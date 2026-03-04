@@ -43,17 +43,17 @@ const TalentCard = createWithRemoteLoader({
           <div>
             <Text className={style['section-label']}>核心技能</Text>
             <Flex gap={4} wrap>
-              {talent.skills.slice(0, 3).map((skill, index) => (
+              {(talent.skills || []).slice(0, 3).map((skill, index) => (
                 <Tag key={index}>{skill}</Tag>
               ))}
-              {talent.skills.length > 3 && <Tag className={style['more-tag']}>+{talent.skills.length - 3}</Tag>}
+              {talent.skills?.length > 3 && <Tag className={style['more-tag']}>+{talent.skills.length - 3}</Tag>}
             </Flex>
           </div>
 
           <div>
             <Text className={style['section-label']}>优势</Text>
             <ul className={style['advantages-list']}>
-              {talent.advantages.map((advantage, index) => (
+              {(talent.advantages || []).map((advantage, index) => (
                 <li key={index}>
                   <span className={classnames(style.dot, style[`dot-${index}`])} />
                   {advantage}

@@ -33,13 +33,15 @@ const createServer = () => {
       properties: {
         DB_DIALECT: { type: 'string', default: 'sqlite' },
         DB_HOST: { type: 'string', default: 'data.db' },
+        DB_PORT: { type: 'number' },
         DB_USERNAME: { type: 'string' },
         DB_PASSWORD: { type: 'string' },
         DB_DATABASE: { type: 'string' },
         ENV: { type: 'string', default: 'local' },
         PORT: { type: 'number', default: 8040 },
         RESUME_PARSE_URL: { type: 'string' },
-        RESUME_PARSE_KEY: { type: 'string' }
+        RESUME_PARSE_KEY: { type: 'string' },
+        SEARCH_API_URL: { type: 'string' }
       }
     }
   });

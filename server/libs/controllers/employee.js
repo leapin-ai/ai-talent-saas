@@ -35,6 +35,48 @@ module.exports = fp(async (fastify, options) => {
     }
   );
 
+  fastify.post(
+    `${options.prefix}/tenant/employee/search`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '员工搜索（支持关键词、语义、向量等多种检索方式）',
+        body: {
+          type: 'object',
+          properties: {
+            query: {
+              type: 'string',
+              description: '查询文本（必填）'
+            },
+            highlightFields: {
+              type: 'array',
+              items: {
+                type: 'string'
+              },
+              description: '高亮字段'
+            },
+            matchType: {
+              type: 'string',
+              description: '匹配类型'
+            },
+            perPage: {
+              type: 'number',
+              default: 20
+            },
+            currentPage: {
+              type: 'number',
+              default: 1
+            }
+          },
+          required: ['query']
+        }
+      }
+    },
+    async request => {
+      return services.employee.search(request.tenantUserInfo, request.body);
+    }
+  );
+
   fastify.get(
     `${options.prefix}/tenant/employee/detail`,
     {

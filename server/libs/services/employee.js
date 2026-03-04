@@ -182,7 +182,52 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
+  const search = async (authenticatePayload, props) => {
+    const { tenantId } = authenticatePayload;
+    const resData = await fastify.task.services.executor({
+      type: 'search',
+      task: {
+        input: {
+          ...props,
+          tenantId
+        }
+      }
+    });
+
+    const employeeList = await models.employee.findAll({
+      include: [models.profile],
+      where: {
+        tenantId,
+        id: {
+          [Op.in]: resData.pageData.map(item => item.id)
+        }
+      }
+    });
+
+    /*const { count, rows: employeeList } = await models.employee.findAndCountAll({
+      include: [models.profile],
+      where: {
+        tenantId
+      },
+      offset: props.perPage * (props.currentPage - 1),
+      limit: props.perPage
+    });*/
+
+    const positionEnums =
+      employeeList.length > 0
+        ? await services.position.enums(authenticatePayload, {
+            ids: employeeList.map(item => get(item, 'options.position')).filter(item => !!item)
+          })
+        : [];
+
+    return {
+      pageData: employeeList,
+      positionEnums,
+      totalCount: resData.totalCount
+    };
+  };
+
   Object.assign(fastify[options.name].services, {
-    employee: { create, list, detail, save, remove, setStatus, recommend }
+    employee: { create, list, detail, save, remove, setStatus, recommend, search }
   });
 });

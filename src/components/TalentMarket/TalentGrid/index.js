@@ -9,7 +9,7 @@ const TalentGrid = ({ talents, onViewProfile, onMoreProfile }) => {
   return (
     <section className={style['section-grid']}>
       <Flex justify="space-between" align="center" className={style['section-header']}>
-        <Title level={3}>推荐候选人</Title>
+        <Title level={3}>推荐</Title>
       </Flex>
 
       <div className={style['talent-grid']}>

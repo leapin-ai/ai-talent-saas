@@ -52,6 +52,10 @@ const getApis = options => {
           recommend: {
             url: `${prefix}/tenant/market/recommend`,
             method: 'GET'
+          },
+          search: {
+            url: `${prefix}/tenant/employee/search`,
+            method: 'POST'
           }
         },
         employee: {
