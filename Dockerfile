@@ -22,7 +22,7 @@ COPY ./server/* ./
 
 RUN cp -r /app_build/build ./build
 
-EXPOSE <%=port %>
+EXPOSE 8040
 
 # 启动应用
 CMD ["npm", "run", "start"]
