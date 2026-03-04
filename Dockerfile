@@ -17,7 +17,7 @@ RUN npm run build
 WORKDIR /node-app
 
 COPY ./server/libs ./libs
-COPY ./server/messageTemplate ./messageTemplate
+COPY ./server/static ./static
 COPY ./server/* ./
 
 RUN cp -r /app_build/build ./build
