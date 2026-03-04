@@ -1,0 +1,23 @@
+export default {
+  'position.name': 'Position Name',
+  'position.status': 'Status',
+  'position.language': 'Language',
+  'position.locationType': 'Location Type',
+  'position.description': 'Description',
+  'position.requirement': 'Requirement',
+  'position.publishAt': 'Publish At',
+  'position.createdAt': 'Created At',
+  'position.updatedAt': 'Updated At',
+  'position.basicInfo': 'Basic Information',
+  'position.deleteConfirm': 'Are you sure to delete this position?',
+  'positionStatus.draft': 'Draft',
+  'positionStatus.published': 'Published',
+  'positionStatus.closed': 'Closed',
+  'language.zh-CN': '中文',
+  'language.en-US': 'English',
+  'locationType.on-site': 'On-site',
+  'locationType.remote': 'Remote',
+  'action.detail': 'Detail',
+  'action.edit': 'Edit',
+  'action.delete': 'Delete'
+};

@@ -1,0 +1,153 @@
+.talent-market {
+}
+
+.header {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 0;
+}
+
+.header-content {
+  margin-bottom: 40px;
+}
+
+.highlight {
+  color: var(--primary-color);
+}
+
+.subtitle {
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.search-bar {
+  gap: 16px;
+
+  svg {
+    color: var(--font-color-grey-2);
+  }
+}
+
+.search-btn {
+  width: 108px;
+  height: 48px;
+}
+
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-header {
+  margin-bottom: 24px;
+
+  h3 {
+    font-size: 20px !important;
+    margin: 0;
+  }
+}
+
+.talent-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 24px;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.talent-card {
+  height: 100%;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: none;
+  position: relative;
+
+  :global {
+    .ant-card-body {
+      height: 100%;
+    }
+
+    .ant-tag {
+      border: none;
+      color: var(--font-color);
+    }
+  }
+}
+
+.talent-card-status {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  border-radius: 0 8px 0 8px !important;
+  background: rgba(17, 24, 39, 0.2) !important;
+  color: rgba(17, 24, 39, 0.78) !important;
+
+  &.employed {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+  }
+}
+
+.talent-name {
+  margin: 0 !important;
+}
+
+.talent-position {
+  font-size: 14px;
+}
+
+.section-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--font-color-grey);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.advantages-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  }
+}
+
+.more-tag {
+  color: var(--primary-color) !important;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+
+  &.dot-0 {
+    background: var(--primary-color);
+  }
+
+  &.dot-1 {
+    background: var(--primary-color);
+  }
+
+  &.dot-2 {
+    background: var(--primary-color);
+  }
+}
+
+.load-more {
+  margin-top: 48px;
+}

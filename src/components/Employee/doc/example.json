@@ -1,0 +1,15 @@
+{
+  "isFull": true,
+  "list": [
+    {
+      "title": "Employee列表",
+      "description": "展示员工列表，支持创建、编辑、删除等操作",
+      "code": "./base.js",
+      "scope": [
+        { "name": "_Employee", "packageName": "@components/Employee" },
+        { "name": "_mockPreset", "packageName": "@root/mockPreset" },
+        { "name": "remoteLoader", "packageName": "@kne/remote-loader" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "isFull": true,
+  "list": [
+    {
+      "title": "基础示例",
+      "description": "人才档案详情页，展示员工完整信息",
+      "code": "./base.js",
+      "scope": [
+        {
+          "name": "_TalentProfile",
+          "packageName": "@components/TalentProfile"
+        }
+      ]
+    },
+    {
+      "title": "HeaderCard - 档案头部卡片",
+      "description": "展示员工头像、姓名、联系方式等基本信息",
+      "code": "./headerCard.js",
+      "scope": [
+        {
+          "name": "_TalentProfile",
+          "packageName": "@components/TalentProfile"
+        }
+      ]
+    },
+    {
+      "title": "AdvantagesCard - 优势卡片",
+      "description": "展示员工的核心优势，分类展示不同维度的能力",
+      "code": "./advantagesCard.js",
+      "scope": [
+        {
+          "name": "_TalentProfile",
+          "packageName": "@components/TalentProfile"
+        }
+      ]
+    },
+    {
+      "title": "SkillRadarChart - 技能雷达图",
+      "description": "使用 ECharts 展示技能指标雷达图，对比员工与行业平均水平",
+      "code": "./skillRadarChart.js",
+      "scope": [
+        {
+          "name": "_TalentProfile",
+          "packageName": "@components/TalentProfile"
+        }
+      ]
+    },
+    {
+      "title": "LeftColumn - 左侧栏",
+      "description": "档案左侧栏，包含优势卡片、任职时长、证书、晋升历史",
+      "code": "./leftColumn.js",
+      "scope": [
+        {
+          "name": "_TalentProfile",
+          "packageName": "@components/TalentProfile"
+        }
+      ]
+    },
+    {
+      "title": "MiddleColumn - 中间栏",
+      "description": "档案中间栏，包含技能雷达图、意向岗位、流动性偏好、兴趣爱好、绩效评价",
+      "code": "./middleColumn.js",
+      "scope": [
+        {
+          "name": "_TalentProfile",
+          "packageName": "@components/TalentProfile"
+        }
+      ]
+    },
+    {
+      "title": "RightColumn - 右侧栏",
+      "description": "档案右侧栏，包含 AI 职业成长规划和 AI 推荐岗位",
+      "code": "./rightColumn.js",
+      "scope": [
+        {
+          "name": "_TalentProfile",
+          "packageName": "@components/TalentProfile"
+        }
+      ]
+    }
+  ]
+}

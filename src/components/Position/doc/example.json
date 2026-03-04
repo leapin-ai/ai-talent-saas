@@ -1,0 +1,15 @@
+{
+  "isFull": true,
+  "list": [
+    {
+      "title": "Position列表",
+      "description": "展示职位列表，支持创建、编辑、删除等操作",
+      "code": "./base.js",
+      "scope": [
+        { "name": "_Position", "packageName": "@components/Position" },
+        { "name": "_mockPreset", "packageName": "@root/mockPreset" },
+        { "name": "remoteLoader", "packageName": "@kne/remote-loader" }
+      ]
+    }
+  ]
+}

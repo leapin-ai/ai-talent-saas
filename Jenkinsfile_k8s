@@ -1,0 +1,11 @@
+@Library(['leapin-pipeline']) _
+
+standardK8sPipeline {
+    projectName = "leapin-talent-saas-service"
+    isMultiBranch = true
+    imageRepo = "leapin-talent-saas-service"
+    deployBranch = []
+    deployBranchEnvMap = []
+    deployBranchCn = ['master', 'develop']
+    deployBranchCnEnvMap = ['master': 'prod', 'develop': 'staging']
+}

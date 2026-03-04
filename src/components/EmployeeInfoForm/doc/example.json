@@ -1,0 +1,68 @@
+{
+  "isFull": true,
+  "list": [
+    {
+      "title": "基础示例",
+      "description": "员工信息补充表单，支持添加/删除意向岗位、技能、兴趣爱好等",
+      "code": "./base.js",
+      "scope": [
+        {
+          "name": "_EmployeeInfoForm",
+          "packageName": "@components/EmployeeInfoForm"
+        }
+      ]
+    },
+    {
+      "title": "ProfileCard - 个人资料卡片",
+      "description": "展示和编辑员工基本信息（头像、姓名、联系方式等）",
+      "code": "./profileCard.js",
+      "scope": [
+        {
+          "name": "_EmployeeInfoForm",
+          "packageName": "@components/EmployeeInfoForm"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        }
+      ]
+    },
+    {
+      "title": "TagInputCard - 标签输入卡片",
+      "description": "通用的标签输入组件，支持添加/删除标签项",
+      "code": "./tagInputCard.js",
+      "scope": [
+        {
+          "name": "_EmployeeInfoForm",
+          "packageName": "@components/EmployeeInfoForm"
+        }
+      ]
+    },
+    {
+      "title": "MobilityCard - 流动性偏好卡片",
+      "description": "设置工作模式、出差意愿、外派意愿等偏好",
+      "code": "./mobilityCard.js",
+      "scope": [
+        {
+          "name": "_EmployeeInfoForm",
+          "packageName": "@components/EmployeeInfoForm"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        }
+      ]
+    },
+    {
+      "title": "CertificateCard - 证书与执照卡片",
+      "description": "管理员工的证书和执照信息",
+      "code": "./certificateCard.js",
+      "scope": [
+        {
+          "name": "_EmployeeInfoForm",
+          "packageName": "@components/EmployeeInfoForm"
+        }
+      ]
+    }
+  ]
+}

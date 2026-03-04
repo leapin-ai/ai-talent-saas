@@ -1,0 +1,262 @@
+const XLSX = require('xlsx');
+const path = require('path');
+
+// 创建工作簿
+const workbook = XLSX.utils.book_new();
+
+// ============ 主表 job_position ============
+const jobPositionData = [
+  // 表头
+  ['字段分组', '字段名', '字段类型', '是否必填', '默认值', '说明', '示例值'],
+  // 主键标识
+  ['主键标识', 'id', 'BIGINT', '是', 'AUTO_INCREMENT', '岗位ID', '1'],
+  ['主键标识', 'position_code', 'VARCHAR(50)', '是', '', '岗位编码（唯一）', 'HR-DEV-001'],
+  ['主键标识', 'position_number', 'VARCHAR(50)', '否', '', '岗位编号（HR系统内部）', 'P1001'],
+  // 基本信息
+  ['基本信息', 'position_title', 'VARCHAR(200)', '是', '', '岗位名称', 'Java开发工程师'],
+  ['基本信息', 'english_title', 'VARCHAR(200)', '否', '', '英文岗位名称', 'Java Development Engineer'],
+  ['基本信息', 'short_title', 'VARCHAR(100)', '否', '', '简称/缩写', 'Java Dev'],
+  ['基本信息', 'display_title', 'VARCHAR(200)', '否', '', '显示名称', '高级Java开发工程师'],
+  // 组织架构
+  ['组织架构', 'department_id', 'BIGINT', '否', '', '所属部门ID', '10'],
+  ['组织架构', 'parent_position_id', 'BIGINT', '否', '', '上级岗位ID', '5'],
+  ['组织架构', 'position_level', 'INT', '否', '0', '岗位层级', '3'],
+  ['组织架构', 'position_path', 'VARCHAR(500)', '否', '', '岗位路径（树形结构）', '1.5.12'],
+  ['组织架构', 'sequence', 'INT', '否', '0', '显示顺序', '1'],
+  // 岗位分类
+  ['岗位分类', 'position_type', 'TINYINT', '否', '', '岗位类型:1-管理,2-技术,3-销售,4-职能,5-生产,6-服务,7-其他', '2'],
+  ['岗位分类', 'job_family', 'VARCHAR(100)', '否', '', '职族/职类', '技术类'],
+  ['岗位分类', 'job_sub_family', 'VARCHAR(100)', '否', '', '子职类', '软件开发'],
+  ['岗位分类', 'job_category', 'VARCHAR(100)', '否', '', '岗位类别', '后端开发'],
+  ['岗位分类', 'job_series', 'VARCHAR(100)', '否', '', '岗位序列', '技术序列'],
+  // 职级体系
+  ['职级体系', 'job_level', 'VARCHAR(50)', '否', '', '岗位级别', 'P6'],
+  ['职级体系', 'grade', 'VARCHAR(20)', '否', '', '薪级', 'G8'],
+  ['职级体系', 'rank', 'VARCHAR(20)', '否', '', '职等', '中级'],
+  ['职级体系', 'band', 'VARCHAR(20)', '否', '', '职带', '专业通道'],
+  ['职级体系', 'level_range', 'VARCHAR(100)', '否', '', '级别范围', 'P5-P7'],
+  // 岗位编制
+  ['岗位编制', 'headcount', 'INT', '否', '1', '编制人数', '3'],
+  ['岗位编制', 'current_count', 'INT', '否', '0', '当前人数', '2'],
+  ['岗位编制', 'vacancy_count', 'INT', '否', '0', '空缺人数', '1'],
+  ['岗位编制', 'is_budgeted', 'BOOLEAN', '否', 'true', '是否预算内岗位', 'true'],
+  ['岗位编制', 'budget_year', 'YEAR', '否', '', '预算年度', '2026'],
+  // 工作属性
+  ['工作属性', 'work_type', 'TINYINT', '否', '1', '工作类型:1-全职,2-兼职,3-实习,4-外包,5-临时', '1'],
+  ['工作属性', 'work_schedule', 'VARCHAR(100)', '否', '', '工作时间安排', '朝九晚六,双休'],
+  ['工作属性', 'work_location', 'VARCHAR(200)', '否', '', '工作地点', '北京市海淀区'],
+  ['工作属性', 'is_remote_allowed', 'BOOLEAN', '否', 'false', '是否允许远程', 'true'],
+  ['工作属性', 'remote_ratio', 'DECIMAL(5,2)', '否', '', '远程办公比例', '0.5'],
+  ['工作属性', 'travel_requirement', 'VARCHAR(100)', '否', '', '出差要求', '偶尔出差'],
+  // 任职要求
+  ['任职要求', 'min_education', 'VARCHAR(50)', '否', '', '最低学历要求', '本科'],
+  ['任职要求', 'education_major', 'VARCHAR(200)', '否', '', '专业要求', '计算机相关专业'],
+  ['任职要求', 'min_experience_years', 'INT', '否', '', '最低工作年限', '3'],
+  ['任职要求', 'min_related_experience_years', 'INT', '否', '', '最低相关经验年限', '2'],
+  ['任职要求', 'age_range', 'VARCHAR(50)', '否', '', '年龄要求', '25-35岁'],
+  ['任职要求', 'language_requirements', 'JSON', '否', '', '语言要求', '[{"language":"英语","level":"CET-6"}]'],
+  ['任职要求', 'certificate_requirements', 'JSON', '否', '', '证书要求', '[{"name":"软考中级","required":false}]'],
+  ['任职要求', 'skill_requirements', 'JSON', '否', '', '技能要求', '[{"skill":"Java","level":"精通"},{"skill":"Spring","level":"熟练"}]'],
+  ['任职要求', 'competence_model', 'JSON', '否', '', '能力素质模型', '[{"competency":"团队协作","weight":0.3}]'],
+  // 职责描述
+  ['职责描述', 'job_summary', 'TEXT', '否', '', '岗位概述', '负责核心业务系统的开发和维护'],
+  ['职责描述', 'key_responsibilities', 'JSON', '否', '', '主要职责', '["系统模块开发","技术方案设计","代码review"]'],
+  ['职责描述', 'core_work_content', 'JSON', '否', '', '核心工作内容', '["后端接口开发","数据库设计","性能优化"]'],
+  ['职责描述', 'performance_indicators', 'JSON', '否', '', '关键绩效指标', '[{"kpi":"代码质量","target":"bug率<1%"}]'],
+  ['职责描述', 'authority_scope', 'TEXT', '否', '', '权限范围', '技术方案决策权'],
+  // 汇报关系
+  ['汇报关系', 'report_to_position_id', 'BIGINT', '否', '', '汇报岗位ID', '8'],
+  ['汇报关系', 'report_line', 'TEXT', '否', '', '汇报线描述', '向技术经理汇报'],
+  ['汇报关系', 'subordinates_count', 'INT', '否', '0', '下属人数', '0'],
+  ['汇报关系', 'management_scope', 'TEXT', '否', '', '管理范围', '无'],
+  ['汇报关系', 'cooperation_departments', 'JSON', '否', '', '协作部门', '["产品部","测试部"]'],
+  // 薪酬范围
+  ['薪酬范围', 'salary_range_min', 'DECIMAL(12,2)', '否', '', '薪资范围下限', '20000.00'],
+  ['薪酬范围', 'salary_range_max', 'DECIMAL(12,2)', '否', '', '薪资范围上限', '35000.00'],
+  ['薪酬范围', 'salary_currency', 'VARCHAR(10)', '否', 'CNY', '薪资货币', 'CNY'],
+  ['薪酬范围', 'salary_structure', 'JSON', '否', '', '薪资结构', '{"base":0.7,"bonus":0.3}'],
+  ['薪酬范围', 'bonus_scheme', 'TEXT', '否', '', '奖金方案', '季度绩效奖金+年终奖'],
+  ['薪酬范围', 'benefits_package', 'JSON', '否', '', '福利包', '["五险一金","补充医疗保险","餐补"]'],
+  // 发展通道
+  ['发展通道', 'career_path_up', 'JSON', '否', '', '向上发展通道', '["技术专家","架构师","技术经理"]'],
+  ['发展通道', 'career_path_lateral', 'JSON', '否', '', '横向发展通道', '["项目经理","产品经理"]'],
+  ['发展通道', 'training_plan', 'TEXT', '否', '', '培训计划', '季度技术培训'],
+  ['发展通道', 'development_goals', 'TEXT', '否', '', '发展目标', '1年内掌握微服务架构'],
+  // 招聘信息
+  ['招聘信息', 'is_recruiting', 'BOOLEAN', '否', 'false', '是否在招聘', 'true'],
+  ['招聘信息', 'recruitment_priority', 'TINYINT', '否', '', '招聘优先级:1-紧急,2-高,3-中,4-低', '2'],
+  ['招聘信息', 'hiring_manager_id', 'BIGINT', '否', '', '招聘负责人ID', '15'],
+  ['招聘信息', 'recruiter_id', 'BIGINT', '否', '', '招聘专员ID', '20'],
+  ['招聘信息', 'time_to_fill', 'INT', '否', '', '预计到岗时间(天)', '30'],
+  ['招聘信息', 'hiring_plan', 'JSON', '否', '', '招聘计划', '{"channel":["内推","招聘网站"]}'],
+  ['招聘信息', 'candidate_requirements', 'TEXT', '否', '', '候选人要求', '3年以上Java开发经验'],
+  // 状态管理
+  ['状态管理', 'status', 'TINYINT', '否', '1', '状态:1-有效,2-暂停招聘,3-已冻结,4-已取消,5-历史岗位', '1'],
+  ['状态管理', 'effective_date', 'DATE', '否', '', '生效日期', '2026-01-01'],
+  ['状态管理', 'expiration_date', 'DATE', '否', '', '失效日期', '2028-12-31'],
+  ['状态管理', 'is_critical_position', 'BOOLEAN', '否', 'false', '是否关键岗位', 'false'],
+  ['状态管理', 'is_confidential', 'BOOLEAN', '否', 'false', '是否保密岗位', 'false'],
+  ['状态管理', 'approval_status', 'TINYINT', '否', '1', '审批状态:1-草稿,2-审批中,3-已批准,4-已驳回', '3'],
+  // 系统字段
+  ['系统字段', 'created_at', 'DATETIME', '否', 'CURRENT_TIMESTAMP', '创建时间', '2026-02-06 10:00:00'],
+  ['系统字段', 'updated_at', 'DATETIME', '否', 'CURRENT_TIMESTAMP', '更新时间', '2026-02-06 10:00:00'],
+  ['系统字段', 'created_by', 'BIGINT', '否', '', '创建人', '1'],
+  ['系统字段', 'updated_by', 'BIGINT', '否', '', '更新人', '1'],
+  ['系统字段', 'version', 'INT', '否', '1', '版本号', '1'],
+  // 其他信息
+  ['其他信息', 'keywords', 'JSON', '否', '', '搜索关键词', '["Java","后端","开发"]'],
+  ['其他信息', 'tags', 'JSON', '否', '', '标签', '["核心岗位","技术岗"]'],
+  ['其他信息', 'external_reference', 'VARCHAR(200)', '否', '', '外部系统编号', 'EXT123456'],
+  ['其他信息', 'job_source', 'VARCHAR(100)', '否', '', '岗位来源', '新增岗位'],
+  ['其他信息', 'benchmark_jobs', 'JSON', '否', '', '对标岗位', '[{"company":"阿里","position":"P6"}]'],
+  ['其他信息', 'industry_benchmark', 'JSON', '否', '', '行业对标', '{"p50":25000}'],
+  ['其他信息', 'attachments', 'JSON', '否', '', '附件信息', '[{"name":"JD文档","url":"/files/jd.pdf"}]'],
+  ['其他信息', 'notes', 'TEXT', '否', '', '备注', '特殊要求:需要参与值班'],
+  ['其他信息', 'custom_fields', 'JSON', '否', '', '自定义字段', '{"field1":"value1"}']
+];
+
+// ============ 关联表 position_skill ============
+const positionSkillData = [
+  ['1. position_skill（岗位技能要求表）'],
+  ['字段名', '字段类型', '是否必填', '默认值', '说明', '示例值'],
+  ['id', 'BIGINT', '是', 'AUTO_INCREMENT', '主键', '1'],
+  ['position_id', 'BIGINT', '是', '', '岗位ID', '1'],
+  ['skill_id', 'BIGINT', '否', '', '技能ID', '10'],
+  ['skill_name', 'VARCHAR(100)', '是', '', '技能名称', 'Java'],
+  ['skill_category', 'VARCHAR(50)', '否', '', '技能类别', '编程语言'],
+  ['proficiency_level', 'TINYINT', '否', '', '熟练程度:1-了解,2-掌握,3-熟练,4-精通,5-专家', '4'],
+  ['is_required', 'BOOLEAN', '否', 'true', '是否必须', 'true'],
+  ['weight', 'DECIMAL(3,2)', '否', '', '权重(0-1)', '0.3'],
+  ['description', 'TEXT', '否', '', '技能描述', '熟悉Java并发编程']
+];
+
+// ============ 关联表 position_incumbent_history ============
+const positionIncumbentHistoryData = [
+  ['2. position_incumbent_history（岗位任职者历史表）'],
+  ['字段名', '字段类型', '是否必填', '默认值', '说明', '示例值'],
+  ['id', 'BIGINT', '是', 'AUTO_INCREMENT', '主键', '1'],
+  ['position_id', 'BIGINT', '是', '', '岗位ID', '1'],
+  ['employee_id', 'BIGINT', '是', '', '员工ID', '100'],
+  ['start_date', 'DATE', '是', '', '任职开始日期', '2025-01-15'],
+  ['end_date', 'DATE', '否', '', '任职结束日期', '2026-01-14'],
+  ['appointment_type', 'TINYINT', '否', '', '任职类型:1-正式,2-代理,3-兼任,4-见习', '1'],
+  ['appointment_reason', 'VARCHAR(200)', '否', '', '任职原因', '正常任职'],
+  ['appointment_document', 'VARCHAR(200)', '否', '', '任命文件', '任命书20250115号'],
+  ['is_primary', 'BOOLEAN', '否', 'true', '是否主岗', 'true'],
+  ['performance_evaluation', 'JSON', '否', '', '任职期间绩效', '{"2025Q1":"A","2025Q2":"B+"}'],
+  ['created_by', 'BIGINT', '否', '', '操作人', '5'],
+  ['created_at', 'DATETIME', '否', 'CURRENT_TIMESTAMP', '创建时间', '2025-01-15 09:00:00']
+];
+
+// ============ 关联表 position_permission ============
+const positionPermissionData = [
+  ['3. position_permission（岗位权限关联表）'],
+  ['字段名', '字段类型', '是否必填', '默认值', '说明', '示例值'],
+  ['id', 'BIGINT', '是', 'AUTO_INCREMENT', '主键', '1'],
+  ['position_id', 'BIGINT', '是', '', '岗位ID', '1'],
+  ['permission_code', 'VARCHAR(100)', '是', '', '权限编码', 'finance.approval.limit'],
+  ['permission_type', 'VARCHAR(50)', '否', '', '权限类型', '审批权限'],
+  ['scope', 'JSON', '否', '', '权限范围', '{"max_amount":50000,"departments":["技术部"]}'],
+  ['is_inherited', 'BOOLEAN', '否', 'false', '是否继承', 'false'],
+  ['effective_date', 'DATE', '否', '', '生效日期', '2026-01-01'],
+  ['expiration_date', 'DATE', '否', '', '失效日期', '2027-12-31']
+];
+
+// ============ 关联表 position_headcount_history ============
+const positionHeadcountHistoryData = [
+  ['4. position_headcount_history（岗位编制历史表）'],
+  ['字段名', '字段类型', '是否必填', '默认值', '说明', '示例值'],
+  ['id', 'BIGINT', '是', 'AUTO_INCREMENT', '主键', '1'],
+  ['position_id', 'BIGINT', '是', '', '岗位ID', '1'],
+  ['old_headcount', 'INT', '否', '', '原编制人数', '2'],
+  ['new_headcount', 'INT', '否', '', '新编制人数', '3'],
+  ['change_type', 'VARCHAR(50)', '否', '', '变更类型', '编制增加'],
+  ['change_reason', 'TEXT', '否', '', '变更原因', '业务扩展需要'],
+  ['effective_date', 'DATE', '否', '', '生效日期', '2026-02-01'],
+  ['budget_amount', 'DECIMAL(12,2)', '否', '', '预算金额', '120000.00'],
+  ['approved_by', 'BIGINT', '否', '', '审批人', '8'],
+  ['created_at', 'DATETIME', '否', 'CURRENT_TIMESTAMP', '创建时间', '2026-01-20 14:30:00']
+];
+
+// ============ 索引设计 ============
+const jobPositionIndexData = [
+  ['job_position 索引'],
+  ['索引名称', '字段', '索引类型', '说明', '是否唯一'],
+  ['idx_position_code', 'position_code', '普通索引', '岗位编码查询', '是'],
+  ['idx_department', 'department_id', '普通索引', '按部门查询', '否'],
+  ['idx_position_title', 'position_title', '普通索引', '岗位名称查询', '否'],
+  ['idx_job_level', 'job_level', '普通索引', '按级别查询', '否'],
+  ['idx_status', 'status', '普通索引', '状态查询', '否'],
+  ['idx_work_type', 'work_type', '普通索引', '工作类型查询', '否'],
+  ['idx_is_recruiting', 'is_recruiting', '普通索引', '招聘状态查询', '否'],
+  ['idx_parent_position', 'parent_position_id', '普通索引', '上级岗位查询', '否'],
+  ['idx_report_to', 'report_to_position_id', '普通索引', '汇报关系查询', '否'],
+  ['idx_created_at', 'created_at', '普通索引', '时间范围查询', '否'],
+  ['idx_job_family', 'job_family', '普通索引', '职类查询', '否'],
+  ['idx_grade', 'grade', '普通索引', '薪级查询', '否'],
+  ['idx_fulltext_search', 'position_title, job_summary, keywords', '全文索引', '全文搜索', '否']
+];
+
+const positionSkillIndexData = [
+  ['position_skill 索引'],
+  ['索引名称', '字段', '索引类型', '说明', '是否唯一'],
+  ['idx_position', 'position_id', '普通索引', '岗位技能查询', '否'],
+  ['idx_skill', 'skill_id', '普通索引', '技能查询', '否']
+];
+
+const positionIncumbentHistoryIndexData = [
+  ['position_incumbent_history 索引'],
+  ['索引名称', '字段', '索引类型', '说明', '是否唯一'],
+  ['idx_position_employee', 'position_id, employee_id', '普通索引', '任职历史查询', '否'],
+  ['idx_dates', 'start_date, end_date', '普通索引', '时间范围查询', '否']
+];
+
+const positionPermissionIndexData = [
+  ['position_permission 索引'],
+  ['索引名称', '字段', '索引类型', '说明', '是否唯一'],
+  ['idx_position', 'position_id', '普通索引', '岗位权限查询', '否'],
+  ['uk_position_permission', 'position_id, permission_code', '唯一索引', '岗位权限唯一', '是']
+];
+
+// 创建工作表
+const wsJobPosition = XLSX.utils.aoa_to_sheet(jobPositionData);
+const wsPositionSkill = XLSX.utils.aoa_to_sheet(positionSkillData);
+const wsPositionIncumbentHistory = XLSX.utils.aoa_to_sheet(positionIncumbentHistoryData);
+const wsPositionPermission = XLSX.utils.aoa_to_sheet(positionPermissionData);
+const wsPositionHeadcountHistory = XLSX.utils.aoa_to_sheet(positionHeadcountHistoryData);
+const wsJobPositionIndex = XLSX.utils.aoa_to_sheet(jobPositionIndexData);
+const wsPositionSkillIndex = XLSX.utils.aoa_to_sheet(positionSkillIndexData);
+const wsPositionIncumbentHistoryIndex = XLSX.utils.aoa_to_sheet(positionIncumbentHistoryIndexData);
+const wsPositionPermissionIndex = XLSX.utils.aoa_to_sheet(positionPermissionIndexData);
+
+// 设置列宽
+const colWidths = [{ wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 10 }, { wch: 15 }, { wch: 40 }, { wch: 30 }];
+wsJobPosition['!cols'] = colWidths;
+wsPositionSkill['!cols'] = colWidths;
+wsPositionIncumbentHistory['!cols'] = colWidths;
+wsPositionPermission['!cols'] = colWidths;
+wsPositionHeadcountHistory['!cols'] = colWidths;
+
+// 索引表列宽
+const indexColWidths = [{ wch: 25 }, { wch: 35 }, { wch: 10 }, { wch: 20 }, { wch: 10 }];
+wsJobPositionIndex['!cols'] = indexColWidths;
+wsPositionSkillIndex['!cols'] = indexColWidths;
+wsPositionIncumbentHistoryIndex['!cols'] = indexColWidths;
+wsPositionPermissionIndex['!cols'] = indexColWidths;
+
+// 添加工作表到工作簿
+XLSX.utils.book_append_sheet(workbook, wsJobPosition, 'job_position主表');
+XLSX.utils.book_append_sheet(workbook, wsPositionSkill, 'position_skill');
+XLSX.utils.book_append_sheet(workbook, wsPositionIncumbentHistory, 'position_incumbent_history');
+XLSX.utils.book_append_sheet(workbook, wsPositionPermission, 'position_permission');
+XLSX.utils.book_append_sheet(workbook, wsPositionHeadcountHistory, 'position_headcount_history');
+XLSX.utils.book_append_sheet(workbook, wsJobPositionIndex, 'job_position索引');
+XLSX.utils.book_append_sheet(workbook, wsPositionSkillIndex, 'position_skill索引');
+XLSX.utils.book_append_sheet(workbook, wsPositionIncumbentHistoryIndex, 'position_incumbent_history索引');
+XLSX.utils.book_append_sheet(workbook, wsPositionPermissionIndex, 'position_permission索引');
+
+// 生成文件
+const outputPath = path.join(__dirname, '岗位管理数据库设计.xlsx');
+XLSX.writeFile(workbook, outputPath);
+
+console.log(`Excel 文件已生成: ${outputPath}`);

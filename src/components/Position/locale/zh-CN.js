@@ -1,0 +1,23 @@
+export default {
+  'position.name': '岗位名称',
+  'position.status': '状态',
+  'position.language': '语言',
+  'position.locationType': '工作地点类型',
+  'position.description': '描述',
+  'position.requirement': '要求',
+  'position.publishAt': '发布时间',
+  'position.createdAt': '创建时间',
+  'position.updatedAt': '更新时间',
+  'position.basicInfo': '基本信息',
+  'position.deleteConfirm': '确定要删除这个职位吗？',
+  'positionStatus.draft': '草稿',
+  'positionStatus.published': '已发布',
+  'positionStatus.closed': '已关闭',
+  'language.zh-CN': '中文',
+  'language.en-US': '英文',
+  'locationType.on-site': '现场',
+  'locationType.remote': '远程',
+  'action.detail': '详情',
+  'action.edit': '编辑',
+  'action.delete': '删除'
+};

@@ -1,0 +1,16 @@
+{
+  "isFull": false,
+  "list": [
+    {
+      "title": "基础示例",
+      "description": "枚举加载器，用于获取枚举数据",
+      "code": "./base.js",
+      "scope": [
+        {
+          "name": "_EnumLoader",
+          "packageName": "@components/EnumLoader"
+        }
+      ]
+    }
+  ]
+}

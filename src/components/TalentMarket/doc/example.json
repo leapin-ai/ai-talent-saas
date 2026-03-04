@@ -1,0 +1,49 @@
+{
+  "isFull": true,
+  "list": [
+    {
+      "title": "基础示例",
+      "description": "人才市场首页，展示推荐候选人列表",
+      "code": "./base.js",
+      "scope": [
+        {
+          "name": "_TalentMarket",
+          "packageName": "@components/TalentMarket"
+        }
+      ]
+    },
+    {
+      "title": "Header - 页面头部",
+      "description": "人才市场页面头部，包含欢迎语、搜索栏和筛选按钮",
+      "code": "./header.js",
+      "scope": [
+        {
+          "name": "_TalentMarket",
+          "packageName": "@components/TalentMarket"
+        }
+      ]
+    },
+    {
+      "title": "TalentGrid - 候选人网格",
+      "description": "候选人卡片网格布局，展示推荐候选人列表",
+      "code": "./talentGrid.js",
+      "scope": [
+        {
+          "name": "_TalentMarket",
+          "packageName": "@components/TalentMarket"
+        }
+      ]
+    },
+    {
+      "title": "TalentCard - 候选人卡片",
+      "description": "单个候选人信息卡片，展示基本信息、技能和优势",
+      "code": "./talentCard.js",
+      "scope": [
+        {
+          "name": "_TalentMarket",
+          "packageName": "@components/TalentMarket"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Internal Talent Pool Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+SC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#5A8BFF",
+              "background-light": "#F8F9FB",
+              "background-dark": "#0F172A",
+            },
+            fontFamily: {
+              display: ["Inter", "Noto Sans SC", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "12px",
+            },
+          },
+        },
+      };
+    </script>
+<style>
+      body {
+        font-family: 'Inter', 'Noto Sans SC', sans-serif;
+      }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
+<header class="max-w-7xl mx-auto px-6 pt-12 pb-8">
+<div class="flex flex-col gap-2">
+<h1 class="text-4xl font-bold tracking-tight">
+                欢迎回来，<span class="text-primary">林舟</span>
+</h1>
+<p class="text-slate-500 dark:text-slate-400 text-lg">
+                从你的内部人才库中找到下一位明星员工吧
+            </p>
+</div>
+<div class="mt-10 flex flex-col md:flex-row gap-4">
+<div class="relative flex-grow">
+<span class="absolute inset-y-0 left-4 flex items-center text-slate-400">
+<span class="material-icons-outlined">search</span>
+</span>
+<input class="w-full pl-12 pr-24 py-4 bg-white dark:bg-slate-800 border-none rounded-xl shadow-sm focus:ring-2 focus:ring-primary/50 text-slate-700 dark:text-slate-200" placeholder="按技能、职位或员工姓名搜索..." type="text"/>
+<button class="absolute inset-y-0 right-4 flex items-center gap-1 text-primary hover:text-primary/80 transition-colors font-medium">
+<span class="material-icons-outlined text-xl">tune</span>
+<span>筛选</span>
+</button>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-white px-10 py-4 rounded-xl font-semibold shadow-lg shadow-primary/20 transition-all flex items-center justify-center">
+                搜索
+            </button>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-6 pb-20">
+<section>
+<div class="flex items-center justify-between mb-8">
+<h2 class="text-xl font-bold">推荐候选人</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 relative flex flex-col overflow-hidden group">
+<div class="absolute top-0 right-0 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-3 py-1 rounded-bl-xl">
+                        在职
+                    </div>
+<div class="flex items-center gap-4 mb-6">
+<img alt="张三三" class="w-14 h-14 rounded-full object-cover ring-2 ring-slate-50 dark:ring-slate-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvPAB0O641DVkigN2YUUsCo3jIvsHcp4OSFJjmz0fPhorqdvR4efVlRQ5l_rwJfrDW5MYuaggIE0eoLk1WYVo8SJ-hKhsE_VLIn_fIcqid0sEtVW6X9Yzle7oVtbY8O8yw2sFJ98QToZJXYweEiPoPMDjgu3-SqCokd9C79qBpgmtBr4xN-SX7pyZkfZH7LsuNTL5EmXaeteqQs9un1Fsj_hbojeqzcsjFHrkH5jW3K68PWJ9hNKNgYYhEVwiCv6jtbW94jil8prPe"/>
+<div>
+<h3 class="font-bold text-lg">张三三</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">数据分析师</p>
+</div>
+</div>
+<div class="space-y-4 flex-grow">
+<div>
+<p class="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider">核心技能</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-full">分析市场需求</span>
+<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-full">制定解决方案</span>
+<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-full">+8</span>
+</div>
+</div>
+<div>
+<p class="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider">优势</p>
+<ul class="space-y-2 text-sm">
+<li class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-purple-500"></span>
+<span>擅长数据可视化</span>
+</li>
+<li class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span>
+<span>数据洞察</span>
+</li>
+<li class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>团队领导力</span>
+</li>
+</ul>
+</div>
+</div>
+<button class="mt-8 w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors">
+                        查看完整档案
+                    </button>
+</div>
+<div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 relative flex flex-col overflow-hidden group">
+<div class="absolute top-0 right-0 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-3 py-1 rounded-bl-xl">
+                        在职
+                    </div>
+<div class="flex items-center gap-4 mb-6">
+<img alt="李星辰" class="w-14 h-14 rounded-full object-cover ring-2 ring-slate-50 dark:ring-slate-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBaxjl-ICxdCw_3yCfzmkys0Q2wuyy69cvHuFyPyzmnYpBk8YM3gJqyjt2AM99rzQ6xL9aKfDB7sG8KUEX-XWCm0DLzAyvKtmorL8V9fSO2UofOZn031chxQNr7dYIKufdNes1-_c8ckSZSZC_78CSbp6ZpQZYSBBguCMSHI61LOCGfCQ94TMMPGLYEozp7almsgsNsNr28SQXWyXAnn4LPCvra7gNoM1TFSa5-ebd3RH2EnoIX6iq8Hpya3reXoHbFA324WBb2Upy"/>
+<div>
+<h3 class="font-bold text-lg">李星辰</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">资深数据科学家</p>
+</div>
+</div>
+<div class="space-y-4 flex-grow">
+<div>
+<p class="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider">核心技能</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-full">构建机器学习模型</span>
+<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-full">优化算法性能</span>
+<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-full">+7</span>
+</div>
+</div>
+<div>
+<p class="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider">优势</p>
+<ul class="space-y-2 text-sm">
+<li class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-purple-500"></span>
+<span>精通深度学习框架</span>
+</li>
+<li class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span>
+<span>复杂场景下的问题建模</span>
+</li>
+<li class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>跨部门技术协作</span>
+</li>
+</ul>
+</div>
+</div>
+<button class="mt-8 w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors">
+                        查看完整档案
+                    </button>
+</div>
+<div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 relative flex flex-col overflow-hidden group">
+<div class="absolute top-0 right-0 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold px-3 py-1 rounded-bl-xl">
+                        已离职
+                    </div>
+<div class="flex items-center gap-4 mb-6">
+<img alt="赵丽华" class="w-14 h-14 rounded-full object-cover ring-2 ring-slate-50 dark:ring-slate-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfzbPSybH8rOdKyU6yil2MZ0AZD46leNuBxb90oMJzRaoU6DrE5_5tSB-f-A6hd8zaQKm9pNN-brGDd9dp5u43qBBetCKexRx-JzbnTABfyYfgorODXP3hFxX7AoH2WMabL_Kb0S-K0dvQSVsWVFQO3BcLW2OQ4yqLqa-5bQlGKtNiPY7bx4ttYyNFPY5rc3CWx3YdBFKmgvpKKZvphWdtaXIHQ2slIsefoj_bl_JO03E4R6pw81RlR8snJUskLVdJwx6bz3QIYtKN"/>
+<div>
+<h3 class="font-bold text-lg">赵丽华</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">AI工程师</p>
+</div>
+</div>
+<div class="space-y-4 flex-grow">
+<div>
+<p class="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider">核心技能</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-full">自然语言处理</span>
+<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-full">智能推荐系统</span>
+<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-full">+4</span>
+</div>
+</div>
+<div>
+<p class="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider">优势</p>
+<ul class="space-y-2 text-sm">
+<li class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-purple-500"></span>
+<span>擅长模型训练与调优</span>
+</li>
+<li class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span>
+<span>数据驱动的决策制定</span>
+</li>
+<li class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>项目管理能力</span>
+</li>
+</ul>
+</div>
+</div>
+<button class="mt-8 w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors">
+                        查看完整档案
+                    </button>
+</div>
+<div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 relative flex flex-col overflow-hidden group">
+<div class="absolute top-0 right-0 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-3 py-1 rounded-bl-xl">
+                        在职
+                    </div>
+<div class="flex items-center gap-4 mb-6">
+<img alt="刘婷婷" class="w-14 h-14 rounded-full object-cover ring-2 ring-slate-50 dark:ring-slate-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjUHtgv-S5cvSAu0mbDD9Xewoo5Ju8DeIaSyBzCJZVQLRWnjb3pt3VlBEB27xq0a8QJDrsMN1KA6FndUTp7hpoUO-VLLSGNI4q88zCdOhMv2tJjv84gFlDOYWx5SzNYoMgMoLEAp66OZJtrJNSo6I3RcYepGW79Pt-1VICUY_N8mvJcb9P1drYZ-QwkPSyFzLEEEZsJ56WFcyVEH_PRy6yi1H1TSD_4E5kL4MzSFGe2ZNtAxjmfYd3y_uWwDxFcxAowo43zZ20gCnk"/>
+<div>
+<h3 class="font-bold text-lg">刘婷婷</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">产品产品经理</p>
+</div>
+</div>
+<div class="space-y-4 flex-grow">
+<div>
+<p class="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider">核心技能</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-full">产品需求分析</span>
+<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-full">用户体验设计</span>
+<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-full">+6</span>
+</div>
+</div>
+<div>
+<p class="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider">优势</p>
+<ul class="space-y-2 text-sm">
+<li class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-purple-500"></span>
+<span>擅长沟通与协调</span>
+</li>
+<li class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span>
+<span>市场趋势分析</span>
+</li>
+<li class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>敏捷开发管理</span>
+</li>
+</ul>
+</div>
+</div>
+<button class="mt-8 w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors">
+                        查看完整档案
+                    </button>
+</div>
+</div>
+<div class="mt-12 flex justify-center">
+<button class="px-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-primary font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    查看更多人才
+                </button>
+</div>
+</section>
+</main>
+<button class="fixed bottom-6 right-6 p-3 bg-white dark:bg-slate-800 shadow-lg rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:scale-110 transition-transform active:scale-95" onclick="document.documentElement.classList.toggle('dark')">
+<span class="material-icons-outlined block dark:hidden">dark_mode</span>
+<span class="material-icons-outlined hidden dark:block">light_mode</span>
+</button>
+
+</body></html>

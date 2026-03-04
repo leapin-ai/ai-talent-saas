@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Talent Profile Dashboard - Accurate</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style type="text/tailwindcss">
+        :root {
+            --primary-color: #6366f1;
+            --bg-dark: #000000;
+            --card-white: #ffffff;
+        }
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: var(--bg-dark);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+            font-size: 18px;
+        }
+        .radar-container {
+            position: relative;
+            height: 320px;
+            width: 100%;
+        }
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 10px;
+            bottom: 0;
+            width: 1px;
+            border-left: 1px dashed #e2e8f0;
+        }
+        .growth-path-line::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 40px;
+            bottom: 0;
+            width: 2px;
+            background: #eef2ff;
+        }
+    </style>
+</head>
+<body class="text-slate-900 min-h-screen p-6">
+<div class="max-w-[1400px] mx-auto space-y-4">
+<header class="bg-white rounded-xl p-8 flex items-center justify-between shadow-sm relative">
+<div class="flex items-center gap-8">
+<div class="relative">
+<img alt="Zhang Sansan Portrait" class="w-32 h-32 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_xVIPjt20E4Cn8KBE8QKXyI3ftGSlPWUHOwKfGrfbIFb8AVSZezmI2Yt-uRucJSBYX5R639D36oZBIWfHb96oCYLzE9LxAvFQBk8LjbtWHABpF6gC-2P53N9y5B4ecuTmxeUO8WkjiBjh-xU7eZVpXlFMRL4ULA0XAp6T6USgqCdVQmXcLkmpNSzIX_T3huTHJ7XJvPPufq_mkwf_Tf6c9mGWg7TD4Df7PoIFSo-SDVVZySAX1bl3gVAnsPx3OY1szrQ-oO351sZc"/>
+<div class="absolute bottom-1 right-1 bg-green-500 w-5 h-5 rounded-full border-4 border-white"></div>
+</div>
+<div>
+<h1 class="text-3xl font-bold mb-1">张三三 <span class="text-lg font-normal text-slate-400 ml-4">Kianna Zhang</span></h1>
+<p class="text-slate-600 font-medium mb-4">数据分析师 | 技术部</p>
+<div class="flex flex-wrap gap-6 text-sm text-slate-500">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-slate-400">call</span> +65 8123 4567</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-slate-400">mail</span> kianna@gmail.com</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-slate-400">link</span> linkedin.com/in/kiannabaptista</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-slate-400">location_on</span> 上海</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-slate-400">language</span> 英语, 中文</span>
+</div>
+</div>
+</div>
+<button class="absolute top-6 right-6 p-2 text-slate-400">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</header>
+<div class="grid grid-cols-12 gap-4">
+<div class="col-span-3 space-y-4">
+<section class="bg-white rounded-xl p-6 shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<h2 class="font-bold flex items-center gap-2"><span class="material-symbols-outlined text-slate-900">auto_awesome</span> 优势</h2>
+<span class="material-symbols-outlined text-slate-400 text-sm cursor-pointer">edit</span>
+</div>
+<div class="space-y-4">
+<div class="bg-purple-50 p-4 rounded-xl border border-purple-100">
+<div class="flex items-center gap-2 mb-2 text-purple-700">
+<span class="material-symbols-outlined !text-[20px]">strategy</span>
+<h3 class="font-bold text-sm">战略与规划</h3>
+</div>
+<ul class="text-[11px] text-slate-800 space-y-1.5 list-disc list-outside ml-4 leading-relaxed">
+<li>擅长从业务目标拆解数据需求。</li>
+<li>曾主导业务平台用户增长项目的分析与落地。</li>
+<li>通过制定分阶段数据验证方案，帮助团队核心指标提升 15%。</li>
+</ul>
+</div>
+<div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+<div class="flex items-center gap-2 mb-2 text-blue-700">
+<span class="material-symbols-outlined !text-[20px]">monitoring</span>
+<h3 class="font-bold text-sm">数据洞察</h3>
+</div>
+<ul class="text-[11px] text-slate-800 space-y-1.5 list-disc list-outside ml-4 leading-relaxed">
+<li>具备敏锐的业务嗅觉，从海量数据挖掘价值。</li>
+<li>通过用户行为分析使留存率提升 8%。</li>
+<li>擅长可视化图表呈现，让业务方快速理解。</li>
+</ul>
+</div>
+<div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+<div class="flex items-center gap-2 mb-2 text-emerald-700">
+<span class="material-symbols-outlined !text-[20px]">groups</span>
+<h3 class="font-bold text-sm">团队领导</h3>
+</div>
+<ul class="text-[11px] text-slate-800 space-y-1.5 list-disc list-outside ml-4 leading-relaxed">
+<li>能够带领 3-5 人小型团队高效协作。</li>
+<li>擅长任务拆解、资源分配及周期性复盘。</li>
+<li>推动跨部门项目提前 2 周交付。</li>
+</ul>
+</div>
+</div>
+</section>
+<section class="bg-white rounded-xl p-6 shadow-sm">
+<div class="space-y-6">
+<div>
+<div class="flex items-center gap-2 text-amber-500 mb-1">
+<span class="material-symbols-outlined">schedule</span>
+<span class="text-sm font-bold text-slate-900">任职时长</span>
+</div>
+<p class="text-2xl font-bold">5.3 <span class="text-sm font-normal text-slate-400">年</span></p>
+</div>
+<div>
+<div class="flex items-center gap-2 text-slate-500 mb-1">
+<span class="material-symbols-outlined">work</span>
+<span class="text-sm font-bold text-slate-900">总工作年限</span>
+</div>
+<p class="text-2xl font-bold">6.8 <span class="text-sm font-normal text-slate-400">年</span></p>
+</div>
+</div>
+</section>
+<section class="bg-white rounded-xl p-6 shadow-sm">
+<h2 class="font-bold flex items-center gap-2 mb-6"><span class="material-symbols-outlined text-amber-500">workspace_premium</span> 证书与执照</h2>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-slate-50 border border-slate-100 text-slate-600 text-[11px] rounded-lg">大学英语六级</span>
+<span class="px-3 py-1 bg-slate-50 border border-slate-100 text-slate-600 text-[11px] rounded-lg">心理咨询师</span>
+<span class="px-3 py-1 bg-slate-50 border border-slate-100 text-slate-600 text-[11px] rounded-lg">认证数据分析师</span>
+</div>
+</section>
+<section class="bg-white rounded-xl p-6 shadow-sm">
+<h2 class="font-bold flex items-center gap-2 mb-6"><span class="material-symbols-outlined text-slate-900">analytics</span> 晋升历史</h2>
+<div class="space-y-6 relative timeline-line">
+<div class="relative pl-6">
+<div class="absolute left-0 top-1.5 w-3.5 h-3.5 rounded-full bg-indigo-600"></div>
+<p class="text-[11px] text-indigo-600 font-bold">2024-至今</p>
+<p class="text-sm font-bold">数据分析师</p>
+<p class="text-[11px] text-slate-400">技术部</p>
+</div>
+<div class="relative pl-6">
+<div class="absolute left-0 top-1.5 w-3.5 h-3.5 rounded-full bg-slate-200"></div>
+<p class="text-[11px] text-slate-400">2021-2024</p>
+<p class="text-sm font-bold">数据专员</p>
+<p class="text-[11px] text-slate-400">技术部</p>
+</div>
+<div class="relative pl-6">
+<div class="absolute left-0 top-1.5 w-3.5 h-3.5 rounded-full bg-slate-200"></div>
+<p class="text-[11px] text-slate-400">2020-2021</p>
+<p class="text-sm font-bold">业务数据助理</p>
+<p class="text-[11px] text-slate-400">技术部</p>
+</div>
+</div>
+</section>
+</div>
+<div class="col-span-5 space-y-4">
+<section class="bg-white rounded-xl p-6 shadow-sm">
+<h2 class="font-bold flex items-center gap-2 mb-6"><span class="material-symbols-outlined text-indigo-500">track_changes</span> 技能指标</h2>
+<div class="radar-container mb-6">
+<canvas id="skillRadar"></canvas>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-medium rounded-lg">深度学习框架</span>
+<span class="px-3 py-1 bg-slate-50 text-slate-600 text-xs font-medium rounded-lg">数据管道设计</span>
+<span class="px-3 py-1 bg-slate-50 text-slate-600 text-xs font-medium rounded-lg">SQL 与高级查询</span>
+<span class="px-3 py-1 bg-slate-50 text-slate-600 text-xs font-medium rounded-lg">数据可视化</span>
+<span class="px-3 py-1 bg-slate-50 text-slate-600 text-xs font-medium rounded-lg">Python 数据分析</span>
+<span class="px-3 py-1 bg-slate-50 text-slate-600 text-xs font-medium rounded-lg">统计建模</span>
+<span class="px-3 py-1 bg-slate-50 text-slate-600 text-xs font-medium rounded-lg">商业智能工具</span>
+</div>
+</section>
+<section class="bg-white rounded-xl p-6 shadow-sm">
+<h2 class="font-bold flex items-center gap-2 mb-6 text-indigo-600"><span class="material-symbols-outlined">person_search</span> 意向岗位</h2>
+<div class="flex flex-wrap gap-2 mb-8">
+<span class="px-4 py-2 border border-slate-100 rounded-lg text-sm font-medium">资源数据分析师</span>
+<span class="px-4 py-2 border border-slate-100 rounded-lg text-sm font-medium">资深数据科学家</span>
+<span class="px-4 py-2 border border-slate-100 rounded-lg text-sm font-medium">机器学习工程师</span>
+<span class="px-4 py-2 border border-slate-100 rounded-lg text-sm font-medium">商业智能专员</span>
+</div>
+<h2 class="font-bold flex items-center gap-2 mb-4 text-indigo-600"><span class="material-symbols-outlined">shuffle</span> 流动性偏好</h2>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+<span class="text-sm flex items-center gap-3 text-slate-600"><span class="material-symbols-outlined text-indigo-500">laptop_mac</span> 工作模式偏好</span>
+<span class="text-sm font-bold">混合办公</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+<span class="text-sm flex items-center gap-3 text-slate-600"><span class="material-symbols-outlined text-indigo-500">flight</span> 出差意愿</span>
+<span class="text-sm font-bold">有限接受</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+<span class="text-sm flex items-center gap-3 text-slate-600"><span class="material-symbols-outlined text-indigo-500">transfer_within_a_station</span> 外派意愿</span>
+<span class="text-sm font-bold">暂不考虑</span>
+</div>
+</div>
+</section>
+<section class="bg-white rounded-xl p-6 shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<h2 class="font-bold flex items-center gap-2 text-green-500"><span class="material-symbols-outlined">auto_awesome_mosaic</span> 兴趣爱好</h2>
+<span class="material-symbols-outlined text-slate-400 text-sm cursor-pointer">edit</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1.5 bg-green-50 text-green-600 border border-green-100 text-xs font-medium rounded-lg">跳舞</span>
+<span class="px-3 py-1.5 bg-green-50 text-green-600 border border-green-100 text-xs font-medium rounded-lg">徒步</span>
+<span class="px-3 py-1.5 bg-green-50 text-green-600 border border-green-100 text-xs font-medium rounded-lg">行为心理学</span>
+<span class="px-3 py-1.5 bg-green-50 text-green-600 border border-green-100 text-xs font-medium rounded-lg">桌面游戏与策略课题</span>
+<span class="px-3 py-1.5 bg-green-50 text-green-600 border border-green-100 text-xs font-medium rounded-lg">唱歌</span>
+<span class="px-3 py-1.5 bg-green-50 text-green-600 border border-green-100 text-xs font-medium rounded-lg flex items-center gap-1">烘焙 <span class="material-symbols-outlined text-[12px]">close</span></span>
+</div>
+</section>
+<section class="bg-white rounded-xl p-6 shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<h2 class="font-bold flex items-center gap-2"><span class="material-symbols-outlined">assignment</span> 绩效评价</h2>
+<span class="material-symbols-outlined text-slate-400 text-sm cursor-pointer">edit</span>
+</div>
+<div class="space-y-6">
+<div class="border-b border-slate-50 pb-6">
+<div class="flex justify-between items-start mb-2">
+<div>
+<div class="flex items-center gap-2 text-indigo-600 mb-1">
+<div class="w-2 h-2 rounded-full bg-indigo-600"></div>
+<span class="text-xs font-bold">2025-12-31</span>
+</div>
+<div class="flex text-amber-400 text-[14px]">
+<span class="material-symbols-outlined !text-[14px] fill-1">star</span>
+<span class="material-symbols-outlined !text-[14px] fill-1">star</span>
+<span class="material-symbols-outlined !text-[14px] fill-1">star</span>
+<span class="material-symbols-outlined !text-[14px] fill-1">star</span>
+<span class="material-symbols-outlined !text-[14px]">star</span>
+<span class="ml-1 text-slate-400 text-[11px] font-bold">4/5</span>
+</div>
+</div>
+<span class="text-sm font-bold">陈敬东</span>
+</div>
+<p class="text-xs text-slate-500 leading-relaxed">技术能力出色，能够承担起更复杂的数据分析任务。</p>
+</div>
+<div class="border-b border-slate-50 pb-6">
+<div class="flex justify-between items-start mb-2">
+<div>
+<div class="flex items-center gap-2 text-indigo-600 mb-1">
+<div class="w-2 h-2 rounded-full bg-indigo-600"></div>
+<span class="text-xs font-bold">2025-02-24</span>
+</div>
+<div class="flex text-amber-400 text-[14px]">
+<span class="material-symbols-outlined !text-[14px] fill-1">star</span>
+<span class="material-symbols-outlined !text-[14px] fill-1">star</span>
+<span class="material-symbols-outlined !text-[14px] fill-1">star</span>
+<span class="material-symbols-outlined !text-[14px]">star</span>
+<span class="material-symbols-outlined !text-[14px]">star</span>
+<span class="ml-1 text-slate-400 text-[11px] font-bold">3/5</span>
+</div>
+</div>
+<span class="text-sm font-bold">周明宇</span>
+</div>
+<p class="text-xs text-slate-500 leading-relaxed">能完成常规数据分析任务，本季度主动参与了数据质量优化项目，提出了 2 个可行的流程改进建议，后续可加强跨部门推动落地的能力。</p>
+</div>
+</div>
+</section>
+</div>
+<div class="col-span-4 space-y-4">
+<section class="bg-white rounded-xl p-6 shadow-sm">
+<div class="flex items-center gap-4 mb-8">
+<div class="w-12 h-12 bg-indigo-500 text-white rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined !text-2xl">psychology</span>
+</div>
+<div>
+<h2 class="font-bold text-lg">AI职业成长规划</h2>
+<p class="text-xs text-slate-500">个性化职业路径推荐</p>
+</div>
+</div>
+<div class="space-y-10 relative growth-path-line">
+<div class="relative pl-10">
+<div class="absolute left-[13px] top-1 w-3.5 h-3.5 rounded-full border-4 border-slate-300 bg-white"></div>
+<h3 class="text-sm font-bold mb-4">2025 Q3</h3>
+<div class="bg-slate-50 p-5 rounded-xl">
+<p class="text-[11px] text-slate-400 flex items-center gap-2 mb-2"><span class="material-symbols-outlined text-[14px]">near_me</span> 当前岗位</p>
+<p class="text-xl font-bold text-indigo-600 mb-6">数据分析师</p>
+<div class="flex justify-between text-xs">
+<span class="text-slate-500">任职时长</span>
+<span class="font-bold">5.3 年</span>
+</div>
+</div>
+</div>
+<div class="relative pl-10">
+<div class="absolute left-[13px] top-1 w-3.5 h-3.5 rounded-full bg-indigo-600"></div>
+<h3 class="text-sm font-bold mb-4">短期 (12 个月)</h3>
+<div class="bg-indigo-50/50 border border-indigo-100 p-5 rounded-xl relative">
+<span class="absolute right-4 top-5 material-symbols-outlined text-slate-400 text-sm cursor-pointer">edit</span>
+<div class="mb-4">
+<p class="text-[11px] text-slate-400 flex items-center gap-2 mb-2"><span class="material-symbols-outlined text-[14px]">near_me</span> 目标岗位</p>
+<p class="text-xl font-bold text-indigo-700">资源数据分析师</p>
+</div>
+<div class="space-y-4">
+<div>
+<p class="text-[11px] font-bold text-slate-600 mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">insights</span> 目标岗位发展路径</p>
+<ul class="text-xs text-slate-500 space-y-1.5 list-disc list-inside ml-1">
+<li>参与客户行为分析项目 (核心成员)</li>
+<li>提升核心业务理解能力</li>
+<li>提升硬技能与沟通能力</li>
+</ul>
+</div>
+<div class="pt-4 border-t border-indigo-100">
+<p class="text-[11px] font-bold text-slate-600 mb-3 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">data_thresholding</span> 培训重点</p>
+<div class="space-y-3">
+<div>
+<div class="flex justify-between text-[11px] mb-1.5">
+<span>机器学习应用能力</span>
+<span class="text-red-500 font-bold">优先级: 高</span>
+</div>
+<div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+<div class="bg-red-500 h-full" style="width: 80%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[11px] mb-1.5">
+<span>团队管理能力</span>
+<span class="text-amber-500 font-bold">优先级: 中</span>
+</div>
+<div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+<div class="bg-indigo-600 h-full" style="width: 45%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="relative pl-10">
+<div class="absolute left-[13px] top-1 w-3.5 h-3.5 rounded-full border-4 border-slate-300 bg-white"></div>
+<h3 class="text-sm font-bold mb-4">长期 (3-5 年)</h3>
+<div class="border border-slate-100 p-5 rounded-xl relative">
+<span class="absolute right-4 top-5 material-symbols-outlined text-slate-400 text-sm cursor-pointer">edit</span>
+<div class="mb-4">
+<p class="text-[11px] text-slate-400 flex items-center gap-2 mb-2"><span class="material-symbols-outlined text-[14px]">near_me</span> 目标岗位</p>
+<p class="text-xl font-bold text-slate-800">资深数据科学家</p>
+</div>
+<p class="text-[11px] font-bold text-slate-600 mb-3 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">data_thresholding</span> 培训重点</p>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-[11px]">
+<span class="text-slate-500">自然语言处理 (NLP) 进阶应用</span>
+<span class="text-amber-500 font-bold">优先级: 中</span>
+</div>
+<div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+<div class="bg-slate-300 h-full" style="width: 50%"></div>
+</div>
+<div class="flex justify-between items-center text-[11px]">
+<span class="text-slate-500">模型部署与工程化能力</span>
+<span class="text-green-500 font-bold">优先级: 低</span>
+</div>
+<div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+<div class="bg-indigo-400 h-full" style="width: 30%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="bg-white rounded-xl p-6 shadow-sm">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-10 h-10 bg-indigo-500 text-white rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined !text-xl">stars</span>
+</div>
+<div>
+<h2 class="font-bold">AI 推荐</h2>
+<p class="text-[10px] text-slate-500">潜在适配岗位推荐</p>
+</div>
+</div>
+<div class="space-y-4">
+<div class="p-5 border border-slate-100 rounded-2xl">
+<div class="flex items-center gap-5 mb-6">
+<div class="relative w-16 h-16 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90">
+<circle class="text-slate-100" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-indigo-600" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175" stroke-dashoffset="28" stroke-linecap="round" stroke-width="4"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="text-sm font-bold">84%</span>
+<span class="text-[8px] text-slate-400">匹配度</span>
+</div>
+</div>
+<div>
+<h4 class="font-bold text-sm mb-2">资深数据科学家</h4>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-medium rounded">Python</span>
+<span class="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-medium rounded">公众演讲</span>
+</div>
+</div>
+</div>
+<div>
+<p class="text-[10px] text-slate-400 mb-2 font-bold uppercase tracking-tight">技能差距</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 bg-red-50 text-red-600 text-[10px] rounded-md">深度学习框架 (大数据处理)</span>
+<span class="px-2 py-1 bg-red-50 text-red-600 text-[10px] rounded-md">数据管道设计</span>
+</div>
+</div>
+</div>
+<div class="p-5 border border-slate-100 rounded-2xl">
+<div class="flex items-center gap-5 mb-6">
+<div class="relative w-16 h-16 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90">
+<circle class="text-slate-100" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-indigo-400" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175" stroke-dashoffset="75" stroke-linecap="round" stroke-width="4"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="text-sm font-bold">57%</span>
+<span class="text-[8px] text-slate-400">匹配度</span>
+</div>
+</div>
+<div>
+<h4 class="font-bold text-sm mb-2">数据管道设计</h4>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-medium rounded">SQL 查询语言</span>
+<span class="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-medium rounded">适应性</span>
+</div>
+</div>
+</div>
+<div>
+<p class="text-[10px] text-slate-400 mb-2 font-bold uppercase tracking-tight">技能差距</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 bg-red-50 text-red-600 text-[10px] rounded-md">信息图表设计</span>
+<span class="px-2 py-1 bg-red-50 text-red-600 text-[10px] rounded-md">主流 BI 工具熟练使用</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+<script>
+    const ctx = document.getElementById('skillRadar').getContext('2d');
+    new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: ['韧性', '逻辑', '专业能力', '英语口语', '价值观', '野心'],
+            datasets: [{
+                label: '员工状态',
+                data: [85, 88, 75, 92, 85, 78],
+                backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                borderColor: 'rgba(99, 102, 241, 0.7)',
+                borderWidth: 2,
+                pointBackgroundColor: '#6366f1',
+                pointBorderColor: '#fff',
+                pointRadius: 3
+            }, {
+                label: '行业平均水平',
+                data: [65, 72, 80, 75, 68, 85],
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                borderColor: 'rgba(245, 158, 11, 0.5)',
+                borderWidth: 1.5,
+                borderDash: [4, 4],
+                pointRadius: 0
+            }, {
+                label: '参与者平均线',
+                data: [55, 65, 70, 68, 62, 75],
+                backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                borderColor: 'rgba(99, 102, 241, 0.3)',
+                borderWidth: 1.5,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            scales: {
+                r: {
+                    angleLines: { color: '#f1f5f9' },
+                    grid: { color: '#f1f5f9' },
+                    pointLabels: {
+                        font: { size: 11, weight: '500' },
+                        color: '#64748b'
+                    },
+                    ticks: { display: false, max: 100, min: 0 }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 8,
+                        boxHeight: 8,
+                        padding: 20,
+                        font: { size: 10 }
+                    }
+                }
+            },
+            maintainAspectRatio: false
+        }
+    });
+</script>
+
+</body></html>

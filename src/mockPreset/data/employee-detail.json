@@ -1,0 +1,241 @@
+{
+  "code": 0,
+  "data": {
+    "id": "815414538789720064",
+    "name": "潘杰",
+    "nameEn": null,
+    "gender": "M",
+    "marital": "Y",
+    "description": "曾在零售咨询公司任方案经理具备门店运营优化经验",
+    "birthday": "1992-04-06T00:00:00.000Z",
+    "email": "j.pan@example.com",
+    "personalEmail": null,
+    "phone": "13800001028",
+    "emergencyContact": null,
+    "emergencyPhone": null,
+    "city": "上海",
+    "address": null,
+    "major": "统计学",
+    "collegeType": "2",
+    "college": "华东师范大学",
+    "degree": 50,
+    "recruit": "统招",
+    "status": "ACTIVE",
+    "hireDate": "2021-11-29T00:00:00.000Z",
+    "terminationDate": null,
+    "terminationReason": null,
+    "idType": null,
+    "idNumber": null,
+    "nationality": null,
+    "ethnicity": null,
+    "politicalStatus": null,
+    "resumes": [],
+    "options": {
+      "position": "815425082171080705",
+      "start_work_date": "2015-07-01"
+    },
+    "createdAt": "2026-02-27T08:56:34.890Z",
+    "updatedAt": "2026-02-28T05:22:22.382Z",
+    "deletedAt": null,
+    "currentResumeId": null,
+    "tenantUserId": null,
+    "tenantId": "279501918814864384",
+    "tenantOrgId": null,
+    "profile": {
+      "id": "815414986187743235",
+      "advantage": [
+        {
+          "name": "数据驱动方案",
+          "description": "他擅长把零售数据洞察转成可落地运营动作，不只是给出分析结论而是明确执行路径。客户沟通中其方案通常兼顾可行性和收益逻辑，推进效率较高。"
+        },
+        {
+          "name": "内容表达",
+          "description": "他的汇报结构清楚且重点聚焦，能让客户和内部团队快速形成共识并进入执行。复杂问题在其表达下会被拆成可讨论模块，降低沟通成本。"
+        }
+      ],
+      "promotionHistory": [
+        {
+          "time": "2021-11",
+          "occupation": "行业解决方案经理（G8）"
+        },
+        {
+          "time": "2023-08",
+          "occupation": "方案组负责人（G8）"
+        },
+        {
+          "time": "2025-02",
+          "occupation": "行业解决方案经理（G8）"
+        }
+      ],
+      "skills": {
+        "cert_mapped": ["执行数据分析", "数据可视化软件应用"],
+        "work_related": ["制定商业计划", "管理利益相关方关系", "向受众展示观点", "解决问题"],
+        "interest_strength": ["photography", "创造性思考", "创造性表达"]
+      },
+      "aiInterviewReport": [
+        {
+          "score": "85",
+          "dimension": "适应能力"
+        },
+        {
+          "score": "84",
+          "dimension": "学习能力"
+        },
+        {
+          "score": "84",
+          "dimension": "沟通能力"
+        },
+        {
+          "score": "86",
+          "dimension": "积极主动性"
+        },
+        {
+          "score": "84",
+          "dimension": "团队合作"
+        },
+        {
+          "score": "83",
+          "dimension": "韧性"
+        }
+      ],
+      "intentionPosition": ["行业解决方案总监", "数据分析经理"],
+      "workPreference": {
+        "work_mode_preference": "Hybrid Work",
+        "relocation_willingness": "Not Open",
+        "business_travel_willingness": "Open"
+      },
+      "options": {
+        "hobbies": ["摄影", "观展", "徒步"],
+        "certificates_licenses": ["数据分析师认证"]
+      },
+      "createdAt": "2026-02-27T08:56:34.890Z",
+      "updatedAt": "2026-02-28T03:20:40.055Z",
+      "deletedAt": null,
+      "employeeId": "815414538789720064",
+      "tenantId": "279501918814864384"
+    },
+    "performances": [
+      {
+        "id": "815422735982276608",
+        "evaluatorId": null,
+        "date": "2021-12-01T00:00:00.000Z",
+        "score": "4",
+        "evaluatorName": "魏岚",
+        "comment": "方案能力突出",
+        "createdAt": "2026-02-27T08:56:34.890Z",
+        "updatedAt": "2026-02-28T03:18:50.057Z",
+        "deletedAt": null,
+        "employeeId": "815414538789720064",
+        "tenantId": "279501918814864384"
+      },
+      {
+        "id": "815422735982276609",
+        "evaluatorId": null,
+        "date": "2022-12-01T00:00:00.000Z",
+        "score": "4",
+        "evaluatorName": "魏岚",
+        "comment": "门店运营模型贡献明显",
+        "createdAt": "2026-02-27T08:56:34.890Z",
+        "updatedAt": "2026-02-28T03:18:50.057Z",
+        "deletedAt": null,
+        "employeeId": "815414538789720064",
+        "tenantId": "279501918814864384"
+      },
+      {
+        "id": "815422735982276610",
+        "evaluatorId": null,
+        "date": "2023-12-01T00:00:00.000Z",
+        "score": "4",
+        "evaluatorName": "魏岚",
+        "comment": "组长阶段带教效果好",
+        "createdAt": "2026-02-27T08:56:34.890Z",
+        "updatedAt": "2026-02-28T03:18:50.057Z",
+        "deletedAt": null,
+        "employeeId": "815414538789720064",
+        "tenantId": "279501918814864384"
+      },
+      {
+        "id": "815422735982276611",
+        "evaluatorId": null,
+        "date": "2024-12-01T00:00:00.000Z",
+        "score": "3",
+        "evaluatorName": "魏岚",
+        "comment": "跨项目投入分散",
+        "createdAt": "2026-02-27T08:56:34.890Z",
+        "updatedAt": "2026-02-28T03:18:50.057Z",
+        "deletedAt": null,
+        "employeeId": "815414538789720064",
+        "tenantId": "279501918814864384"
+      },
+      {
+        "id": "815422735982276612",
+        "evaluatorId": null,
+        "date": "2025-12-01T00:00:00.000Z",
+        "score": "4",
+        "evaluatorName": "魏岚",
+        "comment": "岗位回归后表现稳定",
+        "createdAt": "2026-02-27T08:56:34.890Z",
+        "updatedAt": "2026-02-28T03:18:50.057Z",
+        "deletedAt": null,
+        "employeeId": "815414538789720064",
+        "tenantId": "279501918814864384"
+      }
+    ],
+    "aiSuggest": {
+      "id": "816133175691460609",
+      "shortTerm": {
+        "skill_gap": [
+          {
+            "level": "medium",
+            "skill": "组织领导"
+          },
+          {
+            "level": "medium",
+            "skill": "预算管理"
+          },
+          {
+            "level": "low",
+            "skill": "谈判协商"
+          }
+        ],
+        "training_focus": ["经营分析", "组织管理", "关键客户经营"],
+        "target_position": "事业部总经理（制造/零售/医疗/能源）",
+        "development_points": ["承担营收与利润目标并建立经营节奏", "打造核心人才梯队与激励机制", "构建关键客户与交付协同体系"]
+      },
+      "longTerm": {
+        "skill_gap": [
+          {
+            "level": "high",
+            "skill": "战略规划"
+          },
+          {
+            "level": "high",
+            "skill": "商业战略概念"
+          },
+          {
+            "level": "medium",
+            "skill": "批判性思维"
+          },
+          {
+            "level": "low",
+            "skill": "事实陈述"
+          }
+        ],
+        "training_focus": ["战略规划", "经营洞察", "高层沟通"],
+        "target_position": "战略总监",
+        "development_points": ["从业务问题抽象战略议题并形成路线图", "推动跨部门战略解码与协同执行", "建立战略复盘与调整机制"]
+      },
+      "matchPosition": {
+        "skill_gap": ["系统思维", "machine learning"],
+        "match_rate": 0.6,
+        "skill_match": ["制定商业计划", "管理利益相关方关系", "向受众展示观点"],
+        "target_position": "行业AI解决方案总监*"
+      },
+      "createdAt": "2026-03-02T01:53:59.643Z",
+      "updatedAt": "2026-03-02T02:21:52.100Z",
+      "deletedAt": null,
+      "tenantId": "279501918814864384",
+      "employeeId": "815414538789720064"
+    }
+  }
+}
