@@ -16,9 +16,9 @@
 - _EnumLoader(@components/EnumLoader)
 
 ```jsx
-const {default:EnumLoader} = _EnumLoader;
-const BaseExample = ()=>{
-    return <EnumLoader />;
+const { default: EnumLoader } = _EnumLoader;
+const BaseExample = () => {
+  return <EnumLoader />;
 };
 
 render(<BaseExample />);

@@ -42,10 +42,8 @@ const ProfileCardExample = createWithRemoteLoader({
 
   return (
     <div style={{ maxWidth: 400 }}>
-      <Form onSubmit={(data) => console.log(data)}>
-        <ProfileCard
-          avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuC_AorCAIKZoI2DcahfuT4hT9GDUUaBpTlWUJr3Odohda9NuDi2rGCxWiHwow-OsNiPPrLtCIrMVU4Qgmrdt9H7-60ACubvKLb5EdJ8va-qaAPLMj_uaNUQ1Yolk_J-nfhIheltcXrRHkspotSFm3X6xjh9wKyM_NQYE_P3ACK6aNkJsUEoBca-5ursPSnyHnwZmAxZGHS2FUvH8E1piSMezqWm6H1XxWyU2Zm_G83zLtokX2mz2IOXE-TMwR6YKhDEbySePufNnvrE"
-        />
+      <Form onSubmit={data => console.log(data)}>
+        <ProfileCard avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuC_AorCAIKZoI2DcahfuT4hT9GDUUaBpTlWUJr3Odohda9NuDi2rGCxWiHwow-OsNiPPrLtCIrMVU4Qgmrdt9H7-60ACubvKLb5EdJ8va-qaAPLMj_uaNUQ1Yolk_J-nfhIheltcXrRHkspotSFm3X6xjh9wKyM_NQYE_P3ACK6aNkJsUEoBca-5ursPSnyHnwZmAxZGHS2FUvH8E1piSMezqWm6H1XxWyU2Zm_G83zLtokX2mz2IOXE-TMwR6YKhDEbySePufNnvrE" />
       </Form>
     </div>
   );
@@ -70,7 +68,7 @@ const TagInputCardExample = () => {
       title="意向岗位"
       items={items}
       onAdd={() => setItems([...items, ''])}
-      onRemove={(index) => setItems(items.filter((_, i) => i !== index))}
+      onRemove={index => setItems(items.filter((_, i) => i !== index))}
       onItemChange={(index, value) => {
         const newItems = [...items];
         newItems[index] = value;
@@ -100,7 +98,7 @@ const MobilityCardExample = createWithRemoteLoader({
   const { Form } = FormInfo;
 
   return (
-    <Form onSubmit={(data) => console.log(data)}>
+    <Form onSubmit={data => console.log(data)}>
       <MobilityCard />
     </Form>
   );
@@ -118,17 +116,13 @@ render(<MobilityCardExample />);
 const { CertificateCard } = _EmployeeInfoForm;
 
 const CertificateCardExample = () => {
-  const [certificates, setCertificates] = React.useState([
-    '大学英语六级',
-    '心理咨询师',
-    '认证数据分析师'
-  ]);
+  const [certificates, setCertificates] = React.useState(['大学英语六级', '心理咨询师', '认证数据分析师']);
 
   return (
     <CertificateCard
       items={certificates}
       onAdd={() => setCertificates([...certificates, ''])}
-      onRemove={(index) => setCertificates(certificates.filter((_, i) => i !== index))}
+      onRemove={index => setCertificates(certificates.filter((_, i) => i !== index))}
       onItemChange={(index, value) => {
         const newItems = [...certificates];
         newItems[index] = value;

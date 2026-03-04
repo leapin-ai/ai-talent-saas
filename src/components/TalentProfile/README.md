@@ -39,7 +39,8 @@ const HeaderCardExample = () => {
     englishName: 'Kianna Zhang',
     position: '数据分析师',
     department: '技术部',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB_xVIPjt20E4Cn8KBE8QKXyI3ftGSlPWUHOwKfGrfbIFb8AVSZezmI2Yt-uRucJSBYX5R639D36oZBIWfHb96oCYLzE9LxAvFQBk8LjbtWHABpF6gC-2P53N9y5B4ecuTmxeUO8WkjiBjh-xU7eZVpXlFMRL4ULA0XAp6T6USgqCdVQmXcLkmpNSzIX_T3huTHJ7XJvPPufq_mkwf_Tf6c9mGWg7TD4Df7PoIFSo-SDVVZySAX1bl3gVAnsPx3OY1szrQ-oO351sZc',
+    avatar:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuB_xVIPjt20E4Cn8KBE8QKXyI3ftGSlPWUHOwKfGrfbIFb8AVSZezmI2Yt-uRucJSBYX5R639D36oZBIWfHb96oCYLzE9LxAvFQBk8LjbtWHABpF6gC-2P53N9y5B4ecuTmxeUO8WkjiBjh-xU7eZVpXlFMRL4ULA0XAp6T6USgqCdVQmXcLkmpNSzIX_T3huTHJ7XJvPPufq_mkwf_Tf6c9mGWg7TD4Df7PoIFSo-SDVVZySAX1bl3gVAnsPx3OY1szrQ-oO351sZc',
     phone: '+65 8123 4567',
     email: 'kianna@gmail.com',
     linkedin: 'linkedin.com/in/kiannabaptista',
@@ -70,19 +71,13 @@ const AdvantagesCardExample = () => {
       icon: <span>💡</span>,
       title: '战略与规划',
       color: 'purple',
-      items: [
-        '擅长从业务目标拆解数据需求。',
-        '曾主导业务平台用户增长项目的分析与落地。'
-      ]
+      items: ['擅长从业务目标拆解数据需求。', '曾主导业务平台用户增长项目的分析与落地。']
     },
     {
       icon: <span>📊</span>,
       title: '数据洞察',
       color: 'blue',
-      items: [
-        '具备敏锐的业务嗅觉，从海量数据挖掘价值。',
-        '通过用户行为分析使留存率提升 8%。'
-      ]
+      items: ['具备敏锐的业务嗅觉，从海量数据挖掘价值。', '通过用户行为分析使留存率提升 8%。']
     }
   ];
 
@@ -143,14 +138,7 @@ const LeftColumnExample = () => {
     { period: '2021-2024', position: '数据专员', department: '技术部', active: false }
   ];
 
-  return (
-    <LeftColumn
-      profileData={profileData}
-      advantages={advantages}
-      certificates={certificates}
-      promotionHistory={promotionHistory}
-    />
-  );
+  return <LeftColumn profileData={profileData} advantages={advantages} certificates={certificates} promotionHistory={promotionHistory} />;
 };
 
 render(<LeftColumnExample />);
@@ -181,15 +169,7 @@ const MiddleColumnExample = () => {
     }
   ];
 
-  return (
-    <MiddleColumn
-      skillTags={skillTags}
-      targetPositions={targetPositions}
-      mobilityPreferences={mobilityPreferences}
-      interests={interests}
-      performanceReviews={performanceReviews}
-    />
-  );
+  return <MiddleColumn skillTags={skillTags} targetPositions={targetPositions} mobilityPreferences={mobilityPreferences} interests={interests} performanceReviews={performanceReviews} />;
 };
 
 render(<MiddleColumnExample />);
@@ -216,9 +196,7 @@ const RightColumnExample = () => {
       position: '资源数据分析师',
       isCurrent: false,
       paths: ['参与客户行为分析项目'],
-      trainings: [
-        { name: '机器学习应用能力', priority: 'high', progress: 80 }
-      ]
+      trainings: [{ name: '机器学习应用能力', priority: 'high', progress: 80 }]
     }
   ];
 
@@ -231,12 +209,7 @@ const RightColumnExample = () => {
     }
   ];
 
-  return (
-    <RightColumn
-      careerPath={careerPath}
-      aiRecommendations={aiRecommendations}
-    />
-  );
+  return <RightColumn careerPath={careerPath} aiRecommendations={aiRecommendations} />;
 };
 
 render(<RightColumnExample />);
