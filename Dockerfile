@@ -1,5 +1,7 @@
 FROM node:20
 
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 COPY ./package.json /app_build/
 
 COPY ./server/package.json /node-app/
