@@ -1,10 +1,21 @@
-const getColumns = ({ onDetail, formatMessage }) => {
+const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }) => {
   return [
     {
       name: 'name',
       title: formatMessage({ id: 'employee.name' }),
       onClick: onDetail,
       type: 'mainInfo'
+    },
+    {
+      name: 'position',
+      title: formatMessage({ id: 'employee.position' }),
+      type: 'mainInfo',
+      onClick: onPositionDetail,
+      valueOf: (item, { data }) => {
+        const position = item.options && data.positionEnums.find(target => target.value === item.options.position);
+
+        return position?.description;
+      }
     },
     {
       name: 'status',
@@ -54,7 +65,9 @@ const getColumns = ({ onDetail, formatMessage }) => {
     {
       name: 'city',
       title: formatMessage({ id: 'employee.city' }),
-      type: 'text'
+      valueOf: item => {
+        return item.city && addressRender(item.city);
+      }
     },
     {
       name: 'hireDate',

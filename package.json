@@ -101,6 +101,7 @@
     "@kne/system-layout": "^0.2.0-alpha.14",
     "@kne/token-storage": "^1.0.0",
     "@kne/use-ref-callback": "^0.1.2",
+    "@kne/use-resize": "^0.1.1",
     "dayjs": "^1.11.19"
   }
 }

@@ -137,6 +137,7 @@ const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
                   },
                   (data, newData) => {
                     return Object.assign({}, newData, {
+                      positionEnums: [...data.positionEnums, ...newData.positionEnums],
                       pageData: data.pageData.concat(newData.pageData)
                     });
                   }

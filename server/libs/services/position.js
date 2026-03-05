@@ -130,7 +130,7 @@ module.exports = fp(async (fastify, options) => {
       }),
       offset: perPage * (currentPage - 1),
       limit: perPage,
-      order: [['createdAt', 'DESC']]
+      order: [['id', 'ASC']]
     });
 
     return {
