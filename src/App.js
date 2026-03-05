@@ -21,7 +21,7 @@ const App = createWithRemoteLoader({
           {
             path: 'account/*',
             title: 'Account',
-            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} systemName="LeapIn SaaS" />
+            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} systemName="LeapIn Talent SaaS" />
           },
           {
             path: 'admin/initAdmin',

@@ -43,7 +43,7 @@ const TalentProfile = createWithRemoteLoader({
           linkedin: '',
           location: data.city,
           languages: '',
-          serviceYears: data.options?.start_work_date ? Math.floor((new Date() - new Date(data.options.start_work_date)) / (365 * 24 * 60 * 60 * 1000)) : 0,
+          serviceYears: data.hireDate ? Math.floor((new Date() - new Date(data.hireDate)) / (365 * 24 * 60 * 60 * 1000)) : 0,
           totalWorkYears: data.options?.start_work_date ? Math.floor((new Date() - new Date(data.options.start_work_date)) / (365 * 24 * 60 * 60 * 1000)) : 0,
           isOnline: data.status === 'ACTIVE'
         };

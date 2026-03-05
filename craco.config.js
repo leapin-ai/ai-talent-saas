@@ -11,15 +11,6 @@ module.exports = {
             Object.assign(definePlugin.definitions["process.env"], {
                 DEFAULT_VERSION: `"${process.env.npm_package_version}"`
             });
-            // 优化构建内存使用
-            webpackConfig.optimization = {
-                ...webpackConfig.optimization,
-                splitChunks: {
-                    ...webpackConfig.optimization?.splitChunks,
-                    chunks: 'all',
-                    maxSize: 244 * 1024, // 244KB
-                }
-            };
             return webpackConfig;
         }
     }, plugins: [{

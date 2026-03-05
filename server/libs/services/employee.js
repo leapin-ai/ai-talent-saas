@@ -204,15 +204,6 @@ module.exports = fp(async (fastify, options) => {
       }
     });
 
-    /*const { count, rows: employeeList } = await models.employee.findAndCountAll({
-      include: [models.profile],
-      where: {
-        tenantId
-      },
-      offset: props.perPage * (props.currentPage - 1),
-      limit: props.perPage
-    });*/
-
     const positionEnums =
       employeeList.length > 0
         ? await services.position.enums(authenticatePayload, {
@@ -220,8 +211,10 @@ module.exports = fp(async (fastify, options) => {
           })
         : [];
 
+    const employeeMap = new Map(employeeList.map(item => [item.id, item]));
+
     return {
-      pageData: employeeList,
+      pageData: resData.pageData.map(item => employeeMap.get(item.id)).filter(item => !!item),
       positionEnums,
       totalCount: resData.totalCount
     };
