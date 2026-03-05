@@ -58,7 +58,9 @@ const createServer = () => {
         },
         modelsGlobOptions: {
           syncOptions: {}
-        }
+        },
+        getUserModel: options.getUserModel,
+        getTenantModels: options.getTenantModels
       });
     })
   );
@@ -103,16 +105,15 @@ const createServer = () => {
         name: options.name,
         modules: [
           ['controllers', path.resolve(__dirname, './libs/controllers')],
-          [
-            'models',
-            await fastify.sequelize.addModels(path.resolve(__dirname, './libs/models'), {
-              getUserModel: options.getUserModel,
-              getTenantModels: options.getTenantModels
-            })
-          ],
+          ['models', await fastify.sequelize.addModels(path.resolve(__dirname, './libs/models'))],
           ['services', path.resolve(__dirname, './libs/services')]
         ]
       });
+    })
+  );
+
+  fastify.register(
+    require('fastify-plugin')(async fastify => {
       await fastify.sequelize.sync();
     })
   );
