@@ -48,7 +48,7 @@ const Header = createWithRemoteLoader({
                 onSearch={value => {
                   onSearchChange(value);
                   if (value) {
-                    appendHistory({ value, label: value });
+                    //appendHistory({ value, label: value });
                     onSearch(value);
                   }
                 }}
