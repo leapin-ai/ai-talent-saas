@@ -60,7 +60,7 @@ module.exports = fp(async (fastify, options) => {
     if (
       (await models.position.count({
         where: {
-          name: data.name,
+          name,
           tenantId,
           id: { [Op.not]: position.id }
         }

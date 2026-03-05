@@ -1,6 +1,10 @@
 module.exports = ({ DataTypes, options }) => {
   return {
     model: {
+      avatar: {
+        type: DataTypes.STRING,
+        comment: '头像'
+      },
       name: {
         type: DataTypes.STRING,
         comment: '姓名'
