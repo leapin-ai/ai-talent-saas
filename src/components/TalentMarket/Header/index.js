@@ -40,13 +40,20 @@ const Header = createWithRemoteLoader({
                 placeholder="按技能、职位或员工姓名搜索..."
                 prefix={<MdOutlineSearch />}
                 suffix={
-                  <Button type="link" icon={<FaFilter />} onClick={onFilterToggle}>
+                  <Button
+                    type="link"
+                    icon={<FaFilter />}
+                    onClick={e => {
+                      e.stopPropagation();
+                      onFilterToggle();
+                    }}
+                  >
                     筛选
                   </Button>
                 }
                 onFocus={openHistory}
-                onBlur={e => {
-                  e.target.value && e.target.value !== searchValue && appendHistory({ value: searchValue, label: searchValue });
+                onBlur={() => {
+                  searchValue && setTimeout(() => appendHistory({ value: searchValue, label: searchValue }), 1000);
                 }}
                 value={searchValue}
                 onSearch={value => {
