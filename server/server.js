@@ -52,6 +52,7 @@ const createServer = () => {
         db: {
           dialect: fastify.config.DB_DIALECT,
           host: fastify.config.DB_HOST,
+          port: fastify.config.DB_PORT,
           database: fastify.config.DB_DATABASE,
           username: fastify.config.DB_USERNAME,
           password: fastify.config.DB_PASSWORD
