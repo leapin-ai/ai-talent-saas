@@ -1,8 +1,11 @@
 import React from 'react';
-import ReactECharts from 'echarts-for-react';
+import { createWithRemoteLoader } from '@kne/remote-loader';
 import style from '../style.module.scss';
 
-const SkillRadarChart = ({ data }) => {
+const SkillRadarChart = createWithRemoteLoader({
+  modules: ['components-thirdparty:Echart']
+})(({ remoteModules, data }) => {
+  const [Echart] = remoteModules;
   const option = {
     radar: {
       indicator: data.employee.map(item => {
@@ -80,12 +83,11 @@ const SkillRadarChart = ({ data }) => {
       itemGap: 20
     }
   };
-
   return (
     <div className={style['radar-chart']}>
-      <ReactECharts option={option} style={{ height: '100%', width: '100%' }} />
+      <Echart option={option} style={{ height: '100%', width: '100%' }} />
     </div>
   );
-};
+});
 
 export default SkillRadarChart;

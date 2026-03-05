@@ -1,0 +1,69 @@
+<!-- subject -->
+邀请加入租户
+<!-- html -->
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>邀请加入租户</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            font-family: Arial, sans-serif;
+        }
+
+        .header {
+            background: <%=themeColor%>;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 25px;
+            background: #f9f9f9;
+        }
+
+        .code {
+            font-size: 28px;
+            letter-spacing: 5px;
+            background: #fff;
+            padding: 15px;
+            text-align: center;
+            margin: 20px 0;
+            border: 1px dashed<%=themeColor%>;
+            color: <%=themeColor%>;
+        }
+
+        .footer {
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>邀请加入租户</h1>
+    </div>
+    <div class="content">
+        <p>尊敬的<%= username %>，您好！</p>
+        <p>【<%= companyName || tenantName %>】邀请您加入租户，请点击下面按钮或复制链接完成加入：</p>
+        <div class="link">
+            <a href="<%= inviteUrl %>" target="_blank" style="color: <%= themeColor %>; text-decoration: underline;">点击加入租户</a>
+        </div>
+        <p>如果无法点击链接，请将以下地址复制到浏览器打开：</p>
+        <div class="link" style="color: <%= themeColor %>; text-decoration: underline;"><%= inviteUrl %></div>
+
+        <p>如果已有系统账号，请登录后完成租户认证，如果没有系统账号，请先注册系统账号后完成租户认证。</p>
+
+        <p>如有任何问题，请联系管理员。</p>
+    </div>
+    <div class="footer">
+        <p>© 2025 LeinpIn. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>

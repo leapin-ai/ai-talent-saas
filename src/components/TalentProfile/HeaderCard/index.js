@@ -6,6 +6,7 @@ import { PersonalCard } from '@kne/react-box';
 import { IoMdLink } from 'react-icons/io';
 import dayjs from 'dayjs';
 import '@kne/react-box/dist/index.css';
+import style from '../style.module.scss';
 
 const HeaderCard = createWithRemoteLoader({
   modules: ['components-core:Image.Avatar', 'components-core:Enum']
@@ -15,7 +16,11 @@ const HeaderCard = createWithRemoteLoader({
   return (
     <PersonalCard
       mode={mobile ? 'vertical' : 'horizontal'}
-      avatar={props => <Avatar {...props} id={profileData.avatar} size={64} />}
+      avatar={props => (
+        <div className={style['header-avatar']}>
+          <Avatar {...props} id={profileData.avatar} />
+        </div>
+      )}
       name={profileData.name}
       title={title || profileData.position}
       description={
