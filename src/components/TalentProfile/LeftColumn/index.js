@@ -117,7 +117,7 @@ const LeftColumn = createWithRemoteLoader({
                 title: '编辑晋升历史',
                 formProps: {
                   data: {
-                    promotionHistory: promotionHistory.map(item => ({
+                    promotionHistory: (promotionHistory || []).map(item => ({
                       time: item.period,
                       occupation: item.position,
                       level: item.level
@@ -125,7 +125,7 @@ const LeftColumn = createWithRemoteLoader({
                   },
                   onSubmit: formData => {
                     return saveProfile({
-                      promotionHistory: formData.promotionHistory.map(item =>
+                      promotionHistory: (formData.promotionHistory || []).map(item =>
                         Object.assign({}, item, {
                           time: dayjs(item.time).format('YYYY-MM')
                         })
