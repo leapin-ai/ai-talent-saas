@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import style from './style.module.scss';
 import Header from './Header';
 import TalentGrid from './TalentGrid';
@@ -62,7 +62,15 @@ const SearchList = ({ list, totalCount, onViewProfile, onLoadMore, noMore, isLoa
 };
 
 const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
-  const [searchValue, setSearchValue] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchValue = searchParams.get('query') || '';
+  const setSearchValue = value => {
+    setSearchParams(searchParams => {
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.set('query', value);
+      return newSearchParams;
+    });
+  };
   const [showFilter, setShowFilter] = useState(false);
   const currentPageRef = useRef(1);
   const { isComplete, isLoading, data, loadMore, refresh, requestParams } = useFetch(
@@ -73,6 +81,20 @@ const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
       }
     })
   );
+
+  const init = useRefCallback(() => {
+    if (searchValue) {
+      refresh({
+        data: {
+          query: searchValue
+        }
+      });
+    }
+  });
+
+  useEffect(() => {
+    init();
+  }, [init]);
 
   const navigate = useNavigate();
 
