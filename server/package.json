@@ -36,7 +36,7 @@
     "@kne/fastify-response-data-format": "^1.0.0",
     "@kne/fastify-sequelize": "^4.0.1",
     "@kne/fastify-task": "^1.0.7",
-    "@kne/fastify-tenant": "^1.0.0-alpha.12",
+    "@kne/fastify-tenant": "^1.0.0-alpha.13",
     "fastify": "^5.3.2",
     "fastify-cron": "^1.4.0",
     "fastify-plugin": "^5.0.1",
