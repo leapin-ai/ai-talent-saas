@@ -156,7 +156,18 @@ const BaseFormInner = createWithRemoteLoader({
               }}
             </Enum>,
             <DatePicker name="hireDate" label={formatMessage({ id: 'employee.hireDate' })} />,
-            <SuperSelect name="options.position" label="岗位" labelKey="name" valueKey="id" interceptor="object-output-value" single api={apis.positionList} />,
+            <SuperSelect
+              name="options.position"
+              label="岗位"
+              labelKey="name"
+              valueKey="id"
+              interceptor="object-output-value"
+              single
+              api={apis.positionList}
+              pagination={{
+                paramsType: 'params'
+              }}
+            />,
             <SuperSelectTree name="options.tenantOrgId" label="部门" api={apis.orgList} valueKey="id" labelKey="name" single interceptor="object-output-value" />
           ]}
         />
