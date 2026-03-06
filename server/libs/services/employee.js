@@ -136,8 +136,13 @@ module.exports = fp(async (fastify, options) => {
       ].filter(item => !!item)
     });
 
+    const orgEnums = await fastify.tenant.services.org.enums(authenticatePayload, {
+      ids: [get(employee, 'options.tenantOrgId')].filter(item => !!item)
+    });
+
     employee.setDataValue('aiSuggest', aiSuggest);
     employee.setDataValue('positionEnums', positionEnums);
+    employee.setDataValue('orgEnums', orgEnums);
 
     return employee;
   };
@@ -223,7 +228,12 @@ module.exports = fp(async (fastify, options) => {
       ids: rows.map(item => get(item, 'options.position')).filter(item => !!item)
     });
 
+    const orgEnums = await fastify.tenant.services.org.enums(authenticatePayload, {
+      ids: rows.map(employee => get(employee, 'options.tenantOrgId')).filter(item => !!item)
+    });
+
     return {
+      orgEnums,
       positionEnums,
       pageData: rows,
       totalCount: count

@@ -16,7 +16,7 @@ const MobilityPreferenceFormInner = createWithRemoteLoader({
           options={[
             { label: '混合办公', value: 'Hybrid Work' },
             { label: '远程办公', value: 'Remote' },
-            { label: '办公室办公', value: 'On-site' }
+            { label: '现场办公', value: 'On-site' }
           ]}
           rule="REQ"
         />,
