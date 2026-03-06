@@ -40,11 +40,18 @@ const HeaderCard = createWithRemoteLoader({
             size="small"
             icon={<MdOutlineEdit />}
             onClick={() => {
+              const tenantOrg = originData.orgEnums.find(item => item.value === originData.options?.tenantOrgId);
+              const position = originData.positionEnums.find(item => item.value === originData.options?.position);
               formModal({
                 title: '编辑个人信息',
                 size: 'small',
                 formProps: {
-                  data: Object.assign({}, originData),
+                  data: Object.assign({}, originData, {
+                    options: {
+                      position: position ? { name: position.description, id: position.value } : null,
+                      tenantOrgId: tenantOrg ? { name: tenantOrg.description, id: tenantOrg.value } : null
+                    }
+                  }),
                   onSubmit: async formData => {
                     return saveEmployee(formData);
                   }

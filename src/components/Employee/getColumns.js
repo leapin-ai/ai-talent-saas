@@ -1,6 +1,12 @@
 const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }) => {
   return [
     {
+      name: 'avatar',
+      title: formatMessage({ id: 'employee.avatar' }),
+      type: 'avatar',
+      valueOf: (item, { name }) => Object.assign({}, { gender: item['gender'] || 'M' }, { id: item[name] })
+    },
+    {
       name: 'name',
       title: formatMessage({ id: 'employee.name' }),
       onClick: onDetail,
@@ -13,8 +19,15 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
       onClick: onPositionDetail,
       valueOf: (item, { data }) => {
         const position = item.options && data.positionEnums.find(target => target.value === item.options.position);
-
         return position?.description;
+      }
+    },
+    {
+      name: 'department',
+      title: formatMessage({ id: 'employee.department' }),
+      valueOf: (item, { data }) => {
+        const department = item.options && data.orgEnums.find(target => target.value === item.options.tenantOrgId);
+        return department?.description;
       }
     },
     {
