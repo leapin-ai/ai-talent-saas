@@ -54,7 +54,17 @@ const Employee = createWithRemoteLoader({
         options={{
           bizName: '员工档案',
           keywordFilterName: 'keyword',
-          keywordFilterLabel: '员工关键字'
+          keywordFilterLabel: '员工关键字',
+          saveData: (data, { fetchOptions }) => {
+            const tenantOrg = fetchOptions.data.orgEnums.find(item => item.value === data.options?.tenantOrgId);
+            const position = fetchOptions.data.positionEnums.find(item => item.value === data.options?.position);
+            return Object.assign({}, data, {
+              options: {
+                position: position ? { name: position.description, id: position.value } : null,
+                tenantOrgId: tenantOrg ? { name: tenantOrg.description, id: tenantOrg.value } : null
+              }
+            });
+          }
         }}
       />
     );

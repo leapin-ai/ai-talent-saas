@@ -103,7 +103,6 @@ const TalentProfile = createWithRemoteLoader({
 
         const positionIdMapping = new Map((data.positionEnums || []).map(item => [item.value, item.description]));
         const positionNameMapping = new Map((data.positionEnums || []).map(item => [item.description, item.value]));
-
         const profileData = {
           name: data.name,
           englishName: data.nameEn,
@@ -115,7 +114,7 @@ const TalentProfile = createWithRemoteLoader({
           birthday: data.birthday,
           gender: data.gender,
           marital: data.marital,
-          department: '',
+          department: data.options?.tenantOrgId ? data.orgEnums.find(item => item.value === data.options?.tenantOrgId)?.description : '',
           avatar: data.avatar,
           phone: data.phone,
           email: data.email,

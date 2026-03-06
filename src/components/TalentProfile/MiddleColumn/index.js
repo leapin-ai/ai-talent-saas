@@ -27,7 +27,7 @@ const MiddleColumn = createWithRemoteLoader({
     const translations = {
       'Hybrid Work': '混合办公',
       Remote: '远程办公',
-      'On-site': '办公室办公',
+      'On-site': '现场办公',
       Open: '接受',
       'Not Open': '暂不考虑',
       Limited: '有限接受'

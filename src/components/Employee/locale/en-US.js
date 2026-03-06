@@ -1,7 +1,9 @@
 const enUS = {
+  'employee.avatar': 'Avatar',
   'employee.name': 'Name',
   'employee.nameEn': 'Name (English)',
   'employee.position': 'Position',
+  'employee.department': 'Department',
   'employee.status': 'Status',
   'employee.gender': 'Gender',
   'employee.marital': 'Marital Status',
