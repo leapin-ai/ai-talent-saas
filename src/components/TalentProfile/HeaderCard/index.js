@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { isMobile } from '@kne/system-layout';
-import { Flex } from 'antd';
+import { Flex, Button } from 'antd';
 import useResize from '@kne/use-resize';
 import { PersonalCard } from '@kne/react-box';
 import { IoMdLink } from 'react-icons/io';
 import dayjs from 'dayjs';
 import '@kne/react-box/dist/index.css';
 import style from '../style.module.scss';
+import { MdOutlineEdit } from 'react-icons/md';
+import { EmployeeFormInner } from '@components/Employee';
 
 const HeaderCard = createWithRemoteLoader({
-  modules: ['components-core:Image.Avatar', 'components-core:Enum', 'components-core:Common@AddressEnum']
-})(({ remoteModules, title, profileData }) => {
-  const [Avatar, Enum, AddressEnum] = remoteModules;
+  modules: ['components-core:Image.Avatar', 'components-core:Enum', 'components-core:Common@AddressEnum', 'components-core:FormInfo@useFormModal']
+})(({ remoteModules, title, profileData, originData, saveEmployee, apis }) => {
+  const [Avatar, Enum, AddressEnum, useFormModal] = remoteModules;
   const [width, setWidth] = useState(window.innerWidth - 302);
+  const formModal = useFormModal();
   const mobile = isMobile();
   const ref = useResize(el => {
     setWidth(el.clientWidth);
@@ -31,6 +34,26 @@ const HeaderCard = createWithRemoteLoader({
           </div>
         )}
         name={profileData.name}
+        badge={
+          <Button
+            type="text"
+            size="small"
+            icon={<MdOutlineEdit />}
+            onClick={() => {
+              formModal({
+                title: '编辑个人信息',
+                size: 'small',
+                formProps: {
+                  data: Object.assign({}, originData),
+                  onSubmit: async formData => {
+                    return saveEmployee(formData);
+                  }
+                },
+                children: <EmployeeFormInner apis={apis} action="edit" />
+              });
+            }}
+          />
+        }
         title={title || profileData.position}
         description={
           <Flex vertical>

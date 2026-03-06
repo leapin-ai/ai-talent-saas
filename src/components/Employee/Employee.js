@@ -23,7 +23,7 @@ const Employee = createWithRemoteLoader({
             addressRender: value => <AddressEnum name={value} />
           })
         }
-        getFormInner={({ apis }) => <BaseFormInner apis={apis} />}
+        getFormInner={({ apis, action }) => <BaseFormInner apis={apis} action={action} />}
         name="employee"
         filterList={[
           [

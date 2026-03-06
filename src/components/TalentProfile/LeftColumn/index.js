@@ -1,15 +1,23 @@
 import React from 'react';
-import { Card, Typography, Space, Timeline, Flex, Divider, Tag } from 'antd';
+import { createWithRemoteLoader } from '@kne/remote-loader';
+import { Card, Typography, Space, Timeline, Flex, Divider, Tag, Button } from 'antd';
 import { IoTimerOutline, IoTimeOutline } from 'react-icons/io5';
 import { FaAward } from 'react-icons/fa';
-import { MdOutlineDiamond } from 'react-icons/md';
+import { MdOutlineDiamond, MdOutlineEdit } from 'react-icons/md';
 import classnames from 'classnames';
 import style from '../style.module.scss';
 import AdvantagesCard from '../AdvantagesCard';
+import { CertificateFormInner, PromotionHistoryFormInner } from '../FormInner';
+import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
-const LeftColumn = ({ profileData, advantages, certificates, promotionHistory, gotoPosition }) => {
+const LeftColumn = createWithRemoteLoader({
+  modules: ['components-core:FormInfo@useFormModal']
+})(({ remoteModules, saveProfile, profileData, advantages, certificates, promotionHistory, gotoPosition }) => {
+  const [useFormModal] = remoteModules;
+  const formModal = useFormModal();
+
   const EmptyState = ({ text }) => (
     <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: '20px 0' }}>
       {text || '暂无数据'}
@@ -18,7 +26,7 @@ const LeftColumn = ({ profileData, advantages, certificates, promotionHistory, g
 
   return (
     <div className={style['left-column']}>
-      <AdvantagesCard advantages={advantages} />
+      <AdvantagesCard saveProfile={saveProfile} advantages={advantages} />
 
       <Card className={style['duration-card']}>
         <div>
@@ -58,6 +66,29 @@ const LeftColumn = ({ profileData, advantages, certificates, promotionHistory, g
             </span>
             证书与执照
           </Space>
+          <Button
+            type="text"
+            icon={<MdOutlineEdit />}
+            onClick={() => {
+              formModal({
+                title: '编辑证书与执照',
+                size: 'small',
+                formProps: {
+                  data: {
+                    certificates
+                  },
+                  onSubmit: formData => {
+                    return saveProfile({
+                      options: {
+                        certificates_licenses: formData.certificates
+                      }
+                    });
+                  }
+                },
+                children: <CertificateFormInner />
+              });
+            }}
+          />
         </Flex>
         {certificates.length > 0 ? (
           <Space wrap>
@@ -78,6 +109,34 @@ const LeftColumn = ({ profileData, advantages, certificates, promotionHistory, g
             </span>
             晋升历史
           </Space>
+          <Button
+            type="text"
+            icon={<MdOutlineEdit />}
+            onClick={() => {
+              formModal({
+                title: '编辑晋升历史',
+                formProps: {
+                  data: {
+                    promotionHistory: promotionHistory.map(item => ({
+                      time: item.period,
+                      occupation: item.position,
+                      level: item.level
+                    }))
+                  },
+                  onSubmit: formData => {
+                    return saveProfile({
+                      promotionHistory: formData.promotionHistory.map(item =>
+                        Object.assign({}, item, {
+                          time: dayjs(item.time).format('YYYY-MM')
+                        })
+                      )
+                    });
+                  }
+                },
+                children: <PromotionHistoryFormInner />
+              });
+            }}
+          />
         </Flex>
         {promotionHistory.length > 0 ? (
           <Timeline
@@ -90,6 +149,7 @@ const LeftColumn = ({ profileData, advantages, certificates, promotionHistory, g
                   <div>
                     <Typography.Text strong onClick={() => item.positionId && gotoPosition(item.positionId)}>
                       {item.position}
+                      {item.level ? `(${item.level})` : ''}
                     </Typography.Text>
                     <br />
                     <Text type="secondary">{item.department}</Text>
@@ -104,6 +164,6 @@ const LeftColumn = ({ profileData, advantages, certificates, promotionHistory, g
       </Card>
     </div>
   );
-};
+});
 
 export default LeftColumn;

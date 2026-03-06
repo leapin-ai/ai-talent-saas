@@ -7,7 +7,7 @@ import { Flex, Spin } from 'antd';
 const BaseFormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo', 'components-core:Enum', 'components-core:Global@usePreset']
 })(
-  withLocale(({ remoteModules, apis, ...props }) => {
+  withLocale(({ remoteModules, apis, action, ...props }) => {
     const [FormInfo, Enum, usePreset] = remoteModules;
     const { useFormContext } = FormInfo;
     const { Avatar, Input, Select, DatePicker, TextArea, RadioGroup, PhoneNumber, AddressSelect, Upload, SuperSelect, SuperSelectTree } = FormInfo.fields;
@@ -17,45 +17,47 @@ const BaseFormInner = createWithRemoteLoader({
     const [parseResume, setParseResume] = useState(false);
     return (
       <Flex vertical gap={10}>
-        <Spin tip="简历解析中..." spinning={parseResume}>
-          <FormInfo
-            title="从简历解析"
-            bordered
-            column={1}
-            list={[
-              <Upload
-                name="resumes"
-                label="上传简历"
-                maxLength={1}
-                int
-                getPermission={type => {
-                  return ['preview'].indexOf(type) > -1;
-                }}
-                interceptor="file-format"
-                onChange={async files => {
-                  setParseResume(true);
-                  const { data } = await ajax(
-                    Object.assign({}, apis.parseResume, {
-                      data: {
-                        id: files[0].id
-                      }
-                    })
-                  );
-                  if (data.code !== 0) {
-                    openApi.setField('resume', []);
-                  } else {
-                    openApi.setFormData(
-                      Object.assign({}, data.data, {
-                        resumes: files
+        {action !== 'edit' && (
+          <Spin tip="简历解析中..." spinning={parseResume}>
+            <FormInfo
+              title="从简历解析"
+              bordered
+              column={1}
+              list={[
+                <Upload
+                  name="resumes"
+                  label="上传简历"
+                  maxLength={1}
+                  int
+                  getPermission={type => {
+                    return ['preview'].indexOf(type) > -1;
+                  }}
+                  interceptor="file-format"
+                  onChange={async files => {
+                    setParseResume(true);
+                    const { data } = await ajax(
+                      Object.assign({}, apis.parseResume, {
+                        data: {
+                          id: files[0].id
+                        }
                       })
                     );
-                  }
-                  setParseResume(false);
-                }}
-              />
-            ]}
-          />
-        </Spin>
+                    if (data.code !== 0) {
+                      openApi.setField('resume', []);
+                    } else {
+                      openApi.setFormData(
+                        Object.assign({}, data.data, {
+                          resumes: files
+                        })
+                      );
+                    }
+                    setParseResume(false);
+                  }}
+                />
+              ]}
+            />
+          </Spin>
+        )}
         <FormInfo
           {...props}
           title="基本信息"

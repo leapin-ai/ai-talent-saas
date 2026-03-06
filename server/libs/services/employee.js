@@ -8,6 +8,72 @@ module.exports = fp(async (fastify, options) => {
   const tenantModels = fastify.tenant.models;
   const { Op } = fastify.sequelize.Sequelize;
 
+  // Performance 相关方法
+  const createPerformance = async (authenticatePayload, { employeeId, date, score, evaluatorName, comment }) => {
+    const { tenantId } = authenticatePayload;
+
+    const employee = await models.employee.findByPk(employeeId);
+    if (!employee || employee.tenantId !== tenantId) {
+      throw new Error('未找到员工');
+    }
+
+    if (!date || !score || !evaluatorName) {
+      throw new Error('评价日期、分数和评价人不能为空');
+    }
+
+    return await models.performance.create({
+      employeeId,
+      tenantId,
+      date,
+      score,
+      evaluatorName,
+      comment
+    });
+  };
+
+  const performanceList = async (authenticatePayload, { employeeId, perPage = 20, currentPage = 1 }) => {
+    const { tenantId } = authenticatePayload;
+
+    const employee = await models.employee.findByPk(employeeId);
+    if (!employee || employee.tenantId !== tenantId) {
+      throw new Error('未找到员工');
+    }
+
+    const { count, rows } = await models.performance.findAndCountAll({
+      where: { employeeId, tenantId },
+      offset: perPage * (currentPage - 1),
+      limit: perPage,
+      order: [['date', 'DESC']]
+    });
+
+    return {
+      pageData: rows,
+      totalCount: count
+    };
+  };
+
+  const performanceDetail = async (authenticatePayload, { id }) => {
+    const { tenantId } = authenticatePayload;
+    const performance = await models.performance.findByPk(id);
+
+    if (!performance || performance.tenantId !== tenantId) {
+      throw new Error('未找到绩效评价');
+    }
+
+    return performance;
+  };
+
+  const savePerformance = async (authenticatePayload, { id, ...data }) => {
+    const performance = await performanceDetail(authenticatePayload, { id });
+    await performance.update(omit(data, ['tenantId', 'employeeId']));
+    return performance;
+  };
+
+  const removePerformance = async (authenticatePayload, { id }) => {
+    const performance = await performanceDetail(authenticatePayload, { id });
+    await performance.destroy();
+  };
+
   const create = async (authenticatePayload, { name, phone, email, ...data }) => {
     const { tenantId } = authenticatePayload;
 
@@ -225,7 +291,35 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
+  const saveProfile = async (authenticatePayload, { id, ...profileData }) => {
+    const employee = await detail(authenticatePayload, { id });
+    const { tenantId } = authenticatePayload;
+
+    let profile = await models.profile.findOne({
+      where: { employeeId: employee.id, tenantId }
+    });
+
+    if (!profile) {
+      profile = await models.profile.create({
+        employeeId: employee.id,
+        tenantId,
+        ...profileData
+      });
+    } else {
+      await profile.update(profileData);
+    }
+
+    return profile;
+  };
+
   Object.assign(fastify[options.name].services, {
-    employee: { create, list, detail, save, remove, setStatus, recommend, search }
+    employee: { create, list, detail, save, remove, setStatus, recommend, search, saveProfile },
+    performance: {
+      create: createPerformance,
+      list: performanceList,
+      detail: performanceDetail,
+      save: savePerformance,
+      remove: removePerformance
+    }
   });
 });
