@@ -1,6 +1,7 @@
 export default {
   'employee.name': '姓名',
   'employee.nameEn': '姓名(英文)',
+  'employee.position': '岗位',
   'employee.status': '状态',
   'employee.gender': '性别',
   'employee.marital': '婚姻状态',

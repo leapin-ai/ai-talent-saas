@@ -150,10 +150,15 @@ module.exports = fp(async (fastify, options) => {
       where: Object.assign({}, whereQuery, { tenantId }),
       offset: perPage * (currentPage - 1),
       limit: perPage,
-      order: [['createdAt', 'DESC']]
+      order: [['id', 'ASC']]
+    });
+
+    const positionEnums = await services.position.enums(authenticatePayload, {
+      ids: rows.map(item => get(item, 'options.position')).filter(item => !!item)
     });
 
     return {
+      positionEnums,
       pageData: rows,
       totalCount: count
     };
