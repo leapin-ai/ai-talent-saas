@@ -5,10 +5,10 @@ import getColumns from './getColumns';
 import BaseFormInner from './EmployeeForm/BaseFormInner';
 
 const Employee = createWithRemoteLoader({
-  modules: ['components-admin:BizUnit', 'components-core:Filter', 'components-core:Global@usePreset']
+  modules: ['components-admin:BizUnit', 'components-core:Filter', 'components-core:Global@usePreset', 'components-core:Common@AddressEnum']
 })(
-  withLocale(({ remoteModules, baseUrl, apis, onDetail, ...props }) => {
-    const [BizUnit, Filter, usePreset] = remoteModules;
+  withLocale(({ remoteModules, baseUrl, apis, onDetail, onPositionDetail, ...props }) => {
+    const [BizUnit, Filter, usePreset, AddressEnum] = remoteModules;
     const { SuperSelectFilterItem } = Filter.fields;
     const { ajax } = usePreset();
     const { formatMessage } = useIntl();
@@ -19,7 +19,9 @@ const Employee = createWithRemoteLoader({
         getColumns={() =>
           getColumns({
             onDetail: colItem => onDetail(colItem),
-            formatMessage
+            onPositionDetail: colItem => onPositionDetail(colItem),
+            formatMessage,
+            addressRender: value => <AddressEnum name={value} />
           })
         }
         getFormInner={({ apis }) => <BaseFormInner apis={apis} />}

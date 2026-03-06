@@ -6,7 +6,7 @@ const runner = async (fastify, options, { task }) => {
     query,
     model_type: 'employees',
     project_name: 'talent_profile',
-    env: 'staging',
+    env: fastify.config.ENV,
     region: 'cn',
     method: 'fusion',
     page: currentPage,

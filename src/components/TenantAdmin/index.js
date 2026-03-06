@@ -56,6 +56,9 @@ const TenantAdmin = createWithRemoteLoader({
             onDetail: ({ colItem }) => {
               navigate(`${baseUrl}/profile/${colItem.id}`);
             },
+            onPositionDetail: ({ colItem }) => {
+              navigate(`${baseUrl}/position/${colItem.options?.position}`);
+            },
             children: ({ filter, titleExtra, tableOptions }) => {
               return (
                 <Page title="员工档案" extra={titleExtra}>

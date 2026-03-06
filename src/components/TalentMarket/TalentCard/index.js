@@ -29,7 +29,9 @@ const TalentCard = createWithRemoteLoader({
       <Flex vertical gap={16} flex={1} justify="space-between" style={{ height: '100%' }}>
         <Flex vertical gap={16} flex={1}>
           <Flex align="center" gap={12}>
-            <Avatar size={56} id={talent.avatar} />
+            <Flex flex="none">
+              <Avatar size={56} id={talent.avatar} />
+            </Flex>
             <div>
               <Title level={5} className={style['talent-name']}>
                 {talent.name}
@@ -44,7 +46,9 @@ const TalentCard = createWithRemoteLoader({
             <Text className={style['section-label']}>核心技能</Text>
             <Flex gap={4} wrap>
               {(talent.skills || []).slice(0, 3).map((skill, index) => (
-                <Tag key={index}>{skill}</Tag>
+                <Tag key={index} className={style['skill-tag']}>
+                  {skill}
+                </Tag>
               ))}
               {talent.skills?.length > 3 && <Tag className={style['more-tag']}>+{talent.skills.length - 3}</Tag>}
             </Flex>
