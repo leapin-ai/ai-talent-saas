@@ -29,7 +29,13 @@ const getColumns = ({ onDetail, formatMessage }) => {
     {
       name: 'description',
       title: formatMessage({ id: 'position.description' }),
-      type: 'description'
+      type: 'description',
+      valueOf: target => {
+        if (!target.description) {
+          return '-';
+        }
+        return target.description.replace(/<[^>]*>/g, '');
+      }
     },
     {
       name: 'publishAt',

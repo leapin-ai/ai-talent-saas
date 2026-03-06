@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
+import debounce from 'lodash/debounce';
 import { Button, Flex, Typography } from 'antd';
 import { FaFilter } from 'react-icons/fa';
 import { MdOutlineSearch } from 'react-icons/md';
@@ -8,10 +9,9 @@ import style from '../style.module.scss';
 const { Title, Paragraph } = Typography;
 
 const Header = createWithRemoteLoader({
-  modules: ['components-core:Global@useGlobalContext', 'components-core:LoadingButton', 'components-core:Global@usePreset', 'components-core:HistoryStore', 'components-core:Common@SearchInput']
+  modules: ['components-core:Global@useGlobalContext', 'components-core:LoadingButton', 'components-core:HistoryStore', 'components-core:Common@SearchInput']
 })(({ remoteModules, searchValue, onSearchChange, loading, onFilterToggle, onSearch, apis }) => {
-  const [useGlobalContext, LoadingButton, usePreset, HistoryStore, SearchInput] = remoteModules;
-  const { ajax } = usePreset();
+  const [useGlobalContext, LoadingButton, HistoryStore, SearchInput] = remoteModules;
   const { global } = useGlobalContext('userInfo');
   const { tenantUserInfo } = global;
   return (
@@ -27,6 +27,7 @@ const Header = createWithRemoteLoader({
         <HistoryStore
           className={style['search-input-wrapper']}
           onSelect={async value => {
+            console.log('---->', value);
             onSearchChange(value);
             await onSearch(value);
           }}
@@ -39,16 +40,25 @@ const Header = createWithRemoteLoader({
                 placeholder="按技能、职位或员工姓名搜索..."
                 prefix={<MdOutlineSearch />}
                 suffix={
-                  <Button type="link" icon={<FaFilter />} onClick={onFilterToggle}>
+                  <Button
+                    type="link"
+                    icon={<FaFilter />}
+                    onClick={e => {
+                      e.stopPropagation();
+                      onFilterToggle();
+                    }}
+                  >
                     筛选
                   </Button>
                 }
                 onFocus={openHistory}
+                onBlur={() => {
+                  searchValue && setTimeout(() => appendHistory({ value: searchValue, label: searchValue }), 1000);
+                }}
                 value={searchValue}
                 onSearch={value => {
                   onSearchChange(value);
                   if (value) {
-                    appendHistory({ value, label: value });
                     onSearch(value);
                   }
                 }}
@@ -56,7 +66,15 @@ const Header = createWithRemoteLoader({
             );
           }}
         </HistoryStore>
-        <LoadingButton type="primary" size="large" loading={loading} className={style['search-btn']} onClick={() => onSearch(searchValue)}>
+        <LoadingButton
+          type="primary"
+          size="large"
+          loading={loading}
+          className={style['search-btn']}
+          onClick={() => {
+            searchValue && onSearch(searchValue);
+          }}
+        >
           搜索
         </LoadingButton>
       </Flex>
