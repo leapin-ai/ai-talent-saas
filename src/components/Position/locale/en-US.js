@@ -1,4 +1,4 @@
-export default {
+const enUS = {
   'position.name': 'Position Name',
   'position.status': 'Status',
   'position.language': 'Language',
@@ -21,3 +21,5 @@ export default {
   'action.edit': 'Edit',
   'action.delete': 'Delete'
 };
+
+export default enUS;

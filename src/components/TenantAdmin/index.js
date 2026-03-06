@@ -40,7 +40,14 @@ const TenantAdmin = createWithRemoteLoader({
           title: '员工档案',
           element: (
             <Page title="员工档案" back>
-              <TalentProfile baseUrl={baseUrl} apis={apis.talentSaas.tenant.employee} />
+              <TalentProfile
+                baseUrl={baseUrl}
+                apis={Object.assign({}, apis.talentSaas.tenant.employee, {
+                  positionList: apis.talentSaas.tenant.position.list,
+                  parseResume: apis.talentSaas.tenant.resume.parseFileId,
+                  orgList: apis.tenant.orgList
+                })}
+              />
             </Page>
           )
         },

@@ -2,10 +2,8 @@ import AppChildrenRouter from '@kne/app-children-router';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 
 const Admin = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
-})(({ remoteModules, baseUrl, ...props }) => {
-  const [usePreset] = remoteModules;
-  const { apis } = usePreset();
+  modules: []
+})(({ baseUrl, ...props }) => {
   return (
     <AppChildrenRouter
       {...props}

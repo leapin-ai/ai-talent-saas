@@ -1,4 +1,4 @@
-export default {
+const enUS = {
   'employee.name': 'Name',
   'employee.nameEn': 'Name (English)',
   'employee.position': 'Position',
@@ -60,3 +60,5 @@ export default {
   'collegeType.6': 'Vocational',
   'collegeType.7': 'Training'
 };
+
+export default enUS;
