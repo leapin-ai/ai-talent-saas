@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import AppChildrenRouter from '@kne/app-children-router';
 import { Flex } from 'antd';
 import Layout from './Layout';
@@ -8,10 +9,11 @@ import TalentMarket from '@components/TalentMarket';
 import TalentProfile from '@components/TalentProfile';
 
 const TenantAdmin = createWithRemoteLoader({
-  modules: ['components-admin:Tenant@Setting', 'components-core:Global@usePreset', 'components-core:Table@TablePage', 'components-core:Filter']
+  modules: ['components-admin:Tenant@Setting', 'components-core:Global@usePreset', 'components-core:Table@TablePage', 'components-core:Filter', 'components-core:File@PrintButton']
 })(({ remoteModules, baseUrl }) => {
-  const [Setting, usePreset, TablePage, Filter] = remoteModules;
+  const [Setting, usePreset, TablePage, Filter, PrintButton] = remoteModules;
   const { apis } = usePreset();
+  const profileRef = useRef(null);
   const navigate = useNavigate();
   return (
     <AppChildrenRouter
@@ -39,15 +41,17 @@ const TenantAdmin = createWithRemoteLoader({
           path: 'profile/:id',
           title: '员工档案',
           element: (
-            <Page title="员工档案" back>
-              <TalentProfile
-                baseUrl={baseUrl}
-                apis={Object.assign({}, apis.talentSaas.tenant.employee, {
-                  positionList: apis.talentSaas.tenant.position.list,
-                  parseResume: apis.talentSaas.tenant.resume.parseFileId,
-                  orgList: apis.tenant.orgList
-                })}
-              />
+            <Page title="员工档案" back extra={<PrintButton contentRef={profileRef}>导出</PrintButton>}>
+              <div ref={profileRef}>
+                <TalentProfile
+                  baseUrl={baseUrl}
+                  apis={Object.assign({}, apis.talentSaas.tenant.employee, {
+                    positionList: apis.talentSaas.tenant.position.list,
+                    parseResume: apis.talentSaas.tenant.resume.parseFileId,
+                    orgList: apis.tenant.orgList
+                  })}
+                />
+              </div>
             </Page>
           )
         },

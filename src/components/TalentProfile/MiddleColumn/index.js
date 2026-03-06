@@ -297,15 +297,10 @@ const MiddleColumn = createWithRemoteLoader({
                       </Flex>
                     </div>
                     <Flex vertical align="flex-end">
-                      <Text
-                        strong
-                        className={classnames(style['reviewer-name'], {
-                          [style['active']]: index === 0
-                        })}
-                      >
+                      <Text strong className={classnames(style['reviewer-name'])}>
                         {review.reviewer}
                       </Text>
-                      <Flex align="center" gap={4}>
+                      <Flex align="center" gap={4} className={style['performance-actions']}>
                         <Button
                           type="text"
                           size="small"
