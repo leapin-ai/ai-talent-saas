@@ -1,4 +1,4 @@
-export default [
+const employeeStatus = [
   { description: '在职', value: 'ACTIVE' },
   { description: '离职', value: 'RESIGN' },
   { description: '停薪留职', value: 'STOP_SALARY' },
@@ -6,3 +6,5 @@ export default [
   { description: '实习', value: 'INTERN' },
   { description: '预入职', value: 'PRE_EMPLOYEE' }
 ];
+
+export default employeeStatus;

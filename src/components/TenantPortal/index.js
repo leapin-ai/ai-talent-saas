@@ -3,9 +3,8 @@ import AppChildrenRouter from '@kne/app-children-router';
 import Layout from './Layout';
 
 const TenantPortal = createWithRemoteLoader({
-  modules: ['components-core:Permissions']
-})(({ remoteModules, baseUrl }) => {
-  const [Permissions] = remoteModules;
+  modules: []
+})(({ baseUrl }) => {
   return (
     <AppChildrenRouter
       errorPage

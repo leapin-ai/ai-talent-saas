@@ -1,4 +1,4 @@
-export default {
+const zhCN = {
   'position.name': '岗位名称',
   'position.status': '状态',
   'position.language': '语言',
@@ -21,3 +21,5 @@ export default {
   'action.edit': '编辑',
   'action.delete': '删除'
 };
+
+export default zhCN;

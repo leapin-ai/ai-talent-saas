@@ -375,4 +375,206 @@ module.exports = fp(async (fastify, options) => {
       return {};
     }
   );
+
+  fastify.post(
+    `${options.prefix}/tenant/employee/save-profile`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '保存员工档案',
+        body: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              description: '员工ID'
+            },
+            advantage: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  description: { type: 'string' }
+                }
+              },
+              description: '优势列表'
+            },
+            promotionHistory: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  time: { type: 'string' },
+                  occupation: { type: 'string' }
+                }
+              },
+              description: '晋升历史'
+            },
+            skills: {
+              type: 'object',
+              description: '技能'
+            },
+            intentionPosition: {
+              type: 'array',
+              items: { type: 'string' },
+              description: '意向岗位'
+            },
+            workPreference: {
+              type: 'object',
+              properties: {
+                work_mode_preference: { type: 'string' },
+                relocation_willingness: { type: 'string' },
+                business_travel_willingness: { type: 'string' }
+              },
+              description: '工作偏好'
+            },
+            options: {
+              type: 'object',
+              properties: {
+                certificates_licenses: {
+                  type: 'array',
+                  items: { type: 'string' }
+                },
+                hobbies: {
+                  type: 'array',
+                  items: { type: 'string' }
+                }
+              },
+              description: '其他选项'
+            }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => {
+      return services.employee.saveProfile(request.tenantUserInfo, request.body);
+    }
+  );
+
+  // Performance APIs
+  fastify.get(
+    `${options.prefix}/tenant/performance/list`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '绩效评价列表',
+        query: {
+          type: 'object',
+          properties: {
+            employeeId: {
+              type: 'string'
+            },
+            perPage: {
+              type: 'number',
+              default: 20
+            },
+            currentPage: {
+              type: 'number',
+              default: 1
+            }
+          },
+          required: ['employeeId']
+        }
+      }
+    },
+    async request => {
+      return services.performance.list(request.tenantUserInfo, request.query);
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/performance/create`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '添加绩效评价',
+        body: {
+          type: 'object',
+          properties: {
+            employeeId: {
+              type: 'string'
+            },
+            date: {
+              type: 'string',
+              format: 'date-time'
+            },
+            score: {
+              type: 'number'
+            },
+            evaluatorName: {
+              type: 'string'
+            },
+            comment: {
+              type: 'string',
+              default: ''
+            }
+          },
+          required: ['employeeId', 'date', 'score', 'evaluatorName']
+        }
+      }
+    },
+    async request => {
+      return services.performance.create(request.tenantUserInfo, request.body);
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/performance/save`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '修改绩效评价',
+        body: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string'
+            },
+            date: {
+              type: 'string',
+              format: 'date-time'
+            },
+            score: {
+              type: 'number'
+            },
+            evaluatorName: {
+              type: 'string'
+            },
+            comment: {
+              type: 'string'
+            }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => {
+      return services.performance.save(request.tenantUserInfo, request.body);
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/performance/remove`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '删除绩效评价',
+        body: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string'
+            }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => {
+      await services.performance.remove(request.tenantUserInfo, request.body);
+      return {};
+    }
+  );
 });

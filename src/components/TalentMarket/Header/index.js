@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import debounce from 'lodash/debounce';
 import { Button, Flex, Typography } from 'antd';
 import { FaFilter } from 'react-icons/fa';
 import { MdOutlineSearch } from 'react-icons/md';

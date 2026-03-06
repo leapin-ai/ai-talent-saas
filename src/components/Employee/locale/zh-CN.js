@@ -1,4 +1,4 @@
-export default {
+const zhCN = {
   'employee.name': '姓名',
   'employee.nameEn': '姓名(英文)',
   'employee.position': '岗位',
@@ -60,3 +60,5 @@ export default {
   'collegeType.6': '职业教育',
   'collegeType.7': '培训机构'
 };
+
+export default zhCN;

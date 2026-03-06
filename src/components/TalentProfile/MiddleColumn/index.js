@@ -1,19 +1,22 @@
 import React from 'react';
-import { Card, Tag, Space, Flex, Typography, Rate, Timeline } from 'antd';
-import { FaExchangeAlt } from 'react-icons/fa';
+import { createWithRemoteLoader } from '@kne/remote-loader';
+import { Card, Tag, Space, Flex, Typography, Rate, Timeline, Button } from 'antd';
 import { LuWorkflow } from 'react-icons/lu';
-import { FaClipboardList, FaPlaneArrival } from 'react-icons/fa';
+import { FaClipboardList, FaPlaneArrival, FaExchangeAlt, FaHeadSideVirus, FaBriefcase } from 'react-icons/fa';
 import { PiFlowerLight } from 'react-icons/pi';
-import { FaHeadSideVirus } from 'react-icons/fa6';
-import { FaBriefcase } from 'react-icons/fa';
-import { MdPersonSearch } from 'react-icons/md';
+import { MdPersonSearch, MdOutlineEdit, MdAdd, MdOutlineDeleteOutline } from 'react-icons/md';
 import SkillRadarChart from '../SkillRadarChart';
 import style from '../style.module.scss';
 import classnames from 'classnames';
+import { TargetPositionFormInner, MobilityPreferenceFormInner, InterestFormInner, PerformanceReviewFormInner } from '../FormInner';
 
 const { Text, Paragraph } = Typography;
 
-const MiddleColumn = ({ skillTags, targetPositions, mobilityPreferences, interests, performanceReviews, skillRadarData, gotoPosition }) => {
+const MiddleColumn = createWithRemoteLoader({
+  modules: ['components-core:FormInfo@useFormModal', 'components-core:ConfirmButton']
+})(({ remoteModules, createPerformance, removePerformance, savePerformance, saveProfile, skillTags, targetPositions, mobilityPreferences, interests, performanceReviews, skillRadarData, gotoPosition }) => {
+  const [useFormModal, ConfirmButton] = remoteModules;
+  const formModal = useFormModal();
   const EmptyState = ({ text }) => (
     <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: '20px 0' }}>
       {text || '暂无数据'}
@@ -23,7 +26,7 @@ const MiddleColumn = ({ skillTags, targetPositions, mobilityPreferences, interes
   const translateMobilityValue = value => {
     const translations = {
       'Hybrid Work': '混合办公',
-      'Remote Work': '远程办公',
+      Remote: '远程办公',
       'On-site': '办公室办公',
       Open: '接受',
       'Not Open': '暂不考虑',
@@ -37,6 +40,20 @@ const MiddleColumn = ({ skillTags, targetPositions, mobilityPreferences, interes
     if (value === 'Limited') return 1;
     if (value === 'Not Open') return 2;
     return 0;
+  };
+
+  // 添加绩效评价
+  const handleAddPerformance = () => {
+    formModal({
+      title: '添加绩效评价',
+      size: 'small',
+      formProps: {
+        onSubmit: async formData => {
+          return createPerformance(formData);
+        }
+      },
+      children: <PerformanceReviewFormInner />
+    });
   };
 
   return (
@@ -74,6 +91,25 @@ const MiddleColumn = ({ skillTags, targetPositions, mobilityPreferences, interes
             </span>
             意向岗位
           </Space>
+          <Button
+            type="text"
+            icon={<MdOutlineEdit />}
+            onClick={() => {
+              formModal({
+                title: '编辑意向岗位',
+                size: 'small',
+                formProps: {
+                  data: {
+                    name: targetPositions.map(item => item.position)
+                  },
+                  onSubmit: formData => {
+                    return saveProfile({ intentionPosition: formData.name });
+                  }
+                },
+                children: <TargetPositionFormInner />
+              });
+            }}
+          />
         </Flex>
         {targetPositions.length > 0 ? (
           <Space wrap className={style['target-positions']}>
@@ -103,6 +139,29 @@ const MiddleColumn = ({ skillTags, targetPositions, mobilityPreferences, interes
             </span>
             流动性偏好
           </Space>
+          <Button
+            type="text"
+            icon={<MdOutlineEdit />}
+            onClick={() => {
+              formModal({
+                title: '编辑流动性偏好',
+                size: 'small',
+                formProps: {
+                  data: {
+                    workPreference: {
+                      work_mode_preference: mobilityPreferences[0],
+                      relocation_willingness: mobilityPreferences[1],
+                      business_travel_willingness: mobilityPreferences[2]
+                    }
+                  },
+                  onSubmit: formData => {
+                    return saveProfile({ workPreference: formData.workPreference });
+                  }
+                },
+                children: <MobilityPreferenceFormInner />
+              });
+            }}
+          />
         </Flex>
         {mobilityPreferences.length > 0 ? (
           <Space direction="vertical" className={style['mobility-list']}>
@@ -167,6 +226,29 @@ const MiddleColumn = ({ skillTags, targetPositions, mobilityPreferences, interes
             </span>
             兴趣爱好
           </Space>
+          <Button
+            type="text"
+            icon={<MdOutlineEdit />}
+            onClick={() => {
+              formModal({
+                title: '编辑兴趣爱好',
+                size: 'small',
+                formProps: {
+                  data: {
+                    name: interests
+                  },
+                  onSubmit: formData => {
+                    return saveProfile({
+                      options: {
+                        hobbies: formData.name
+                      }
+                    });
+                  }
+                },
+                children: <InterestFormInner />
+              });
+            }}
+          />
         </Flex>
         {interests.length > 0 ? (
           <Space wrap>
@@ -187,6 +269,7 @@ const MiddleColumn = ({ skillTags, targetPositions, mobilityPreferences, interes
             </span>
             绩效评价
           </Space>
+          <Button type="text" icon={<MdAdd />} onClick={handleAddPerformance} />
         </Flex>
         {performanceReviews.length > 0 ? (
           <Timeline
@@ -213,14 +296,51 @@ const MiddleColumn = ({ skillTags, targetPositions, mobilityPreferences, interes
                         </Text>
                       </Flex>
                     </div>
-                    <Text
-                      strong
-                      className={classnames(style['reviewer-name'], {
-                        [style['active']]: index === 0
-                      })}
-                    >
-                      {review.reviewer}
-                    </Text>
+                    <Flex vertical align="flex-end">
+                      <Text
+                        strong
+                        className={classnames(style['reviewer-name'], {
+                          [style['active']]: index === 0
+                        })}
+                      >
+                        {review.reviewer}
+                      </Text>
+                      <Flex align="center" gap={4}>
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<MdOutlineEdit />}
+                          onClick={() => {
+                            formModal({
+                              title: '编辑绩效评价',
+                              size: 'small',
+                              formProps: {
+                                data: {
+                                  date: review.date,
+                                  score: review.rating,
+                                  evaluatorName: review.reviewer,
+                                  comment: review.comment
+                                },
+                                onSubmit: formData => {
+                                  return savePerformance(Object.assign({}, formData, { id: review.id }));
+                                }
+                              },
+                              children: <PerformanceReviewFormInner />
+                            });
+                          }}
+                        />
+                        <ConfirmButton
+                          type="text"
+                          size="small"
+                          isDelete
+                          danger
+                          icon={<MdOutlineDeleteOutline />}
+                          onClick={() => {
+                            return removePerformance(review.id);
+                          }}
+                        />
+                      </Flex>
+                    </Flex>
                   </Flex>
                   <Paragraph className={style['review-comment']}>{review.comment}</Paragraph>
                 </div>
@@ -233,6 +353,6 @@ const MiddleColumn = ({ skillTags, targetPositions, mobilityPreferences, interes
       </Card>
     </div>
   );
-};
+});
 
 export default MiddleColumn;

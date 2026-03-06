@@ -78,6 +78,22 @@ const getApis = options => {
           remove: {
             url: `${prefix}/tenant/employee/remove`,
             method: 'POST'
+          },
+          saveProfile: {
+            url: `${prefix}/tenant/employee/save-profile`,
+            method: 'POST'
+          },
+          createPerformance: {
+            url: `${prefix}/tenant/performance/create`,
+            method: 'POST'
+          },
+          removePerformance: {
+            url: `${prefix}/tenant/performance/remove`,
+            method: 'POST'
+          },
+          savePerformance: {
+            url: `${prefix}/tenant/performance/save`,
+            method: 'POST'
           }
         },
         resume: {

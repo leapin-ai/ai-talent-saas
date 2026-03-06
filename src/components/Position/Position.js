@@ -5,12 +5,10 @@ import getColumns from './getColumns';
 import BaseFormInner from './PositionForm/BaseFormInner';
 
 const Position = createWithRemoteLoader({
-  modules: ['components-admin:BizUnit', 'components-core:Filter', 'components-core:Global@usePreset']
+  modules: ['components-admin:BizUnit']
 })(
   withLocale(({ remoteModules, baseUrl, apis, onDetail, ...props }) => {
-    const [BizUnit, Filter, usePreset] = remoteModules;
-    const { SuperSelectFilterItem } = Filter.fields;
-    const { ajax } = usePreset();
+    const [BizUnit] = remoteModules;
     const { formatMessage } = useIntl();
     return (
       <BizUnit
