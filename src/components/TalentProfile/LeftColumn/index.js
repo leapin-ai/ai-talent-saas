@@ -68,6 +68,7 @@ const LeftColumn = createWithRemoteLoader({
           </Space>
           <Button
             type="text"
+            className={style['edit-btn']}
             icon={<MdOutlineEdit />}
             onClick={() => {
               formModal({
@@ -111,6 +112,7 @@ const LeftColumn = createWithRemoteLoader({
           </Space>
           <Button
             type="text"
+            className={style['edit-btn']}
             icon={<MdOutlineEdit />}
             onClick={() => {
               formModal({

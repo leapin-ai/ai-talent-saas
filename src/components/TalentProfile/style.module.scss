@@ -643,21 +643,11 @@
     padding: 20px !important;
   }
 
-  .right-column {
-    display: block !important;
+  .edit-btn {
+    display: none !important;
   }
 
-  .career-card {
-    display: block !important;
-    page-break-inside: avoid;
-  }
-
-  .recommend-card {
-    display: block !important;
-    page-break-inside: avoid;
-  }
-
-  .career-item {
-    break-inside: avoid;
+  .performance-actions {
+    display: none !important;
   }
 }

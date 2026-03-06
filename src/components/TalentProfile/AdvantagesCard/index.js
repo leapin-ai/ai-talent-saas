@@ -29,6 +29,7 @@ const AdvantagesCard = createWithRemoteLoader({
         </Space>
         <Button
           type="text"
+          className={style['edit-btn']}
           icon={<MdOutlineEdit />}
           onClick={() => {
             formModal({
