@@ -93,6 +93,7 @@ const MiddleColumn = createWithRemoteLoader({
           </Space>
           <Button
             type="text"
+            className={style['edit-btn']}
             icon={<MdOutlineEdit />}
             onClick={() => {
               formModal({
@@ -141,6 +142,7 @@ const MiddleColumn = createWithRemoteLoader({
           </Space>
           <Button
             type="text"
+            className={style['edit-btn']}
             icon={<MdOutlineEdit />}
             onClick={() => {
               formModal({
@@ -228,6 +230,7 @@ const MiddleColumn = createWithRemoteLoader({
           </Space>
           <Button
             type="text"
+            className={style['edit-btn']}
             icon={<MdOutlineEdit />}
             onClick={() => {
               formModal({
@@ -269,7 +272,7 @@ const MiddleColumn = createWithRemoteLoader({
             </span>
             绩效评价
           </Space>
-          <Button type="text" icon={<MdAdd />} onClick={handleAddPerformance} />
+          <Button type="text" className={style['edit-btn']} icon={<MdAdd />} onClick={handleAddPerformance} />
         </Flex>
         {performanceReviews.length > 0 ? (
           <Timeline
@@ -304,6 +307,7 @@ const MiddleColumn = createWithRemoteLoader({
                         <Button
                           type="text"
                           size="small"
+                          className={style['edit-btn']}
                           icon={<MdOutlineEdit />}
                           onClick={() => {
                             formModal({
@@ -327,6 +331,7 @@ const MiddleColumn = createWithRemoteLoader({
                         <ConfirmButton
                           type="text"
                           size="small"
+                          className={style['edit-btn']}
                           isDelete
                           danger
                           icon={<MdOutlineDeleteOutline />}
