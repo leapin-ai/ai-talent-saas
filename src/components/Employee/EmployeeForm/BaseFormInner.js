@@ -164,6 +164,13 @@ const BaseFormInner = createWithRemoteLoader({
               interceptor="object-output-value"
               single
               api={apis.positionList}
+              getSearchProps={({ searchText }) => {
+                return {
+                  filter: {
+                    keyword: searchText
+                  }
+                };
+              }}
               pagination={{
                 paramsType: 'params'
               }}
