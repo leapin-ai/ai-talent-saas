@@ -38,6 +38,7 @@ const HeaderCard = createWithRemoteLoader({
           <Button
             type="text"
             size="small"
+            className={style['edit-btn']}
             icon={<MdOutlineEdit />}
             onClick={() => {
               const tenantOrg = originData.orgEnums.find(item => item.value === originData.options?.tenantOrgId);
