@@ -2,33 +2,15 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
 import Fetch from '@kne/react-fetch';
-import { Row, Col, Flex, Button, Segmented } from 'antd';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { useState } from 'react';
-import BaseFormInner from '../PositionForm/BaseFormInner';
+import { useParams } from 'react-router-dom';
 
 const Detail = createWithRemoteLoader({
-  modules: [
-    'components-core:Global@usePreset',
-    'components-core:InfoPage',
-    'components-core:InfoPage@CentralContent',
-    'components-core:Icon',
-    'components-core:FormInfo',
-    'components-core:ButtonGroup@ButtonFooter',
-    'components-core:Layout@Page',
-    'components-core:Layout@PageHeader',
-    'components-thirdparty:CKEditor.Content'
-  ]
+  modules: ['components-core:InfoPage', 'components-core:InfoPage@CentralContent', 'components-core:Layout@Page', 'components-core:Layout@PageHeader', 'components-thirdparty:CKEditor.Content']
 })(
   withLocale(({ remoteModules, baseUrl, apis, children }) => {
-    const [usePreset, InfoPage, CentralContent, Icon, FormInfo, ButtonFooter, Page, PageHeader, EditorContent] = remoteModules;
-    const { ajax } = usePreset();
-    const { Form, SubmitButton, CancelButton } = FormInfo;
+    const [InfoPage, CentralContent, Page, PageHeader, EditorContent] = remoteModules;
     const { formatMessage } = useIntl();
     const { id } = useParams();
-    const [searchParams, setSearchParams] = useSearchParams();
-    const [isEdit, setIsEdit] = useState(false);
-    const current = searchParams.get('tab') || 'basic';
 
     return (
       <Fetch

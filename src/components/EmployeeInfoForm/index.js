@@ -2,16 +2,14 @@ import React from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import style from './style.module.scss';
 import ProfileCard from './ProfileCard';
-import TagInputCard from './TagInputCard';
 import MobilityCard from './MobilityCard';
-import CertificateCard from './CertificateCard';
 
 const EmployeeInfoForm = createWithRemoteLoader({
   modules: ['components-core:FormInfo']
 })(({ remoteModules }) => {
   const [FormInfo] = remoteModules;
-  const { Form, SubmitButton, TableList } = FormInfo;
-  const { Input, TextArea } = FormInfo.fields;
+  const { Form, TableList } = FormInfo;
+  const { Input } = FormInfo.fields;
 
   const avatarUrl =
     'https://lh3.googleusercontent.com/aida-public/AB6AXuC_AorCAIKZoI2DcahfuT4hT9GDUUaBpTlWUJr3Odohda9NuDi2rGCxWiHwow-OsNiPPrLtCIrMVU4Qgmrdt9H7-60ACubvKLb5EdJ8va-qaAPLMj_uaNUQ1Yolk_J-nfhIheltcXrRHkspotSFm3X6xjh9wKyM_NQYE_P3ACK6aNkJsUEoBca-5ursPSnyHnwZmAxZGHS2FUvH8E1piSMezqWm6H1XxWyU2Zm_G83zLtokX2mz2IOXE-TMwR6YKhDEbySePufNnvrE';

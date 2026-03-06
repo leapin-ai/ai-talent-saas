@@ -1,10 +1,8 @@
-import React from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Flex, Typography } from 'antd';
 import { FaLightbulb } from 'react-icons/fa';
-import { MdAnalytics, MdPersonSearch, MdStars, MdOutlineWork } from 'react-icons/md';
 import dayjs from 'dayjs';
 import HeaderCard from './HeaderCard';
 import LeftColumn from './LeftColumn';

@@ -1,16 +1,13 @@
 import React from 'react';
 import { Card, Typography, Space, Timeline, Flex, Divider, Tag } from 'antd';
 import { IoTimerOutline, IoTimeOutline } from 'react-icons/io5';
-import { FaClock, FaTrophy } from 'react-icons/fa';
 import { FaAward } from 'react-icons/fa';
 import { MdOutlineDiamond } from 'react-icons/md';
-import { PiHeadCircuitLight } from 'react-icons/pi';
-import { MdWorkOutline, MdWorkspacePremium } from 'react-icons/md';
 import classnames from 'classnames';
 import style from '../style.module.scss';
 import AdvantagesCard from '../AdvantagesCard';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const LeftColumn = ({ profileData, advantages, certificates, promotionHistory, gotoPosition }) => {
   const EmptyState = ({ text }) => (
