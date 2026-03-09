@@ -5,7 +5,7 @@ import getColumns from './getColumns';
 import BaseFormInner from './PositionForm/BaseFormInner';
 
 const Position = createWithRemoteLoader({
-  modules: ['components-admin:BizUnit']
+  modules: ['components-admin:BizUnit', 'components-admin:Editor']
 })(
   withLocale(({ remoteModules, baseUrl, apis, onDetail, ...props }) => {
     const [BizUnit] = remoteModules;
