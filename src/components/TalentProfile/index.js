@@ -148,7 +148,7 @@ const TalentProfile = createWithRemoteLoader({
           active: true
         }));
 
-        const skillTags = [...(data.profile?.skills?.cert_mapped || []), ...(data.profile?.skills?.work_related || [])];
+        const skillTags = [...(data.profile?.skills?.cert_mapped || []), ...(data.profile?.skills?.interest_strength || []), ...(data.profile?.skills?.work_related || [])];
 
         const targetPositions = (data.profile?.intentionPosition || []).map(position => {
           return {
@@ -263,6 +263,7 @@ const TalentProfile = createWithRemoteLoader({
                 mobilityPreferences={mobilityPreferences}
                 interests={interests}
                 performanceReviews={performanceReviews}
+                originData={data}
                 skillRadarData={{ employee: data.profile?.aiInterviewReport || [], industry: [] }}
                 gotoPosition={gotoPosition}
               />
