@@ -8,13 +8,13 @@ import { MdPersonSearch, MdOutlineEdit, MdAdd, MdOutlineDeleteOutline } from 're
 import SkillRadarChart from '../SkillRadarChart';
 import style from '../style.module.scss';
 import classnames from 'classnames';
-import { TargetPositionFormInner, MobilityPreferenceFormInner, InterestFormInner, PerformanceReviewFormInner } from '../FormInner';
+import { TargetPositionFormInner, MobilityPreferenceFormInner, InterestFormInner, PerformanceReviewFormInner, SkillFormInner } from '../FormInner';
 
 const { Text, Paragraph } = Typography;
 
 const MiddleColumn = createWithRemoteLoader({
   modules: ['components-core:FormInfo@useFormModal', 'components-core:ConfirmButton']
-})(({ remoteModules, createPerformance, removePerformance, savePerformance, saveProfile, skillTags, targetPositions, mobilityPreferences, interests, performanceReviews, skillRadarData, gotoPosition }) => {
+})(({ remoteModules, originData, createPerformance, removePerformance, savePerformance, saveProfile, skillTags, targetPositions, mobilityPreferences, interests, performanceReviews, skillRadarData, gotoPosition }) => {
   const [useFormModal, ConfirmButton] = remoteModules;
   const formModal = useFormModal();
   const EmptyState = ({ text }) => (
@@ -71,16 +71,32 @@ const MiddleColumn = createWithRemoteLoader({
           <div className={style['radar-chart']}>
             <SkillRadarChart data={skillRadarData} />
           </div>
-        ) : null}
-        {skillTags.length > 0 ? (
-          <Space wrap className={style['skill-tags']}>
-            {skillTags.map((skill, index) => (
-              <Tag key={index}>{skill}</Tag>
-            ))}
-          </Space>
         ) : (
           <EmptyState text="暂无技能信息" />
         )}
+        <Space wrap className={style['skill-tags']}>
+          {skillTags.map((skill, index) => (
+            <Tag key={index}>{skill}</Tag>
+          ))}
+          <Button
+            type="text"
+            className={style['edit-btn']}
+            icon={<MdOutlineEdit />}
+            onClick={() => {
+              formModal({
+                title: '编辑技能标签',
+                size: 'small',
+                formProps: {
+                  data: Object.assign({}, originData.profile?.skills),
+                  onSubmit: formData => {
+                    return saveProfile({ skills: formData });
+                  }
+                },
+                children: <SkillFormInner />
+              });
+            }}
+          />
+        </Space>
       </Card>
 
       <Card className={style['target-card']}>
