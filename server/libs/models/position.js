@@ -27,7 +27,7 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
         comment: '工作地点'
       },
       capacity: {
-        type: DataTypes.JSON,
+        type: DataTypes.STRING,
         comment: '职能'
       },
       skill: {

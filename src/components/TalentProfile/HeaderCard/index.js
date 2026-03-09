@@ -48,10 +48,10 @@ const HeaderCard = createWithRemoteLoader({
                 size: 'small',
                 formProps: {
                   data: Object.assign({}, originData, {
-                    options: {
+                    options: Object.assign({}, originData.options, {
                       position: position ? { name: position.description, id: position.value } : null,
                       tenantOrgId: tenantOrg ? { name: tenantOrg.description, id: tenantOrg.value } : null
-                    }
+                    })
                   }),
                   onSubmit: async formData => {
                     return saveEmployee(formData);

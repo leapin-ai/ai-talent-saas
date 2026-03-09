@@ -77,6 +77,7 @@ const BaseFormInner = createWithRemoteLoader({
               }}
             </Enum>,
             <DatePicker name="birthday" label={formatMessage({ id: 'employee.birthday' })} />,
+            <DatePicker name="options.start_work_date" picker="month" label={formatMessage({ id: 'employee.startWorkDate' })} />,
             <TextArea name="description" label={formatMessage({ id: 'employee.description' })} block rule="LEN-0-500" />
           ]}
         />
@@ -169,6 +170,16 @@ const BaseFormInner = createWithRemoteLoader({
                   filter: {
                     keyword: searchText
                   }
+                };
+              }}
+              dataFormat={data => {
+                return {
+                  list: data.pageData.map(item => {
+                    return Object.assign({}, item, {
+                      description: item.description ? item.description.replace(/<[^>]*>/g, '') : null
+                    });
+                  }),
+                  total: data.totalCount
                 };
               }}
               pagination={{

@@ -46,7 +46,7 @@ const BaseFormInner = createWithRemoteLoader({
             }}
             isPopup={!mobile}
           />,
-          <FunctionSelect name="capacity" label="职能" single isPopup={!mobile} />,
+          <FunctionSelect name="capacity" label="职能" single isPopup={false} />,
           <PayDetails name="salary" label="薪资" defaultValue={{ currency: 'CNY' }} />,
           <Editor name="description" label={formatMessage({ id: 'position.description' })} block rule="LEN-0-1000" />,
           <Editor name="requirement" label={formatMessage({ id: 'position.requirement' })} block rule="LEN-0-1000" />

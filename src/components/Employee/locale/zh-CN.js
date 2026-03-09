@@ -9,6 +9,7 @@ const zhCN = {
   'employee.marital': '婚姻状态',
   'employee.description': '简介',
   'employee.birthday': '出生日期',
+  'employee.startWorkDate': '开始工作时间',
   'employee.email': '邮箱',
   'employee.personalEmail': '个人邮箱',
   'employee.phone': '电话号码',
