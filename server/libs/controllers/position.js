@@ -90,7 +90,8 @@ module.exports = fp(async (fastify, options) => {
               default: []
             },
             capacity: {
-              type: 'string'
+              type: 'string',
+              default: ''
             },
             salary: {
               type: 'object',

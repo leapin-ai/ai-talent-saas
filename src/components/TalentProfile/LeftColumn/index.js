@@ -143,22 +143,24 @@ const LeftColumn = createWithRemoteLoader({
         {promotionHistory.length > 0 ? (
           <Timeline
             className={style['timeline']}
-            items={promotionHistory.map((item, index) => ({
-              dot: <span className={classnames(style['timeline-dot'], index === 0 && style['timeline-dot-active'])} />,
-              children: (
-                <div key={index} className={style['promotion-item']}>
-                  <Text className={classnames(style['promotion-period'], index === 0 && style['promotion-period-active'])}>{item.period}</Text>
-                  <div>
-                    <Typography.Text strong onClick={() => item.positionId && gotoPosition(item.positionId)}>
-                      {item.position}
-                      {item.level ? `(${item.level})` : ''}
-                    </Typography.Text>
-                    <br />
-                    <Text type="secondary">{item.department}</Text>
+            items={[...promotionHistory]
+              .sort((a, b) => dayjs(b.period).valueOf() - dayjs(a.period).valueOf())
+              .map((item, index) => ({
+                dot: <span className={classnames(style['timeline-dot'], index === 0 && style['timeline-dot-active'])} />,
+                children: (
+                  <div key={index} className={style['promotion-item']}>
+                    <Text className={classnames(style['promotion-period'], index === 0 && style['promotion-period-active'])}>{item.period}</Text>
+                    <div>
+                      <Typography.Text strong onClick={() => item.positionId && gotoPosition(item.positionId)}>
+                        {item.position}
+                        {item.level ? `(${item.level})` : ''}
+                      </Typography.Text>
+                      <br />
+                      <Text type="secondary">{item.department}</Text>
+                    </div>
                   </div>
-                </div>
-              )
-            }))}
+                )
+              }))}
           />
         ) : (
           <EmptyState text="暂无晋升历史" />

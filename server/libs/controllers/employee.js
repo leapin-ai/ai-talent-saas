@@ -184,7 +184,7 @@ module.exports = fp(async (fastify, options) => {
             },
             hireDate: {
               type: 'string',
-              format: 'date'
+              format: 'date-time'
             },
             idType: {
               type: 'string',
@@ -292,6 +292,10 @@ module.exports = fp(async (fastify, options) => {
             },
             recruit: {
               type: 'string'
+            },
+            hireDate: {
+              type: 'string',
+              format: 'date-time'
             },
             idType: {
               type: 'string',

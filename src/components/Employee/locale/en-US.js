@@ -9,6 +9,7 @@ const enUS = {
   'employee.marital': 'Marital Status',
   'employee.description': 'Description',
   'employee.birthday': 'Birthday',
+  'employee.startWorkDate': 'Start Work Date',
   'employee.email': 'Email',
   'employee.personalEmail': 'Personal Email',
   'employee.phone': 'Phone',
