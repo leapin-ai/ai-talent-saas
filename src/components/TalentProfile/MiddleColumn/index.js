@@ -72,12 +72,10 @@ const MiddleColumn = createWithRemoteLoader({
             <SkillRadarChart data={skillRadarData} />
           </div>
         ) : (
-          <EmptyState text="暂无技能信息" />
+          <EmptyState text="暂无技能雷达图" />
         )}
         <Space wrap className={style['skill-tags']}>
-          {skillTags.map((skill, index) => (
-            <Tag key={index}>{skill}</Tag>
-          ))}
+          {skillTags.length > 0 ? skillTags.map((skill, index) => <Tag key={index}>{skill}</Tag>) : <EmptyState text="暂无技能标签" />}
           <Button
             type="text"
             className={style['edit-btn']}
@@ -89,7 +87,17 @@ const MiddleColumn = createWithRemoteLoader({
                 formProps: {
                   data: Object.assign({}, originData.profile?.skills),
                   onSubmit: formData => {
-                    return saveProfile({ skills: formData });
+                    return saveProfile({
+                      skills: Object.assign(
+                        {},
+                        {
+                          cert_mapped: [],
+                          interest_strength: [],
+                          work_related: []
+                        },
+                        formData
+                      )
+                    });
                   }
                 },
                 children: <SkillFormInner />
