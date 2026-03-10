@@ -221,7 +221,10 @@ module.exports = fp(async (fastify, options) => {
       where: Object.assign({}, whereQuery, { tenantId }),
       offset: perPage * (currentPage - 1),
       limit: perPage,
-      order: [['id', 'ASC']]
+      order: [
+        ['createdAt', 'DESC'],
+        ['id', 'DESC']
+      ]
     });
 
     const positionEnums = await services.position.enums(authenticatePayload, {

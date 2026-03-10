@@ -5,6 +5,12 @@ const PAY_SALARY = value => {
       errMsg: '薪资补充说明不能超过50个字符'
     };
   }
+  if (!value?.minimumAmount && !value?.maximumAmount) {
+    return {
+      result: true,
+      errMsg: ''
+    };
+  }
   if (!value?.minimumAmount) {
     return {
       result: false,
