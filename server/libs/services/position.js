@@ -33,7 +33,7 @@ module.exports = fp(async (fastify, options) => {
         language,
         locationType,
         status: data.status || 'draft',
-        capacity: data.capacity || {},
+        capacity: data.capacity || '',
         salary: data.salary || {},
         location: data.location || {}
       })
@@ -130,7 +130,10 @@ module.exports = fp(async (fastify, options) => {
       }),
       offset: perPage * (currentPage - 1),
       limit: perPage,
-      order: [['id', 'ASC']]
+      order: [
+        ['createdAt', 'DESC'],
+        ['id', 'DESC']
+      ]
     });
 
     return {
