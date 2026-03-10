@@ -93,7 +93,7 @@ export const globalInit = async () => {
         //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.21'
+        defaultVersion: '1.1.22'
       },
       'components-thirdparty': {
         ...registry,
@@ -121,7 +121,7 @@ export const globalInit = async () => {
     try {
       return await loadModule(name).then(({ default: defaultModule }) => defaultModule);
     } catch (e) {
-      console.error(e);
+      console.error(e, name);
       return () => {
         return {};
       };
