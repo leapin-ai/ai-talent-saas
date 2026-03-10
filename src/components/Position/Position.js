@@ -2,7 +2,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
 import getColumns from './getColumns';
-import BaseFormInner from './PositionForm/BaseFormInner';
+import BaseFormInner, { PAY_SALARY } from './PositionForm';
 
 const Position = createWithRemoteLoader({
   modules: ['components-admin:BizUnit', 'components-admin:Editor']
@@ -25,7 +25,10 @@ const Position = createWithRemoteLoader({
         options={{
           bizName: '岗位',
           formSize: 'default',
-          keywordFilterLabel: '岗位关键字'
+          keywordFilterLabel: '岗位关键字',
+          formProps: {
+            rules: { PAY_SALARY }
+          }
         }}
       />
     );
