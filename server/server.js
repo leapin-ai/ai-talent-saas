@@ -6,6 +6,7 @@ const fastify = require('fastify')({
 const fastifyEnv = require('@fastify/env');
 const packageJson = require('./package.json');
 const path = require('node:path');
+const ensureSlash = require('@kne/ensure-slash');
 
 const version = `v${packageJson.version.split('.')[0]}`;
 
@@ -146,7 +147,7 @@ const createServer = () => {
               type: 0,
               code: 'RESETPASSWORDCODE',
               props: Object.assign({}, props, {
-                url: `${fastify.config.ORIGIN}/account/reset-password/${props.token}${props.options?.referer ? `?referer=${props.options?.referer}` : ''}`
+                url: `${ensureSlash(fastify.config.ORIGIN)}/account/reset-password/${props.token}${props.options?.referer ? `?referer=${props.options?.referer}` : ''}`
               }),
               options: {
                 title: '重置密码'
