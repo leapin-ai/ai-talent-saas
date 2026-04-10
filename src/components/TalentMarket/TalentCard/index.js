@@ -47,7 +47,7 @@ const HighlightText = ({ text }) => {
         if (part.startsWith('<em>') && part.endsWith('</em>')) {
           const content = part.slice(4, -5);
           return (
-            <Text key={index} mark style={{ backgroundColor: '#fffbe6', color: '#fa8c16' }}>
+            <Text key={index} mark style={{ backgroundColor: '#fffbe6', fontWeight: 'bold' }}>
               {content}
             </Text>
           );
