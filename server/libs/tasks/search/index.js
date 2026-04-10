@@ -11,7 +11,7 @@ const runner = async (fastify, options, { task }) => {
     method: 'fusion',
     page: currentPage,
     page_size: perPage,
-    include_fields: ['id']
+    include_fields: ['id', 'name', 'highlight']
   };
 
   if (highlightFields) {
