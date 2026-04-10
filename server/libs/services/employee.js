@@ -298,7 +298,22 @@ module.exports = fp(async (fastify, options) => {
     const employeeMap = new Map(employeeList.map(item => [item.id, item]));
 
     return {
-      pageData: resData.pageData.map(item => employeeMap.get(item.id)).filter(item => !!item),
+      pageData: resData.pageData
+        .map(item => {
+          const employee = employeeMap.get(item.id);
+          if (!employee) {
+            return null;
+          }
+
+          const employeeData = employee.toJSON();
+
+          if (item.highlight) {
+            employeeData.highlight = item.highlight;
+          }
+
+          return employeeData;
+        })
+        .filter(item => !!item),
       positionEnums,
       totalCount: resData.totalCount
     };

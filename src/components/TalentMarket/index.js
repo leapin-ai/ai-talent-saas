@@ -6,7 +6,7 @@ import TalentGrid from './TalentGrid';
 import Fetch, { useFetch } from '@kne/react-fetch';
 import useRefCallback from '@kne/use-ref-callback';
 import { Spin, Flex, Typography } from 'antd';
-import TalentCard from './TalentCard';
+import TalentCard, { DEFAULT_HIGHLIGHT_FIELDS } from './TalentCard';
 
 const SearchList = ({ list, totalCount, onViewProfile, onLoadMore, noMore, isLoading }) => {
   const ref = useRef();
@@ -86,7 +86,8 @@ const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
     if (searchValue) {
       refresh({
         data: {
-          query: searchValue
+          query: searchValue,
+          highlightFields: DEFAULT_HIGHLIGHT_FIELDS
         }
       });
     }
@@ -116,7 +117,8 @@ const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
       avatar: item.avatar,
       status: item.status === 'ACTIVE' ? 'employed' : 'resigned',
       skills: [...(item.profile?.skills?.cert_mapped || []), ...(item.profile?.skills?.work_related || []), ...(item.profile?.skills?.interest_strength || [])],
-      advantages: (item.profile?.advantage || []).map(adv => adv.name)
+      advantages: (item.profile?.advantage || []).map(adv => adv.name),
+      highlight: item.highlight || {}
     };
   };
 
@@ -131,7 +133,8 @@ const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
         onSearch={async searchValue => {
           await refresh({
             data: {
-              query: searchValue
+              query: searchValue,
+              highlightFields: DEFAULT_HIGHLIGHT_FIELDS
             }
           });
         }}
@@ -154,6 +157,7 @@ const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
                   {
                     data: {
                       query: searchValue,
+                      highlightFields: DEFAULT_HIGHLIGHT_FIELDS,
                       currentPage: requestParams.data.currentPage + 1
                     }
                   },

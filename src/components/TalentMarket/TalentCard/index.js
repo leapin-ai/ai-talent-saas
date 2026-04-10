@@ -6,11 +6,94 @@ import style from '../style.module.scss';
 
 const { Title, Text } = Typography;
 
+export const fieldSourceMap = {
+  name: { label: '姓名', source: '基本信息' },
+  name_en: { label: '英文名', source: '基本信息' },
+  email: { label: '邮箱', source: '基本信息' },
+  personal_email: { label: '个人邮箱', source: '基本信息' },
+  phone: { label: '电话', source: '基本信息' },
+  city: { label: '城市', source: '基本信息' },
+  address: { label: '地址', source: '基本信息' },
+  major: { label: '专业', source: '基本信息' },
+  college: { label: '院校', source: '基本信息' },
+  description: { label: '个人描述', source: '基本信息' },
+  'position.name': { label: '职位名称', source: '职位信息' },
+  'position.description': { label: '职位描述', source: '职位信息' },
+  'position.requirement': { label: '职位要求', source: '职位信息' },
+  'position.skill': { label: '职位技能', source: '职位信息' },
+  'profile.skills.cert_mapped': { label: '技能-证书类', source: '资料信息' },
+  'profile.skills.work_related': { label: '技能-工作类', source: '资料信息' },
+  'profile.skills.project_related': { label: '技能-项目类', source: '资料信息' },
+  'profile.skills.interest_strength': { label: '技能-兴趣类', source: '资料信息' },
+  'profile.advantage': { label: '优势', source: '资料信息' },
+  'profile.intention_position': { label: '意向职位', source: '资料信息' },
+  'profile.work_preference.work_mode_preference': { label: '工作模式偏好', source: '资料信息' },
+  'profile.options.hobbies': { label: '兴趣爱好', source: '资料信息' },
+  'profile.options.certificates_licenses': { label: '证书执照', source: '资料信息' }
+};
+
+export const DEFAULT_HIGHLIGHT_FIELDS = Object.keys(fieldSourceMap);
+
+const HighlightText = ({ text }) => {
+  if (!text) {
+    return null;
+  }
+
+  const parts = text.split(/(<em>.*?<\/em>)/g);
+
+  return (
+    <span>
+      {parts.map((part, index) => {
+        if (part.startsWith('<em>') && part.endsWith('</em>')) {
+          const content = part.slice(4, -5);
+          return (
+            <Text key={index} mark style={{ backgroundColor: '#fffbe6', color: '#fa8c16' }}>
+              {content}
+            </Text>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </span>
+  );
+};
+
+const HighlightItem = ({ field, values }) => {
+  const fieldInfo = fieldSourceMap[field] || { label: field, source: '其他' };
+
+  return (
+    <Flex vertical gap={2} className={style['highlight-item']}>
+      <Flex align="center" gap={6}>
+        <Tag
+          color="blue"
+          style={{
+            fontSize: '11px',
+            padding: '0 6px',
+            margin: 0,
+            lineHeight: '18px',
+            height: '20px'
+          }}
+        >
+          {fieldInfo.label}
+        </Tag>
+      </Flex>
+      <Text className={style['highlight-text']} style={{ fontSize: '13px', lineHeight: '1.6' }}>
+        <HighlightText text={values[0]} />
+      </Text>
+    </Flex>
+  );
+};
+
 const TalentCard = createWithRemoteLoader({
   modules: ['components-core:Image.Avatar']
 })(({ remoteModules, talent, onViewProfile }) => {
   const isEmployed = talent.status === 'employed';
   const [Avatar] = remoteModules;
+
+  const highlightFields = Object.entries(talent.highlight || {})
+    .filter(([key, value]) => value && Array.isArray(value) && value.length > 0)
+    .slice(0, 3);
+
   return (
     <Card
       hoverable
@@ -34,10 +117,10 @@ const TalentCard = createWithRemoteLoader({
             </Flex>
             <div>
               <Title level={5} className={style['talent-name']}>
-                {talent.name}
+                <HighlightText text={talent.highlight?.name?.[0] || talent.name} />
               </Title>
               <Text type="secondary" className={style['talent-position']}>
-                {talent.position}
+                <HighlightText text={talent.highlight?.['position.name']?.[0] || talent.position} />
               </Text>
             </div>
           </Flex>
@@ -65,6 +148,16 @@ const TalentCard = createWithRemoteLoader({
               ))}
             </ul>
           </div>
+          {highlightFields.length > 0 && (
+            <div>
+              <Text className={style['section-label']}>匹配亮点</Text>
+              <Flex vertical gap={8}>
+                {highlightFields.map(([field, values]) => (
+                  <HighlightItem key={field} field={field} values={values} />
+                ))}
+              </Flex>
+            </div>
+          )}
         </Flex>
         <Button type="primary" block onClick={() => onViewProfile(talent)}>
           查看完整档案
