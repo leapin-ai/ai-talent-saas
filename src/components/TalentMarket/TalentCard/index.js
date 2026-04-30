@@ -90,9 +90,7 @@ const TalentCard = createWithRemoteLoader({
   const isEmployed = talent.status === 'employed';
   const [Avatar] = remoteModules;
 
-  const highlightFields = Object.entries(talent.highlight || {})
-    .filter(([key, value]) => value && Array.isArray(value) && value.length > 0)
-    .slice(0, 3);
+  const highlightFields = Object.entries(talent.highlight || {}).filter(([key, value]) => value && Array.isArray(value) && value.length > 0);
 
   return (
     <Card
@@ -151,11 +149,13 @@ const TalentCard = createWithRemoteLoader({
           {highlightFields.length > 0 && (
             <div>
               <Text className={style['section-label']}>匹配亮点</Text>
-              <Flex vertical gap={8}>
-                {highlightFields.map(([field, values]) => (
-                  <HighlightItem key={field} field={field} values={values} />
-                ))}
-              </Flex>
+              <div className={style['highlights-container']}>
+                <Flex vertical gap={8}>
+                  {highlightFields.map(([field, values]) => (
+                    <HighlightItem key={field} field={field} values={values} />
+                  ))}
+                </Flex>
+              </div>
             </div>
           )}
         </Flex>
