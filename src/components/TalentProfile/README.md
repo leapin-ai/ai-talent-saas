@@ -1,6 +1,4 @@
-
 # TalentProfile
-
 
 ### 概述
 
@@ -216,7 +214,6 @@ render(<RightColumnExample />);
 
 ```
 
-
 ### API
 
 ## TalentProfile 主组件
@@ -268,4 +265,3 @@ render(<RightColumnExample />);
 |---|---|---|---|
 |careerPath|职业路径|array|-|
 |aiRecommendations|AI推荐|array|-|
-

@@ -1,6 +1,4 @@
-
 # TalentMarket
-
 
 ### 概述
 
@@ -97,7 +95,6 @@ render(<TalentCardExample />);
 
 ```
 
-
 ### API
 
 ## TalentMarket 主组件
@@ -126,4 +123,3 @@ render(<TalentCardExample />);
 |---|---|---|---|
 |talent|候选人数据|object|-|
 |onViewProfile|点击查看档案时的回调函数|(talent: object) => void|-|
-
