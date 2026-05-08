@@ -30,7 +30,8 @@ export const fieldSourceMap = {
   'profile.intention_position': { label: '意向职位', source: '资料信息' },
   'profile.work_preference.work_mode_preference': { label: '工作模式偏好', source: '资料信息' },
   'profile.options.hobbies': { label: '兴趣爱好', source: '资料信息' },
-  'profile.options.certificates_licenses': { label: '证书执照', source: '资料信息' }
+  'profile.options.certificates_licenses': { label: '证书执照', source: '资料信息' },
+  'profile.promotion_history.occupation': { label: '晋升历史', source: '资料信息' }
 };
 
 export const DEFAULT_HIGHLIGHT_FIELDS = Object.keys(fieldSourceMap);
