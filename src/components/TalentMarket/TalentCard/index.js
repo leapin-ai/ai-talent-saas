@@ -80,7 +80,7 @@ const HighlightItem = ({ field, values }) => {
         </Tag>
       </Flex>
       <Text className={style['highlight-text']} style={{ fontSize: '13px', lineHeight: '1.6' }}>
-        <HighlightText text={values[0]} />
+        <HighlightText text={values?.join('、')} />
       </Text>
     </Flex>
   );
