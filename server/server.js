@@ -55,7 +55,11 @@ const createServer = () => {
         ALISMTP_PASSWORD: { type: 'string' },
         ALISMTP_ENDPOINT: { type: 'string' },
         SMS_ACCESS_APP_ID: { type: 'string' },
-        SMS_ACCESS_SECRET: { type: 'string' }
+        SMS_ACCESS_SECRET: { type: 'string' },
+
+        SYNC_ORG_SECRET: { type: 'string' },
+        SYNC_ORG_HOST: { type: 'string' },
+        SYNC_ORG_TYPE: { type: 'string' }
       }
     }
   });
@@ -71,7 +75,8 @@ const createServer = () => {
           port: fastify.config.DB_PORT,
           database: fastify.config.DB_DATABASE,
           username: fastify.config.DB_USERNAME,
-          password: fastify.config.DB_PASSWORD
+          password: fastify.config.DB_PASSWORD,
+          logging: false
         },
         modelsGlobOptions: {
           syncOptions: {}
@@ -96,32 +101,6 @@ const createServer = () => {
           accessKeyId: fastify.config.OSS_ACCESS_KEY_ID,
           accessKeySecret: fastify.config.OSS_ACCESS_KEY_SECRET,
           bucket: fastify.config.OSS_BUCKET
-        }
-      });
-
-      fastify.register(require('@kne/fastify-message'), {
-        //isTest: fastify.config.IS_TEST,
-        emailConfig: {
-          host: fastify.config.ALISMTP_ENDPOINT,
-          port: 465,
-          secure: true,
-          user: fastify.config.ALISMTP_USER,
-          pass: fastify.config.ALISMTP_PASSWORD
-        },
-        templateDir: path.join(__dirname, './messageTemplate'),
-        senders: {
-          1: async ({ name, props, content }) => {
-            return await fastify.task.services.executor({
-              type: 'sms',
-              task: {
-                input: {
-                  name,
-                  props,
-                  content
-                }
-              }
-            });
-          }
         }
       });
 
@@ -176,21 +155,84 @@ const createServer = () => {
         }
       });
 
+      fastify.register(require('@kne/fastify-message'), {
+        //isTest: fastify.config.IS_TEST,
+        emailConfig: {
+          host: fastify.config.ALISMTP_ENDPOINT,
+          port: 465,
+          secure: true,
+          user: fastify.config.ALISMTP_USER,
+          pass: fastify.config.ALISMTP_PASSWORD
+        },
+        templateDir: path.join(__dirname, './messageTemplate'),
+        senders: {
+          1: async ({ name, props, content }) => {
+            return await fastify.task.services.executor({
+              type: 'sms',
+              task: {
+                input: {
+                  name,
+                  props,
+                  content
+                }
+              }
+            });
+          }
+        }
+      });
+
+      fastify.register(require('@kne/fastify-signature'), {
+        prefix: `${options.prefix}/signature`
+      });
+
       fastify.register(require('@kne/fastify-task'), {
-        prefix: `${options.prefix}/admin/task`,
+        prefix: `${options.prefix}/task`,
         cronTime: options.taskCron,
         maxPollTimes: 40,
         pollInterval: 20 * 1000,
+
         task: {
           'parse-resume': target => {
             return fastify[options.name].services.resume.parseTaskRecord(target);
+          },
+          'sync-org': ({ task, result }) => {
+            return fastify.tenant.services.org.syncOrg(result);
+          },
+          'sync-org-send-message': ({ task, result }) => {
+            return result;
           }
         }
       });
 
       fastify.register(require('@kne/fastify-tenant'), {
         prefix: `${options.prefix}/tenant`,
-        getUserModel: options.getUserModel
+        getUserModel: options.getUserModel,
+        syncOrgType: fastify.config.SYNC_ORG_TYPE,
+        syncOrgTask: async input => {
+          const { tenantId } = input;
+          return fastify.task.services.create({
+            type: 'sync-org',
+            targetId: tenantId,
+            targetType: 'tenant',
+            runnerType: 'system',
+            input
+          });
+        },
+        sendOrgMessage: async ({ tenantId, syncSource, config, touser, msgtype, content }) => {
+          return fastify.task.services.executor({
+            type: 'sync-org-send-message',
+            task: {
+              input: {
+                tenantId,
+                syncSource,
+                config,
+                touser,
+                msgtype,
+                content
+              }
+            }
+          });
+        }
       });
     })
   );

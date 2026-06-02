@@ -118,6 +118,11 @@ module.exports = ({ DataTypes, options }) => {
         comment: '简历列表',
         defaultValue: []
       },
+      tenantOrgIds: {
+        type: DataTypes.JSONB,
+        comment: '所属组织（可多选）',
+        defaultValue: []
+      },
       options: {
         type: DataTypes.JSONB,
         comment: '其他信息'
@@ -132,12 +137,10 @@ module.exports = ({ DataTypes, options }) => {
       employee.hasMany(performance);
 
       employee.belongsTo(options.getTenantModels().tenantUser, {
-        allowNull: false
+        allowNull: true
       });
+
       employee.belongsTo(options.getTenantModels().tenant, {
-        allowNull: false
-      });
-      employee.belongsTo(options.getTenantModels().tenantOrg, {
         allowNull: false
       });
     },

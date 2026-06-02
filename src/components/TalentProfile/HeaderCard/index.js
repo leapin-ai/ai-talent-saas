@@ -41,16 +41,21 @@ const HeaderCard = createWithRemoteLoader({
             className={style['edit-btn']}
             icon={<MdOutlineEdit />}
             onClick={() => {
-              const tenantOrg = originData.orgEnums.find(item => item.value === originData.options?.tenantOrgId);
+              const orgIds = Array.isArray(originData.tenantOrgIds) ? originData.tenantOrgIds : [];
+              const tenantOrgs = orgIds
+                .map(id => originData.orgEnums.find(item => item.value === id))
+                .filter(Boolean)
+                .map(org => ({ name: org.description, id: org.value }));
               const position = originData.positionEnums.find(item => item.value === originData.options?.position);
               formModal({
                 title: '编辑个人信息',
                 size: 'small',
                 formProps: {
                   data: Object.assign({}, originData, {
+                    tenantOrgIds: orgIds,
+                    tenantOrgs,
                     options: Object.assign({}, originData.options, {
-                      position: position ? { name: position.description, id: position.value } : null,
-                      tenantOrgId: tenantOrg ? { name: tenantOrg.description, id: tenantOrg.value } : null
+                      position: position ? { name: position.description, id: position.value } : null
                     })
                   }),
                   onSubmit: async formData => {

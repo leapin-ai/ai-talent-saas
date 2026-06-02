@@ -4,7 +4,6 @@ import { useIntl } from '@kne/react-intl';
 import PayDetails from '@kne/pay-details';
 import { isMobile } from '@kne/system-layout';
 import '@kne/pay-details/dist/index.css';
-import { PAY_SALARY } from './index';
 
 const BaseFormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo', 'components-admin:Editor']

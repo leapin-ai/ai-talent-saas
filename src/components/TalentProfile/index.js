@@ -114,7 +114,11 @@ const TalentProfile = createWithRemoteLoader({
           birthday: data.birthday,
           gender: data.gender,
           marital: data.marital,
-          department: data.options?.tenantOrgId ? data.orgEnums.find(item => item.value === data.options?.tenantOrgId)?.description : '',
+          department: (Array.isArray(data.tenantOrgIds) ? data.tenantOrgIds : [])
+            .map(id => data.orgEnums.find(item => item.value === id))
+            .filter(Boolean)
+            .map(org => org.description)
+            .join('、'),
           avatar: data.avatar,
           phone: data.phone,
           email: data.email,
