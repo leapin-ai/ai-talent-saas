@@ -212,25 +212,3 @@ COMMENT ON COLUMN t_tenant_user.source_id IS '同步源中的原始ID';
 CREATE UNIQUE INDEX IF NOT EXISTS t_tenant_user_sync_source_id_uniq
     ON t_tenant_user (tenant_id, sync_source, source_id)
     WHERE deleted_at IS NULL AND synced = TRUE;
-
--- t_tenant_org_sync：组织同步记录表
-CREATE TABLE IF NOT EXISTS t_tenant_org_sync (
-                                                 id SERIAL PRIMARY KEY,
-                                                 type VARCHAR(255),
-    config JSONB NOT NULL DEFAULT '{}'::jsonb,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'success', 'failed')),
-    last_sync_at TIMESTAMP WITH TIME ZONE,
-                               options JSONB,
-                               tenant_id INT8 NOT NULL REFERENCES t_tenant_tenant(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP WITH TIME ZONE
-                               );
-
-COMMENT ON TABLE t_tenant_org_sync IS '组织同步记录';
-COMMENT ON COLUMN t_tenant_org_sync.type IS '同步源类型';
-COMMENT ON COLUMN t_tenant_org_sync.config IS '同步配置';
-COMMENT ON COLUMN t_tenant_org_sync.status IS '同步状态';
-COMMENT ON COLUMN t_tenant_org_sync.last_sync_at IS '最后同步时间';
-COMMENT ON COLUMN t_tenant_org_sync.options IS '扩展字段';
-
