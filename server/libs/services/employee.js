@@ -2,6 +2,16 @@ const fp = require('fastify-plugin');
 const omit = require('lodash/omit');
 const get = require('lodash/get');
 
+/**
+ * 获取员工所属组织 ID 列表
+ */
+const getEmployeeOrgIds = employee => {
+  if (!employee || !Array.isArray(employee.tenantOrgIds)) {
+    return [];
+  }
+  return [...new Set(employee.tenantOrgIds.filter(id => id != null && id !== '').map(String))];
+};
+
 module.exports = fp(async (fastify, options) => {
   const { models, services } = fastify[options.name];
   const tenantServices = fastify.tenant.services;
@@ -136,8 +146,9 @@ module.exports = fp(async (fastify, options) => {
       ].filter(item => !!item)
     });
 
+    const employeeOrgIds = getEmployeeOrgIds(employee);
     const orgEnums = await fastify.tenant.services.org.enums(authenticatePayload, {
-      ids: [get(employee, 'options.tenantOrgId')].filter(item => !!item)
+      ids: employeeOrgIds
     });
 
     employee.setDataValue('aiSuggest', aiSuggest);
@@ -206,6 +217,10 @@ module.exports = fp(async (fastify, options) => {
       };
     }
 
+    if (filter['id']) {
+      whereQuery.id = filter['id'];
+    }
+
     if (filter['keyword']) {
       whereQuery[Op.or] = [
         { name: { [Op.like]: `%${filter['keyword']}%` } },
@@ -231,8 +246,9 @@ module.exports = fp(async (fastify, options) => {
       ids: rows.map(item => get(item, 'options.position')).filter(item => !!item)
     });
 
+    const allOrgIds = [...new Set(rows.flatMap(employee => getEmployeeOrgIds(employee)))];
     const orgEnums = await fastify.tenant.services.org.enums(authenticatePayload, {
-      ids: rows.map(employee => get(employee, 'options.tenantOrgId')).filter(item => !!item)
+      ids: allOrgIds
     });
 
     return {
@@ -340,8 +356,97 @@ module.exports = fp(async (fastify, options) => {
     return profile;
   };
 
+  const linkTenantUser = async (authenticatePayload, { id, tenantUserId }) => {
+    const { tenantId } = authenticatePayload;
+    const employee = await models.employee.findByPk(id);
+    if (!employee || employee.tenantId !== tenantId) {
+      throw new Error('未找到员工');
+    }
+
+    if (employee.tenantUserId) {
+      throw new Error('该员工档案已关联用户');
+    }
+
+    const existingEmployee = await models.employee.findOne({
+      where: { tenantUserId, tenantId }
+    });
+    if (existingEmployee) {
+      throw new Error('该用户已关联其他员工');
+    }
+
+    await employee.update({ tenantUserId });
+    return employee;
+  };
+
+  const unlinkTenantUser = async (authenticatePayload, { id }) => {
+    const { tenantId } = authenticatePayload;
+    const employee = await models.employee.findByPk(id);
+    if (!employee || employee.tenantId !== tenantId) {
+      throw new Error('未找到员工');
+    }
+
+    await employee.update({ tenantUserId: null });
+    return employee;
+  };
+
+  const enhanceUserList = async (userList, tenantId) => {
+    const ids = [
+      ...new Set(
+        userList.pageData
+          .map(item => item.options?.position)
+          .filter(item => item != null && item !== '')
+          .map(item => (typeof item === 'object' && item.id != null ? item.id : item))
+      )
+    ];
+    let positionList = [];
+    if (ids.length) {
+      positionList = (
+        await services.position.list(
+          { tenantId },
+          {
+            filter: { ids },
+            perPage: Math.max(ids.length, 1),
+            currentPage: 1
+          }
+        )
+      ).pageData;
+    }
+
+    const tenantUserIds = userList.pageData.map(item => item.id).filter(Boolean);
+    const employeeList = tenantUserIds.length
+      ? await models.employee.findAll({
+          where: { tenantUserId: { [Op.in]: tenantUserIds }, tenantId },
+          attributes: ['id', 'name', 'tenantUserId']
+        })
+      : [];
+    const employeeMap = new Map(employeeList.map(e => [e.tenantUserId, e]));
+
+    const enhancedPageData = userList.pageData.map(item => {
+      const employee = employeeMap.get(item.id);
+      return Object.assign({}, item.toJSON ? item.toJSON() : item, {
+        employee: employee || null
+      });
+    });
+
+    return Object.assign({}, userList, {
+      pageData: enhancedPageData,
+      positionList
+    });
+  };
+
+  const userList = async (authenticatePayload, props) => {
+    const { tenantId } = authenticatePayload;
+    const userList = await tenantServices.user.list(Object.assign({}, props, { tenantId }));
+    return enhanceUserList(userList, tenantId);
+  };
+
+  const adminUserList = async ({ tenantId }, props) => {
+    const userList = await tenantServices.user.list(Object.assign({}, props, { tenantId }));
+    return enhanceUserList(userList, tenantId);
+  };
+
   Object.assign(fastify[options.name].services, {
-    employee: { create, list, detail, save, remove, setStatus, recommend, search, saveProfile },
+    employee: { create, list, detail, save, remove, setStatus, recommend, search, saveProfile, linkTenantUser, unlinkTenantUser, userList, adminUserList },
     performance: {
       create: createPerformance,
       list: performanceList,

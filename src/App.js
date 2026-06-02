@@ -72,6 +72,16 @@ const App = createWithRemoteLoader({
                           key: 'file',
                           title: '文件管理',
                           path: `${baseUrl}/admin/file`
+                        },
+                        {
+                          key: 'signature',
+                          title: '密钥管理',
+                          path: '/admin/signature'
+                        },
+                        {
+                          key: 'message',
+                          title: '消息管理',
+                          path: '/admin/message'
                         }
                       ]
                     }}
@@ -95,6 +105,16 @@ const App = createWithRemoteLoader({
                     path: 'file',
                     title: '文件管理',
                     element: <RemoteLoader module="components-file-manager:FileListPage" />
+                  },
+                  {
+                    path: 'signature',
+                    title: '密钥管理',
+                    element: <RemoteLoader module="components-admin:Signature" />
+                  },
+                  {
+                    path: 'message/*',
+                    title: '消息管理',
+                    element: <RemoteLoader module="components-admin:MessageManger" baseUrl={`${baseUrl}/admin/message`} />
                   }
                 ]}
               >

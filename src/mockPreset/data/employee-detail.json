@@ -41,6 +41,7 @@
     "tenantUserId": null,
     "tenantId": "279501918814864384",
     "tenantOrgId": null,
+    "tenantOrgIds": [],
     "profile": {
       "id": "815414986187743235",
       "advantage": [

@@ -2,29 +2,31 @@ const getApis = options => {
   const { prefix } = Object.assign({}, { prefix: '/api/v1' }, options);
 
   return {
-    task: {
-      complete: {
-        url: `${prefix}/admin/task/complete`,
-        method: 'POST'
-      },
-      cancel: {
-        url: `${prefix}/admin/task/cancel`,
-        method: 'POST'
-      },
-      list: {
-        url: `${prefix}/admin/task/list`,
-        method: 'GET'
-      },
-      retry: {
-        url: `${prefix}/admin/task/retry`,
-        method: 'POST'
-      }
-    },
     talentSaas: {
+      tenantAdmin: {
+        userList: {
+          url: `${prefix}/tenant-extra/admin/user-list`,
+          method: 'GET'
+        },
+        sendOrgMessage: {
+          url: `${prefix}/tenant/admin/send-org-message`,
+          method: 'POST'
+        },
+        position: {
+          list: {
+            url: `${prefix}/tenant/admin/position-list`,
+            method: 'GET'
+          }
+        }
+      },
       tenant: {
         userList: {
           url: `${prefix}/tenant-extra/user-list`,
           method: 'GET'
+        },
+        sendOrgMessage: {
+          url: `${prefix}/tenant/send-org-message`,
+          method: 'POST'
         },
         position: {
           list: {
@@ -93,6 +95,14 @@ const getApis = options => {
           },
           savePerformance: {
             url: `${prefix}/tenant/performance/save`,
+            method: 'POST'
+          },
+          linkTenantUser: {
+            url: `${prefix}/tenant/employee/link-tenant-user`,
+            method: 'POST'
+          },
+          unlinkTenantUser: {
+            url: `${prefix}/tenant/employee/unlink-tenant-user`,
             method: 'POST'
           }
         },

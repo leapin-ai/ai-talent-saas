@@ -26,8 +26,14 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
       name: 'department',
       title: formatMessage({ id: 'employee.department' }),
       valueOf: (item, { data }) => {
-        const department = item.options && data.orgEnums.find(target => target.value === item.options.tenantOrgId);
-        return department?.description;
+        const orgIds = Array.isArray(item.tenantOrgIds) ? item.tenantOrgIds : [];
+        return orgIds
+          .map(id => {
+            const org = data.orgEnums && data.orgEnums.find(target => target.value === id);
+            return org?.description;
+          })
+          .filter(Boolean)
+          .join('、');
       }
     },
     {

@@ -6,6 +6,41 @@ module.exports = fp(async (fastify, options) => {
   const { authenticate } = fastify.account;
 
   fastify.get(
+    `${options.prefix}/tenant/admin/position-list`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: '平台管理-租户岗位列表',
+        query: {
+          type: 'object',
+          properties: {
+            tenantId: {
+              type: 'string'
+            },
+            filter: {
+              type: 'object',
+              default: {}
+            },
+            perPage: {
+              type: 'number',
+              default: 500
+            },
+            currentPage: {
+              type: 'number',
+              default: 1
+            }
+          },
+          required: ['tenantId']
+        }
+      }
+    },
+    async request => {
+      const { tenantId, filter, perPage, currentPage } = request.query;
+      return services.position.list({ tenantId }, { filter, perPage, currentPage });
+    }
+  );
+
+  fastify.get(
     `${options.prefix}/tenant/position/list`,
     {
       onRequest: [authenticate.user, tenantAuthenticate.tenantUser],

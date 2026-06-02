@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import AppChildrenRouter from '@kne/app-children-router';
 import { Flex } from 'antd';
 import Layout from './Layout';
@@ -62,7 +62,12 @@ const TenantAdmin = createWithRemoteLoader({
             apis: Object.assign({}, apis.talentSaas.tenant.employee, {
               positionList: apis.talentSaas.tenant.position.list,
               parseResume: apis.talentSaas.tenant.resume.parseFileId,
-              orgList: apis.tenant.orgList
+              orgList: apis.tenant.orgList,
+              userList: Object.assign({}, apis.talentSaas.tenant.userList, {
+                params: {
+                  filter: { status: 'open' }
+                }
+              })
             }),
             onDetail: ({ colItem }) => {
               navigate(`${baseUrl}/profile/${colItem.id}`);
@@ -116,26 +121,32 @@ const TenantAdmin = createWithRemoteLoader({
         {
           path: 'setting/company',
           title: 'Setting/Company',
-          element: <Setting.Company>{({ title, children }) => <Page title={title}>{children}</Page>}</Setting.Company>
+          element: <Setting.Company baseUrl={`${baseUrl}/setting`}>{({ title, children }) => <Page title={title}>{children}</Page>}</Setting.Company>
         },
         {
           path: 'setting/org',
           title: 'Setting/Org',
-          element: <Setting.Org>{({ title, children }) => <Page title={title}>{children}</Page>}</Setting.Org>
+          element: <Setting.Org baseUrl={`${baseUrl}/setting`}>{({ title, children }) => <Page title={title}>{children}</Page>}</Setting.Org>
         },
         {
           path: 'setting/user',
           title: 'Setting/User',
           element: (
             <Setting.User
+              baseUrl={`${baseUrl}/setting`}
               apis={{
                 positionList: apis.talentSaas.tenant.position.list,
-                list: apis.talentSaas.tenant.userList
+                list: apis.talentSaas.tenant.userList,
+                sendOrgMessage: apis.talentSaas.tenantAdmin.sendOrgMessage,
+                linkTenantUser: apis.talentSaas.tenant.employee.linkTenantUser,
+                unlinkTenantUser: apis.talentSaas.tenant.employee.unlinkTenantUser,
+                employeeList: apis.talentSaas.tenant.employee.list
               }}
             >
-              {({ title, titleExtra, children }) => {
+              {({ title, filter, titleExtra, children }) => {
                 return (
                   <Page title={title} extra={titleExtra}>
+                    <Filter {...filter} />
                     {children}
                   </Page>
                 );
@@ -146,7 +157,7 @@ const TenantAdmin = createWithRemoteLoader({
         {
           path: 'setting/permission',
           title: 'Setting/Permission',
-          element: <Setting.Permission>{({ title, children }) => <Page title={title}>{children}</Page>}</Setting.Permission>
+          element: <Setting.Permission baseUrl={`${baseUrl}/setting`}>{({ title, children }) => <Page title={title}>{children}</Page>}</Setting.Permission>
         }
       ]}
     />

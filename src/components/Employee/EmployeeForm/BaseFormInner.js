@@ -186,7 +186,7 @@ const BaseFormInner = createWithRemoteLoader({
                 paramsType: 'params'
               }}
             />,
-            <SuperSelectTree name="options.tenantOrgId" label="部门" api={apis.orgList} valueKey="id" labelKey="name" single interceptor="object-output-value" />
+            <SuperSelectTree name="tenantOrgIds" label="部门" api={apis.orgList} valueKey="id" labelKey="name" interceptor="array-output-value" />
           ]}
         />
       </Flex>

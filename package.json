@@ -72,7 +72,7 @@
     "@kne/craco": "^7.1.4",
     "@kne/modules-dev": "^2.3.3",
     "@kne/react-fetch": "^1.4.3",
-    "@kne/remote-loader": "^1.2.3",
+    "@kne/remote-loader": "^1.4.6",
     "@loadable/component": "^5.16.3",
     "@testing-library/jest-dom": "^6.4.2",
     "antd": "^5.14.2",
@@ -92,7 +92,7 @@
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
-    "@kne/app-children-router": "^0.1.7",
+    "@kne/app-children-router": "^0.1.9",
     "@kne/axios-fetch": "^1.0.7",
     "@kne/fastify-aliyun": "^1.1.7",
     "@kne/pay-details": "^0.1.1",
