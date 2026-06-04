@@ -164,11 +164,12 @@ const BaseFormInner = createWithRemoteLoader({
               valueKey="id"
               interceptor="object-output-value"
               single
-              api={apis.positionList}
+              api={Object.assign({}, apis.positionList, { params: { filter: { status: 'published' } } })}
               getSearchProps={({ searchText }) => {
                 return {
                   filter: {
-                    keyword: searchText
+                    keyword: searchText,
+                    status: 'published'
                   }
                 };
               }}

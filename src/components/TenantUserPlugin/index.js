@@ -86,7 +86,20 @@ const TenantUserPlugin = createWithRemoteLoader({
 
     const formInnerList = useMemo(() => {
       const newList = list.slice(0);
-      newList.splice(2, 0, <SuperSelect name="options.position" label={formatMessage({ id: 'tenantUser.position' })} rule="REQ" labelKey="name" valueKey="id" interceptor="object-output-value" single api={apis.positionList} />);
+      newList.splice(
+        2,
+        0,
+        <SuperSelect
+          name="options.position"
+          label={formatMessage({ id: 'tenantUser.position' })}
+          rule="REQ"
+          labelKey="name"
+          valueKey="id"
+          interceptor="object-output-value"
+          single
+          api={Object.assign({}, apis.positionList, { params: { filter: { status: 'published' } } })}
+        />
+      );
       newList.splice(7, 0, <DatePicker name="options.joinDate" label={formatMessage({ id: 'tenantUser.joinDate' })} />, <DatePicker name="options.workStartDate" label={formatMessage({ id: 'tenantUser.workStartDate' })} />);
       return newList;
     }, [list, formatMessage, apis.positionList]);

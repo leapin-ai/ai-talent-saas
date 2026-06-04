@@ -48,6 +48,10 @@ const getApis = options => {
           remove: {
             url: `${prefix}/tenant/position/remove`,
             method: 'POST'
+          },
+          setStatus: {
+            url: `${prefix}/tenant/position/set-status`,
+            method: 'POST'
           }
         },
         market: {
