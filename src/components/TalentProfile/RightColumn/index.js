@@ -7,6 +7,8 @@ import { FaCrosshairs } from 'react-icons/fa';
 import { MdStars } from 'react-icons/md';
 import style from '../style.module.scss';
 import '@kne/react-box/dist/index.css';
+import withLocale from '../withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const { Title, Text } = Typography;
 
@@ -28,7 +30,7 @@ const RightCardTitle = ({ color, title, description, icon }) => {
   );
 };
 
-const CareerPath = ({ careerPath, renderProgress, getPriorityText, gotoPosition }) => {
+const CareerPath = ({ careerPath, renderProgress, getPriorityText, gotoPosition, formatMessage }) => {
   return (
     <Flex vertical gap={8}>
       {careerPath.map((item, index) => {
@@ -40,13 +42,13 @@ const CareerPath = ({ careerPath, renderProgress, getPriorityText, gotoPosition 
             {item.isCurrent && (
               <Flex vertical gap={24}>
                 <Flex vertical gap={4} className={style['current-position']}>
-                  <Text>当前岗位</Text>
+                  <Text>{formatMessage({ id: 'talentProfile.CurrentPosition' })}</Text>
                   <div>
                     <Typography.Link onClick={() => item.positionId && gotoPosition(item.positionId)}>{item.position}</Typography.Link>
                   </div>
                 </Flex>
                 <Flex justify="space-between">
-                  <Text>任职时长</Text>
+                  <Text>{formatMessage({ id: 'talentProfile.ServiceDuration' })}</Text>
                   <Text strong>{item.duration}</Text>
                 </Flex>
               </Flex>
@@ -58,7 +60,7 @@ const CareerPath = ({ careerPath, renderProgress, getPriorityText, gotoPosition 
                     <span className="anticon">
                       <FaCrosshairs />
                     </span>
-                    <Text>目标岗位</Text>
+                    <Text>{formatMessage({ id: 'talentProfile.TargetPositionLabel' })}</Text>
                   </Flex>
                   <div>
                     <Typography.Link onClick={() => item.positionId && gotoPosition(item.positionId)}>{item.position}</Typography.Link>
@@ -70,7 +72,7 @@ const CareerPath = ({ careerPath, renderProgress, getPriorityText, gotoPosition 
                       <span className="anticon">
                         <FaDirections />
                       </span>
-                      <Text strong>目标岗位发展路径</Text>
+                      <Text strong>{formatMessage({ id: 'talentProfile.DevelopmentPath' })}</Text>
                     </Flex>
                     <ul>
                       {item.paths.map((path, i) => (
@@ -85,7 +87,7 @@ const CareerPath = ({ careerPath, renderProgress, getPriorityText, gotoPosition 
                       <span className="anticon">
                         <FaCompass />
                       </span>
-                      <Text strong>培训重点</Text>
+                      <Text strong>{formatMessage({ id: 'talentProfile.TrainingFocus' })}</Text>
                     </Flex>
                     {item.trainings.map((training, i) => (
                       <div key={i}>
@@ -118,16 +120,16 @@ const CareerPath = ({ careerPath, renderProgress, getPriorityText, gotoPosition 
   );
 };
 
-const AiRecommendCard = ({ aiRecommendations, renderMatchRing }) => {
+const AiRecommendCard = ({ aiRecommendations, renderMatchRing, formatMessage }) => {
   const EmptyState = ({ text }) => (
     <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: '20px 0' }}>
-      {text || '暂无数据'}
+      {text || formatMessage({ id: 'talentProfile.NoData' })}
     </Text>
   );
 
   return (
     <Card className={style['recommend-card']}>
-      <RightCardTitle color="#5386FA" title="AI 推荐" description="潜在适配岗位推荐" icon={<MdStars />} />
+      <RightCardTitle color="#5386FA" title={formatMessage({ id: 'talentProfile.AIRecommend' })} description={formatMessage({ id: 'talentProfile.PotentialPosition' })} icon={<MdStars />} />
       {aiRecommendations && aiRecommendations.length > 0 ? (
         <Space direction="vertical" className={style['recommend-list']}>
           {aiRecommendations.map((item, index) => (
@@ -141,7 +143,7 @@ const AiRecommendCard = ({ aiRecommendations, renderMatchRing }) => {
               {item.skills && item.skills.length > 0 && (
                 <div className={style['skill-gaps']}>
                   <Text type="secondary" className={style['skill-gaps-label']}>
-                    匹配技能
+                    {formatMessage({ id: 'talentProfile.MatchSkills' })}
                   </Text>
                   <Space wrap>
                     {item.skills.map((skill, i) => (
@@ -155,7 +157,7 @@ const AiRecommendCard = ({ aiRecommendations, renderMatchRing }) => {
               {item.gaps && item.gaps.length > 0 && (
                 <div className={style['skill-gaps']}>
                   <Text type="secondary" className={style['skill-gaps-label']}>
-                    技能差距
+                    {formatMessage({ id: 'talentProfile.SkillGap' })}
                   </Text>
                   <Space wrap>
                     {item.gaps.map((gap, i) => (
@@ -170,16 +172,17 @@ const AiRecommendCard = ({ aiRecommendations, renderMatchRing }) => {
           ))}
         </Space>
       ) : (
-        <EmptyState text="暂无推荐岗位" />
+        <EmptyState text={formatMessage({ id: 'talentProfile.NoRecommendPosition' })} />
       )}
     </Card>
   );
 };
 
-const RightColumn = ({ careerPath, aiRecommendations, gotoPosition }) => {
+const RightColumn = withLocale(({ careerPath, aiRecommendations, gotoPosition }) => {
+  const { formatMessage } = useIntl();
   const EmptyState = ({ text }) => (
     <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: '20px 0' }}>
-      {text || '暂无数据'}
+      {text || formatMessage({ id: 'talentProfile.NoData' })}
     </Text>
   );
 
@@ -189,7 +192,7 @@ const RightColumn = ({ careerPath, aiRecommendations, gotoPosition }) => {
   };
 
   const getPriorityText = priority => {
-    const texts = { high: '优先级: 高', medium: '优先级: 中', low: '优先级: 低' };
+    const texts = { high: formatMessage({ id: 'talentProfile.PriorityHigh' }), medium: formatMessage({ id: 'talentProfile.PriorityMedium' }), low: formatMessage({ id: 'talentProfile.PriorityLow' }) };
     return texts[priority] || texts.medium;
   };
 
@@ -207,7 +210,7 @@ const RightColumn = ({ careerPath, aiRecommendations, gotoPosition }) => {
         </svg>
         <div className={style['match-value']}>
           <span className={style['match-number']}>{matchRate}%</span>
-          <span className={style['match-label']}>匹配度</span>
+          <span className={style['match-label']}>{formatMessage({ id: 'talentProfile.MatchDegree' })}</span>
         </div>
       </div>
     );
@@ -216,13 +219,17 @@ const RightColumn = ({ careerPath, aiRecommendations, gotoPosition }) => {
   return (
     <div className={style['right-column']}>
       <Card className={style['career-card']}>
-        <RightCardTitle color="#8B5CF6" title="AI职业成长规划" description="个性化职业路径推荐" icon={<FaLightbulb />} gotoPosition={gotoPosition} />
-        {careerPath && careerPath.length > 0 ? <CareerPath careerPath={careerPath} renderProgress={renderProgress} getPriorityText={getPriorityText} gotoPosition={gotoPosition} /> : <EmptyState text="暂无职业规划" />}
+        <RightCardTitle color="#8B5CF6" title={formatMessage({ id: 'talentProfile.AICareerPlan' })} description={formatMessage({ id: 'talentProfile.CareerPathRecommend' })} icon={<FaLightbulb />} gotoPosition={gotoPosition} />
+        {careerPath && careerPath.length > 0 ? (
+          <CareerPath careerPath={careerPath} renderProgress={renderProgress} getPriorityText={getPriorityText} gotoPosition={gotoPosition} formatMessage={formatMessage} />
+        ) : (
+          <EmptyState text={formatMessage({ id: 'talentProfile.NoCareerPlan' })} />
+        )}
       </Card>
 
-      <AiRecommendCard aiRecommendations={aiRecommendations} renderMatchRing={renderMatchRing} gotoPosition={gotoPosition} />
+      <AiRecommendCard aiRecommendations={aiRecommendations} renderMatchRing={renderMatchRing} gotoPosition={gotoPosition} formatMessage={formatMessage} />
     </div>
   );
-};
+});
 
 export default RightColumn;

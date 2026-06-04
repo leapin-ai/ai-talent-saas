@@ -1,0 +1,30 @@
+const zhCN = {
+  'enumLoader.collegeType0': '普通院校',
+  'enumLoader.collegeType1': '985',
+  'enumLoader.collegeType2': '211',
+  'enumLoader.collegeType3': '港澳台院校',
+  'enumLoader.collegeType4': '海外院校',
+  'enumLoader.collegeType5': '中学',
+  'enumLoader.collegeType6': '职业教育',
+  'enumLoader.collegeType7': '培训机构',
+  'enumLoader.employeeStatusActive': '在职',
+  'enumLoader.employeeStatusResign': '离职',
+  'enumLoader.employeeStatusStopSalary': '停薪留职',
+  'enumLoader.employeeStatusRetire': '退休',
+  'enumLoader.employeeStatusIntern': '实习',
+  'enumLoader.employeeStatusPreEmployee': '预入职',
+  'enumLoader.languageZhCN': '中文',
+  'enumLoader.languageEnUS': '英文',
+  'enumLoader.locationTypeOnSite': '现场',
+  'enumLoader.locationTypeRemote': '远程',
+  'enumLoader.positionStatusDraft': '草稿',
+  'enumLoader.positionStatusPublished': '已发布',
+  'enumLoader.positionStatusClosed': '已关闭',
+  'enumLoader.recruitUnified': '统招',
+  'enumLoader.recruitSelfStudy': '自考',
+  'enumLoader.recruitOnJob': '在职',
+  'enumLoader.recruitAdultEdu': '成教',
+  'enumLoader.recruitCorrespondence': '函授'
+};
+
+export default zhCN;

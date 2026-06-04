@@ -10,93 +10,98 @@ import '@kne/react-box/dist/index.css';
 import style from '../style.module.scss';
 import { MdOutlineEdit } from 'react-icons/md';
 import { EmployeeFormInner } from '@components/Employee';
+import withLocale from '../withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const HeaderCard = createWithRemoteLoader({
   modules: ['components-core:Image.Avatar', 'components-core:Enum', 'components-core:Common@AddressEnum', 'components-core:FormInfo@useFormModal']
-})(({ remoteModules, title, profileData, originData, saveEmployee, apis }) => {
-  const [Avatar, Enum, AddressEnum, useFormModal] = remoteModules;
-  const [width, setWidth] = useState(window.innerWidth - 302);
-  const formModal = useFormModal();
-  const mobile = isMobile();
-  const ref = useResize(el => {
-    setWidth(el.clientWidth);
-  });
-  useEffect(() => {
-    ref.current && setWidth(ref.current.clientWidth);
-  }, [ref]);
-  return (
-    <div ref={ref}>
-      <PersonalCard
-        mode={mobile || width < 768 ? 'vertical' : 'horizontal'}
-        avatar={props => (
-          <div className={style['header-avatar']}>
-            <Avatar {...props} id={profileData.avatar} />
-          </div>
-        )}
-        name={profileData.name}
-        badge={
-          <Button
-            type="text"
-            size="small"
-            className={style['edit-btn']}
-            icon={<MdOutlineEdit />}
-            onClick={() => {
-              const orgIds = Array.isArray(originData.tenantOrgIds) ? originData.tenantOrgIds : [];
-              const tenantOrgs = orgIds
-                .map(id => originData.orgEnums.find(item => item.value === id))
-                .filter(Boolean)
-                .map(org => ({ name: org.description, id: org.value }));
-              const position = originData.positionEnums.find(item => item.value === originData.options?.position);
-              formModal({
-                title: '编辑个人信息',
-                size: 'small',
-                formProps: {
-                  data: Object.assign({}, originData, {
-                    tenantOrgIds: orgIds,
-                    tenantOrgs,
-                    options: Object.assign({}, originData.options, {
-                      position: position ? { name: position.description, id: position.value } : null
-                    })
-                  }),
-                  onSubmit: async formData => {
-                    return saveEmployee(formData);
-                  }
-                },
-                children: <EmployeeFormInner apis={apis} action="edit" />
-              });
-            }}
-          />
-        }
-        title={title || profileData.position}
-        description={
-          <Flex vertical>
-            {profileData.linkedin && (
-              <Flex gap={8}>
-                <span className="anticon">
-                  <IoMdLink />
-                </span>
-                <span>{profileData.linkedin}</span>
-              </Flex>
-            )}
-            {profileData.description || '暂无个人简介'}
-          </Flex>
-        }
-        phone={profileData.phone}
-        email={profileData.email}
-        moreInfo={[
-          { label: '部门', content: profileData.department },
-          { label: '地点', content: profileData.location ? <AddressEnum name={profileData.location} /> : null },
-          { label: '语言', content: profileData.languages },
-          { label: '学历', content: profileData.degree ? <Enum moduleName="degreeEnum" name={profileData.degree} /> : null },
-          { label: '毕业院校', content: profileData.college },
-          { label: '专业', content: profileData.major },
-          { label: '年龄', content: profileData.birthday ? dayjs().diff(profileData.birthday, 'year') : null },
-          { label: '性别', content: profileData.gender ? <Enum moduleName="gender" name={profileData.gender} /> : null },
-          { label: '婚姻状况', content: profileData.marital ? <Enum moduleName="marital" name={profileData.marital} /> : null }
-        ].filter(({ content }) => !!content)}
-      />
-    </div>
-  );
-});
+})(
+  withLocale(({ remoteModules, title, profileData, originData, saveEmployee, apis }) => {
+    const { formatMessage } = useIntl();
+    const [Avatar, Enum, AddressEnum, useFormModal] = remoteModules;
+    const [width, setWidth] = useState(window.innerWidth - 302);
+    const formModal = useFormModal();
+    const mobile = isMobile();
+    const ref = useResize(el => {
+      setWidth(el.clientWidth);
+    });
+    useEffect(() => {
+      ref.current && setWidth(ref.current.clientWidth);
+    }, [ref]);
+    return (
+      <div ref={ref}>
+        <PersonalCard
+          mode={mobile || width < 768 ? 'vertical' : 'horizontal'}
+          avatar={props => (
+            <div className={style['header-avatar']}>
+              <Avatar {...props} id={profileData.avatar} />
+            </div>
+          )}
+          name={profileData.name}
+          badge={
+            <Button
+              type="text"
+              size="small"
+              className={style['edit-btn']}
+              icon={<MdOutlineEdit />}
+              onClick={() => {
+                const orgIds = Array.isArray(originData.tenantOrgIds) ? originData.tenantOrgIds : [];
+                const tenantOrgs = orgIds
+                  .map(id => originData.orgEnums.find(item => item.value === id))
+                  .filter(Boolean)
+                  .map(org => ({ name: org.description, id: org.value }));
+                const position = originData.positionEnums.find(item => item.value === originData.options?.position);
+                formModal({
+                  title: formatMessage({ id: 'talentProfile.EditPersonalInfo' }),
+                  size: 'small',
+                  formProps: {
+                    data: Object.assign({}, originData, {
+                      tenantOrgIds: orgIds,
+                      tenantOrgs,
+                      options: Object.assign({}, originData.options, {
+                        position: position ? { name: position.description, id: position.value } : null
+                      })
+                    }),
+                    onSubmit: async formData => {
+                      return saveEmployee(formData);
+                    }
+                  },
+                  children: <EmployeeFormInner apis={apis} action="edit" />
+                });
+              }}
+            />
+          }
+          title={title || profileData.position}
+          description={
+            <Flex vertical>
+              {profileData.linkedin && (
+                <Flex gap={8}>
+                  <span className="anticon">
+                    <IoMdLink />
+                  </span>
+                  <span>{profileData.linkedin}</span>
+                </Flex>
+              )}
+              {profileData.description || formatMessage({ id: 'talentProfile.NoPersonalIntro' })}
+            </Flex>
+          }
+          phone={profileData.phone}
+          email={profileData.email}
+          moreInfo={[
+            { label: formatMessage({ id: 'talentProfile.Department' }), content: profileData.department },
+            { label: formatMessage({ id: 'talentProfile.Location' }), content: profileData.location ? <AddressEnum name={profileData.location} /> : null },
+            { label: formatMessage({ id: 'talentProfile.Language' }), content: profileData.languages },
+            { label: formatMessage({ id: 'talentProfile.Education' }), content: profileData.degree ? <Enum moduleName="degreeEnum" name={profileData.degree} /> : null },
+            { label: formatMessage({ id: 'talentProfile.School' }), content: profileData.college },
+            { label: formatMessage({ id: 'talentProfile.Major' }), content: profileData.major },
+            { label: formatMessage({ id: 'talentProfile.Age' }), content: profileData.birthday ? dayjs().diff(profileData.birthday, 'year') : null },
+            { label: formatMessage({ id: 'talentProfile.Gender' }), content: profileData.gender ? <Enum moduleName="gender" name={profileData.gender} /> : null },
+            { label: formatMessage({ id: 'talentProfile.MaritalStatus' }), content: profileData.marital ? <Enum moduleName="marital" name={profileData.marital} /> : null }
+          ].filter(({ content }) => !!content)}
+        />
+      </div>
+    );
+  })
+);
 
 export default HeaderCard;

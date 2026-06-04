@@ -2,6 +2,8 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useMemo } from 'react';
 import merge from 'lodash/merge';
 import { Actions } from '@components/Employee';
+import withLocale, { FormatMessage } from './withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const resolvePositionDisplayName = (item, positionList) => {
   const raw = item?.options?.position ?? item?.position;
@@ -27,7 +29,7 @@ const insertAfterKey = (items, key, entry) => {
 };
 
 /** 邀请 / 加入确认卡片：在角色行后插入岗位等信息 */
-export const personalCard = ({ moreInfo, data, formatMessage, positionList }) => {
+export const personalCard = ({ moreInfo, data, positionList }) => {
   if (moreInfo.some(item => item.key === 'position')) {
     return moreInfo;
   }
@@ -37,7 +39,7 @@ export const personalCard = ({ moreInfo, data, formatMessage, positionList }) =>
   }
   return insertAfterKey(moreInfo, 'roles', {
     key: 'position',
-    label: formatMessage?.({ id: 'Position' }) || '岗位',
+    label: <FormatMessage id="tenantUser.position" />,
     content: positionName
   });
 };
@@ -76,18 +78,21 @@ export const enhanceUserData = async (item, { apis, ajax }) => {
 
 const TenantUserPlugin = createWithRemoteLoader({
   modules: ['components-core:FormInfo']
-})(({ remoteModules, list, apis, ...props }) => {
-  const [FormInfo] = remoteModules;
-  const { SuperSelect, DatePicker } = FormInfo.fields;
+})(
+  withLocale(({ remoteModules, list, apis, ...props }) => {
+    const { formatMessage } = useIntl();
+    const [FormInfo] = remoteModules;
+    const { SuperSelect, DatePicker } = FormInfo.fields;
 
-  const formInnerList = useMemo(() => {
-    const newList = list.slice(0);
-    newList.splice(2, 0, <SuperSelect name="options.position" label="岗位" rule="REQ" labelKey="name" valueKey="id" interceptor="object-output-value" single api={apis.positionList} />);
-    newList.splice(7, 0, <DatePicker name="options.joinDate" label="加入公司时间" />, <DatePicker name="options.workStartDate" label="开始工作时间" />);
-    return newList;
-  }, [list, apis.positionList]);
-  return <FormInfo {...props} list={formInnerList} />;
-});
+    const formInnerList = useMemo(() => {
+      const newList = list.slice(0);
+      newList.splice(2, 0, <SuperSelect name="options.position" label={formatMessage({ id: 'tenantUser.position' })} rule="REQ" labelKey="name" valueKey="id" interceptor="object-output-value" single api={apis.positionList} />);
+      newList.splice(7, 0, <DatePicker name="options.joinDate" label={formatMessage({ id: 'tenantUser.joinDate' })} />, <DatePicker name="options.workStartDate" label={formatMessage({ id: 'tenantUser.workStartDate' })} />);
+      return newList;
+    }, [list, formatMessage, apis.positionList]);
+    return <FormInfo {...props} list={formInnerList} />;
+  })
+);
 
 export const getUserListColumns = ({ columns }) => {
   const newColumns = columns.slice(0);
@@ -95,18 +100,18 @@ export const getUserListColumns = ({ columns }) => {
     7,
     0,
     {
-      title: '岗位',
+      title: <FormatMessage id="tenantUser.position" />,
       name: 'options.position',
       type: 'other',
       valueOf: (item, { data }) => resolvePositionDisplayName(item, data?.positionList)
     },
     {
-      title: '加入公司时间',
+      title: <FormatMessage id="tenantUser.joinDate" />,
       name: 'options.joinDate',
       type: 'date'
     },
     {
-      title: '开始工作时间',
+      title: <FormatMessage id="tenantUser.workStartDate" />,
       name: 'options.workStartDate',
       type: 'date'
     }
@@ -116,31 +121,33 @@ export const getUserListColumns = ({ columns }) => {
 
 const UserListAction = createWithRemoteLoader({
   modules: ['components-core:ButtonGroup']
-})(({ remoteModules, itemClassName, list, moreType, ...props }) => {
-  const [ButtonGroup] = remoteModules;
-  const actionList = list.slice(0);
-  if (props?.data.employee) {
-    actionList.splice(
-      0,
-      0,
-      {
+})(
+  withLocale(({ remoteModules, itemClassName, list, moreType, ...props }) => {
+    const [ButtonGroup] = remoteModules;
+    const actionList = list.slice(0);
+    if (props?.data.employee) {
+      actionList.splice(
+        0,
+        0,
+        {
+          ...props,
+          baseUrl: '/tenant',
+          buttonComponent: Actions.ViewEmployeeAction
+        },
+        {
+          ...props,
+          buttonComponent: Actions.UnlinkEmployeeAction
+        }
+      );
+    } else {
+      actionList.splice(0, 0, {
         ...props,
-        baseUrl: '/tenant',
-        buttonComponent: Actions.ViewEmployeeAction
-      },
-      {
-        ...props,
-        buttonComponent: Actions.UnlinkEmployeeAction
-      }
-    );
-  } else {
-    actionList.splice(0, 0, {
-      ...props,
-      buttonComponent: Actions.LinkEmployeeAction
-    });
-  }
-  return <ButtonGroup itemClassName={itemClassName} list={actionList} moreType={moreType} />;
-});
+        buttonComponent: Actions.LinkEmployeeAction
+      });
+    }
+    return <ButtonGroup itemClassName={itemClassName} list={actionList} moreType={moreType} />;
+  })
+);
 
 export const getUserListActions = props => {
   return <UserListAction {...props} />;

@@ -20,7 +20,7 @@ const Detail = createWithRemoteLoader({
         render={({ data, reload }) => {
           const basicInfo = (
             <InfoPage>
-              <InfoPage.Part bordered title="基本信息">
+              <InfoPage.Part bordered title={formatMessage({ id: 'position.basicInfo' })}>
                 <CentralContent
                   type="compact"
                   col={1}
@@ -58,10 +58,10 @@ const Detail = createWithRemoteLoader({
                   ]}
                 />
               </InfoPage.Part>
-              <InfoPage.Part bordered title="工作内容">
+              <InfoPage.Part bordered title={formatMessage({ id: 'position.workContent' })}>
                 <EditorContent>{data.description}</EditorContent>
               </InfoPage.Part>
-              <InfoPage.Part bordered title="工作要求">
+              <InfoPage.Part bordered title={formatMessage({ id: 'position.workRequirement' })}>
                 <EditorContent>{data.requirement}</EditorContent>
               </InfoPage.Part>
             </InfoPage>

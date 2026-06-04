@@ -1,0 +1,30 @@
+const enUS = {
+  'enumLoader.collegeType0': 'Regular Institution',
+  'enumLoader.collegeType1': '985',
+  'enumLoader.collegeType2': '211',
+  'enumLoader.collegeType3': 'HK/Macau/Taiwan Institution',
+  'enumLoader.collegeType4': 'Overseas Institution',
+  'enumLoader.collegeType5': 'Middle School',
+  'enumLoader.collegeType6': 'Vocational Education',
+  'enumLoader.collegeType7': 'Training Institution',
+  'enumLoader.employeeStatusActive': 'Active',
+  'enumLoader.employeeStatusResign': 'Resigned',
+  'enumLoader.employeeStatusStopSalary': 'Leave Without Pay',
+  'enumLoader.employeeStatusRetire': 'Retired',
+  'enumLoader.employeeStatusIntern': 'Intern',
+  'enumLoader.employeeStatusPreEmployee': 'Pre-employee',
+  'enumLoader.languageZhCN': 'Chinese',
+  'enumLoader.languageEnUS': 'English',
+  'enumLoader.locationTypeOnSite': 'On-site',
+  'enumLoader.locationTypeRemote': 'Remote',
+  'enumLoader.positionStatusDraft': 'Draft',
+  'enumLoader.positionStatusPublished': 'Published',
+  'enumLoader.positionStatusClosed': 'Closed',
+  'enumLoader.recruitUnified': 'Unified',
+  'enumLoader.recruitSelfStudy': 'Self-study',
+  'enumLoader.recruitOnJob': 'On-the-job',
+  'enumLoader.recruitAdultEdu': 'Adult Education',
+  'enumLoader.recruitCorrespondence': 'Correspondence'
+};
+
+export default enUS;
