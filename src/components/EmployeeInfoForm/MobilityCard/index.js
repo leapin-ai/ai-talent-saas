@@ -3,58 +3,63 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import { Card, Flex, Typography } from 'antd';
 import { MdPersonOutline } from 'react-icons/md';
 import style from '../style.module.scss';
+import withLocale from '../withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const { Title } = Typography;
 
 const MobilityCard = createWithRemoteLoader({
   modules: ['components-core:FormInfo']
-})(({ remoteModules }) => {
-  const [FormInfo] = remoteModules;
-  const { SuperSelect } = FormInfo.fields;
+})(
+  withLocale(({ remoteModules }) => {
+    const [FormInfo] = remoteModules;
+    const { SuperSelect } = FormInfo.fields;
+    const { formatMessage } = useIntl();
 
-  return (
-    <Card className={style['section-card']}>
-      <Flex align="center" gap={8} className={style['card-header']}>
-        <MdPersonOutline className={style['card-icon-gray']} />
-        <Title level={4}>流动性偏好</Title>
-      </Flex>
+    return (
+      <Card className={style['section-card']}>
+        <Flex align="center" gap={8} className={style['card-header']}>
+          <MdPersonOutline className={style['card-icon-gray']} />
+          <Title level={4}>{formatMessage({ id: 'employeeInfoForm.mobilityPreference' })}</Title>
+        </Flex>
 
-      <SuperSelect
-        name="workMode"
-        label="工作模式偏好"
-        rule="REQ"
-        options={[
-          { label: '全职', value: 'fulltime' },
-          { label: '远程', value: 'remote' },
-          { label: '混合', value: 'hybrid' }
-        ]}
-        single
-      />
+        <SuperSelect
+          name="workMode"
+          label={formatMessage({ id: 'employeeInfoForm.workMode' })}
+          rule="REQ"
+          options={[
+            { label: formatMessage({ id: 'employeeInfoForm.workModeFulltime' }), value: 'fulltime' },
+            { label: formatMessage({ id: 'employeeInfoForm.workModeRemote' }), value: 'remote' },
+            { label: formatMessage({ id: 'employeeInfoForm.workModeHybrid' }), value: 'hybrid' }
+          ]}
+          single
+        />
 
-      <SuperSelect
-        name="businessTravel"
-        label="出差意愿"
-        rule="REQ"
-        options={[
-          { label: '不接受', value: 'no' },
-          { label: '接受少量', value: 'little' },
-          { label: '接受频繁', value: 'frequent' }
-        ]}
-        single
-      />
+        <SuperSelect
+          name="businessTravel"
+          label={formatMessage({ id: 'employeeInfoForm.businessTravel' })}
+          rule="REQ"
+          options={[
+            { label: formatMessage({ id: 'employeeInfoForm.businessTravelNo' }), value: 'no' },
+            { label: formatMessage({ id: 'employeeInfoForm.businessTravelLittle' }), value: 'little' },
+            { label: formatMessage({ id: 'employeeInfoForm.businessTravelFrequent' }), value: 'frequent' }
+          ]}
+          single
+        />
 
-      <SuperSelect
-        name="assignment"
-        label="外派意愿"
-        rule="REQ"
-        options={[
-          { label: '愿意', value: 'yes' },
-          { label: '不愿意', value: 'no' }
-        ]}
-        single
-      />
-    </Card>
-  );
-});
+        <SuperSelect
+          name="assignment"
+          label={formatMessage({ id: 'employeeInfoForm.assignment' })}
+          rule="REQ"
+          options={[
+            { label: formatMessage({ id: 'employeeInfoForm.assignmentYes' }), value: 'yes' },
+            { label: formatMessage({ id: 'employeeInfoForm.assignmentNo' }), value: 'no' }
+          ]}
+          single
+        />
+      </Card>
+    );
+  })
+);
 
 export default MobilityCard;

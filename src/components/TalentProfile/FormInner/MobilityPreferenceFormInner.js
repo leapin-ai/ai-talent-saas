@@ -1,48 +1,53 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
+import withLocale from '../withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const MobilityPreferenceFormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo']
-})(({ remoteModules }) => {
-  const [FormInfo] = remoteModules;
-  const { RadioGroup } = FormInfo.fields;
+})(
+  withLocale(({ remoteModules }) => {
+    const { formatMessage } = useIntl();
+    const [FormInfo] = remoteModules;
+    const { RadioGroup } = FormInfo.fields;
 
-  return (
-    <FormInfo
-      column={1}
-      list={[
-        <RadioGroup
-          name="workPreference.work_mode_preference"
-          label="工作模式偏好"
-          options={[
-            { label: '混合办公', value: 'Hybrid Work' },
-            { label: '远程办公', value: 'Remote' },
-            { label: '现场办公', value: 'On-site' }
-          ]}
-          rule="REQ"
-        />,
-        <RadioGroup
-          name="workPreference.business_travel_willingness"
-          label="出差意愿"
-          options={[
-            { label: '接受', value: 'Open' },
-            { label: '有限接受', value: 'Limited' },
-            { label: '暂不考虑', value: 'Not Open' }
-          ]}
-          rule="REQ"
-        />,
-        <RadioGroup
-          name="workPreference.relocation_willingness"
-          label="外派意愿"
-          options={[
-            { label: '接受', value: 'Open' },
-            { label: '有限接受', value: 'Limited' },
-            { label: '暂不考虑', value: 'Not Open' }
-          ]}
-          rule="REQ"
-        />
-      ]}
-    />
-  );
-});
+    return (
+      <FormInfo
+        column={1}
+        list={[
+          <RadioGroup
+            name="workPreference.work_mode_preference"
+            label={formatMessage({ id: 'talentProfile.WorkModePreference' })}
+            options={[
+              { label: formatMessage({ id: 'talentProfile.HybridWork' }), value: 'Hybrid Work' },
+              { label: formatMessage({ id: 'talentProfile.RemoteWork' }), value: 'Remote' },
+              { label: formatMessage({ id: 'talentProfile.OnSiteWork' }), value: 'On-site' }
+            ]}
+            rule="REQ"
+          />,
+          <RadioGroup
+            name="workPreference.business_travel_willingness"
+            label={formatMessage({ id: 'talentProfile.BusinessTravel' })}
+            options={[
+              { label: formatMessage({ id: 'talentProfile.Accept' }), value: 'Open' },
+              { label: formatMessage({ id: 'talentProfile.LimitedAccept' }), value: 'Limited' },
+              { label: formatMessage({ id: 'talentProfile.NotConsider' }), value: 'Not Open' }
+            ]}
+            rule="REQ"
+          />,
+          <RadioGroup
+            name="workPreference.relocation_willingness"
+            label={formatMessage({ id: 'talentProfile.RelocationWillingness' })}
+            options={[
+              { label: formatMessage({ id: 'talentProfile.Accept' }), value: 'Open' },
+              { label: formatMessage({ id: 'talentProfile.LimitedAccept' }), value: 'Limited' },
+              { label: formatMessage({ id: 'talentProfile.NotConsider' }), value: 'Not Open' }
+            ]}
+            rule="REQ"
+          />
+        ]}
+      />
+    );
+  })
+);
 
 export default MobilityPreferenceFormInner;

@@ -61,7 +61,19 @@ const enUS = {
   'collegeType.4': 'Overseas',
   'collegeType.5': 'Middle School',
   'collegeType.6': 'Vocational',
-  'collegeType.7': 'Training'
+  'collegeType.7': 'Training',
+  'employee.linkEmployee': 'Link Employee',
+  'employee.linkUser': 'Link User',
+  'employee.selectEmployee': 'Select Employee',
+  'employee.selectUser': 'Select User',
+  'employee.linkFailed': 'Link Failed',
+  'employee.unlinkEmployee': 'Unlink Employee',
+  'employee.unlinkUser': 'Unlink User',
+  'employee.confirmUnlinkEmployee': 'Confirm unlink employee?',
+  'employee.confirmUnlinkUser': 'Confirm unlink user?',
+  'employee.unlinkFailed': 'Unlink Failed',
+  'employee.viewEmployee': 'View Employee',
+  'employee.viewUser': 'View User'
 };
 
 export default enUS;

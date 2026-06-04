@@ -3,10 +3,14 @@ import { Card, Input, Button, Flex, Space, Typography } from 'antd';
 import { FaPlus } from 'react-icons/fa';
 import { MdDeleteOutline } from 'react-icons/md';
 import style from '../style.module.scss';
+import withLocale from '../withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const { Title } = Typography;
 
-const TagInputCard = ({ title, icon, items, onAdd, onRemove, onItemChange, placeholder, buttonClassName }) => {
+const TagInputCard = withLocale(({ title, icon, items, onAdd, onRemove, onItemChange, placeholder, buttonClassName }) => {
+  const { formatMessage } = useIntl();
+
   return (
     <Card className={style['section-card']}>
       <Flex align="center" gap={8} className={style['card-header']}>
@@ -21,11 +25,11 @@ const TagInputCard = ({ title, icon, items, onAdd, onRemove, onItemChange, place
           </Flex>
         ))}
         <Button type="dashed" icon={<FaPlus />} onClick={onAdd} className={buttonClassName || style['add-button']}>
-          添加
+          {formatMessage({ id: 'employeeInfoForm.add' })}
         </Button>
       </Space>
     </Card>
   );
-};
+});
 
 export default TagInputCard;

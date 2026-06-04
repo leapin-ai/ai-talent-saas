@@ -1,13 +1,18 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
+import withLocale from '../withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const TargetPositionFormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo']
-})(({ remoteModules }) => {
-  const [FormInfo] = remoteModules;
-  const { MultiField } = FormInfo;
-  const { Input } = FormInfo.fields;
+})(
+  withLocale(({ remoteModules }) => {
+    const { formatMessage } = useIntl();
+    const [FormInfo] = remoteModules;
+    const { MultiField } = FormInfo;
+    const { Input } = FormInfo.fields;
 
-  return <FormInfo column={1} list={[<MultiField name="name" label="岗位名称" rule="REQ LEN-0-100" field={Input} />]} />;
-});
+    return <FormInfo column={1} list={[<MultiField name="name" label={formatMessage({ id: 'talentProfile.PositionName' })} rule="REQ LEN-0-100" field={Input} />]} />;
+  })
+);
 
 export default TargetPositionFormInner;

@@ -5,4 +5,9 @@ const language = () => {
   ];
 };
 
+export const createLanguage = formatMessage => () => [
+  { value: 'zh-CN', description: formatMessage({ id: 'enumLoader.languageZhCN' }), type: 'success' },
+  { value: 'en-US', description: formatMessage({ id: 'enumLoader.languageEnUS' }), type: 'info' }
+];
+
 export default language;
