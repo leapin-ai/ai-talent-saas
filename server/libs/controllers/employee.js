@@ -210,6 +210,13 @@ module.exports = fp(async (fastify, options) => {
               type: 'array',
               default: []
             },
+            tenantOrgIds: {
+              type: 'array',
+              items: {
+                type: 'string'
+              },
+              default: []
+            },
             options: {
               type: 'object',
               default: {}
@@ -316,6 +323,12 @@ module.exports = fp(async (fastify, options) => {
             resumes: {
               type: 'array'
             },
+            tenantOrgIds: {
+              type: 'array',
+              items: {
+                type: 'string'
+              }
+            },
             options: {
               type: 'object'
             }
@@ -327,6 +340,53 @@ module.exports = fp(async (fastify, options) => {
     async request => {
       await services.employee.save(request.tenantUserInfo, request.body);
       return {};
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/employee/link-tenant-user`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '关联租户用户',
+        body: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string'
+            },
+            tenantUserId: {
+              type: 'string'
+            }
+          },
+          required: ['id', 'tenantUserId']
+        }
+      }
+    },
+    async request => {
+      return services.employee.linkTenantUser(request.tenantUserInfo, request.body);
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/employee/unlink-tenant-user`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '取消关联租户用户',
+        body: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string'
+            }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => {
+      return services.employee.unlinkTenantUser(request.tenantUserInfo, request.body);
     }
   );
 

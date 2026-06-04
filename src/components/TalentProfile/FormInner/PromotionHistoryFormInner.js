@@ -1,19 +1,28 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
+import withLocale from '../withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const PromotionHistoryFormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo']
-})(({ remoteModules }) => {
-  const [FormInfo] = remoteModules;
-  const { TableList } = FormInfo;
-  const { DatePicker, Input } = FormInfo.fields;
+})(
+  withLocale(({ remoteModules }) => {
+    const { formatMessage } = useIntl();
+    const [FormInfo] = remoteModules;
+    const { TableList } = FormInfo;
+    const { DatePicker, Input } = FormInfo.fields;
 
-  return (
-    <TableList
-      name="promotionHistory"
-      title="晋升历史"
-      list={[<DatePicker name="time" label="晋升时间" picker="month" format="YYYY-MM" rule="REQ" />, <Input name="occupation" label="岗位名称" rule="REQ LEN-0-100" />, <Input name="level" label="晋升等级" rule="LEN-0-100" />]}
-    />
-  );
-});
+    return (
+      <TableList
+        name="promotionHistory"
+        title={formatMessage({ id: 'talentProfile.PromotionHistory' })}
+        list={[
+          <DatePicker name="time" label={formatMessage({ id: 'talentProfile.PromotionTime' })} picker="month" format="YYYY-MM" rule="REQ" />,
+          <Input name="occupation" label={formatMessage({ id: 'talentProfile.PositionName' })} rule="REQ LEN-0-100" />,
+          <Input name="level" label={formatMessage({ id: 'talentProfile.PromotionLevel' })} rule="LEN-0-100" />
+        ]}
+      />
+    );
+  })
+);
 
 export default PromotionHistoryFormInner;

@@ -1,6 +1,4 @@
-
 # Position
-
 
 ### 概述
 
@@ -61,7 +59,6 @@ render(<BaseExample />);
 
 ```
 
-
 ### API
 
 ## Position 主组件
@@ -108,4 +105,3 @@ render(<BaseExample />);
 |---|---|
 | on-site | 现场 |
 | remote | 远程 |
-

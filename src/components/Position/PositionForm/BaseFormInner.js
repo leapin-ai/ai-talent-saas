@@ -4,7 +4,6 @@ import { useIntl } from '@kne/react-intl';
 import PayDetails from '@kne/pay-details';
 import { isMobile } from '@kne/system-layout';
 import '@kne/pay-details/dist/index.css';
-import { PAY_SALARY } from './index';
 
 const BaseFormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo', 'components-admin:Editor']
@@ -40,15 +39,15 @@ const BaseFormInner = createWithRemoteLoader({
           />,
           <AddressSelect
             name="location"
-            label="城市"
+            label={formatMessage({ id: 'position.city' })}
             display={context => {
               const { formData } = context;
               return formData.locationType === 'on-site';
             }}
             isPopup={!mobile}
           />,
-          <FunctionSelect name="capacity" label="职能" single isPopup={false} />,
-          <PayDetails name="salary" label="薪资" defaultValue={{ currency: 'CNY' }} rule="PAY_SALARY" />,
+          <FunctionSelect name="capacity" label={formatMessage({ id: 'position.capacity' })} single isPopup={false} />,
+          <PayDetails name="salary" label={formatMessage({ id: 'position.salary' })} defaultValue={{ currency: 'CNY' }} rule="PAY_SALARY" />,
           <Editor name="description" label={formatMessage({ id: 'position.description' })} block rule="LEN-0-1000" />,
           <Editor name="requirement" label={formatMessage({ id: 'position.requirement' })} block rule="LEN-0-1000" />
         ]}

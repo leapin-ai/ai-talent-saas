@@ -8,7 +8,7 @@ import transform from 'lodash/transform';
 import { getApis } from '@components/Apis';
 import { enums as talentEnums } from '@components/EnumLoader';
 import ensureSlash from '@kne/ensure-slash';
-import TenantUserPlugin, { getUserListColumns } from '@components/TenantUserPlugin';
+import TenantUserPlugin, { personalCard, getUserListColumns, enhanceUserData, getUserListActions } from '@components/TenantUserPlugin';
 
 window.PUBLIC_URL = window.runtimePublicUrl || process.env.PUBLIC_URL;
 
@@ -72,7 +72,7 @@ export const globalInit = async () => {
     //url: 'http://localhost:3001',
     //tpl: '{{url}}',
     remote: 'components-core',
-    defaultVersion: '0.4.64'
+    defaultVersion: '0.4.75'
   };
   remoteLoaderPreset({
     remotes: {
@@ -93,14 +93,14 @@ export const globalInit = async () => {
         //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.22'
+        defaultVersion: '1.1.45'
       },
       'components-thirdparty': {
         ...registry,
         //url: 'http://localhost:3010',
         //tpl: '{{url}}',
         remote: 'components-thirdparty',
-        defaultVersion: '0.1.12'
+        defaultVersion: '0.1.24'
       },
       'fastify-app':
         process.env.NODE_ENV === 'development'
@@ -143,9 +143,13 @@ export const globalInit = async () => {
     );
   })();
   const getAccountApis = await safeLoadApis('components-admin:Apis@getApis');
+  const talentApis = getApis();
 
   const enums = Object.assign({}, await safeLoadApis('components-admin:Task@enums'), talentEnums, {
-    taskType: () => [{ value: 'parse-resume', description: '简历解析', type: 'info' }]
+    taskType: () => [
+      { value: 'sync-org', description: '组织同步', type: 'warning' },
+      { value: 'parse-resume', description: '简历解析', type: 'info' }
+    ]
   });
 
   return {
@@ -153,44 +157,68 @@ export const globalInit = async () => {
     staticUrl: baseApiUrl,
     enums: Object.assign({}, enums),
     plugins: {
-      tenantAdmin: { UserFormInner: TenantUserPlugin, getUserListColumns }
-    },
-    apis: Object.assign(
-      {},
-      getAccountApis(),
-      remoteApis,
-      {
-        file: {
-          contentWindowUrl: 'https://cdn.leapin-ai.com/components/@kne/iframe-resizer/0.1.3/dist/contentWindow.js',
-          pdfjsUrl: 'https://cdn.leapin-ai.com/components/pdfjs-dist/5.4.296',
-          getUrl: {
-            url: `/api/v1/static/file-url/{id}`,
-            paramsType: 'urlParams',
-            ignoreSuccessState: true
-          },
-          uploadForEditor: ({ file }) => {
-            return ajax
-              .postForm({
-                url: `/api/v1/static/upload`,
-                data: { file }
-              })
-              .then(response => {
-                if (response.data.code === 0) {
-                  response.data.data = `${ensureSlash(baseApiUrl)}/api/v1/static/file-id/${response.data.data.id}`;
-                }
-                return response;
-              });
-          },
-          upload: ({ file }) => {
-            return ajax.postForm({
-              url: `/api/v1/static/upload`,
-              data: { file }
+      tenant: {
+        getUserListActions
+      },
+      tenantAdmin: {
+        UserFormInner: TenantUserPlugin,
+        getUserListColumns,
+        personalCard,
+        enhanceUserData,
+        getUserApis: ({ tenantId, apis }) => {
+          const positionList = apis.talentSaas?.tenantAdmin?.position?.list;
+          const userList = apis.talentSaas?.tenantAdmin?.userList;
+          const result = {};
+          if (userList) {
+            result.list = Object.assign({}, userList, {
+              params: Object.assign({ tenantId }, userList.params || {})
             });
           }
+          if (positionList) {
+            result.positionList = Object.assign({}, positionList, {
+              params: Object.assign({ tenantId, perPage: 500, currentPage: 1 }, positionList.params || {})
+            });
+          }
+          return result;
         }
-      },
-      getApis()
-    ),
+      }
+    },
+    apis: Object.assign({}, getAccountApis(), remoteApis, talentApis, {
+      tenant: Object.assign({}, getAccountApis().tenant, talentApis.tenant, {
+        parseJoinToken: {
+          url: '/api/v1/tenant-extra/parse-join-token',
+          method: 'POST'
+        }
+      }),
+      file: {
+        contentWindowUrl: 'https://cdn.leapin-ai.com/components/@kne/iframe-resizer/0.1.3/dist/contentWindow.js',
+        pdfjsUrl: 'https://cdn.leapin-ai.com/components/pdfjs-dist/5.4.296',
+        getUrl: {
+          url: `/api/v1/static/file-url/{id}`,
+          paramsType: 'urlParams',
+          ignoreSuccessState: true
+        },
+        uploadForEditor: ({ file }) => {
+          return ajax
+            .postForm({
+              url: `/api/v1/static/upload`,
+              data: { file }
+            })
+            .then(response => {
+              if (response.data.code === 0) {
+                response.data.data = `${ensureSlash(baseApiUrl)}/api/v1/static/file-id/${response.data.data.id}`;
+              }
+              return response;
+            });
+        },
+        upload: ({ file }) => {
+          return ajax.postForm({
+            url: `/api/v1/static/upload`,
+            data: { file }
+          });
+        }
+      }
+    }),
     themeToken: {
       colorPrimary: '#4183F0'
     }

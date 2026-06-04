@@ -1,6 +1,4 @@
-
 # EmployeeInfoForm
-
 
 ### 概述
 
@@ -136,7 +134,6 @@ render(<CertificateCardExample />);
 
 ```
 
-
 ### API
 
 ## EmployeeInfoForm 主组件
@@ -180,4 +177,3 @@ render(<CertificateCardExample />);
 |onAdd|添加证书回调|() => void|-|
 |onRemove|删除证书回调|(index: number) => void|-|
 |onItemChange|证书内容变化回调|(index: number, value: string) => void|-|
-

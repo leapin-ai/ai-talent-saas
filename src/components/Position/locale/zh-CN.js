@@ -19,7 +19,22 @@ const zhCN = {
   'locationType.remote': '远程',
   'action.detail': '详情',
   'action.edit': '编辑',
-  'action.delete': '删除'
+  'action.delete': '删除',
+  'action.publish': '发布',
+  'action.unpublish': '取消发布',
+  'position.publishConfirm': '确定要发布该岗位吗？',
+  'position.unpublishConfirm': '确定要取消发布该岗位吗？',
+  'position.bizName': '岗位',
+  'position.keywordFilterLabel': '岗位关键字',
+  'position.salaryDescMaxLength': '薪资补充说明不能超过50个字符',
+  'position.salaryMinRequired': '请填写最低薪资',
+  'position.salaryMaxRequired': '请填写最高薪资',
+  'position.salaryMinGreaterThanMax': '最低薪资不能大于最高薪资',
+  'position.city': '城市',
+  'position.capacity': '职能',
+  'position.salary': '薪资',
+  'position.workContent': '工作内容',
+  'position.workRequirement': '工作要求'
 };
 
 export default zhCN;

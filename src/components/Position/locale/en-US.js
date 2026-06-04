@@ -19,7 +19,22 @@ const enUS = {
   'locationType.remote': 'Remote',
   'action.detail': 'Detail',
   'action.edit': 'Edit',
-  'action.delete': 'Delete'
+  'action.delete': 'Delete',
+  'action.publish': 'Publish',
+  'action.unpublish': 'Unpublish',
+  'position.publishConfirm': 'Are you sure to publish this position?',
+  'position.unpublishConfirm': 'Are you sure to unpublish this position?',
+  'position.bizName': 'Position',
+  'position.keywordFilterLabel': 'Position Keyword',
+  'position.salaryDescMaxLength': 'Salary description cannot exceed 50 characters',
+  'position.salaryMinRequired': 'Please fill in the minimum salary',
+  'position.salaryMaxRequired': 'Please fill in the maximum salary',
+  'position.salaryMinGreaterThanMax': 'Minimum salary cannot be greater than maximum salary',
+  'position.city': 'City',
+  'position.capacity': 'Function',
+  'position.salary': 'Salary',
+  'position.workContent': 'Work Content',
+  'position.workRequirement': 'Work Requirement'
 };
 
 export default enUS;

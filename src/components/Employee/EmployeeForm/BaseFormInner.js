@@ -164,11 +164,12 @@ const BaseFormInner = createWithRemoteLoader({
               valueKey="id"
               interceptor="object-output-value"
               single
-              api={apis.positionList}
+              api={Object.assign({}, apis.positionList, { params: { filter: { status: 'published' } } })}
               getSearchProps={({ searchText }) => {
                 return {
                   filter: {
-                    keyword: searchText
+                    keyword: searchText,
+                    status: 'published'
                   }
                 };
               }}
@@ -186,7 +187,7 @@ const BaseFormInner = createWithRemoteLoader({
                 paramsType: 'params'
               }}
             />,
-            <SuperSelectTree name="options.tenantOrgId" label="部门" api={apis.orgList} valueKey="id" labelKey="name" single interceptor="object-output-value" />
+            <SuperSelectTree name="tenantOrgIds" label="部门" api={apis.orgList} valueKey="id" labelKey="name" interceptor="array-output-value" />
           ]}
         />
       </Flex>

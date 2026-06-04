@@ -1,6 +1,4 @@
-
 # Employee
-
 
 ### 概述
 
@@ -58,7 +56,6 @@ render(<BaseExample />);
 
 ```
 
-
 ### API
 
 ## Employee 主组件
@@ -94,4 +91,3 @@ render(<BaseExample />);
 | description | 简介 | text |
 | createdAt | 创建时间 | datetime |
 | updatedAt | 更新时间 | datetime |
-

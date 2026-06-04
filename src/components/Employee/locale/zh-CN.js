@@ -61,7 +61,19 @@ const zhCN = {
   'collegeType.4': '海外院校',
   'collegeType.5': '中学',
   'collegeType.6': '职业教育',
-  'collegeType.7': '培训机构'
+  'collegeType.7': '培训机构',
+  'employee.linkEmployee': '关联员工档案',
+  'employee.linkUser': '关联用户',
+  'employee.selectEmployee': '选择员工',
+  'employee.selectUser': '选择用户',
+  'employee.linkFailed': '关联失败',
+  'employee.unlinkEmployee': '取消员工档案',
+  'employee.unlinkUser': '取消关联用户',
+  'employee.confirmUnlinkEmployee': '确认取消关联员工档案？',
+  'employee.confirmUnlinkUser': '确认取消关联用户？',
+  'employee.unlinkFailed': '取消关联失败',
+  'employee.viewEmployee': '查看员工档案',
+  'employee.viewUser': '查看用户'
 };
 
 export default zhCN;

@@ -6,9 +6,12 @@ import TalentGrid from './TalentGrid';
 import Fetch, { useFetch } from '@kne/react-fetch';
 import useRefCallback from '@kne/use-ref-callback';
 import { Spin, Flex, Typography } from 'antd';
-import TalentCard from './TalentCard';
+import TalentCard, { DEFAULT_HIGHLIGHT_FIELDS } from './TalentCard';
+import withLocale from './withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const SearchList = ({ list, totalCount, onViewProfile, onLoadMore, noMore, isLoading }) => {
+  const { formatMessage } = useIntl();
   const ref = useRef();
   const handlerLoadMore = useRefCallback(() => {
     !noMore && onLoadMore();
@@ -25,7 +28,7 @@ const SearchList = ({ list, totalCount, onViewProfile, onLoadMore, noMore, isLoa
       },
       {
         root: null,
-        rootMargin: '0px 0px 100px 0px' // 提前100px触发
+        rootMargin: '0px 0px 100px 0px'
       }
     );
     observer.observe(ref.current);
@@ -36,9 +39,7 @@ const SearchList = ({ list, totalCount, onViewProfile, onLoadMore, noMore, isLoa
 
   return (
     <Flex vertical gap={24}>
-      <div>
-        共搜索到<Typography.Link>{totalCount}条</Typography.Link>结果
-      </div>
+      <div>{formatMessage({ id: 'talentMarket.SearchResultCount' }, { count: <Typography.Link key="count">{totalCount}</Typography.Link> })}</div>
       <div className={style['talent-grid']}>
         {list.map(talent => (
           <TalentCard key={talent.id} talent={talent} onViewProfile={onViewProfile} />
@@ -50,8 +51,8 @@ const SearchList = ({ list, totalCount, onViewProfile, onLoadMore, noMore, isLoa
             {noMore ? (
               ''
             ) : (
-              <Spin tip="加载更多...">
-                <span style={{ visibility: 'hidden' }}>加载更多...</span>
+              <Spin tip={formatMessage({ id: 'talentMarket.LoadMore' })}>
+                <span style={{ visibility: 'hidden' }}>{formatMessage({ id: 'talentMarket.LoadMore' })}</span>
               </Spin>
             )}
           </Flex>
@@ -61,7 +62,8 @@ const SearchList = ({ list, totalCount, onViewProfile, onLoadMore, noMore, isLoa
   );
 };
 
-const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
+const TalentMarket = withLocale(({ baseUrl, onMoreProfile, apis }) => {
+  const { formatMessage } = useIntl();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchValue = searchParams.get('query') || '';
   const setSearchValue = value => {
@@ -86,7 +88,8 @@ const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
     if (searchValue) {
       refresh({
         data: {
-          query: searchValue
+          query: searchValue,
+          highlightFields: DEFAULT_HIGHLIGHT_FIELDS
         }
       });
     }
@@ -116,7 +119,8 @@ const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
       avatar: item.avatar,
       status: item.status === 'ACTIVE' ? 'employed' : 'resigned',
       skills: [...(item.profile?.skills?.cert_mapped || []), ...(item.profile?.skills?.work_related || []), ...(item.profile?.skills?.interest_strength || [])],
-      advantages: (item.profile?.advantage || []).map(adv => adv.name)
+      advantages: (item.profile?.advantage || []).map(adv => adv.name),
+      highlight: item.highlight || {}
     };
   };
 
@@ -131,14 +135,15 @@ const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
         onSearch={async searchValue => {
           await refresh({
             data: {
-              query: searchValue
+              query: searchValue,
+              highlightFields: DEFAULT_HIGHLIGHT_FIELDS
             }
           });
         }}
       />
       <main className={style.main}>
         {searchValue && (isLoading || (data && data.pageData?.length > 0)) ? (
-          <Spin spinning={isLoading} tip="正在加载中...">
+          <Spin spinning={isLoading} tip={formatMessage({ id: 'talentMarket.Loading' })}>
             <SearchList
               list={(data?.pageData || []).map(item => talentMapping(item, data.positionEnums))}
               totalCount={data?.totalCount || 0}
@@ -154,6 +159,7 @@ const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
                   {
                     data: {
                       query: searchValue,
+                      highlightFields: DEFAULT_HIGHLIGHT_FIELDS,
                       currentPage: requestParams.data.currentPage + 1
                     }
                   },
@@ -179,7 +185,7 @@ const TalentMarket = ({ baseUrl, onMoreProfile, apis }) => {
       </main>
     </div>
   );
-};
+});
 
 export { default as Header } from './Header';
 export { default as TalentGrid } from './TalentGrid';
