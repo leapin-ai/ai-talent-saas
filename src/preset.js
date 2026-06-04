@@ -167,6 +167,7 @@ export const globalInit = async () => {
         enhanceUserData,
         getUserApis: ({ tenantId, apis }) => {
           const positionList = apis.talentSaas?.tenantAdmin?.position?.list;
+          const positionCreate = apis.talentSaas?.tenantAdmin?.position?.create;
           const userList = apis.talentSaas?.tenantAdmin?.userList;
           const result = {};
           if (userList) {
@@ -177,6 +178,11 @@ export const globalInit = async () => {
           if (positionList) {
             result.positionList = Object.assign({}, positionList, {
               params: Object.assign({ tenantId, perPage: 500, currentPage: 1 }, positionList.params || {})
+            });
+          }
+          if (positionCreate) {
+            result.positionCreate = Object.assign({}, positionCreate, {
+              data: Object.assign({ tenantId }, positionCreate.data || {})
             });
           }
           return result;

@@ -16,6 +16,10 @@ const getApis = options => {
           list: {
             url: `${prefix}/tenant/admin/position-list`,
             method: 'GET'
+          },
+          create: {
+            url: `${prefix}/tenant/admin/position-create`,
+            method: 'POST'
           }
         }
       },

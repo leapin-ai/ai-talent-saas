@@ -40,6 +40,42 @@ module.exports = fp(async (fastify, options) => {
     }
   );
 
+  fastify.post(
+    `${options.prefix}/tenant/admin/position-create`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: '平台管理-租户创建岗位',
+        body: {
+          type: 'object',
+          properties: {
+            tenantId: {
+              type: 'string'
+            },
+            name: {
+              type: 'string'
+            },
+            language: {
+              type: 'string',
+              enum: ['zh-CN', 'en-US'],
+              default: 'zh-CN'
+            },
+            locationType: {
+              type: 'string',
+              enum: ['on-site', 'remote'],
+              default: 'on-site'
+            }
+          },
+          required: ['tenantId', 'name']
+        }
+      }
+    },
+    async request => {
+      const { tenantId, ...body } = request.body;
+      return services.position.create({ tenantId }, body);
+    }
+  );
+
   fastify.get(
     `${options.prefix}/tenant/position/list`,
     {

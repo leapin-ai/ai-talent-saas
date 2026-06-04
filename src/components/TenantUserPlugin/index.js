@@ -1,7 +1,9 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useMemo } from 'react';
+import { Button, Flex } from 'antd';
 import merge from 'lodash/merge';
 import { Actions } from '@components/Employee';
+import PositionFormInner, { createPaySalary } from '@components/Position/PositionForm';
 import withLocale, { FormatMessage } from './withLocale';
 import { useIntl } from '@kne/react-intl';
 
@@ -77,12 +79,16 @@ export const enhanceUserData = async (item, { apis, ajax }) => {
 };
 
 const TenantUserPlugin = createWithRemoteLoader({
-  modules: ['components-core:FormInfo']
+  modules: ['components-core:FormInfo', 'components-core:FormInfo@useFormModal', 'components-core:Global@usePreset']
 })(
   withLocale(({ remoteModules, list, apis, ...props }) => {
     const { formatMessage } = useIntl();
-    const [FormInfo] = remoteModules;
+    const [FormInfo, useFormModal, usePreset] = remoteModules;
     const { SuperSelect, DatePicker } = FormInfo.fields;
+    const { ajax } = usePreset();
+    const formModal = useFormModal();
+
+    const positionApi = Object.assign({}, apis.positionList, { params: Object.assign({}, apis.positionList?.params || {}, { filter: { status: 'published' } }) });
 
     const formInnerList = useMemo(() => {
       const newList = list.slice(0);
@@ -92,17 +98,49 @@ const TenantUserPlugin = createWithRemoteLoader({
         <SuperSelect
           name="options.position"
           label={formatMessage({ id: 'tenantUser.position' })}
-          rule="REQ"
           labelKey="name"
           valueKey="id"
           interceptor="object-output-value"
           single
-          api={Object.assign({}, apis.positionList, { params: { filter: { status: 'published' } } })}
+          api={positionApi}
+          footer={({ close, reload }) => (
+            <Flex justify="center" style={{ padding: '4px 0' }}>
+              <Button
+                type="link"
+                size="small"
+                onClick={() => {
+                  close();
+                  formModal({
+                    title: formatMessage({ id: 'tenantUser.addPosition' }),
+                    size: 'small',
+                    formProps: {
+                      rules: { PAY_SALARY: createPaySalary(formatMessage) },
+                      onSubmit: async formData => {
+                        const { data: resData } = await ajax(
+                          Object.assign({}, apis.positionCreate, {
+                            data: Object.assign({ status: 'published' }, apis.positionCreate?.data || {}, formData)
+                          })
+                        );
+                        if (resData.code !== 0) {
+                          throw new Error(resData.msg || formatMessage({ id: 'tenantUser.addPositionFailed' }));
+                        }
+                        await reload();
+                        return resData.data;
+                      }
+                    },
+                    children: <PositionFormInner />
+                  });
+                }}
+              >
+                {formatMessage({ id: 'tenantUser.addPosition' })}
+              </Button>
+            </Flex>
+          )}
         />
       );
       newList.splice(7, 0, <DatePicker name="options.joinDate" label={formatMessage({ id: 'tenantUser.joinDate' })} />, <DatePicker name="options.workStartDate" label={formatMessage({ id: 'tenantUser.workStartDate' })} />);
       return newList;
-    }, [list, formatMessage, apis.positionList]);
+    }, [ajax, list, formatMessage, apis.positionCreate, positionApi, formModal]);
     return <FormInfo {...props} list={formInnerList} />;
   })
 );
