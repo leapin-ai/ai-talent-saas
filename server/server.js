@@ -60,7 +60,7 @@ const createServer = () => {
         AWS_S3_BUCKET: { type: 'string' },
         AWS_S3_ENDPOINT: { type: 'string' },
         AWS_S3_ACCESS_KEY_ID: { type: 'string' },
-        AWS_S3_SECRET_ACCESS_KEY: { type: 'string' }
+        AWS_S3_SECRET_ACCESS_KEY: { type: 'string' },
 
         ALISMTP_USER: { type: 'string' },
         ALISMTP_PASSWORD: { type: 'string' },
@@ -100,6 +100,9 @@ const createServer = () => {
         prefix: `${options.prefix}/static`,
         root: path.resolve('./static'),
         ossAdapter: () => {
+          if (fastify.config.AWS_S3_ACCESS_KEY_ID) {
+            return fastify.aws.services.oss;
+          }
           return fastify.aliyun.services.oss;
         }
       });
@@ -119,6 +122,7 @@ const createServer = () => {
         isTest: true,
         prefix: `${options.prefix}`,
         sendMessage: async ({ name, type, messageType, props }) => {
+          const language = props.options?.language || 'zh-CN';
           // messageType: 0:短信验证码，1:邮件验证码 type: 0:注册,2:登录,4:验证租户管理员,5:忘记密码,6:候选人登录验证
           if (messageType === 1 && type === 0) {
             await fastify.message.services.sendMessage({
@@ -127,7 +131,7 @@ const createServer = () => {
               code: 'REGISTERCODE',
               props,
               options: {
-                title: '注册验证码'
+                title: language === 'zh-CN' ? '注册验证码' : 'Registration verification code'
               }
             });
           }
@@ -140,7 +144,7 @@ const createServer = () => {
                 url: `${ensureSlash(fastify.config.ORIGIN)}/account/reset-password/${props.token}${props.options?.referer ? `?referer=${props.options?.referer}` : ''}`
               }),
               options: {
-                title: '重置密码'
+                title: language === 'zh-CN' ? '重置密码' : 'Reset Password'
               }
             });
           }
@@ -159,7 +163,7 @@ const createServer = () => {
               code: 'CANDIDATECODE',
               props,
               options: {
-                title: '认证验证码'
+                title: language === 'zh-CN' ? '认证验证码' : 'Verification Code'
               }
             });
           }
@@ -172,11 +176,12 @@ const createServer = () => {
           host: fastify.config.ALISMTP_ENDPOINT,
           port: 465,
           secure: true,
-          user: fastify.config.ALISMTP_USER,
+          user: fastify.config.AWS_SES_SOURCE_EMAIL || fastify.config.ALISMTP_USER,
           pass: fastify.config.ALISMTP_PASSWORD
         },
         templateDir: path.join(__dirname, './messageTemplate'),
         senders: {
+          0: fastify.config.AWS_SES_SOURCE_EMAIL && (mailOptions => fastify.aws.services.ses(mailOptions)),
           1: async ({ name, props, content }) => {
             return await fastify.task.services.executor({
               type: 'sms',
@@ -243,6 +248,23 @@ const createServer = () => {
               }
             }
           });
+        }
+      });
+
+      fastify.register(require('@kne/fastify-aws'), {
+        prefix: `${options.prefix}/aws`,
+        oss: {
+          baseDir: 'ai-talent-saas',
+          region: fastify.config.AWS_S3_REGION,
+          accessKeyId: fastify.config.AWS_S3_ACCESS_KEY_ID,
+          accessKeySecret: fastify.config.AWS_S3_SECRET_ACCESS_KEY,
+          bucket: fastify.config.AWS_S3_BUCKET
+        },
+        ses: {
+          region: fastify.config.AWS_SES_REGION,
+          accessKeyId: fastify.config.AWS_SES_ACCESS_KEY_ID,
+          accessKeySecret: fastify.config.AWS_SES_SECRET_ACCESS_KEY,
+          from: fastify.config.AWS_SES_SOURCE_EMAIL
         }
       });
     })

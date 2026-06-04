@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import AppChildrenRouter from '@kne/app-children-router';
 import { Flex } from 'antd';
 import Layout from './Layout';
@@ -19,6 +19,35 @@ const TenantAdmin = createWithRemoteLoader({
     const { apis } = usePreset();
     const profileRef = useRef(null);
     const navigate = useNavigate();
+    const settingUserApis = useMemo(
+      () => ({
+        positionList: apis.talentSaas.tenant.position.list,
+        list: apis.talentSaas.tenant.userList,
+        sendOrgMessage: apis.talentSaas.tenantAdmin.sendOrgMessage,
+        linkTenantUser: apis.talentSaas.tenant.employee.linkTenantUser,
+        unlinkTenantUser: apis.talentSaas.tenant.employee.unlinkTenantUser,
+        employeeList: apis.talentSaas.tenant.employee.list
+      }),
+      [
+        apis.talentSaas.tenant.position.list,
+        apis.talentSaas.tenant.userList,
+        apis.talentSaas.tenantAdmin.sendOrgMessage,
+        apis.talentSaas.tenant.employee.linkTenantUser,
+        apis.talentSaas.tenant.employee.unlinkTenantUser,
+        apis.talentSaas.tenant.employee.list
+      ]
+    );
+    const renderSettingUserPage = useCallback(
+      ({ title, filter, titleExtra, children }) => {
+        return (
+          <Page title={title} extra={titleExtra}>
+            <Filter {...filter} />
+            {children}
+          </Page>
+        );
+      },
+      [Filter]
+    );
     return (
       <AppChildrenRouter
         errorPage
@@ -136,25 +165,8 @@ const TenantAdmin = createWithRemoteLoader({
             path: 'setting/user',
             title: 'Setting/User',
             element: (
-              <Setting.User
-                baseUrl={`${baseUrl}/setting`}
-                apis={{
-                  positionList: apis.talentSaas.tenant.position.list,
-                  list: apis.talentSaas.tenant.userList,
-                  sendOrgMessage: apis.talentSaas.tenantAdmin.sendOrgMessage,
-                  linkTenantUser: apis.talentSaas.tenant.employee.linkTenantUser,
-                  unlinkTenantUser: apis.talentSaas.tenant.employee.unlinkTenantUser,
-                  employeeList: apis.talentSaas.tenant.employee.list
-                }}
-              >
-                {({ title, filter, titleExtra, children }) => {
-                  return (
-                    <Page title={title} extra={titleExtra}>
-                      <Filter {...filter} />
-                      {children}
-                    </Page>
-                  );
-                }}
+              <Setting.User baseUrl={`${baseUrl}/setting`} apis={settingUserApis}>
+                {renderSettingUserPage}
               </Setting.User>
             )
           },

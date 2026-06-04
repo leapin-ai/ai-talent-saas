@@ -73,7 +73,8 @@ const zhCN = {
   'employee.confirmUnlinkUser': '确认取消关联用户？',
   'employee.unlinkFailed': '取消关联失败',
   'employee.viewEmployee': '查看员工档案',
-  'employee.viewUser': '查看用户'
+  'employee.viewUser': '查看用户',
+  inputPlaceholder: '请输入'
 };
 
 export default zhCN;

@@ -4,7 +4,8 @@ const enUS = {
   'tenantUser.workStartDate': 'Work Start Date',
   'tenantUser.addPosition': 'Add Position',
   'tenantUser.addPositionFailed': 'Failed to add position',
-  'tenantUser.positionName': 'Position Name'
+  'tenantUser.positionName': 'Position Name',
+  inputPlaceholder: 'Please enter'
 };
 
 export default enUS;

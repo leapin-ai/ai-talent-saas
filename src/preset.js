@@ -72,7 +72,7 @@ export const globalInit = async () => {
     //url: 'http://localhost:3001',
     //tpl: '{{url}}',
     remote: 'components-core',
-    defaultVersion: '0.4.75'
+    defaultVersion: '0.5.0'
   };
   remoteLoaderPreset({
     remotes: {
@@ -93,7 +93,7 @@ export const globalInit = async () => {
         //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.45'
+        defaultVersion: '1.1.47'
       },
       'components-thirdparty': {
         ...registry,
@@ -145,12 +145,7 @@ export const globalInit = async () => {
   const getAccountApis = await safeLoadApis('components-admin:Apis@getApis');
   const talentApis = getApis();
 
-  const enums = Object.assign({}, await safeLoadApis('components-admin:Task@enums'), talentEnums, {
-    taskType: () => [
-      { value: 'sync-org', description: '组织同步', type: 'warning' },
-      { value: 'parse-resume', description: '简历解析', type: 'info' }
-    ]
-  });
+  const enums = Object.assign({}, await safeLoadApis('components-admin:Task@enums'), talentEnums);
 
   return {
     ajax,

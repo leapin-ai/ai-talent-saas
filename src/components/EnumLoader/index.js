@@ -1,20 +1,12 @@
-import language, { createLanguage } from './language';
-import positionStatus, { createPositionStatus } from './positionStatus';
-import locationType, { createLocationType } from './locationType';
-import employeeStatus, { createEmployeeStatus } from './employeeStatus';
-import collegeType, { createCollegeType } from './collegeType';
-import recruit, { createRecruit } from './recruit';
+import language from './language';
+import positionStatus from './positionStatus';
+import locationType from './locationType';
+import employeeStatus from './employeeStatus';
+import collegeType from './collegeType';
+import recruit from './recruit';
+import taskType from './taskType';
 
-export const enums = { language, positionStatus, locationType, employeeStatus, collegeType, recruit };
-
-export const createEnums = formatMessage => ({
-  language: createLanguage(formatMessage),
-  positionStatus: createPositionStatus(formatMessage),
-  locationType: createLocationType(formatMessage),
-  employeeStatus: createEmployeeStatus(formatMessage),
-  collegeType: createCollegeType(formatMessage),
-  recruit: createRecruit(formatMessage)
-});
+export const enums = { language, positionStatus, locationType, employeeStatus, collegeType, recruit, taskType };
 
 const EnumLoader = ({ children }) => {
   if (typeof children !== 'function') {

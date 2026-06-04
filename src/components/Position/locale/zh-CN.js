@@ -22,6 +22,8 @@ const zhCN = {
   'action.delete': '删除',
   'action.publish': '发布',
   'action.unpublish': '取消发布',
+  'action.publishSuccess': '发布成功',
+  'action.unpublishSuccess': '取消发布成功',
   'position.publishConfirm': '确定要发布该岗位吗？',
   'position.unpublishConfirm': '确定要取消发布该岗位吗？',
   'position.bizName': '岗位',
@@ -34,7 +36,8 @@ const zhCN = {
   'position.capacity': '职能',
   'position.salary': '薪资',
   'position.workContent': '工作内容',
-  'position.workRequirement': '工作要求'
+  'position.workRequirement': '工作要求',
+  inputPlaceholder: '请输入'
 };
 
 export default zhCN;
