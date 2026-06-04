@@ -51,6 +51,17 @@ const createServer = () => {
         OSS_ACCESS_KEY_ID: { type: 'string' },
         OSS_ACCESS_KEY_SECRET: { type: 'string' },
 
+        AWS_SES_ACCESS_KEY_ID: { type: 'string' },
+        AWS_SES_SECRET_ACCESS_KEY: { type: 'string' },
+        AWS_SES_REGION: { type: 'string' },
+        AWS_SES_SOURCE_EMAIL: { type: 'string' },
+
+        AWS_S3_REGION: { type: 'string' },
+        AWS_S3_BUCKET: { type: 'string' },
+        AWS_S3_ENDPOINT: { type: 'string' },
+        AWS_S3_ACCESS_KEY_ID: { type: 'string' },
+        AWS_S3_SECRET_ACCESS_KEY: { type: 'string' }
+
         ALISMTP_USER: { type: 'string' },
         ALISMTP_PASSWORD: { type: 'string' },
         ALISMTP_ENDPOINT: { type: 'string' },
