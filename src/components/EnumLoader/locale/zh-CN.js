@@ -24,7 +24,9 @@ const zhCN = {
   'enumLoader.recruitSelfStudy': '自考',
   'enumLoader.recruitOnJob': '在职',
   'enumLoader.recruitAdultEdu': '成教',
-  'enumLoader.recruitCorrespondence': '函授'
+  'enumLoader.recruitCorrespondence': '函授',
+  'enumLoader.taskTypeSyncOrg': '组织同步',
+  'enumLoader.taskTypeParseResume': '简历解析'
 };
 
 export default zhCN;

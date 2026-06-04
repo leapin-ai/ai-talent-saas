@@ -82,7 +82,8 @@ const zhCN = {
   'talentProfile.WorkRelated': '工作相关',
   'talentProfile.ShortTerm': '短期 (12 个月)',
   'talentProfile.LongTerm': '长期 (3-5 年)',
-  'talentProfile.ServiceYearsValue': '{years} 年'
+  'talentProfile.ServiceYearsValue': '{years} 年',
+  inputPlaceholder: '请输入'
 };
 
 export default zhCN;

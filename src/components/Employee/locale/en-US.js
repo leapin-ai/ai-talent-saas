@@ -73,7 +73,8 @@ const enUS = {
   'employee.confirmUnlinkUser': 'Confirm unlink user?',
   'employee.unlinkFailed': 'Unlink Failed',
   'employee.viewEmployee': 'View Employee',
-  'employee.viewUser': 'View User'
+  'employee.viewUser': 'View User',
+  inputPlaceholder: 'Please enter'
 };
 
 export default enUS;

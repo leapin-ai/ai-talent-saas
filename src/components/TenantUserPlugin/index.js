@@ -88,7 +88,7 @@ const TenantUserPlugin = createWithRemoteLoader({
     const { ajax } = usePreset();
     const formModal = useFormModal();
 
-    const positionApi = Object.assign({}, apis.positionList, { params: Object.assign({}, apis.positionList?.params || {}, { filter: { status: 'published' } }) });
+    const positionApi = useMemo(() => Object.assign({}, apis.positionList, { params: Object.assign({}, apis.positionList?.params || {}, { filter: { status: 'published' } }) }), [apis.positionList]);
 
     const formInnerList = useMemo(() => {
       const newList = list.slice(0);

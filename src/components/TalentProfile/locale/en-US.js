@@ -82,7 +82,8 @@ const enUS = {
   'talentProfile.WorkRelated': 'Work Related',
   'talentProfile.ShortTerm': 'Short Term (12 months)',
   'talentProfile.LongTerm': 'Long Term (3-5 years)',
-  'talentProfile.ServiceYearsValue': '{years} Years'
+  'talentProfile.ServiceYearsValue': '{years} Years',
+  inputPlaceholder: 'Please enter'
 };
 
 export default enUS;

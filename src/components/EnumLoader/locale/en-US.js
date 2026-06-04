@@ -24,7 +24,9 @@ const enUS = {
   'enumLoader.recruitSelfStudy': 'Self-study',
   'enumLoader.recruitOnJob': 'On-the-job',
   'enumLoader.recruitAdultEdu': 'Adult Education',
-  'enumLoader.recruitCorrespondence': 'Correspondence'
+  'enumLoader.recruitCorrespondence': 'Correspondence',
+  'enumLoader.taskTypeSyncOrg': 'Org Sync',
+  'enumLoader.taskTypeParseResume': 'Resume Parsing'
 };
 
 export default enUS;

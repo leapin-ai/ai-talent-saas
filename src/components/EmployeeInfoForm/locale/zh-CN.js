@@ -29,7 +29,8 @@ const zhCN = {
   'employeeInfoForm.assignmentNo': '不愿意',
   'employeeInfoForm.add': '添加',
   'employeeInfoForm.noCertificateRecord': '暂无证书记录',
-  'employeeInfoForm.languageChinese': '中文'
+  'employeeInfoForm.languageChinese': '中文',
+  inputPlaceholder: '请输入'
 };
 
 export default zhCN;

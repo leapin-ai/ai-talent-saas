@@ -26,7 +26,7 @@ const Position = createWithRemoteLoader({
             data: { id, status }
           }).then(({ data: res }) => {
             if (res.code === 0) {
-              message.success(isPublish ? formatMessage({ id: 'action.publish' }) + '成功' : formatMessage({ id: 'action.unpublish' }) + '成功');
+              message.success(isPublish ? formatMessage({ id: 'action.publishSuccess' }) : formatMessage({ id: 'action.unpublishSuccess' }));
               setRefreshKey(prev => prev + 1);
             }
           });

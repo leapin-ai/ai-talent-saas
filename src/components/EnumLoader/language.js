@@ -1,13 +1,11 @@
-const language = () => {
+import { createFormatMessage } from './withLocale';
+
+const language = ({ locale }) => {
+  const formatMessage = createFormatMessage(locale);
   return [
-    { value: 'zh-CN', description: '中文', type: 'success' },
-    { value: 'en-US', description: '英文', type: 'info' }
+    { value: 'zh-CN', description: formatMessage({ id: 'enumLoader.languageZhCN' }), type: 'success' },
+    { value: 'en-US', description: formatMessage({ id: 'enumLoader.languageEnUS' }), type: 'info' }
   ];
 };
-
-export const createLanguage = formatMessage => () => [
-  { value: 'zh-CN', description: formatMessage({ id: 'enumLoader.languageZhCN' }), type: 'success' },
-  { value: 'en-US', description: formatMessage({ id: 'enumLoader.languageEnUS' }), type: 'info' }
-];
 
 export default language;
