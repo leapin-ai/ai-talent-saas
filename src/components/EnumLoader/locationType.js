@@ -1,13 +1,11 @@
-const locationType = () => {
+import { createFormatMessage } from './withLocale';
+
+const locationType = ({ locale }) => {
+  const formatMessage = createFormatMessage(locale);
   return [
-    { value: 'on-site', description: '现场', type: 'info' },
-    { value: 'remote', description: '远程', type: 'success' }
+    { value: 'on-site', description: formatMessage({ id: 'enumLoader.locationTypeOnSite' }), type: 'info' },
+    { value: 'remote', description: formatMessage({ id: 'enumLoader.locationTypeRemote' }), type: 'success' }
   ];
 };
-
-export const createLocationType = formatMessage => () => [
-  { value: 'on-site', description: formatMessage({ id: 'enumLoader.locationTypeOnSite' }), type: 'info' },
-  { value: 'remote', description: formatMessage({ id: 'enumLoader.locationTypeRemote' }), type: 'success' }
-];
 
 export default locationType;

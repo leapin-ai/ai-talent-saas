@@ -22,6 +22,8 @@ const enUS = {
   'action.delete': 'Delete',
   'action.publish': 'Publish',
   'action.unpublish': 'Unpublish',
+  'action.publishSuccess': 'Published successfully',
+  'action.unpublishSuccess': 'Unpublished successfully',
   'position.publishConfirm': 'Are you sure to publish this position?',
   'position.unpublishConfirm': 'Are you sure to unpublish this position?',
   'position.bizName': 'Position',
@@ -34,7 +36,8 @@ const enUS = {
   'position.capacity': 'Function',
   'position.salary': 'Salary',
   'position.workContent': 'Work Content',
-  'position.workRequirement': 'Work Requirement'
+  'position.workRequirement': 'Work Requirement',
+  inputPlaceholder: 'Please enter'
 };
 
 export default enUS;

@@ -29,7 +29,8 @@ const enUS = {
   'employeeInfoForm.assignmentNo': 'Not Willing',
   'employeeInfoForm.add': 'Add',
   'employeeInfoForm.noCertificateRecord': 'No certificate records',
-  'employeeInfoForm.languageChinese': 'Chinese'
+  'employeeInfoForm.languageChinese': 'Chinese',
+  inputPlaceholder: 'Please enter'
 };
 
 export default enUS;

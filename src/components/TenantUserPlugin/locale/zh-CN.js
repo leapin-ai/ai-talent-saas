@@ -4,7 +4,8 @@ const zhCN = {
   'tenantUser.workStartDate': '开始工作时间',
   'tenantUser.addPosition': '添加岗位',
   'tenantUser.addPositionFailed': '添加岗位失败',
-  'tenantUser.positionName': '岗位名称'
+  'tenantUser.positionName': '岗位名称',
+  inputPlaceholder: '请输入'
 };
 
 export default zhCN;
