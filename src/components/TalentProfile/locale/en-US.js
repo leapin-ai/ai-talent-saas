@@ -20,6 +20,7 @@ const enUS = {
   'talentProfile.EditPromotionHistory': 'Edit Promotion History',
   'talentProfile.NoPromotionHistory': 'No promotion history',
   'talentProfile.NoData': 'No data',
+  'talentProfile.NoLinkedEmployee': 'No employee profile linked to this account',
   'talentProfile.HybridWork': 'Hybrid Work',
   'talentProfile.RemoteWork': 'Remote Work',
   'talentProfile.OnSiteWork': 'On-site Work',

@@ -14,7 +14,7 @@ const { Text } = Typography;
 const AdvantagesCard = createWithRemoteLoader({
   modules: ['components-core:FormInfo@useFormModal']
 })(
-  withLocale(({ remoteModules, saveProfile, advantages }) => {
+  withLocale(({ remoteModules, saveProfile, advantages, readOnly }) => {
     const [useFormModal] = remoteModules;
     const { formatMessage } = useIntl();
     const formModal = useFormModal();
@@ -31,26 +31,28 @@ const AdvantagesCard = createWithRemoteLoader({
             <IoMdTrendingUp />
             <span>{formatMessage({ id: 'talentProfile.Advantages' })}</span>
           </Space>
-          <Button
-            type="text"
-            className={style['edit-btn']}
-            icon={<MdOutlineEdit />}
-            onClick={() => {
-              formModal({
-                title: formatMessage({ id: 'talentProfile.EditAdvantages' }),
-                size: 'small',
-                formProps: {
-                  data: {
-                    advantage: advantages
+          {!readOnly && (
+            <Button
+              type="text"
+              className={style['edit-btn']}
+              icon={<MdOutlineEdit />}
+              onClick={() => {
+                formModal({
+                  title: formatMessage({ id: 'talentProfile.EditAdvantages' }),
+                  size: 'small',
+                  formProps: {
+                    data: {
+                      advantage: advantages
+                    },
+                    onSubmit: formData => {
+                      return saveProfile({ advantage: (formData.advantage || []).map(item => Object.assign({}, { name: '', description: '' }, item)) });
+                    }
                   },
-                  onSubmit: formData => {
-                    return saveProfile({ advantage: (formData.advantage || []).map(item => Object.assign({}, { name: '', description: '' }, item)) });
-                  }
-                },
-                children: <AdvantageFormInner />
-              });
-            }}
-          />
+                  children: <AdvantageFormInner />
+                });
+              }}
+            />
+          )}
         </Flex>
         {advantages && advantages.length > 0 ? (
           advantages.map((advantage, index) => (

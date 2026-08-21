@@ -158,6 +158,21 @@ module.exports = fp(async (fastify, options) => {
     return employee;
   };
 
+  const myDetail = async authenticatePayload => {
+    const { tenantId, id: tenantUserId } = authenticatePayload;
+    if (!tenantUserId) {
+      return null;
+    }
+    const employee = await models.employee.findOne({
+      where: { tenantUserId, tenantId },
+      attributes: ['id']
+    });
+    if (!employee) {
+      return null;
+    }
+    return detail(authenticatePayload, { id: employee.id });
+  };
+
   const save = async (authenticatePayload, { id, name, phone, email, ...data }) => {
     const employee = await detail(authenticatePayload, { id });
     const { tenantId } = authenticatePayload;
@@ -446,7 +461,7 @@ module.exports = fp(async (fastify, options) => {
   };
 
   Object.assign(fastify[options.name].services, {
-    employee: { create, list, detail, save, remove, setStatus, recommend, search, saveProfile, linkTenantUser, unlinkTenantUser, userList, adminUserList },
+    employee: { create, list, detail, myDetail, save, remove, setStatus, recommend, search, saveProfile, linkTenantUser, unlinkTenantUser, userList, adminUserList },
     performance: {
       create: createPerformance,
       list: performanceList,

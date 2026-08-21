@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import TalentMarket from '@components/TalentMarket';
 import TalentProfile from '@components/TalentProfile';
+import Home from './Home';
+import CompleteProfile from './CompleteProfile';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
 
@@ -55,7 +57,17 @@ const TenantAdmin = createWithRemoteLoader({
         list={[
           {
             index: true,
-            title: 'Dashboard',
+            title: formatMessage({ id: 'tenantAdmin.home' }),
+            element: <Home baseUrl={baseUrl} />
+          },
+          {
+            path: 'complete-profile',
+            title: formatMessage({ id: 'tenantAdmin.completeMyProfile' }),
+            element: <CompleteProfile baseUrl={baseUrl} />
+          },
+          {
+            path: 'market',
+            title: formatMessage({ id: 'tenantAdmin.internalTalentMarket' }),
             element: (
               <Page>
                 <TalentMarket

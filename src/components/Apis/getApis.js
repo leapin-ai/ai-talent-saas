@@ -77,6 +77,10 @@ const getApis = options => {
             url: `${prefix}/tenant/employee/detail`,
             method: 'GET'
           },
+          myDetail: {
+            url: `${prefix}/tenant/employee/my-detail`,
+            method: 'GET'
+          },
           create: {
             url: `${prefix}/tenant/employee/create`,
             method: 'POST'

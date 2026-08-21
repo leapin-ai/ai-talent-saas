@@ -37,6 +37,12 @@ const Layout = createWithRemoteLoader({
                   items: [
                     {
                       path: '/',
+                      label: formatMessage({ id: 'tenantAdmin.home' }),
+                      toolbar: true,
+                      icon: 'home'
+                    },
+                    {
+                      path: '/market',
                       label: formatMessage({ id: 'tenantAdmin.internalTalentMarket' }),
                       toolbar: true,
                       icon: (

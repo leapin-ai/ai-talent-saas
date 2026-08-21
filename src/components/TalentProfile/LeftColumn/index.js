@@ -17,7 +17,7 @@ const { Text } = Typography;
 const LeftColumn = createWithRemoteLoader({
   modules: ['components-core:FormInfo@useFormModal']
 })(
-  withLocale(({ remoteModules, saveProfile, profileData, advantages, certificates, promotionHistory, gotoPosition }) => {
+  withLocale(({ remoteModules, saveProfile, profileData, advantages, certificates, promotionHistory, gotoPosition, readOnly }) => {
     const { formatMessage } = useIntl();
     const [useFormModal] = remoteModules;
     const formModal = useFormModal();
@@ -30,7 +30,7 @@ const LeftColumn = createWithRemoteLoader({
 
     return (
       <div className={style['left-column']}>
-        <AdvantagesCard saveProfile={saveProfile} advantages={advantages} />
+        <AdvantagesCard readOnly={readOnly} saveProfile={saveProfile} advantages={advantages} />
 
         <Card className={style['duration-card']}>
           <div>
@@ -70,30 +70,32 @@ const LeftColumn = createWithRemoteLoader({
               </span>
               {formatMessage({ id: 'talentProfile.Certificates' })}
             </Space>
-            <Button
-              type="text"
-              className={style['edit-btn']}
-              icon={<MdOutlineEdit />}
-              onClick={() => {
-                formModal({
-                  title: formatMessage({ id: 'talentProfile.EditCertificates' }),
-                  size: 'small',
-                  formProps: {
-                    data: {
-                      certificates
+            {!readOnly && (
+              <Button
+                type="text"
+                className={style['edit-btn']}
+                icon={<MdOutlineEdit />}
+                onClick={() => {
+                  formModal({
+                    title: formatMessage({ id: 'talentProfile.EditCertificates' }),
+                    size: 'small',
+                    formProps: {
+                      data: {
+                        certificates
+                      },
+                      onSubmit: formData => {
+                        return saveProfile({
+                          options: {
+                            certificates_licenses: formData.certificates
+                          }
+                        });
+                      }
                     },
-                    onSubmit: formData => {
-                      return saveProfile({
-                        options: {
-                          certificates_licenses: formData.certificates
-                        }
-                      });
-                    }
-                  },
-                  children: <CertificateFormInner />
-                });
-              }}
-            />
+                    children: <CertificateFormInner />
+                  });
+                }}
+              />
+            )}
           </Flex>
           {certificates.length > 0 ? (
             <Space wrap>
@@ -114,35 +116,37 @@ const LeftColumn = createWithRemoteLoader({
               </span>
               {formatMessage({ id: 'talentProfile.PromotionHistory' })}
             </Space>
-            <Button
-              type="text"
-              className={style['edit-btn']}
-              icon={<MdOutlineEdit />}
-              onClick={() => {
-                formModal({
-                  title: formatMessage({ id: 'talentProfile.EditPromotionHistory' }),
-                  formProps: {
-                    data: {
-                      promotionHistory: (promotionHistory || []).map(item => ({
-                        time: item.period,
-                        occupation: item.position,
-                        level: item.level
-                      }))
+            {!readOnly && (
+              <Button
+                type="text"
+                className={style['edit-btn']}
+                icon={<MdOutlineEdit />}
+                onClick={() => {
+                  formModal({
+                    title: formatMessage({ id: 'talentProfile.EditPromotionHistory' }),
+                    formProps: {
+                      data: {
+                        promotionHistory: (promotionHistory || []).map(item => ({
+                          time: item.period,
+                          occupation: item.position,
+                          level: item.level
+                        }))
+                      },
+                      onSubmit: formData => {
+                        return saveProfile({
+                          promotionHistory: (formData.promotionHistory || []).map(item =>
+                            Object.assign({}, item, {
+                              time: dayjs(item.time).format('YYYY-MM')
+                            })
+                          )
+                        });
+                      }
                     },
-                    onSubmit: formData => {
-                      return saveProfile({
-                        promotionHistory: (formData.promotionHistory || []).map(item =>
-                          Object.assign({}, item, {
-                            time: dayjs(item.time).format('YYYY-MM')
-                          })
-                        )
-                      });
-                    }
-                  },
-                  children: <PromotionHistoryFormInner />
-                });
-              }}
-            />
+                    children: <PromotionHistoryFormInner />
+                  });
+                }}
+              />
+            )}
           </Flex>
           {promotionHistory.length > 0 ? (
             <Timeline
