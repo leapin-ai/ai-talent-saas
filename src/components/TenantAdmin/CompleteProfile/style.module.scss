@@ -1,0 +1,387 @@
+$primary: #5b6cff;
+$primary-soft: #b8c3ff;
+$text: #334155;
+$muted: #94a3b8;
+$border: #e2e8f0;
+$surface: #fafafe;
+
+.complete-profile {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  // Page 在桌面布局里 page-children 常为 height:unset，用容器高度撑满面板，footer 才能贴底
+  min-height: var(--container-height, 100%);
+  height: 100%;
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px 16px;
+  border-bottom: 1px solid $border;
+  flex-shrink: 0;
+}
+
+.step-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: $muted;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.step-active {
+  color: $text;
+  font-weight: 600;
+}
+
+.step-done {
+  color: $text;
+}
+
+.step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 100px;
+  background: #cbd5e1;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.step-active .step-index,
+.step-done .step-index {
+  background: $primary;
+}
+
+.step-connector {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.step-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 20px;
+  background: $border;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  min-height: 0;
+}
+
+.content-inner {
+  width: 100%;
+  max-width: none;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.step-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.step-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.step-form {
+  flex: 1;
+  display: flex !important;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  margin-top: auto;
+  flex-shrink: 0;
+  width: 100%;
+  padding: 16px 0;
+  background: transparent;
+}
+
+.footer-actions {
+  width: 100%;
+}
+
+.skip-btn {
+  min-width: 120px;
+  border-color: $primary-soft !important;
+  color: #343fae !important;
+  font-weight: 600;
+}
+
+.primary-btn {
+  min-width: 120px;
+  font-weight: 600;
+}
+
+.upload-wrap {
+  width: 100%;
+}
+
+.upload-drag-outer {
+  width: 100%;
+
+  :global(.file-list-outer) {
+    width: 100%;
+  }
+}
+
+.upload-zone {
+  background: $surface;
+  border: 1px dashed rgba(79, 70, 229, 0.35);
+  border-radius: 16px;
+  padding: 40px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 280px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.upload-guide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  width: 100%;
+
+  :global(.upload-drag-tips) {
+    padding: 0;
+  }
+
+  :global(.upload-drag-icon) {
+    color: $primary;
+  }
+
+  :global(.upload-drag-title) {
+    font-size: 17px;
+    font-weight: 700;
+    color: #16142e;
+  }
+
+  :global(.upload-drag-text) {
+    font-size: 14px;
+    color: #8481a6;
+    line-height: 21px;
+  }
+}
+
+.upload-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 32px;
+  background: #edebfe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $primary;
+  font-size: 26px;
+}
+
+.upload-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #16142e;
+}
+
+.upload-hint {
+  font-size: 14px;
+  color: #8481a6;
+  line-height: 21px;
+}
+
+.upload-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.upload-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+
+  :global(.ant-btn) {
+    height: 40px !important;
+    min-width: 140px;
+    padding: 0 28px !important;
+    border-radius: 8px !important;
+    background: $primary !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    border: none !important;
+    box-shadow: none !important;
+
+    &:hover,
+    &:focus {
+      background: #4a5af0 !important;
+      color: #fff !important;
+    }
+
+    :global(.anticon),
+    span {
+      color: #fff !important;
+    }
+  }
+}
+
+.upload-privacy {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  color: #8481a6;
+  font-size: 13px;
+  line-height: 20px;
+
+  :global(.anticon) {
+    flex-shrink: 0;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  :global(.ant-typography) {
+    margin: 0;
+    line-height: 20px;
+    color: inherit;
+  }
+}
+
+.review-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+.review-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.side-card {
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.side-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: $text;
+  margin-bottom: 12px;
+}
+
+.source-file {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.source-file-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(22, 20, 46, 0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $primary;
+}
+
+.source-file-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #16142e;
+  word-break: break-all;
+}
+
+.source-file-meta {
+  font-size: 12px;
+  color: #12a150;
+  margin-top: 2px;
+}
+
+.missing-list {
+  margin: 0;
+  padding-left: 18px;
+  color: $muted;
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.interview-panel {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.interview-card {
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.interview-tips {
+  margin: 8px 0 16px;
+  padding-left: 18px;
+  color: $text;
+  font-size: 14px;
+  line-height: 24px;
+}
+
+@media (max-width: 768px) {
+  .review-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .content {
+    padding: 16px 12px 96px;
+  }
+}

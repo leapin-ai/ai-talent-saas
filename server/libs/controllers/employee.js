@@ -99,6 +99,19 @@ module.exports = fp(async (fastify, options) => {
     }
   );
 
+  fastify.get(
+    `${options.prefix}/tenant/employee/my-detail`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '当前登录用户关联的员工档案详情'
+      }
+    },
+    async request => {
+      return services.employee.myDetail(request.tenantUserInfo);
+    }
+  );
+
   fastify.post(
     `${options.prefix}/tenant/employee/create`,
     {
