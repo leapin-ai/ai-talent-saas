@@ -63,6 +63,7 @@ const Layout = createWithRemoteLoader({
                         </span>
                       )
                     },
+                    /* Hiring Intelligence 暂时隐藏
                     {
                       group: 'hiring',
                       groupLabel: 'Hiring Intelligence',
@@ -104,6 +105,7 @@ const Layout = createWithRemoteLoader({
                         </span>
                       )
                     },
+                    */
                     {
                       group: 'tenantSetting',
                       groupLabel: formatMessage({ id: 'tenantAdmin.settings' }),
