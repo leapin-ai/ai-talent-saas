@@ -72,7 +72,7 @@ export const globalInit = async () => {
     //url: 'http://localhost:3001',
     //tpl: '{{url}}',
     remote: 'components-core',
-    defaultVersion: '0.5.0'
+    defaultVersion: '0.5.42'
   };
   remoteLoaderPreset({
     remotes: {
@@ -86,21 +86,21 @@ export const globalInit = async () => {
       'components-file-manager': {
         ...registry,
         remote: 'components-file-manager',
-        defaultVersion: '0.1.1'
+        defaultVersion: '0.1.9'
       },
       'components-admin': {
         ...registry,
         //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.47'
+        defaultVersion: '1.1.85'
       },
       'components-thirdparty': {
         ...registry,
         //url: 'http://localhost:3010',
         //tpl: '{{url}}',
         remote: 'components-thirdparty',
-        defaultVersion: '0.1.24'
+        defaultVersion: '0.1.35'
       },
       'fastify-app':
         process.env.NODE_ENV === 'development'
