@@ -12,6 +12,16 @@ const getApis = options => {
           url: `${prefix}/tenant/admin/send-org-message`,
           method: 'POST'
         },
+        aiInterview: {
+          detail: {
+            url: `${prefix}/tenant/admin/ai-interview-setting`,
+            method: 'GET'
+          },
+          save: {
+            url: `${prefix}/tenant/admin/ai-interview-setting-save`,
+            method: 'POST'
+          }
+        },
         position: {
           list: {
             url: `${prefix}/tenant/admin/position-list`,
