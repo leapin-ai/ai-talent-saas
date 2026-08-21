@@ -37,16 +37,14 @@ const TenantAdmin = createWithRemoteLoader({
         apis.talentSaas.tenant.employee.list
       ]
     );
+    // Setting.User(isNext TablePage) 已自带筛选，勿再挂一层空 Filter
     const renderSettingUserPage = useCallback(
-      ({ title, filter, titleExtra, children }) => {
-        return (
-          <Page title={title} extra={titleExtra}>
-            <Filter {...filter} />
-            {children}
-          </Page>
-        );
-      },
-      [Filter]
+      ({ title, titleExtra, children }) => (
+        <Page title={title} extra={titleExtra}>
+          {children}
+        </Page>
+      ),
+      []
     );
     return (
       <AppChildrenRouter
