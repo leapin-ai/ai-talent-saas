@@ -1,6 +1,6 @@
 const zhCN = {
   'tenantAdmin.home': '首页',
-  'tenantAdmin.myEmployeeProfile': '我的员工档案',
+  'tenantAdmin.myEmployeeProfile': '员工档案',
 
   'tenantAdmin.completeStepUpload': '上传简历',
   'tenantAdmin.completeStepReview': '核对信息',
@@ -42,6 +42,8 @@ const zhCN = {
   'tenantAdmin.completeProjectName': '项目名称',
   'tenantAdmin.completeProjectRole': '担任角色',
   'tenantAdmin.completeProjectPeriod': '项目周期',
+  'tenantAdmin.completeProjectStartDate': '开始日期',
+  'tenantAdmin.completeProjectEndDate': '结束日期',
   'tenantAdmin.completeProjectDesc': '项目描述',
   'tenantAdmin.completeProjectSkills': '相关技能',
   'tenantAdmin.completeAddProject': '添加另一个项目',
