@@ -240,7 +240,22 @@ $surface: #fafafe;
     min-width: 140px;
     padding: 0 28px !important;
     border-radius: 8px !important;
+    background: var(--primary-color) !important;
+    color: #fff !important;
     font-weight: 600 !important;
+    border: none !important;
+    box-shadow: none !important;
+
+    &:hover,
+    &:focus {
+      background: var(--ant-color-primary-hover, var(--theme-primary-hover, var(--primary-color))) !important;
+      color: #fff !important;
+    }
+
+    :global(.anticon),
+    span {
+      color: #fff !important;
+    }
   }
 }
 
