@@ -100,9 +100,9 @@ const AppContent = withLocale(({ baseUrl, AfterUserLoginLayout, AfterAdminUserLo
                   element: <RemoteLoader module="components-admin:Task" baseUrl={baseUrl + '/admin'} />
                 },
                 {
-                  path: 'file',
+                  path: 'file/*',
                   title: formatMessage({ id: 'app.FileManagement' }),
-                  element: <RemoteLoader module="components-file-manager:FileListPage" />
+                  element: <RemoteLoader module="components-file-manager:FileListPage" baseUrl={`${baseUrl}/admin/file`} />
                 },
                 {
                   path: 'signature',
