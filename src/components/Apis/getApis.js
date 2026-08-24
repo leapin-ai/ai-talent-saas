@@ -20,6 +20,18 @@ const getApis = options => {
           save: {
             url: `${prefix}/tenant/admin/ai-interview-setting-save`,
             method: 'POST'
+          },
+          projects: {
+            url: `${prefix}/tenant/admin/ai-interview-projects`,
+            method: 'GET'
+          },
+          saveFeatureBinding: {
+            url: `${prefix}/tenant/admin/ai-interview-feature-binding-save`,
+            method: 'POST'
+          },
+          removeFeatureBinding: {
+            url: `${prefix}/tenant/admin/ai-interview-feature-binding-remove`,
+            method: 'POST'
           }
         },
         position: {
@@ -140,6 +152,20 @@ const getApis = options => {
           list: {
             url: `${prefix}/tenant/resume/list`,
             method: 'GET'
+          }
+        },
+        assessment: {
+          saveProfile: {
+            url: `${prefix}/tenant/assessment/save-profile`,
+            method: 'POST'
+          },
+          detail: {
+            url: `${prefix}/tenant/assessment/detail`,
+            method: 'GET'
+          },
+          ensureInvite: {
+            url: `${prefix}/tenant/assessment/ensure-invite`,
+            method: 'POST'
           }
         }
       }

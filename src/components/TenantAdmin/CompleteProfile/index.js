@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Button, Flex, message } from 'antd';
 import { Page } from '@kne/system-layout';
 import { ButtonFooter } from '@kne/button-group';
 import '@kne/button-group/dist/index.css';
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
 import Stepper from './Stepper';
@@ -73,10 +73,13 @@ const CompleteProfile = createWithRemoteLoader({
     const { Form, SubmitButton } = FormInfo;
     const { apis, ajax } = usePreset();
     const navigate = useNavigate();
-    const [current, setCurrent] = useState(0);
+    const [searchParams] = useSearchParams();
+    const [current, setCurrent] = useState(() => (searchParams.get('step') === 'interview' ? 3 : 0));
     const [uploadState, setUploadState] = useState({ resumes: [], parsed: null });
     const [reviewData, setReviewData] = useState(null);
     const [projectsData, setProjectsData] = useState(null);
+    const [interviewFinished, setInterviewFinished] = useState(false);
+    const handleInterviewComplete = useCallback(() => setInterviewFinished(true), []);
 
     const employeeApis = useMemo(
       () =>
@@ -227,23 +230,31 @@ const CompleteProfile = createWithRemoteLoader({
               {current === 3 && (
                 <div className={style['step-panel']}>
                   <div className={style['step-body']}>
-                    <InterviewStep />
+                    <InterviewStep
+                      profilePayload={{
+                        ...(reviewData || uploadState.parsed || {}),
+                        projects: projectsData?.projects || []
+                      }}
+                      onInterviewComplete={handleInterviewComplete}
+                    />
                   </div>
-                  <Footer
-                    primary={
-                      <Button
-                        type="primary"
-                        size="middle"
-                        className={style['primary-btn']}
-                        onClick={() => {
-                          message.success(formatMessage({ id: 'tenantAdmin.completeFinishTip' }));
-                          goHome();
-                        }}
-                      >
-                        {formatMessage({ id: 'tenantAdmin.completeFinish' })}
-                      </Button>
-                    }
-                  />
+                  {interviewFinished ? (
+                    <Footer
+                      primary={
+                        <Button
+                          type="primary"
+                          size="middle"
+                          className={style['primary-btn']}
+                          onClick={() => {
+                            message.success(formatMessage({ id: 'tenantAdmin.completeFinishTip' }));
+                            goHome();
+                          }}
+                        >
+                          {formatMessage({ id: 'tenantAdmin.completeFinish' })}
+                        </Button>
+                      }
+                    />
+                  ) : null}
                 </div>
               )}
             </div>

@@ -354,11 +354,29 @@ $surface: #fafafe;
 
 .interview-panel {
   width: 100%;
-  max-width: 560px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.interview-room {
+  width: 100%;
+  flex: 1;
+  min-height: min(70vh, 720px);
+  display: flex;
+  flex-direction: column;
+
+  :global(.core-container-body),
+  :global([data-testid='components-core-pure-global']) {
+    width: 100% !important;
+    max-width: none !important;
+    flex: 1;
+    min-height: 0;
+  }
 }
 
 .interview-card {
@@ -366,6 +384,8 @@ $surface: #fafafe;
   border: 1px solid $border;
   border-radius: 12px;
   padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .interview-tips {

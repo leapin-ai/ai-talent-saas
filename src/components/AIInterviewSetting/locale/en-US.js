@@ -1,6 +1,7 @@
 const enUS = {
   title: 'AI Interview Settings',
-  cdnUrl: 'Settings Component CDN URL',
+  cdnUrl: 'Component CDN URL',
+  version: 'Component version',
   apiUrl: 'API URL',
   appId: 'AppId',
   secretKey: 'SecretKey',
@@ -8,10 +9,28 @@ const enUS = {
   cancel: 'Cancel',
   edit: 'Edit',
   saveSuccess: 'Saved successfully',
-  cdnUrlPlaceholder: 'https://cdn.example.com/...',
-  apiUrlPlaceholder: 'https://ai-interview.example.com/api/v1',
+  cdnUrlPlaceholder: 'https://cdn.leapin-ai.com/leapin-ai-interview-flowup/cn-staging/6cf4a8a',
+  versionPlaceholder: '0.1.73',
+  apiUrlPlaceholder: 'https://api.gw.leapin-ai.com/ai-interview/cn-staging/api/v1',
   secretKeyKeepPlaceholder: 'Leave blank to keep current',
-  secretKeyRequired: 'Please enter SecretKey'
+  secretKeyRequired: 'Please enter SecretKey',
+  featureTitle: 'Feature projects',
+  featureDescription: 'Bind a feature key string to an AI Interview project (loaded via open-api).',
+  featureKey: 'Feature key',
+  featureKeyPlaceholder: 'e.g. default, hiring, campus',
+  project: 'AI Interview project',
+  projectPlaceholder: 'Select from open-api project list',
+  projectName: 'Project name',
+  projectId: 'Project ID',
+  actions: 'Actions',
+  addBinding: 'Add binding',
+  addBindingTitle: 'Add feature project binding',
+  editBindingTitle: 'Edit feature project binding',
+  removeBinding: 'Remove',
+  removeSuccess: 'Removed',
+  removeConfirmTitle: 'Confirm remove',
+  removeConfirmContent: 'Remove project binding for feature "{key}"?',
+  featureEmpty: 'No feature project bindings'
 };
 
 export default enUS;
