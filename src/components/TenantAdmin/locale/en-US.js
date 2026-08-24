@@ -1,6 +1,6 @@
 const enUS = {
   'tenantAdmin.home': 'Home',
-  'tenantAdmin.myEmployeeProfile': 'My Employee Profile',
+  'tenantAdmin.myEmployeeProfile': 'Profile',
 
   'tenantAdmin.completeStepUpload': 'Upload CV',
   'tenantAdmin.completeStepReview': 'Review details',
