@@ -97,7 +97,7 @@ export const globalInit = async () => {
         remote: 'ai-interview-flowup',
         url: '',
         tpl: '{{url}}',
-        defaultVersion: '0.1.73'
+        defaultVersion: ''
       },
       'fastify-app':
         process.env.NODE_ENV === 'development'

@@ -14,9 +14,9 @@
 - _TenantHiring(@components/TenantHiring)
 
 ```jsx
-const {default:TenantHiring} = _TenantHiring;
-const BaseExample = ()=>{
-    return <TenantHiring />;
+const { default: TenantHiring } = _TenantHiring;
+const BaseExample = () => {
+  return <TenantHiring />;
 };
 
 render(<BaseExample />);

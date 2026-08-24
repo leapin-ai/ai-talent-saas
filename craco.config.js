@@ -14,25 +14,6 @@ module.exports = {
             return webpackConfig;
         }
     }, plugins: [{
-        plugin: CracoRemoteComponentsPlugin,
-        options: {
-            // 与 ai-interview-flowup 对齐：react eager，否则动态加载其 remote 时 MF consumes 会报 loaded undefined
-            middleware: (config) => {
-                config.shared = {
-                    ...config.shared,
-                    react: {
-                        singleton: true,
-                        requiredVersion: false,
-                        eager: true
-                    },
-                    'react-dom': {
-                        singleton: true,
-                        requiredVersion: false,
-                        eager: true
-                    }
-                };
-                return config;
-            }
-        }
+        plugin: CracoRemoteComponentsPlugin
     }]
 };
