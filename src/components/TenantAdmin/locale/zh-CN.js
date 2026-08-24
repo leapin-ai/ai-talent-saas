@@ -1,6 +1,6 @@
 const zhCN = {
   'tenantAdmin.home': '首页',
-  'tenantAdmin.myEmployeeProfile': '我的员工档案',
+  'tenantAdmin.myEmployeeProfile': '员工档案',
 
   'tenantAdmin.completeStepUpload': '上传简历',
   'tenantAdmin.completeStepReview': '核对信息',
