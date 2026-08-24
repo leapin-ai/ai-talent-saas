@@ -5,13 +5,16 @@ import { useIntl } from '@kne/react-intl';
 const MobilityPreferenceFormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo']
 })(
-  withLocale(({ remoteModules }) => {
+  withLocale(({ remoteModules, title, bordered, required = true }) => {
     const { formatMessage } = useIntl();
     const [FormInfo] = remoteModules;
     const { RadioGroup } = FormInfo.fields;
+    const rule = required ? 'REQ' : undefined;
 
     return (
       <FormInfo
+        title={title}
+        bordered={bordered}
         column={1}
         list={[
           <RadioGroup
@@ -22,7 +25,7 @@ const MobilityPreferenceFormInner = createWithRemoteLoader({
               { label: formatMessage({ id: 'talentProfile.RemoteWork' }), value: 'Remote' },
               { label: formatMessage({ id: 'talentProfile.OnSiteWork' }), value: 'On-site' }
             ]}
-            rule="REQ"
+            rule={rule}
           />,
           <RadioGroup
             name="workPreference.business_travel_willingness"
@@ -32,7 +35,7 @@ const MobilityPreferenceFormInner = createWithRemoteLoader({
               { label: formatMessage({ id: 'talentProfile.LimitedAccept' }), value: 'Limited' },
               { label: formatMessage({ id: 'talentProfile.NotConsider' }), value: 'Not Open' }
             ]}
-            rule="REQ"
+            rule={rule}
           />,
           <RadioGroup
             name="workPreference.relocation_willingness"
@@ -42,7 +45,7 @@ const MobilityPreferenceFormInner = createWithRemoteLoader({
               { label: formatMessage({ id: 'talentProfile.LimitedAccept' }), value: 'Limited' },
               { label: formatMessage({ id: 'talentProfile.NotConsider' }), value: 'Not Open' }
             ]}
-            rule="REQ"
+            rule={rule}
           />
         ]}
       />

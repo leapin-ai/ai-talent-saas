@@ -1,0 +1,23 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px 0 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 22%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-color) 6%, #fff) 0%, color-mix(in srgb, var(--primary-color) 12%, #fff) 100%);
+  color: var(--primary-color);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  box-sizing: border-box;
+  cursor: default;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.icon {
+  font-size: 14px;
+  color: var(--primary-color);
+}
