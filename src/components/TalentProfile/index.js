@@ -1,6 +1,7 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Flex, Typography } from 'antd';
 import { FaLightbulb } from 'react-icons/fa';
 import dayjs from 'dayjs';
@@ -12,26 +13,55 @@ import MiddleColumn from './MiddleColumn';
 import RightColumn from './RightColumn';
 import style from './style.module.scss';
 
+const DataNotifier = ({ data, onData }) => {
+  useEffect(() => {
+    if (typeof onData === 'function') {
+      onData(data || null);
+    }
+  }, [data, onData]);
+  return null;
+};
+
 const TalentProfile = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']
 })(
-  withLocale(({ remoteModules, baseUrl, apis }) => {
+  withLocale(({ remoteModules, baseUrl, apis, id: idProp, self, readOnly, empty, onData }) => {
     const [usePreset] = remoteModules;
     const { formatMessage } = useIntl();
     const { ajax } = usePreset();
-    const { id } = useParams();
+    const { id: paramId } = useParams();
     const navigate = useNavigate();
+    const id = idProp || paramId;
+    // 首页 / 本人档案：走 my-detail，不依赖路由或 query 里的员工 id
+    const useMyDetail = self || !id;
+    const fetchProps = useMyDetail ? Object.assign({}, apis.myDetail) : Object.assign({}, apis.detail, { params: { id } });
 
     return (
       <Fetch
-        {...Object.assign({}, apis.detail, { params: { id } })}
+        {...fetchProps}
         render={({ data, reload }) => {
+          if (useMyDetail && !data) {
+            return (
+              <>
+                <DataNotifier data={data} onData={onData} />
+                {empty || (
+                  <Flex justify="center" style={{ padding: '80px 0' }}>
+                    <Typography.Text type="secondary">{formatMessage({ id: 'talentProfile.NoLinkedEmployee' })}</Typography.Text>
+                  </Flex>
+                )}
+              </>
+            );
+          }
+          const employeeId = data.id;
           const saveProfile = async profileData => {
+            if (readOnly) {
+              return;
+            }
             const { data } = await ajax(
               Object.assign({}, apis.saveProfile, {
                 data: {
                   ...profileData,
-                  id
+                  id: employeeId
                 }
               })
             );
@@ -44,11 +74,14 @@ const TalentProfile = createWithRemoteLoader({
           };
 
           const saveEmployee = async employeeData => {
+            if (readOnly) {
+              return;
+            }
             const { data } = await ajax(
               Object.assign({}, apis.save, {
                 data: {
                   ...employeeData,
-                  id
+                  id: employeeId
                 }
               })
             );
@@ -60,11 +93,14 @@ const TalentProfile = createWithRemoteLoader({
           };
 
           const createPerformance = async performanceData => {
+            if (readOnly) {
+              return;
+            }
             const { data } = await ajax(
               Object.assign({}, apis.createPerformance, {
                 data: {
                   ...performanceData,
-                  employeeId: id
+                  employeeId
                 }
               })
             );
@@ -77,6 +113,9 @@ const TalentProfile = createWithRemoteLoader({
           };
 
           const removePerformance = async id => {
+            if (readOnly) {
+              return;
+            }
             const { data } = await ajax(
               Object.assign({}, apis.removePerformance, {
                 data: {
@@ -92,6 +131,9 @@ const TalentProfile = createWithRemoteLoader({
           };
 
           const savePerformance = async performanceData => {
+            if (readOnly) {
+              return;
+            }
             const { data } = await ajax(
               Object.assign({}, apis.savePerformance, {
                 data: performanceData
@@ -243,11 +285,13 @@ const TalentProfile = createWithRemoteLoader({
           };
           return (
             <Flex className={style['talent-profile']} vertical gap={16}>
+              <DataNotifier data={data} onData={onData} />
               <HeaderCard
                 apis={apis}
                 originData={data}
                 saveEmployee={saveEmployee}
                 profileData={profileData}
+                readOnly={readOnly}
                 title={
                   <Typography.Link
                     onClick={() => {
@@ -259,9 +303,10 @@ const TalentProfile = createWithRemoteLoader({
                 }
               />
               <div className={style['main-content']}>
-                <LeftColumn saveProfile={saveProfile} profileData={profileData} advantages={advantages} certificates={certificates} promotionHistory={promotionHistory} gotoPosition={gotoPosition} />
+                <LeftColumn readOnly={readOnly} saveProfile={saveProfile} profileData={profileData} advantages={advantages} certificates={certificates} promotionHistory={promotionHistory} gotoPosition={gotoPosition} />
                 <MiddleColumn
-                  employeeId={id}
+                  readOnly={readOnly}
+                  employeeId={employeeId}
                   createPerformance={createPerformance}
                   removePerformance={removePerformance}
                   savePerformance={savePerformance}

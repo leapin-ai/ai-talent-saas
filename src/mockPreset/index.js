@@ -14,6 +14,9 @@ const apis = merge({}, getApis(), {
         detail: {
           loader: () => employeeDetail.data
         },
+        myDetail: {
+          loader: () => employeeDetail.data
+        },
         create: {
           loader: () => employeeCreate.data
         }

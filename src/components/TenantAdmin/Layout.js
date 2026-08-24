@@ -37,6 +37,12 @@ const Layout = createWithRemoteLoader({
                   items: [
                     {
                       path: '/',
+                      label: formatMessage({ id: 'tenantAdmin.home' }),
+                      toolbar: true,
+                      icon: 'home'
+                    },
+                    {
+                      path: '/market',
                       label: formatMessage({ id: 'tenantAdmin.internalTalentMarket' }),
                       toolbar: true,
                       icon: (
@@ -63,6 +69,49 @@ const Layout = createWithRemoteLoader({
                         </span>
                       )
                     },
+                    /* Hiring Intelligence 暂时隐藏
+                    {
+                      group: 'hiring',
+                      groupLabel: 'Hiring Intelligence',
+                      label: 'Role Strategy',
+                      path: '/hiring',
+                      icon: (
+                        <span className="anticon">
+                          <FaRegBuilding />
+                        </span>
+                      )
+                    },
+                    {
+                      group: 'hiring',
+                      label: 'Candidate Insights',
+                      path: '/hiring/candidate',
+                      icon: (
+                        <span className="anticon">
+                          <FaRegBuilding />
+                        </span>
+                      )
+                    },
+                    {
+                      group: 'hiring',
+                      label: 'Interview Intelligence',
+                      path: '/hiring/ai-interview',
+                      icon: (
+                        <span className="anticon">
+                          <FaRegBuilding />
+                        </span>
+                      )
+                    },
+                    {
+                      group: 'hiring',
+                      label: 'Talent Pools',
+                      path: '/hiring/talent-pool',
+                      icon: (
+                        <span className="anticon">
+                          <FaRegBuilding />
+                        </span>
+                      )
+                    },
+                    */
                     {
                       group: 'tenantSetting',
                       groupLabel: formatMessage({ id: 'tenantAdmin.settings' }),

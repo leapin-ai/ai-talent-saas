@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import TalentMarket from '@components/TalentMarket';
 import TalentProfile from '@components/TalentProfile';
+import Home from './Home';
+import CompleteProfile from './CompleteProfile';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
 
@@ -37,16 +39,14 @@ const TenantAdmin = createWithRemoteLoader({
         apis.talentSaas.tenant.employee.list
       ]
     );
+    // Setting.User(isNext TablePage) 已自带筛选，勿再挂一层空 Filter
     const renderSettingUserPage = useCallback(
-      ({ title, filter, titleExtra, children }) => {
-        return (
-          <Page title={title} extra={titleExtra}>
-            <Filter {...filter} />
-            {children}
-          </Page>
-        );
-      },
-      [Filter]
+      ({ title, titleExtra, children }) => (
+        <Page title={title} extra={titleExtra}>
+          {children}
+        </Page>
+      ),
+      []
     );
     return (
       <AppChildrenRouter
@@ -57,7 +57,17 @@ const TenantAdmin = createWithRemoteLoader({
         list={[
           {
             index: true,
-            title: 'Dashboard',
+            title: formatMessage({ id: 'tenantAdmin.home' }),
+            element: <Home baseUrl={baseUrl} />
+          },
+          {
+            path: 'complete-profile',
+            title: formatMessage({ id: 'tenantAdmin.completeMyProfile' }),
+            element: <CompleteProfile baseUrl={baseUrl} />
+          },
+          {
+            path: 'market',
+            title: formatMessage({ id: 'tenantAdmin.internalTalentMarket' }),
             element: (
               <Page>
                 <TalentMarket
@@ -150,6 +160,11 @@ const TenantAdmin = createWithRemoteLoader({
               )
             },
             loader: () => import('@components/Position/Detail')
+          },
+          {
+            path: 'hiring/*',
+            title: 'Hiring',
+            loader: () => import('@components/TenantHiring')
           },
           {
             path: 'setting/company',

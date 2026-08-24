@@ -130,3 +130,5 @@ build
 pnpm-lock.yaml
 package-lock.json
 prompts
+
+graphify-out
