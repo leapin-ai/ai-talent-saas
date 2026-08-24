@@ -61,11 +61,11 @@ const Home = createWithRemoteLoader({
                       <AssessmentGeneratingBadge />
                       <AssessmentRegenerateButton baseUrl={baseUrl} onRestarted={() => setAssessmentReloadKey(k => k + 1)} />
                     </Space>
-                  ) : (
+                  ) : data.status === 'interviewing' ? (
                     <Button type="primary" onClick={() => navigate(`${baseUrl}/complete-profile?step=interview`)}>
                       {formatMessage({ id: 'tenantAdmin.assessmentContinueInterview' })}
                     </Button>
-                  )}
+                  ) : null}
                 </>
               )}
             />
