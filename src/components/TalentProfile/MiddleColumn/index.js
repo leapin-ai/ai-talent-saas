@@ -17,7 +17,7 @@ const { Text, Paragraph } = Typography;
 const MiddleColumn = createWithRemoteLoader({
   modules: ['components-core:FormInfo@useFormModal', 'components-core:ConfirmButton']
 })(
-  withLocale(({ remoteModules, originData, createPerformance, removePerformance, savePerformance, saveProfile, skillTags, targetPositions, mobilityPreferences, interests, performanceReviews, skillRadarData, gotoPosition }) => {
+  withLocale(({ remoteModules, originData, createPerformance, removePerformance, savePerformance, saveProfile, skillTags, targetPositions, mobilityPreferences, interests, performanceReviews, skillRadarData, gotoPosition, readOnly }) => {
     const { formatMessage } = useIntl();
     const [useFormModal, ConfirmButton] = remoteModules;
     const formModal = useFormModal();
@@ -80,34 +80,36 @@ const MiddleColumn = createWithRemoteLoader({
           )}
           <Space wrap className={style['skill-tags']}>
             {skillTags.length > 0 ? skillTags.map((skill, index) => <Tag key={index}>{skill}</Tag>) : <EmptyState text={formatMessage({ id: 'talentProfile.NoSkillTags' })} />}
-            <Button
-              type="text"
-              className={style['edit-btn']}
-              icon={<MdOutlineEdit />}
-              onClick={() => {
-                formModal({
-                  title: formatMessage({ id: 'talentProfile.EditSkillTags' }),
-                  size: 'small',
-                  formProps: {
-                    data: Object.assign({}, originData.profile?.skills),
-                    onSubmit: formData => {
-                      return saveProfile({
-                        skills: Object.assign(
-                          {},
-                          {
-                            cert_mapped: [],
-                            interest_strength: [],
-                            work_related: []
-                          },
-                          formData
-                        )
-                      });
-                    }
-                  },
-                  children: <SkillFormInner />
-                });
-              }}
-            />
+            {!readOnly && (
+              <Button
+                type="text"
+                className={style['edit-btn']}
+                icon={<MdOutlineEdit />}
+                onClick={() => {
+                  formModal({
+                    title: formatMessage({ id: 'talentProfile.EditSkillTags' }),
+                    size: 'small',
+                    formProps: {
+                      data: Object.assign({}, originData.profile?.skills),
+                      onSubmit: formData => {
+                        return saveProfile({
+                          skills: Object.assign(
+                            {},
+                            {
+                              cert_mapped: [],
+                              interest_strength: [],
+                              work_related: []
+                            },
+                            formData
+                          )
+                        });
+                      }
+                    },
+                    children: <SkillFormInner />
+                  });
+                }}
+              />
+            )}
           </Space>
         </Card>
 
@@ -119,26 +121,28 @@ const MiddleColumn = createWithRemoteLoader({
               </span>
               {formatMessage({ id: 'talentProfile.TargetPosition' })}
             </Space>
-            <Button
-              type="text"
-              className={style['edit-btn']}
-              icon={<MdOutlineEdit />}
-              onClick={() => {
-                formModal({
-                  title: formatMessage({ id: 'talentProfile.EditTargetPosition' }),
-                  size: 'small',
-                  formProps: {
-                    data: {
-                      name: targetPositions.map(item => item.position)
+            {!readOnly && (
+              <Button
+                type="text"
+                className={style['edit-btn']}
+                icon={<MdOutlineEdit />}
+                onClick={() => {
+                  formModal({
+                    title: formatMessage({ id: 'talentProfile.EditTargetPosition' }),
+                    size: 'small',
+                    formProps: {
+                      data: {
+                        name: targetPositions.map(item => item.position)
+                      },
+                      onSubmit: formData => {
+                        return saveProfile({ intentionPosition: formData.name });
+                      }
                     },
-                    onSubmit: formData => {
-                      return saveProfile({ intentionPosition: formData.name });
-                    }
-                  },
-                  children: <TargetPositionFormInner />
-                });
-              }}
-            />
+                    children: <TargetPositionFormInner />
+                  });
+                }}
+              />
+            )}
           </Flex>
           {targetPositions.length > 0 ? (
             <Space wrap className={style['target-positions']}>
@@ -168,30 +172,32 @@ const MiddleColumn = createWithRemoteLoader({
               </span>
               {formatMessage({ id: 'talentProfile.MobilityPreference' })}
             </Space>
-            <Button
-              type="text"
-              className={style['edit-btn']}
-              icon={<MdOutlineEdit />}
-              onClick={() => {
-                formModal({
-                  title: formatMessage({ id: 'talentProfile.EditMobilityPreference' }),
-                  size: 'small',
-                  formProps: {
-                    data: {
-                      workPreference: {
-                        work_mode_preference: mobilityPreferences[0],
-                        relocation_willingness: mobilityPreferences[1],
-                        business_travel_willingness: mobilityPreferences[2]
+            {!readOnly && (
+              <Button
+                type="text"
+                className={style['edit-btn']}
+                icon={<MdOutlineEdit />}
+                onClick={() => {
+                  formModal({
+                    title: formatMessage({ id: 'talentProfile.EditMobilityPreference' }),
+                    size: 'small',
+                    formProps: {
+                      data: {
+                        workPreference: {
+                          work_mode_preference: mobilityPreferences[0],
+                          relocation_willingness: mobilityPreferences[1],
+                          business_travel_willingness: mobilityPreferences[2]
+                        }
+                      },
+                      onSubmit: formData => {
+                        return saveProfile({ workPreference: formData.workPreference });
                       }
                     },
-                    onSubmit: formData => {
-                      return saveProfile({ workPreference: formData.workPreference });
-                    }
-                  },
-                  children: <MobilityPreferenceFormInner />
-                });
-              }}
-            />
+                    children: <MobilityPreferenceFormInner />
+                  });
+                }}
+              />
+            )}
           </Flex>
           {mobilityPreferences.length > 0 ? (
             <Space direction="vertical" className={style['mobility-list']}>
@@ -256,30 +262,32 @@ const MiddleColumn = createWithRemoteLoader({
               </span>
               {formatMessage({ id: 'talentProfile.Hobbies' })}
             </Space>
-            <Button
-              type="text"
-              className={style['edit-btn']}
-              icon={<MdOutlineEdit />}
-              onClick={() => {
-                formModal({
-                  title: formatMessage({ id: 'talentProfile.EditHobbies' }),
-                  size: 'small',
-                  formProps: {
-                    data: {
-                      name: interests
+            {!readOnly && (
+              <Button
+                type="text"
+                className={style['edit-btn']}
+                icon={<MdOutlineEdit />}
+                onClick={() => {
+                  formModal({
+                    title: formatMessage({ id: 'talentProfile.EditHobbies' }),
+                    size: 'small',
+                    formProps: {
+                      data: {
+                        name: interests
+                      },
+                      onSubmit: formData => {
+                        return saveProfile({
+                          options: {
+                            hobbies: formData.name
+                          }
+                        });
+                      }
                     },
-                    onSubmit: formData => {
-                      return saveProfile({
-                        options: {
-                          hobbies: formData.name
-                        }
-                      });
-                    }
-                  },
-                  children: <InterestFormInner />
-                });
-              }}
-            />
+                    children: <InterestFormInner />
+                  });
+                }}
+              />
+            )}
           </Flex>
           {interests.length > 0 ? (
             <Space wrap>
@@ -300,7 +308,7 @@ const MiddleColumn = createWithRemoteLoader({
               </span>
               {formatMessage({ id: 'talentProfile.PerformanceReview' })}
             </Space>
-            <Button type="text" className={style['edit-btn']} icon={<MdAdd />} onClick={handleAddPerformance} />
+            {!readOnly && <Button type="text" className={style['edit-btn']} icon={<MdAdd />} onClick={handleAddPerformance} />}
           </Flex>
           {performanceReviews.length > 0 ? (
             <Timeline
@@ -331,43 +339,45 @@ const MiddleColumn = createWithRemoteLoader({
                         <Text strong className={classnames(style['reviewer-name'])}>
                           {review.reviewer}
                         </Text>
-                        <Flex align="center" gap={4} className={style['performance-actions']}>
-                          <Button
-                            type="text"
-                            size="small"
-                            className={style['edit-btn']}
-                            icon={<MdOutlineEdit />}
-                            onClick={() => {
-                              formModal({
-                                title: formatMessage({ id: 'talentProfile.EditPerformanceReview' }),
-                                size: 'small',
-                                formProps: {
-                                  data: {
-                                    date: review.date,
-                                    score: review.rating,
-                                    evaluatorName: review.reviewer,
-                                    comment: review.comment
+                        {!readOnly && (
+                          <Flex align="center" gap={4} className={style['performance-actions']}>
+                            <Button
+                              type="text"
+                              size="small"
+                              className={style['edit-btn']}
+                              icon={<MdOutlineEdit />}
+                              onClick={() => {
+                                formModal({
+                                  title: formatMessage({ id: 'talentProfile.EditPerformanceReview' }),
+                                  size: 'small',
+                                  formProps: {
+                                    data: {
+                                      date: review.date,
+                                      score: review.rating,
+                                      evaluatorName: review.reviewer,
+                                      comment: review.comment
+                                    },
+                                    onSubmit: formData => {
+                                      return savePerformance(Object.assign({}, formData, { id: review.id }));
+                                    }
                                   },
-                                  onSubmit: formData => {
-                                    return savePerformance(Object.assign({}, formData, { id: review.id }));
-                                  }
-                                },
-                                children: <PerformanceReviewFormInner />
-                              });
-                            }}
-                          />
-                          <ConfirmButton
-                            type="text"
-                            size="small"
-                            className={style['edit-btn']}
-                            isDelete
-                            danger
-                            icon={<MdOutlineDeleteOutline />}
-                            onClick={() => {
-                              return removePerformance(review.id);
-                            }}
-                          />
-                        </Flex>
+                                  children: <PerformanceReviewFormInner />
+                                });
+                              }}
+                            />
+                            <ConfirmButton
+                              type="text"
+                              size="small"
+                              className={style['edit-btn']}
+                              isDelete
+                              danger
+                              icon={<MdOutlineDeleteOutline />}
+                              onClick={() => {
+                                return removePerformance(review.id);
+                              }}
+                            />
+                          </Flex>
+                        )}
                       </Flex>
                     </Flex>
                     <Paragraph className={style['review-comment']}>{review.comment}</Paragraph>

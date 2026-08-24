@@ -97,12 +97,12 @@ render(<TalentCardExample />);
 
 ### API
 
-## TalentMarket 主组件
+#### TalentMarket 主组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
 
-## Header 子组件
+#### Header 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
@@ -110,14 +110,14 @@ render(<TalentCardExample />);
 |onSearchChange|搜索框值变化回调|(value: string) => void|-|
 |onFilterToggle|筛选按钮点击回调|() => void|-|
 
-## TalentGrid 子组件
+#### TalentGrid 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
 |talents|候选人数据列表|array|[]|
 |onViewProfile|点击查看档案时的回调函数|(talent: object) => void|-|
 
-## TalentCard 子组件
+#### TalentCard 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|

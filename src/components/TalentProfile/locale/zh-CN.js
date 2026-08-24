@@ -20,6 +20,7 @@ const zhCN = {
   'talentProfile.EditPromotionHistory': '编辑晋升历史',
   'talentProfile.NoPromotionHistory': '暂无晋升历史',
   'talentProfile.NoData': '暂无数据',
+  'talentProfile.NoLinkedEmployee': '当前账号尚未关联员工档案',
   'talentProfile.HybridWork': '混合办公',
   'talentProfile.RemoteWork': '远程办公',
   'talentProfile.OnSiteWork': '现场办公',

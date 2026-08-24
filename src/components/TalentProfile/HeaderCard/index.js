@@ -16,7 +16,7 @@ import { useIntl } from '@kne/react-intl';
 const HeaderCard = createWithRemoteLoader({
   modules: ['components-core:Image.Avatar', 'components-core:Enum', 'components-core:Common@AddressEnum', 'components-core:FormInfo@useFormModal']
 })(
-  withLocale(({ remoteModules, title, profileData, originData, saveEmployee, apis }) => {
+  withLocale(({ remoteModules, title, profileData, originData, saveEmployee, apis, readOnly }) => {
     const { formatMessage } = useIntl();
     const [Avatar, Enum, AddressEnum, useFormModal] = remoteModules;
     const [width, setWidth] = useState(window.innerWidth - 302);
@@ -39,37 +39,39 @@ const HeaderCard = createWithRemoteLoader({
           )}
           name={profileData.name}
           badge={
-            <Button
-              type="text"
-              size="small"
-              className={style['edit-btn']}
-              icon={<MdOutlineEdit />}
-              onClick={() => {
-                const orgIds = Array.isArray(originData.tenantOrgIds) ? originData.tenantOrgIds : [];
-                const tenantOrgs = orgIds
-                  .map(id => originData.orgEnums.find(item => item.value === id))
-                  .filter(Boolean)
-                  .map(org => ({ name: org.description, id: org.value }));
-                const position = originData.positionEnums.find(item => item.value === originData.options?.position);
-                formModal({
-                  title: formatMessage({ id: 'talentProfile.EditPersonalInfo' }),
-                  size: 'small',
-                  formProps: {
-                    data: Object.assign({}, originData, {
-                      tenantOrgIds: orgIds,
-                      tenantOrgs,
-                      options: Object.assign({}, originData.options, {
-                        position: position ? { name: position.description, id: position.value } : null
-                      })
-                    }),
-                    onSubmit: async formData => {
-                      return saveEmployee(formData);
-                    }
-                  },
-                  children: <EmployeeFormInner apis={apis} action="edit" />
-                });
-              }}
-            />
+            readOnly ? null : (
+              <Button
+                type="text"
+                size="small"
+                className={style['edit-btn']}
+                icon={<MdOutlineEdit />}
+                onClick={() => {
+                  const orgIds = Array.isArray(originData.tenantOrgIds) ? originData.tenantOrgIds : [];
+                  const tenantOrgs = orgIds
+                    .map(id => originData.orgEnums.find(item => item.value === id))
+                    .filter(Boolean)
+                    .map(org => ({ name: org.description, id: org.value }));
+                  const position = originData.positionEnums.find(item => item.value === originData.options?.position);
+                  formModal({
+                    title: formatMessage({ id: 'talentProfile.EditPersonalInfo' }),
+                    size: 'small',
+                    formProps: {
+                      data: Object.assign({}, originData, {
+                        tenantOrgIds: orgIds,
+                        tenantOrgs,
+                        options: Object.assign({}, originData.options, {
+                          position: position ? { name: position.description, id: position.value } : null
+                        })
+                      }),
+                      onSubmit: async formData => {
+                        return saveEmployee(formData);
+                      }
+                    },
+                    children: <EmployeeFormInner apis={apis} action="edit" />
+                  });
+                }}
+              />
+            )
           }
           title={title || profileData.position}
           description={

@@ -5,6 +5,7 @@ import { preset as remoteLoaderPreset, loadModule } from '@kne/remote-loader';
 import createAjax from '@kne/axios-fetch';
 import { getToken } from '@kne/token-storage';
 import transform from 'lodash/transform';
+import loadable from '@loadable/component';
 import { getApis } from '@components/Apis';
 import { enums as talentEnums } from '@components/EnumLoader';
 import ensureSlash from '@kne/ensure-slash';
@@ -25,7 +26,7 @@ export const globalInit = async () => {
     },
     registerInterceptors: interceptors => {
       interceptors.response.use(response => {
-        if (response.status === 401 || response.data.code === 401) {
+        if (response.config.ignoreState !== true && (response.status === 401 || response.data.code === 401)) {
           const searchParams = new URLSearchParams(window.location.search);
           const referer = encodeURIComponent(window.location.pathname + window.location.search);
           searchParams.append('referer', referer);
@@ -72,7 +73,7 @@ export const globalInit = async () => {
     //url: 'http://localhost:3001',
     //tpl: '{{url}}',
     remote: 'components-core',
-    defaultVersion: '0.5.0'
+    defaultVersion: '0.5.42'
   };
   remoteLoaderPreset({
     remotes: {
@@ -86,21 +87,28 @@ export const globalInit = async () => {
       'components-file-manager': {
         ...registry,
         remote: 'components-file-manager',
-        defaultVersion: '0.1.1'
+        defaultVersion: '0.1.9'
       },
       'components-admin': {
         ...registry,
         //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.47'
+        defaultVersion: '1.1.86'
       },
       'components-thirdparty': {
         ...registry,
         //url: 'http://localhost:3010',
         //tpl: '{{url}}',
         remote: 'components-thirdparty',
-        defaultVersion: '0.1.24'
+        defaultVersion: '0.1.35'
+      },
+      // AI 面试远程组件：url/version 由租户设置在运行时 applyAiInterviewRemote 写入
+      'ai-interview-flowup': {
+        remote: 'ai-interview-flowup',
+        url: '',
+        tpl: '{{url}}',
+        defaultVersion: ''
       },
       'fastify-app':
         process.env.NODE_ENV === 'development'
@@ -152,6 +160,17 @@ export const globalInit = async () => {
     staticUrl: baseApiUrl,
     enums: Object.assign({}, enums),
     plugins: {
+      admin: {
+        tenant: {
+          appendSettingMenus: [
+            {
+              key: 'ai-interview',
+              label: 'AI面试设置',
+              component: loadable(() => import('@components/AIInterviewSetting'))
+            }
+          ]
+        }
+      },
       tenant: {
         getUserListActions
       },
@@ -224,4 +243,27 @@ export const globalInit = async () => {
       colorPrimary: '#4183F0'
     }
   };
+};
+
+/** 按租户 AI 面试设置写入 remote-loader remotes，供 ai-interview-flowup:* 正常加载 */
+export const applyAiInterviewRemote = ({ cdnUrl, version } = {}) => {
+  const url = String(cdnUrl || '')
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/remoteEntry\.js$/i, '');
+  const defaultVersion = String(version || '').trim();
+  if (!url || !defaultVersion) {
+    return false;
+  }
+  remoteLoaderPreset({
+    remotes: {
+      'ai-interview-flowup': {
+        remote: 'ai-interview-flowup',
+        url,
+        tpl: '{{url}}',
+        defaultVersion
+      }
+    }
+  });
+  return true;
 };

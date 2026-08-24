@@ -12,6 +12,28 @@ const getApis = options => {
           url: `${prefix}/tenant/admin/send-org-message`,
           method: 'POST'
         },
+        aiInterview: {
+          detail: {
+            url: `${prefix}/tenant/admin/ai-interview-setting`,
+            method: 'GET'
+          },
+          save: {
+            url: `${prefix}/tenant/admin/ai-interview-setting-save`,
+            method: 'POST'
+          },
+          projects: {
+            url: `${prefix}/tenant/admin/ai-interview-projects`,
+            method: 'GET'
+          },
+          saveFeatureBinding: {
+            url: `${prefix}/tenant/admin/ai-interview-feature-binding-save`,
+            method: 'POST'
+          },
+          removeFeatureBinding: {
+            url: `${prefix}/tenant/admin/ai-interview-feature-binding-remove`,
+            method: 'POST'
+          }
+        },
         position: {
           list: {
             url: `${prefix}/tenant/admin/position-list`,
@@ -77,6 +99,10 @@ const getApis = options => {
             url: `${prefix}/tenant/employee/detail`,
             method: 'GET'
           },
+          myDetail: {
+            url: `${prefix}/tenant/employee/my-detail`,
+            method: 'GET'
+          },
           create: {
             url: `${prefix}/tenant/employee/create`,
             method: 'POST'
@@ -126,6 +152,28 @@ const getApis = options => {
           list: {
             url: `${prefix}/tenant/resume/list`,
             method: 'GET'
+          }
+        },
+        assessment: {
+          saveProfile: {
+            url: `${prefix}/tenant/assessment/save-profile`,
+            method: 'POST'
+          },
+          detail: {
+            url: `${prefix}/tenant/assessment/detail`,
+            method: 'GET'
+          },
+          ensureInvite: {
+            url: `${prefix}/tenant/assessment/ensure-invite`,
+            method: 'POST'
+          },
+          restart: {
+            url: `${prefix}/tenant/assessment/restart`,
+            method: 'POST'
+          },
+          acceptPrevious: {
+            url: `${prefix}/tenant/assessment/accept-previous`,
+            method: 'POST'
           }
         }
       }
