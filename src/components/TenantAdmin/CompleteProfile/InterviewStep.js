@@ -136,28 +136,18 @@ const InterviewStep = createWithRemoteLoader({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot once on mount
   }, []);
 
+  // 面试间内提交/完成后直接结束流程，不再跳回「检测到上次面试记录」
   const handleInterviewSessionComplete = useCallback(async () => {
     setPhase('loading');
     setError('');
     try {
-      const { data: detailRes } = await ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail));
-      if (detailRes.code !== 0) {
-        throw new Error(detailRes.msg || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
-      }
-      const detail = detailRes.data;
-      if (detail?.previousInterview) {
-        choiceResolvedRef.current = false;
-        setInvite(null);
-        setPreviousInterview(detail.previousInterview);
-        setPhase('choice');
-        return;
-      }
-      finishDirectly();
+      // 拉取 detail 以同步面试完成态（generating），失败也不阻断结束
+      await ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail));
     } catch (e) {
-      setError(e.message || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
-      setPhase('error');
+      // ignore sync error
     }
-  }, [ajax, apis, finishDirectly, formatMessage]);
+    finishDirectly();
+  }, [ajax, apis, finishDirectly]);
 
   const handleUsePrevious = async () => {
     setActionLoading('previous');
