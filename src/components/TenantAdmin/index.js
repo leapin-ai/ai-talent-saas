@@ -11,13 +11,14 @@ import Home from './Home';
 import CompleteProfile from './CompleteProfile';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
+import { TENANT_ADMIN_PERMISSIONS } from './constants';
 
 const TenantAdmin = createWithRemoteLoader({
-  modules: ['components-admin:Tenant@Setting', 'components-core:Global@usePreset', 'components-core:Table@TablePage', 'components-core:Filter', 'components-core:File@PrintButton']
+  modules: ['components-admin:Tenant@Setting', 'components-core:Global@usePreset', 'components-core:Table@TablePage', 'components-core:Filter', 'components-core:File@PrintButton', 'components-core:Permissions']
 })(
   withLocale(({ remoteModules, baseUrl }) => {
     const { formatMessage } = useIntl();
-    const [Setting, usePreset, TablePage, Filter, PrintButton] = remoteModules;
+    const [Setting, usePreset, TablePage, Filter, PrintButton, Permissions] = remoteModules;
     const { apis } = usePreset();
     const profileRef = useRef(null);
     const navigate = useNavigate();
@@ -69,33 +70,37 @@ const TenantAdmin = createWithRemoteLoader({
             path: 'market',
             title: formatMessage({ id: 'tenantAdmin.internalTalentMarket' }),
             element: (
-              <Page>
-                <TalentMarket
-                  baseUrl={baseUrl}
-                  apis={apis.talentSaas.tenant.market}
-                  onMoreProfile={() => {
-                    navigate(`${baseUrl}/employee`);
-                  }}
-                />
-              </Page>
+              <Permissions request={TENANT_ADMIN_PERMISSIONS.talentMarketplace} type="error">
+                <Page>
+                  <TalentMarket
+                    baseUrl={baseUrl}
+                    apis={apis.talentSaas.tenant.market}
+                    onMoreProfile={() => {
+                      navigate(`${baseUrl}/employee`);
+                    }}
+                  />
+                </Page>
+              </Permissions>
             )
           },
           {
             path: 'profile/:id',
             title: formatMessage({ id: 'tenantAdmin.employeeProfile' }),
             element: (
-              <Page title={formatMessage({ id: 'tenantAdmin.employeeProfile' })} back extra={<PrintButton contentRef={profileRef}>{formatMessage({ id: 'tenantAdmin.export' })}</PrintButton>}>
-                <div ref={profileRef}>
-                  <TalentProfile
-                    baseUrl={baseUrl}
-                    apis={Object.assign({}, apis.talentSaas.tenant.employee, {
-                      positionList: apis.talentSaas.tenant.position.list,
-                      parseResume: apis.talentSaas.tenant.resume.parseFileId,
-                      orgList: apis.tenant.orgList
-                    })}
-                  />
-                </div>
-              </Page>
+              <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
+                <Page title={formatMessage({ id: 'tenantAdmin.employeeProfile' })} back extra={<PrintButton contentRef={profileRef}>{formatMessage({ id: 'tenantAdmin.export' })}</PrintButton>}>
+                  <div ref={profileRef}>
+                    <TalentProfile
+                      baseUrl={baseUrl}
+                      apis={Object.assign({}, apis.talentSaas.tenant.employee, {
+                        positionList: apis.talentSaas.tenant.position.list,
+                        parseResume: apis.talentSaas.tenant.resume.parseFileId,
+                        orgList: apis.tenant.orgList
+                      })}
+                    />
+                  </div>
+                </Page>
+              </Permissions>
             )
           },
           {
@@ -120,10 +125,12 @@ const TenantAdmin = createWithRemoteLoader({
               },
               children: ({ filter, titleExtra, tableOptions }) => {
                 return (
-                  <Page title={formatMessage({ id: 'tenantAdmin.employeeProfile' })} extra={titleExtra}>
-                    <Filter {...filter} />
-                    <TablePage {...tableOptions} />
-                  </Page>
+                  <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
+                    <Page title={formatMessage({ id: 'tenantAdmin.employeeProfile' })} extra={titleExtra}>
+                      <Filter {...filter} />
+                      <TablePage {...tableOptions} />
+                    </Page>
+                  </Permissions>
                 );
               }
             },
@@ -138,12 +145,14 @@ const TenantAdmin = createWithRemoteLoader({
                 navigate(`${baseUrl}/position/${colItem.id}`);
               },
               children: ({ filter, titleExtra, tableOptions }) => (
-                <Page title={formatMessage({ id: 'tenantAdmin.positionManagement' })} extra={titleExtra}>
-                  <Flex vertical gap={8} flex={1}>
-                    <Filter {...filter} />
-                    <TablePage {...tableOptions} />
-                  </Flex>
-                </Page>
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                  <Page title={formatMessage({ id: 'tenantAdmin.positionManagement' })} extra={titleExtra}>
+                    <Flex vertical gap={8} flex={1}>
+                      <Filter {...filter} />
+                      <TablePage {...tableOptions} />
+                    </Flex>
+                  </Page>
+                </Permissions>
               )
             },
             loader: () => import('@components/Position')
@@ -154,9 +163,11 @@ const TenantAdmin = createWithRemoteLoader({
             elementProps: {
               apis: apis.talentSaas.tenant.position,
               children: ({ title, extra, children }) => (
-                <Page back title={title} extra={extra}>
-                  {children}
-                </Page>
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                  <Page back title={title} extra={extra}>
+                    {children}
+                  </Page>
+                </Permissions>
               )
             },
             loader: () => import('@components/Position/Detail')

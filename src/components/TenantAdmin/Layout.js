@@ -7,13 +7,14 @@ import { MdGroups, MdWork } from 'react-icons/md';
 import '@kne/system-layout/dist/index.css';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
+import { TENANT_ADMIN_PERMISSIONS } from './constants';
 
 const Layout = createWithRemoteLoader({
-  modules: ['components-admin:Tenant@Authenticate', 'components-admin:Account@useLogout', 'components-core:Permissions', 'components-admin:Account@Language']
+  modules: ['components-admin:Tenant@Authenticate', 'components-admin:Account@useLogout', 'components-core:Permissions', 'components-core:Permissions@usePermissionsPass', 'components-admin:Account@Language']
 })(
   withLocale(({ remoteModules, baseUrl, children }) => {
     const { formatMessage } = useIntl();
-    const [Authenticate, useLogout, Permissions, Language] = remoteModules;
+    const [Authenticate, useLogout, Permissions, usePermissionsPass, Language] = remoteModules;
     const logout = useLogout();
     return (
       <Authenticate>
@@ -21,146 +22,9 @@ const Layout = createWithRemoteLoader({
           const { tenantUserInfo, tenant } = global;
           return (
             <Permissions request={['tenant-admin']} type="error">
-              <SystemLayout
-                background={'linear-gradient(180deg, #E8DCDF, #E1D1E3, #DED7EF, #D5E0F1)'}
-                logo={{ id: tenant?.logo }}
-                userInfo={{
-                  ...tenantUserInfo,
-                  extra: (
-                    <div style={{ paddingTop: '8px' }}>
-                      <Language colorful={false} />
-                    </div>
-                  )
-                }}
-                menu={{
-                  base: baseUrl,
-                  items: [
-                    {
-                      path: '/',
-                      label: formatMessage({ id: 'tenantAdmin.home' }),
-                      toolbar: true,
-                      icon: 'home'
-                    },
-                    {
-                      path: '/market',
-                      label: formatMessage({ id: 'tenantAdmin.internalTalentMarket' }),
-                      toolbar: true,
-                      icon: (
-                        <span className="anticon">
-                          <MdGroups />
-                        </span>
-                      )
-                    },
-                    {
-                      label: formatMessage({ id: 'tenantAdmin.positionManagement' }),
-                      path: '/position',
-                      icon: (
-                        <span className="anticon">
-                          <MdWork />
-                        </span>
-                      )
-                    },
-                    {
-                      label: formatMessage({ id: 'tenantAdmin.employeeProfile' }),
-                      path: '/employee',
-                      icon: (
-                        <span className="anticon">
-                          <FaUserTie />
-                        </span>
-                      )
-                    },
-                    /* Hiring Intelligence 暂时隐藏
-                    {
-                      group: 'hiring',
-                      groupLabel: 'Hiring Intelligence',
-                      label: 'Role Strategy',
-                      path: '/hiring',
-                      icon: (
-                        <span className="anticon">
-                          <FaRegBuilding />
-                        </span>
-                      )
-                    },
-                    {
-                      group: 'hiring',
-                      label: 'Candidate Insights',
-                      path: '/hiring/candidate',
-                      icon: (
-                        <span className="anticon">
-                          <FaRegBuilding />
-                        </span>
-                      )
-                    },
-                    {
-                      group: 'hiring',
-                      label: 'Interview Intelligence',
-                      path: '/hiring/ai-interview',
-                      icon: (
-                        <span className="anticon">
-                          <FaRegBuilding />
-                        </span>
-                      )
-                    },
-                    {
-                      group: 'hiring',
-                      label: 'Talent Pools',
-                      path: '/hiring/talent-pool',
-                      icon: (
-                        <span className="anticon">
-                          <FaRegBuilding />
-                        </span>
-                      )
-                    },
-                    */
-                    {
-                      group: 'tenantSetting',
-                      groupLabel: formatMessage({ id: 'tenantAdmin.settings' }),
-                      label: formatMessage({ id: 'tenantAdmin.companyInfo' }),
-                      path: '/setting/company',
-                      toolbar: true,
-                      icon: (
-                        <span className="anticon">
-                          <FaRegBuilding />
-                        </span>
-                      )
-                    },
-                    {
-                      group: 'tenantSetting',
-                      groupLabel: formatMessage({ id: 'tenantAdmin.settings' }),
-                      label: formatMessage({ id: 'tenantAdmin.orgStructure' }),
-                      path: '/setting/org',
-                      toolbar: true,
-                      icon: <PartitionOutlined />
-                    },
-                    {
-                      group: 'tenantSetting',
-                      groupLabel: formatMessage({ id: 'tenantAdmin.settings' }),
-                      label: formatMessage({ id: 'tenantAdmin.userManagement' }),
-                      path: '/setting/user',
-                      toolbar: true,
-                      icon: <UserOutlined />
-                    },
-                    {
-                      group: 'account',
-                      groupLabel: formatMessage({ id: 'tenantAdmin.account' }),
-                      label: formatMessage({ id: 'tenantAdmin.switchTenant' }),
-                      icon: <UserSwitchOutlined />,
-                      onClick: () => {
-                        window.location.href = '/login-tenant';
-                      }
-                    },
-                    {
-                      group: 'account',
-                      groupLabel: formatMessage({ id: 'tenantAdmin.account' }),
-                      label: formatMessage({ id: 'tenantAdmin.logout' }),
-                      icon: <LogoutOutlined />,
-                      onClick: logout
-                    }
-                  ]
-                }}
-              >
+              <TenantAdminMenu baseUrl={baseUrl} tenant={tenant} tenantUserInfo={tenantUserInfo} logout={logout} formatMessage={formatMessage} usePermissionsPass={usePermissionsPass} Language={Language}>
                 {children || <Outlet />}
-              </SystemLayout>
+              </TenantAdminMenu>
             </Permissions>
           );
         }}
@@ -168,5 +32,128 @@ const Layout = createWithRemoteLoader({
     );
   })
 );
+
+const TenantAdminMenu = ({ baseUrl, tenant, tenantUserInfo, logout, formatMessage, usePermissionsPass, Language, children }) => {
+  const allowTalentMarketplace = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.talentMarketplace });
+  const allowPositionManagement = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionManagement });
+  const allowEmployeeProfile = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeProfile });
+  const allowCompanySetting = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.companySetting });
+  const allowOrgSetting = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.orgSetting });
+  const allowUserManagement = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.userManagement });
+
+  const menuItems = [
+    {
+      path: '/',
+      label: formatMessage({ id: 'tenantAdmin.home' }),
+      toolbar: true,
+      icon: 'home'
+    },
+    allowTalentMarketplace
+      ? {
+          path: '/market',
+          label: formatMessage({ id: 'tenantAdmin.internalTalentMarket' }),
+          toolbar: true,
+          icon: (
+            <span className="anticon">
+              <MdGroups />
+            </span>
+          )
+        }
+      : null,
+    allowPositionManagement
+      ? {
+          label: formatMessage({ id: 'tenantAdmin.positionManagement' }),
+          path: '/position',
+          icon: (
+            <span className="anticon">
+              <MdWork />
+            </span>
+          )
+        }
+      : null,
+    allowEmployeeProfile
+      ? {
+          label: formatMessage({ id: 'tenantAdmin.employeeProfile' }),
+          path: '/employee',
+          icon: (
+            <span className="anticon">
+              <FaUserTie />
+            </span>
+          )
+        }
+      : null,
+    allowCompanySetting
+      ? {
+          group: 'tenantSetting',
+          groupLabel: formatMessage({ id: 'tenantAdmin.settings' }),
+          label: formatMessage({ id: 'tenantAdmin.companyInfo' }),
+          path: '/setting/company',
+          toolbar: true,
+          icon: (
+            <span className="anticon">
+              <FaRegBuilding />
+            </span>
+          )
+        }
+      : null,
+    allowOrgSetting
+      ? {
+          group: 'tenantSetting',
+          groupLabel: formatMessage({ id: 'tenantAdmin.settings' }),
+          label: formatMessage({ id: 'tenantAdmin.orgStructure' }),
+          path: '/setting/org',
+          toolbar: true,
+          icon: <PartitionOutlined />
+        }
+      : null,
+    allowUserManagement
+      ? {
+          group: 'tenantSetting',
+          groupLabel: formatMessage({ id: 'tenantAdmin.settings' }),
+          label: formatMessage({ id: 'tenantAdmin.userManagement' }),
+          path: '/setting/user',
+          toolbar: true,
+          icon: <UserOutlined />
+        }
+      : null,
+    {
+      group: 'account',
+      groupLabel: formatMessage({ id: 'tenantAdmin.account' }),
+      label: formatMessage({ id: 'tenantAdmin.switchTenant' }),
+      icon: <UserSwitchOutlined />,
+      onClick: () => {
+        window.location.href = '/login-tenant';
+      }
+    },
+    {
+      group: 'account',
+      groupLabel: formatMessage({ id: 'tenantAdmin.account' }),
+      label: formatMessage({ id: 'tenantAdmin.logout' }),
+      icon: <LogoutOutlined />,
+      onClick: logout
+    }
+  ].filter(Boolean);
+
+  return (
+    <SystemLayout
+      background={'linear-gradient(180deg, #E8DCDF, #E1D1E3, #DED7EF, #D5E0F1)'}
+      logo={{ id: tenant?.logo }}
+      userInfo={{
+        ...tenantUserInfo,
+        extra: (
+          <div style={{ paddingTop: '8px' }}>
+            <Language colorful={false} />
+          </div>
+        )
+      }}
+      menu={{
+        base: baseUrl,
+        items: menuItems
+      }}
+    >
+      {children}
+    </SystemLayout>
+  );
+};
 
 export default Layout;
