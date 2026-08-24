@@ -139,7 +139,7 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
                   }}
                 />
                 <div className={style['upload-cta']}>
-                  <UploadButton type="primary">{formatMessage({ id: 'tenantAdmin.completeChooseFile' })}</UploadButton>
+                  <UploadButton>{formatMessage({ id: 'tenantAdmin.completeChooseFile' })}</UploadButton>
                 </div>
               </div>
             ) : (
@@ -154,7 +154,7 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
                   renderTips={() => formatMessage({ id: 'tenantAdmin.completeUploadHint' })}
                 />
                 <div className={style['upload-cta']}>
-                  <UploadButton type="primary">{formatMessage({ id: 'tenantAdmin.completeChooseFile' })}</UploadButton>
+                  <UploadButton>{formatMessage({ id: 'tenantAdmin.completeChooseFile' })}</UploadButton>
                 </div>
               </div>
             )}
