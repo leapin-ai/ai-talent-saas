@@ -3,6 +3,7 @@ import { useState } from 'react';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
 import { Flex, Spin } from 'antd';
+import { FILE_DIRECTORY } from '@components/Apis';
 
 const BaseFormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo', 'components-core:Enum', 'components-core:Global@usePreset']
@@ -12,9 +13,14 @@ const BaseFormInner = createWithRemoteLoader({
     const { useFormContext } = FormInfo;
     const { Avatar, Input, Select, DatePicker, TextArea, RadioGroup, PhoneNumber, AddressSelect, Upload, SuperSelect, SuperSelectTree } = FormInfo.fields;
     const { formatMessage } = useIntl();
-    const { ajax } = usePreset();
+    const { ajax, apis: presetApis } = usePreset();
     const { openApi } = useFormContext();
     const [parseResume, setParseResume] = useState(false);
+    const uploadResume = ({ file, path } = {}) =>
+      presetApis?.file?.upload?.({
+        file,
+        path: path || FILE_DIRECTORY.EMPLOYEE_RESUME
+      });
     return (
       <Flex vertical gap={10}>
         {action !== 'edit' && (
@@ -29,6 +35,8 @@ const BaseFormInner = createWithRemoteLoader({
                   label="上传简历"
                   maxLength={1}
                   int
+                  directory={FILE_DIRECTORY.EMPLOYEE_RESUME}
+                  onUpload={uploadResume}
                   getPermission={type => {
                     return ['preview'].indexOf(type) > -1;
                   }}
@@ -63,7 +71,7 @@ const BaseFormInner = createWithRemoteLoader({
           title="基本信息"
           column={2}
           list={[
-            <Avatar name="avatar" label="头像" labelHidden block interceptor="photo-string" />,
+            <Avatar name="avatar" label="头像" labelHidden block interceptor="photo-string" directory={FILE_DIRECTORY.EMPLOYEE_AVATAR} />,
             <Input name="name" label={formatMessage({ id: 'employee.name' })} rule="REQ LEN-0-100" />,
             <Input name="nameEn" label={formatMessage({ id: 'employee.nameEn' })} rule="LEN-0-100" />,
             <Enum moduleName="gender" format="option">

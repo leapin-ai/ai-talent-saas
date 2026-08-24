@@ -1,4 +1,5 @@
 import getApis from './getApis';
+import { FILE_DIRECTORY } from './fileDirectories';
 
 const Apis = ({ children }) => {
   return children({ getApis });
@@ -6,4 +7,4 @@ const Apis = ({ children }) => {
 
 export default Apis;
 
-export { getApis };
+export { getApis, FILE_DIRECTORY };
