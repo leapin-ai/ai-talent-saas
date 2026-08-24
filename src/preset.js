@@ -218,10 +218,11 @@ export const globalInit = async () => {
           paramsType: 'urlParams',
           ignoreSuccessState: true
         },
-        uploadForEditor: ({ file }) => {
+        uploadForEditor: ({ file, path }) => {
           return ajax
             .postForm({
               url: `/api/v1/static/upload`,
+              params: path ? { path } : undefined,
               data: { file }
             })
             .then(response => {
@@ -231,9 +232,10 @@ export const globalInit = async () => {
               return response;
             });
         },
-        upload: ({ file }) => {
+        upload: ({ file, path }) => {
           return ajax.postForm({
             url: `/api/v1/static/upload`,
+            params: path ? { path } : undefined,
             data: { file }
           });
         }
