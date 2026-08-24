@@ -1,9 +1,19 @@
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
+import { ConfigProvider } from 'antd';
 import { useGlobalValue } from '@kne/global-context';
 import { applyThemeColorToContainer, getThemeContainer, injectTenantThemeStylesheet, observeTenantThemeOverride } from './themeColor';
 
 const TenantThemeProvider = ({ themeColor, SetGlobal, children }) => {
   const existingThemeToken = useGlobalValue('themeToken') || {};
+  const themeToken = useMemo(() => {
+    if (!themeColor) {
+      return existingThemeToken;
+    }
+    if (existingThemeToken.colorPrimary === themeColor && existingThemeToken.colorLink === themeColor) {
+      return existingThemeToken;
+    }
+    return { ...existingThemeToken, colorPrimary: themeColor, colorLink: themeColor };
+  }, [existingThemeToken, themeColor]);
 
   useLayoutEffect(() => {
     if (!themeColor) {
@@ -41,15 +51,18 @@ const TenantThemeProvider = ({ themeColor, SetGlobal, children }) => {
     };
   }, [themeColor]);
 
-  if (!themeColor || !SetGlobal) {
-    return children;
+  let content = children;
+  if (themeColor) {
+    content = <ConfigProvider theme={{ token: themeToken }}>{content}</ConfigProvider>;
   }
-
-  return (
-    <SetGlobal globalKey="themeToken" value={{ ...existingThemeToken, colorPrimary: themeColor }}>
-      {children}
-    </SetGlobal>
-  );
+  if (themeColor && SetGlobal) {
+    content = (
+      <SetGlobal globalKey="themeToken" value={themeToken}>
+        {content}
+      </SetGlobal>
+    );
+  }
+  return content;
 };
 
 export default TenantThemeProvider;
