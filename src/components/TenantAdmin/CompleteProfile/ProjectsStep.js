@@ -107,7 +107,13 @@ const ProjectEditCard = ({ FormInfo, initial, canDelete, onSave, onCancel, onDel
             <Input name="name" label={formatMessage({ id: 'tenantAdmin.completeProjectName' })} rule="REQ LEN-0-100" />,
             <Input name="role" label={formatMessage({ id: 'tenantAdmin.completeProjectRole' })} rule="LEN-0-100" />,
             DatePickerToday ? (
-              <DatePickerToday name="period" label={formatMessage({ id: 'tenantAdmin.completeProjectPeriod' })} picker="month" soFarText={formatMessage({ id: 'tenantAdmin.completeSoFar' })} />
+              <DatePickerToday
+                name="period"
+                label={formatMessage({ id: 'tenantAdmin.completeProjectPeriod' })}
+                picker="month"
+                placeholder={[formatMessage({ id: 'tenantAdmin.completeProjectStartDate' }), formatMessage({ id: 'tenantAdmin.completeProjectEndDate' })]}
+                soFarText={formatMessage({ id: 'tenantAdmin.completeSoFar' })}
+              />
             ) : (
               <Input name="period" label={formatMessage({ id: 'tenantAdmin.completeProjectPeriod' })} rule="LEN-0-100" />
             ),

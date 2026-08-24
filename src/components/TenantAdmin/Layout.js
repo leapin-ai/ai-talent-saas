@@ -8,24 +8,36 @@ import '@kne/system-layout/dist/index.css';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
 import { TENANT_ADMIN_PERMISSIONS } from './constants';
+import TenantThemeProvider from '../../commons/TenantThemeProvider';
+import { resolveTenantThemeColor } from '../../commons/themeColor';
 
 const Layout = createWithRemoteLoader({
-  modules: ['components-admin:Tenant@Authenticate', 'components-admin:Account@useLogout', 'components-core:Permissions', 'components-core:Permissions@usePermissionsPass', 'components-admin:Account@Language']
+  modules: [
+    'components-admin:Tenant@Authenticate',
+    'components-admin:Account@useLogout',
+    'components-core:Permissions',
+    'components-core:Permissions@usePermissionsPass',
+    'components-admin:Account@Language',
+    'components-core:Global@SetGlobal'
+  ]
 })(
   withLocale(({ remoteModules, baseUrl, children }) => {
     const { formatMessage } = useIntl();
-    const [Authenticate, useLogout, Permissions, usePermissionsPass, Language] = remoteModules;
+    const [Authenticate, useLogout, Permissions, usePermissionsPass, Language, SetGlobal] = remoteModules;
     const logout = useLogout();
     return (
       <Authenticate>
         {({ global }) => {
           const { tenantUserInfo, tenant } = global;
+          const themeColor = resolveTenantThemeColor({ tenant, tenantUserInfo });
           return (
-            <Permissions request={['tenant-admin']} type="error">
-              <TenantAdminMenu baseUrl={baseUrl} tenant={tenant} tenantUserInfo={tenantUserInfo} logout={logout} formatMessage={formatMessage} usePermissionsPass={usePermissionsPass} Language={Language}>
-                {children || <Outlet />}
-              </TenantAdminMenu>
-            </Permissions>
+            <TenantThemeProvider themeColor={themeColor} SetGlobal={SetGlobal}>
+              <Permissions request={['tenant-admin']} type="error">
+                <TenantAdminMenu baseUrl={baseUrl} tenant={tenant} tenantUserInfo={tenantUserInfo} logout={logout} formatMessage={formatMessage} usePermissionsPass={usePermissionsPass} Language={Language}>
+                  {children || <Outlet />}
+                </TenantAdminMenu>
+              </Permissions>
+            </TenantThemeProvider>
           );
         }}
       </Authenticate>

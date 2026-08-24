@@ -1,15 +1,12 @@
-import { FileOutlined } from '@ant-design/icons';
 import { useIntl } from '@kne/react-intl';
 import TargetPositionFormInner from '@components/TalentProfile/FormInner/TargetPositionFormInner';
 import MobilityPreferenceFormInner from '@components/TalentProfile/FormInner/MobilityPreferenceFormInner';
-import SkillFormInner from '@components/TalentProfile/FormInner/SkillFormInner';
 import style from './style.module.scss';
 
-const ReviewStep = ({ FormInfo, resumeFile, parsedCount = 0, missing = [], positionListApi }) => {
+const ReviewStep = ({ FormInfo, positionListApi }) => {
   const { fields } = FormInfo;
   const { Input, PhoneNumber } = fields;
   const { formatMessage } = useIntl();
-  const missingList = Array.isArray(missing) ? missing : [];
 
   return (
     <div className={style['review-layout']}>
@@ -25,11 +22,11 @@ const ReviewStep = ({ FormInfo, resumeFile, parsedCount = 0, missing = [], posit
             <Input name="linkedin" label={formatMessage({ id: 'tenantAdmin.completePublicProfile' })} rule="LEN-0-200" />
           ]}
         />
-        <SkillFormInner namePrefix="skills" title={formatMessage({ id: 'tenantAdmin.completeSkills' })} bordered />
+        {/* <SkillFormInner namePrefix="skills" title={formatMessage({ id: 'tenantAdmin.completeSkills' })} bordered /> */}
         <TargetPositionFormInner fieldName="intentionPosition" title={formatMessage({ id: 'tenantAdmin.completeTargetRole' })} bordered required={false} mode="select" positionListApi={positionListApi} />
         <MobilityPreferenceFormInner title={formatMessage({ id: 'tenantAdmin.completePreferences' })} bordered required={false} />
       </div>
-      <div className={style['review-side']}>
+      {/* <div className={style['review-side']}>
         <div className={style['side-card']}>
           <div className={style['side-card-title']}>{formatMessage({ id: 'tenantAdmin.completeSource' })}</div>
           <div className={style['source-file']}>
@@ -52,7 +49,7 @@ const ReviewStep = ({ FormInfo, resumeFile, parsedCount = 0, missing = [], posit
             </ul>
           </div>
         ) : null}
-      </div>
+      </div> */}
     </div>
   );
 };
