@@ -61,8 +61,12 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
       comment: 'AI面试评估记录',
       indexes: [
         {
-          fields: ['tenantId', 'tenantUserId'],
-          unique: true
+          // underscored: true 时表字段为 snake_case；索引 fields 不会自动转换，须写库内真实列名
+          fields: ['tenant_id', 'tenant_user_id'],
+          unique: true,
+          where: {
+            deleted_at: null
+          }
         }
       ]
     }
