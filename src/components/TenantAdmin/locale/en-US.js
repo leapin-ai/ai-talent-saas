@@ -42,6 +42,8 @@ const enUS = {
   'tenantAdmin.completeProjectName': 'Project name',
   'tenantAdmin.completeProjectRole': 'Role',
   'tenantAdmin.completeProjectPeriod': 'Project period',
+  'tenantAdmin.completeProjectStartDate': 'Start date',
+  'tenantAdmin.completeProjectEndDate': 'End date',
   'tenantAdmin.completeProjectDesc': 'Description',
   'tenantAdmin.completeProjectSkills': 'Skills',
   'tenantAdmin.completeAddProject': 'Add another project',
