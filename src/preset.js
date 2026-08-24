@@ -21,20 +21,9 @@ export const globalInit = async () => {
     errorHandler: error => message.error(error),
     getDefaultHeaders: () => {
       return {
-        'X-User-Token': getToken('X-User-Token')
+        'X-User-Token': getToken('X-User-Token'),
+        'X-Candidate-Token': getToken('X-Candidate-Token')
       };
-    },
-    registerInterceptors: interceptors => {
-      interceptors.response.use(response => {
-        if (response.status === 401 || response.data.code === 401) {
-          const searchParams = new URLSearchParams(window.location.search);
-          const referer = encodeURIComponent(window.location.pathname + window.location.search);
-          searchParams.append('referer', referer);
-          window.location.href = '/account/login?' + searchParams.toString();
-          response.showError = false;
-        }
-        return response;
-      });
     }
   });
 
@@ -102,6 +91,13 @@ export const globalInit = async () => {
         //tpl: '{{url}}',
         remote: 'components-thirdparty',
         defaultVersion: '0.1.35'
+      },
+      // AI 面试远程组件：url/version 由租户设置在运行时 applyAiInterviewRemote 写入
+      'ai-interview-flowup': {
+        remote: 'ai-interview-flowup',
+        url: '',
+        tpl: '{{url}}',
+        defaultVersion: '0.1.73'
       },
       'fastify-app':
         process.env.NODE_ENV === 'development'
@@ -236,4 +232,27 @@ export const globalInit = async () => {
       colorPrimary: '#4183F0'
     }
   };
+};
+
+/** 按租户 AI 面试设置写入 remote-loader remotes，供 ai-interview-flowup:* 正常加载 */
+export const applyAiInterviewRemote = ({ cdnUrl, version } = {}) => {
+  const url = String(cdnUrl || '')
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/remoteEntry\.js$/i, '');
+  const defaultVersion = String(version || '').trim();
+  if (!url || !defaultVersion) {
+    return false;
+  }
+  remoteLoaderPreset({
+    remotes: {
+      'ai-interview-flowup': {
+        remote: 'ai-interview-flowup',
+        url,
+        tpl: '{{url}}',
+        defaultVersion
+      }
+    }
+  });
+  return true;
 };
