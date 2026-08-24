@@ -21,9 +21,20 @@ export const globalInit = async () => {
     errorHandler: error => message.error(error),
     getDefaultHeaders: () => {
       return {
-        'X-User-Token': getToken('X-User-Token'),
-        'X-Candidate-Token': getToken('X-Candidate-Token')
+        'X-User-Token': getToken('X-User-Token')
       };
+    },
+    registerInterceptors: interceptors => {
+      interceptors.response.use(response => {
+        if (response.config.ignoreState !== true && (response.status === 401 || response.data.code === 401)) {
+          const searchParams = new URLSearchParams(window.location.search);
+          const referer = encodeURIComponent(window.location.pathname + window.location.search);
+          searchParams.append('referer', referer);
+          window.location.href = '/account/login?' + searchParams.toString();
+          response.showError = false;
+        }
+        return response;
+      });
     }
   });
 

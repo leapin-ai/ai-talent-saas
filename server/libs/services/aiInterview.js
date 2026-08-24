@@ -196,13 +196,6 @@ module.exports = fp(async (fastify, options) => {
 
   const openApiRequest = async (credentials, pathname, { method = 'GET', body, query } = {}) => {
     const { apiBase, requestUrl } = buildOpenApiUrl(credentials.apiUrl, pathname, query);
-    console.log('[aiInterview open-api]', {
-      method,
-      apiUrl: credentials.apiUrl,
-      apiBase,
-      requestUrl,
-      appId: credentials.appId
-    });
     let response;
     try {
       const signaturePayload = generateSignature(credentials.appId, credentials.secretKey, 60);
@@ -221,12 +214,6 @@ module.exports = fp(async (fastify, options) => {
       throwOpenApiError(e.message || 'AI interview open-api 请求失败');
     }
     const text = await response.text();
-    console.log('[aiInterview open-api] response', {
-      requestUrl,
-      status: response.status,
-      contentType: response.headers.get('content-type'),
-      bodyPreview: text.slice(0, 200)
-    });
     let data = {};
     if (text) {
       try {
