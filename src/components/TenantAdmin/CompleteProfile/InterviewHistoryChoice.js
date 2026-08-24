@@ -3,7 +3,18 @@ import { Button, Descriptions, Typography } from 'antd';
 import { useIntl } from '@kne/react-intl';
 import style from './style.module.scss';
 
-const COMPLETED_STATUSES = ['completed', 'ended', 'done'];
+const COMPLETED_STATUSES = ['completed', 'ended', 'done', 'submitted'];
+
+export const isPreviousInterviewFinished = previousInterview => {
+  if (!previousInterview) {
+    return false;
+  }
+  if (previousInterview.completed === true) {
+    return true;
+  }
+  const normalized = String(previousInterview.interviewStatus || '').toLowerCase();
+  return COMPLETED_STATUSES.includes(normalized);
+};
 
 export const getInterviewStatusLabel = (status, formatMessage) => {
   const normalized = String(status || '').toLowerCase();
@@ -24,12 +35,17 @@ const formatDateTime = value => {
   return parsed.isValid() ? parsed.format('YYYY-MM-DD HH:mm') : '-';
 };
 
-const InterviewHistoryChoice = ({ previousInterview, loading, onUsePrevious, onRetakeInterview }) => {
+const InterviewHistoryChoice = ({ previousInterview, loading, onUsePrevious, onContinueInterview, onRetakeInterview }) => {
   const { formatMessage } = useIntl();
 
   if (!previousInterview) {
     return null;
   }
+
+  const finished = isPreviousInterviewFinished(previousInterview);
+  const primaryAction = finished ? onUsePrevious : onContinueInterview;
+  const primaryLoadingKey = finished ? 'previous' : 'continue';
+  const primaryLabelId = finished ? 'tenantAdmin.assessmentUsePreviousInterview' : 'tenantAdmin.assessmentContinueInterview';
 
   return (
     <div className={style['interview-history-panel']}>
@@ -41,12 +57,12 @@ const InterviewHistoryChoice = ({ previousInterview, loading, onUsePrevious, onR
         <Descriptions column={1} size="small" className={style['interview-history-meta']}>
           <Descriptions.Item label={formatMessage({ id: 'tenantAdmin.assessmentInterviewProject' })}>{previousInterview.projectName || '-'}</Descriptions.Item>
           <Descriptions.Item label={formatMessage({ id: 'tenantAdmin.assessmentInterviewInviteCode' })}>{previousInterview.inviteCode || '-'}</Descriptions.Item>
-          <Descriptions.Item label={formatMessage({ id: 'tenantAdmin.assessmentInterviewStatus' })}>{getInterviewStatusLabel(previousInterview.completed ? 'completed' : previousInterview.interviewStatus, formatMessage)}</Descriptions.Item>
+          <Descriptions.Item label={formatMessage({ id: 'tenantAdmin.assessmentInterviewStatus' })}>{getInterviewStatusLabel(finished ? 'completed' : previousInterview.interviewStatus, formatMessage)}</Descriptions.Item>
           <Descriptions.Item label={formatMessage({ id: 'tenantAdmin.assessmentInterviewInvitedAt' })}>{formatDateTime(previousInterview.invitedAt || previousInterview.lastSyncAt)}</Descriptions.Item>
         </Descriptions>
         <div className={style['interview-history-actions']}>
-          <Button type="primary" loading={loading === 'previous'} onClick={onUsePrevious}>
-            {formatMessage({ id: 'tenantAdmin.assessmentUsePreviousInterview' })}
+          <Button type="primary" loading={loading === primaryLoadingKey} onClick={primaryAction}>
+            {formatMessage({ id: primaryLabelId })}
           </Button>
           <Button loading={loading === 'new'} onClick={onRetakeInterview}>
             {formatMessage({ id: 'tenantAdmin.assessmentRetakeInterview' })}

@@ -181,6 +181,22 @@ const InterviewStep = createWithRemoteLoader({
     }
   };
 
+  const handleContinueInterview = async () => {
+    setActionLoading('continue');
+    setError('');
+    try {
+      choiceResolvedRef.current = true;
+      bootOnceRef.current = true;
+      await loadEnsureInvite();
+    } catch (e) {
+      choiceResolvedRef.current = false;
+      setError(e.message || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
+      setPhase('error');
+    } finally {
+      setActionLoading('');
+    }
+  };
+
   const handleRetakeInterview = async () => {
     setActionLoading('new');
     setError('');
@@ -210,7 +226,7 @@ const InterviewStep = createWithRemoteLoader({
   }
 
   if (phase === 'choice') {
-    return <InterviewHistoryChoice previousInterview={previousInterview} loading={actionLoading} onUsePrevious={handleUsePrevious} onRetakeInterview={handleRetakeInterview} />;
+    return <InterviewHistoryChoice previousInterview={previousInterview} loading={actionLoading} onUsePrevious={handleUsePrevious} onContinueInterview={handleContinueInterview} onRetakeInterview={handleRetakeInterview} />;
   }
 
   if (!invite?.shorten) {

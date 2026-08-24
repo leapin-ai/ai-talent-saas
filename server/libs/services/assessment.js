@@ -51,7 +51,7 @@ const formatPhoneForInvite = value => {
   return `+86 ${raw.replace(/\s+/g, '')}`;
 };
 
-const COMPLETED_INTERVIEW_STATUSES = ['completed', 'ended', 'done'];
+const COMPLETED_INTERVIEW_STATUSES = ['completed', 'ended', 'done', 'submitted'];
 
 const isInterviewCompleted = status => COMPLETED_INTERVIEW_STATUSES.includes(String(status || '').toLowerCase());
 
