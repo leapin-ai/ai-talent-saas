@@ -101,7 +101,12 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
   };
 
   return (
-    <Spin spinning={parsing || uploadingList.length > 0} tip={parsing ? '简历解析中...' : '上传中...'}>
+    <Spin
+      spinning={parsing || uploadingList.length > 0}
+      tip={formatMessage({
+        id: parsing ? 'tenantAdmin.completeResumeParsing' : 'tenantAdmin.completeResumeUploading'
+      })}
+    >
       <div className={style['upload-wrap']}>
         <DragAreaOuter accept={ACCEPT} fileSize={FILE_SIZE_MB} maxLength={1} onFileSelected={onFileSelected}>
           <div
@@ -134,7 +139,7 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
                   }}
                 />
                 <div className={style['upload-cta']}>
-                  <UploadButton>{formatMessage({ id: 'tenantAdmin.completeChooseFile' })}</UploadButton>
+                  <UploadButton type="primary">{formatMessage({ id: 'tenantAdmin.completeChooseFile' })}</UploadButton>
                 </div>
               </div>
             ) : (
@@ -149,7 +154,7 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
                   renderTips={() => formatMessage({ id: 'tenantAdmin.completeUploadHint' })}
                 />
                 <div className={style['upload-cta']}>
-                  <UploadButton>{formatMessage({ id: 'tenantAdmin.completeChooseFile' })}</UploadButton>
+                  <UploadButton type="primary">{formatMessage({ id: 'tenantAdmin.completeChooseFile' })}</UploadButton>
                 </div>
               </div>
             )}
