@@ -106,3 +106,64 @@ export const hasSavedProfileData = profileData => {
   const { review, projects } = splitAssessmentProfileData(profileData);
   return hasPrefilledReviewData(review) || hasSavedProjectsData(projects.projects);
 };
+
+const hasWorkPreferenceValue = workPreference => {
+  if (!workPreference || typeof workPreference !== 'object') {
+    return false;
+  }
+  return ['work_mode_preference', 'business_travel_willingness', 'relocation_willingness'].some(key => {
+    const value = workPreference[key];
+    return value != null && String(value).trim() !== '';
+  });
+};
+
+/** 员工档案 → 完善档案表单默认值（核对信息；档案无独立项目经历则 projects 为空） */
+export const mapEmployeeToCompleteProfileData = employee => {
+  if (!employee || typeof employee !== 'object') {
+    return { review: normalizeReviewProfileData({}), projects: { projects: [] } };
+  }
+  const profile = employee.profile && typeof employee.profile === 'object' ? employee.profile : {};
+  const options = employee.options && typeof employee.options === 'object' ? employee.options : {};
+  const profileOptions = profile.options && typeof profile.options === 'object' ? profile.options : {};
+  const linkedin = profile.linkedin || profileOptions.linkedin || options.linkedin || '';
+
+  const review = normalizeReviewProfileData({
+    name: employee.name || '',
+    phone: employee.phone || '',
+    email: employee.email || employee.personalEmail || '',
+    linkedin,
+    skills: profile.skills,
+    intentionPosition: profile.intentionPosition,
+    workPreference: profile.workPreference
+  });
+
+  return {
+    review,
+    projects: { projects: [] }
+  };
+};
+
+/** 以档案为底，assessment 已填字段覆盖（空值不覆盖） */
+export const mergeCompleteProfilePrefill = (employeeMapped, assessmentMapped) => {
+  const base = employeeMapped || { review: normalizeReviewProfileData({}), projects: { projects: [] } };
+  const overlay = assessmentMapped || null;
+  if (!overlay) {
+    return base;
+  }
+
+  const baseReview = normalizeReviewProfileData(base.review);
+  const overlayReview = normalizeReviewProfileData(overlay.review);
+  const review = normalizeReviewProfileData({
+    name: overlayReview.name || baseReview.name,
+    phone: overlayReview.phone || baseReview.phone,
+    email: overlayReview.email || baseReview.email,
+    linkedin: overlayReview.linkedin || baseReview.linkedin,
+    skills: hasSkillTags(overlayReview.skills) ? overlayReview.skills : baseReview.skills,
+    intentionPosition: Array.isArray(overlayReview.intentionPosition) && overlayReview.intentionPosition.length > 0 ? overlayReview.intentionPosition : baseReview.intentionPosition,
+    workPreference: hasWorkPreferenceValue(overlayReview.workPreference) ? overlayReview.workPreference : baseReview.workPreference
+  });
+
+  const projects = hasSavedProjectsData(overlay.projects?.projects) ? overlay.projects : base.projects || { projects: [] };
+
+  return { review, projects };
+};
