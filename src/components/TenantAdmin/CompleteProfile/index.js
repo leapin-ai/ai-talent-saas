@@ -12,19 +12,8 @@ import UploadStep from './UploadStep';
 import ReviewStep from './ReviewStep';
 import ProjectsStep from './ProjectsStep';
 import InterviewStep from './InterviewStep';
-import { hasPrefilledReviewData, hasSavedProfileData, hasSavedProjectsData, hasSkillTags, mapEmployeeToCompleteProfileData, mergeCompleteProfilePrefill, normalizeReviewProfileData, splitAssessmentProfileData } from './profileDataUtils';
+import { hasPrefilledReviewData, hasSavedProfileData, hasSavedProjectsData, mapEmployeeToCompleteProfileData, mergeCompleteProfilePrefill, normalizeReviewProfileData, splitAssessmentProfileData } from './profileDataUtils';
 import style from './style.module.scss';
-
-const countParsedFields = parsed => {
-  if (!parsed || typeof parsed !== 'object') return 0;
-  return Object.keys(parsed).filter(key => {
-    const value = parsed[key];
-    if (value == null || value === '') return false;
-    if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === 'object') return Object.keys(value).length > 0;
-    return true;
-  }).length;
-};
 
 const hasContactValue = value => {
   if (value == null || value === '') return false;
@@ -34,20 +23,6 @@ const hasContactValue = value => {
     return number != null && String(number).trim().length > 0;
   }
   return true;
-};
-
-const getMissingLabels = (data, formatMessage) => {
-  const missing = [];
-  if (!data?.name) missing.push(formatMessage({ id: 'tenantAdmin.completeFullName' }));
-  const hasPhone = hasContactValue(data?.phone);
-  const hasEmail = hasContactValue(data?.email);
-  if (!hasPhone && !hasEmail) {
-    missing.push(formatMessage({ id: 'tenantAdmin.completePhoneOrEmail' }));
-  }
-  if (!hasSkillTags(data?.skills)) {
-    missing.push(formatMessage({ id: 'tenantAdmin.completeSkills' }));
-  }
-  return missing;
 };
 
 const CompleteProfile = createWithRemoteLoader({
@@ -192,7 +167,7 @@ const CompleteProfile = createWithRemoteLoader({
     );
 
     const activeReviewData = normalizeReviewProfileData(reviewData || uploadState.parsed || {});
-    const resumeFile = Array.isArray(uploadState.resumes) ? uploadState.resumes[0] : null;
+    const activeProjectsData = projectsData || splitAssessmentProfileData(uploadState.parsed || {}).projects;
     const canContinueUpload = (Array.isArray(uploadState.resumes) && uploadState.resumes.length > 0) || hasPrefilledReviewData(uploadState.parsed) || hasPrefilledReviewData(reviewData);
 
     if (initialLoading) {
@@ -259,13 +234,7 @@ const CompleteProfile = createWithRemoteLoader({
                     }}
                   >
                     <div className={style['step-body']}>
-                      <ReviewStep
-                        FormInfo={FormInfo}
-                        resumeFile={resumeFile}
-                        parsedCount={countParsedFields(activeReviewData)}
-                        missing={getMissingLabels(activeReviewData, formatMessage)}
-                        positionListApi={apis.talentSaas.tenant.position.list}
-                      />
+                      <ReviewStep FormInfo={FormInfo} positionListApi={apis.talentSaas.tenant.position.list} />
                     </div>
                     <Footer
                       showSkip={false}
@@ -282,7 +251,7 @@ const CompleteProfile = createWithRemoteLoader({
               {current === 2 && (
                 <div className={style['step-panel']}>
                   <div className={style['step-body']}>
-                    <ProjectsStep FormInfo={FormInfo} value={projectsData?.projects || []} onChange={projects => setProjectsData({ projects })} onEditingChange={setProjectsEditing} />
+                    <ProjectsStep FormInfo={FormInfo} value={activeProjectsData?.projects || []} onChange={projects => setProjectsData({ projects })} onEditingChange={setProjectsEditing} />
                   </div>
                   <Footer
                     showSkip={false}
@@ -310,7 +279,7 @@ const CompleteProfile = createWithRemoteLoader({
                               message.warning(formatMessage({ id: 'tenantAdmin.completeFinishEditFirst' }));
                               return;
                             }
-                            if (!projectsData) {
+                            if (!projectsData && !hasSavedProjectsData(activeProjectsData?.projects)) {
                               setProjectsData({ projects: [] });
                             }
                             setCurrent(3);
@@ -330,7 +299,7 @@ const CompleteProfile = createWithRemoteLoader({
                     <InterviewStep
                       profilePayload={{
                         ...(reviewData || uploadState.parsed || {}),
-                        projects: projectsData?.projects || []
+                        projects: activeProjectsData?.projects || []
                       }}
                       onInterviewComplete={handleInterviewComplete}
                     />
