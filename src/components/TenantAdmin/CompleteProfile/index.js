@@ -12,7 +12,7 @@ import UploadStep from './UploadStep';
 import ReviewStep from './ReviewStep';
 import ProjectsStep from './ProjectsStep';
 import InterviewStep from './InterviewStep';
-import { hasPrefilledReviewData, hasSavedProfileData, hasSkillTags, normalizeReviewProfileData, splitAssessmentProfileData } from './profileDataUtils';
+import { hasPrefilledReviewData, hasSavedProfileData, hasSavedProjectsData, hasSkillTags, mapEmployeeToCompleteProfileData, mergeCompleteProfilePrefill, normalizeReviewProfileData, splitAssessmentProfileData } from './profileDataUtils';
 import style from './style.module.scss';
 
 const countParsedFields = parsed => {
@@ -93,11 +93,19 @@ const CompleteProfile = createWithRemoteLoader({
 
       (async () => {
         try {
-          const { data: resData } = await ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail));
+          const [assessmentResult, employeeResult] = await Promise.all([ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail)), ajax(Object.assign({}, apis.talentSaas.tenant.employee.myDetail))]);
           if (cancelled) {
             return;
           }
-          if (resData.code !== 0 || !resData.data?.profileData || !hasSavedProfileData(resData.data.profileData)) {
+
+          const assessmentRes = assessmentResult?.data;
+          const employeeRes = employeeResult?.data;
+          const employeeMapped = employeeRes?.code === 0 && employeeRes.data ? mapEmployeeToCompleteProfileData(employeeRes.data) : null;
+          const assessmentMapped = assessmentRes?.code === 0 && assessmentRes.data?.profileData && hasSavedProfileData(assessmentRes.data.profileData) ? splitAssessmentProfileData(assessmentRes.data.profileData) : null;
+
+          const { review, projects } = mergeCompleteProfilePrefill(employeeMapped, assessmentMapped);
+          const hasPrefill = hasPrefilledReviewData(review) || hasSavedProjectsData(projects?.projects);
+          if (!hasPrefill) {
             return;
           }
           if (prefillAppliedRef.current && !isRestart) {
@@ -105,7 +113,6 @@ const CompleteProfile = createWithRemoteLoader({
           }
           prefillAppliedRef.current = true;
 
-          const { review, projects } = splitAssessmentProfileData(resData.data.profileData);
           setUploadState(prev => {
             if (Array.isArray(prev.resumes) && prev.resumes.length > 0) {
               return prev;
