@@ -8,15 +8,27 @@ import { useIntl } from '@kne/react-intl';
  */
 const AIInterviewRoom = createWithRemoteLoader({
   modules: ['ai-interview-flowup:ComponentPreset', 'ai-interview-flowup:InterviewSession', 'components-core:Global@useGlobalValue']
-})(({ remoteModules, ajaxBaseUrl, apiUrl, shorten, style, onStageChange }) => {
+})(({ remoteModules, ajaxBaseUrl, apiUrl, shorten, style, height = '100%', onStageChange }) => {
   const [ComponentPreset, InterviewSession, useGlobalValue] = remoteModules;
   const { formatMessage } = useIntl();
   const hostThemeToken = useGlobalValue('themeToken');
   const apiHost = apiUrl || ajaxBaseUrl;
+  // 最大宽度按传入高度约 16:9 并居中；百分比高度由外层容器约束（% 在 max-width 中按宽度解析）
+  const heightStr = String(height).trim();
+  const maxWidth = /%$/.test(heightStr) ? '100%' : `min(100%, calc((${heightStr}) * 16 / 9))`;
+  const roomStyle = {
+    width: '100%',
+    height: heightStr,
+    maxWidth,
+    marginLeft: 'auto',
+    marginRight: 'auto',
+    boxSizing: 'border-box',
+    ...style
+  };
 
   if (!ComponentPreset || !InterviewSession) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: 48, ...style }}>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 48, ...roomStyle }}>
         <Spin />
       </div>
     );
@@ -27,7 +39,7 @@ const AIInterviewRoom = createWithRemoteLoader({
   }
 
   return (
-    <div style={{ width: '100%', height: '100%', minHeight: '70vh', ...style }}>
+    <div style={roomStyle}>
       <ComponentPreset apiHost={apiHost} themeToken={hostThemeToken}>
         <InterviewSession
           key={shorten}
