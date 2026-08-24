@@ -166,6 +166,14 @@ const getApis = options => {
           ensureInvite: {
             url: `${prefix}/tenant/assessment/ensure-invite`,
             method: 'POST'
+          },
+          restart: {
+            url: `${prefix}/tenant/assessment/restart`,
+            method: 'POST'
+          },
+          acceptPrevious: {
+            url: `${prefix}/tenant/assessment/accept-previous`,
+            method: 'POST'
           }
         }
       }

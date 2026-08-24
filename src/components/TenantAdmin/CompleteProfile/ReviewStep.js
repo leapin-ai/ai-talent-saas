@@ -1,10 +1,13 @@
 import { FileOutlined } from '@ant-design/icons';
 import { useIntl } from '@kne/react-intl';
+import TargetPositionFormInner from '@components/TalentProfile/FormInner/TargetPositionFormInner';
+import MobilityPreferenceFormInner from '@components/TalentProfile/FormInner/MobilityPreferenceFormInner';
+import SkillFormInner from '@components/TalentProfile/FormInner/SkillFormInner';
 import style from './style.module.scss';
 
-const ReviewStep = ({ FormInfo, resumeFile, parsedCount = 0, missing = [] }) => {
+const ReviewStep = ({ FormInfo, resumeFile, parsedCount = 0, missing = [], positionListApi }) => {
   const { fields } = FormInfo;
-  const { Input, PhoneNumber, Select } = fields;
+  const { Input, PhoneNumber } = fields;
   const { formatMessage } = useIntl();
   const missingList = Array.isArray(missing) ? missing : [];
 
@@ -22,23 +25,9 @@ const ReviewStep = ({ FormInfo, resumeFile, parsedCount = 0, missing = [] }) => 
             <Input name="linkedin" label={formatMessage({ id: 'tenantAdmin.completePublicProfile' })} rule="LEN-0-200" />
           ]}
         />
-        <FormInfo
-          title={formatMessage({ id: 'tenantAdmin.completeSkills' })}
-          bordered
-          column={1}
-          list={[<Select name="skills" label={formatMessage({ id: 'tenantAdmin.completeSkills' })} mode="tags" placeholder={formatMessage({ id: 'tenantAdmin.completeAddSkill' })} />]}
-        />
-        <FormInfo
-          title={formatMessage({ id: 'tenantAdmin.completePreferences' })}
-          bordered
-          column={2}
-          list={[
-            <Input name="options.targetRole" label={formatMessage({ id: 'tenantAdmin.completeTargetRole' })} rule="LEN-0-100" />,
-            <Input name="options.workMode" label={formatMessage({ id: 'tenantAdmin.completeWorkMode' })} rule="LEN-0-100" />,
-            <Input name="options.openTravel" label={formatMessage({ id: 'tenantAdmin.completeOpenTravel' })} rule="LEN-0-100" />,
-            <Input name="options.openRelocation" label={formatMessage({ id: 'tenantAdmin.completeOpenRelocation' })} rule="LEN-0-100" />
-          ]}
-        />
+        <SkillFormInner namePrefix="skills" title={formatMessage({ id: 'tenantAdmin.completeSkills' })} bordered />
+        <TargetPositionFormInner fieldName="intentionPosition" title={formatMessage({ id: 'tenantAdmin.completeTargetRole' })} bordered required={false} mode="select" positionListApi={positionListApi} />
+        <MobilityPreferenceFormInner title={formatMessage({ id: 'tenantAdmin.completePreferences' })} bordered required={false} />
       </div>
       <div className={style['review-side']}>
         <div className={style['side-card']}>

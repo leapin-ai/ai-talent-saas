@@ -1,12 +1,21 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Page } from '@kne/system-layout';
 import { Button, Empty, Space } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import TalentProfile from '@components/TalentProfile';
+import AssessmentGeneratingBadge from './AssessmentGeneratingBadge';
+import AssessmentRegenerateButton from './AssessmentRegenerateButton';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
+
+const SyncAssessmentStatus = ({ status, onChange }) => {
+  useEffect(() => {
+    onChange(status ?? null);
+  }, [status, onChange]);
+  return null;
+};
 
 const Home = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']
@@ -17,12 +26,17 @@ const Home = createWithRemoteLoader({
     const { apis } = usePreset();
     const navigate = useNavigate();
     const [hasProfile, setHasProfile] = useState(false);
+    const [assessmentStatus, setAssessmentStatus] = useState(null);
+    const [assessmentReloadKey, setAssessmentReloadKey] = useState(0);
     const onData = useCallback(data => setHasProfile(!!data), []);
+    const onAssessmentStatusChange = useCallback(status => setAssessmentStatus(status), []);
     const employeeApis = Object.assign({}, apis.talentSaas.tenant.employee, {
       positionList: apis.talentSaas.tenant.position.list,
       parseResume: apis.talentSaas.tenant.resume.parseFileId,
       orgList: apis.tenant.orgList
     });
+
+    const showCompleteProfile = hasProfile && assessmentStatus !== 'generating';
 
     const completeProfileButton = (
       <Button type="primary" onClick={() => navigate(`${baseUrl}/complete-profile`)}>
@@ -34,25 +48,28 @@ const Home = createWithRemoteLoader({
       <Page
         title={formatMessage({ id: 'tenantAdmin.myEmployeeProfile' })}
         extra={
-          <Space>
+          <Space wrap>
             <Fetch
+              key={assessmentReloadKey}
               {...apis.talentSaas.tenant.assessment.detail}
               error={null}
-              render={({ data }) => {
-                if (!data) {
-                  return null;
-                }
-                if (data.status === 'generating') {
-                  return <Button disabled>{formatMessage({ id: 'tenantAdmin.assessmentGenerating' })}</Button>;
-                }
-                return (
-                  <Button type="primary" onClick={() => navigate(`${baseUrl}/complete-profile?step=interview`)}>
-                    {formatMessage({ id: 'tenantAdmin.assessmentContinueInterview' })}
-                  </Button>
-                );
-              }}
+              render={({ data }) => (
+                <>
+                  <SyncAssessmentStatus status={data?.status} onChange={onAssessmentStatusChange} />
+                  {!data ? null : data.status === 'generating' ? (
+                    <Space wrap>
+                      <AssessmentGeneratingBadge />
+                      <AssessmentRegenerateButton baseUrl={baseUrl} onRestarted={() => setAssessmentReloadKey(k => k + 1)} />
+                    </Space>
+                  ) : (
+                    <Button type="primary" onClick={() => navigate(`${baseUrl}/complete-profile?step=interview`)}>
+                      {formatMessage({ id: 'tenantAdmin.assessmentContinueInterview' })}
+                    </Button>
+                  )}
+                </>
+              )}
             />
-            {hasProfile ? completeProfileButton : null}
+            {showCompleteProfile ? completeProfileButton : null}
           </Space>
         }
       >
@@ -64,7 +81,7 @@ const Home = createWithRemoteLoader({
           onData={onData}
           empty={
             <Empty description={formatMessage({ id: 'talentProfile.NoLinkedEmployee' })} style={{ padding: '80px 0' }}>
-              {completeProfileButton}
+              {assessmentStatus === 'generating' ? null : completeProfileButton}
             </Empty>
           }
         />

@@ -1,5 +1,5 @@
-import { useMemo, useState, useCallback } from 'react';
-import { Button, Flex, message } from 'antd';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { Alert, Button, Flex, message, Spin } from 'antd';
 import { Page } from '@kne/system-layout';
 import { ButtonFooter } from '@kne/button-group';
 import '@kne/button-group/dist/index.css';
@@ -12,6 +12,7 @@ import UploadStep from './UploadStep';
 import ReviewStep from './ReviewStep';
 import ProjectsStep from './ProjectsStep';
 import InterviewStep from './InterviewStep';
+import { hasPrefilledReviewData, hasSavedProfileData, hasSkillTags, normalizeReviewProfileData, splitAssessmentProfileData } from './profileDataUtils';
 import style from './style.module.scss';
 
 const countParsedFields = parsed => {
@@ -43,31 +44,22 @@ const getMissingLabels = (data, formatMessage) => {
   if (!hasPhone && !hasEmail) {
     missing.push(formatMessage({ id: 'tenantAdmin.completePhoneOrEmail' }));
   }
-  if (!data?.options?.openRelocation) missing.push(formatMessage({ id: 'tenantAdmin.completeOpenRelocation' }));
-  if (!Array.isArray(data?.skills) || data.skills.length === 0) {
+  if (!hasSkillTags(data?.skills)) {
     missing.push(formatMessage({ id: 'tenantAdmin.completeSkills' }));
   }
   return missing;
 };
 
 const CompleteProfile = createWithRemoteLoader({
-  modules: [
-    'components-core:Global@usePreset',
-    'components-core:FormInfo',
-    'components-core:InfoPage',
-    'components-core:FileList@DragAreaOuter',
-    'components-core:FileList@UploadTips',
-    'components-core:FileList@UploadButton',
-    'components-core:File@List'
-  ]
+  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:FileList@DragAreaOuter', 'components-core:FileList@UploadTips', 'components-core:FileList@UploadButton', 'components-core:File@List']
 })(
   withLocale(({ remoteModules, baseUrl = '/tenant' }) => {
     const { formatMessage } = useIntl();
-    if (!Array.isArray(remoteModules) || remoteModules.length < 7) {
+    if (!Array.isArray(remoteModules) || remoteModules.length < 6) {
       return null;
     }
-    const [usePreset, FormInfo, InfoPage, DragAreaOuter, UploadTips, UploadButton, FileList] = remoteModules;
-    if (typeof usePreset !== 'function' || !FormInfo || !InfoPage || !DragAreaOuter || !UploadTips || !UploadButton || !FileList) {
+    const [usePreset, FormInfo, DragAreaOuter, UploadTips, UploadButton, FileList] = remoteModules;
+    if (typeof usePreset !== 'function' || !FormInfo || !DragAreaOuter || !UploadTips || !UploadButton || !FileList) {
       return null;
     }
     const { Form, SubmitButton } = FormInfo;
@@ -78,8 +70,72 @@ const CompleteProfile = createWithRemoteLoader({
     const [uploadState, setUploadState] = useState({ resumes: [], parsed: null });
     const [reviewData, setReviewData] = useState(null);
     const [projectsData, setProjectsData] = useState(null);
+    const [projectsEditing, setProjectsEditing] = useState(false);
     const [interviewFinished, setInterviewFinished] = useState(false);
-    const handleInterviewComplete = useCallback(() => setInterviewFinished(true), []);
+    const [prefillLoaded, setPrefillLoaded] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
+    const prefillAppliedRef = useRef(false);
+    const handleInterviewComplete = useCallback(
+      event => {
+        if (event?.directFinish) {
+          message.success(formatMessage({ id: 'tenantAdmin.completeFinishTip' }));
+          navigate(baseUrl || '/tenant');
+          return;
+        }
+        setInterviewFinished(true);
+      },
+      [baseUrl, formatMessage, navigate]
+    );
+
+    useEffect(() => {
+      let cancelled = false;
+      const isRestart = searchParams.get('restart') === '1';
+
+      (async () => {
+        try {
+          const { data: resData } = await ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail));
+          if (cancelled) {
+            return;
+          }
+          if (resData.code !== 0 || !resData.data?.profileData || !hasSavedProfileData(resData.data.profileData)) {
+            return;
+          }
+          if (prefillAppliedRef.current && !isRestart) {
+            return;
+          }
+          prefillAppliedRef.current = true;
+
+          const { review, projects } = splitAssessmentProfileData(resData.data.profileData);
+          setUploadState(prev => {
+            if (Array.isArray(prev.resumes) && prev.resumes.length > 0) {
+              return prev;
+            }
+            return { resumes: [], parsed: review };
+          });
+          setReviewData(prev => prev || review);
+          setProjectsData(prev => prev || projects);
+          setPrefillLoaded(true);
+
+          if (isRestart) {
+            setInterviewFinished(false);
+            setCurrent(0);
+            message.success(formatMessage({ id: 'tenantAdmin.assessmentRestartPrefilled' }));
+          }
+        } catch (e) {
+          if (!cancelled) {
+            message.error(e.message || formatMessage({ id: 'tenantAdmin.assessmentRestartFailed' }));
+          }
+        } finally {
+          if (!cancelled) {
+            setInitialLoading(false);
+          }
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [ajax, apis, formatMessage, searchParams]);
 
     const employeeApis = useMemo(
       () =>
@@ -128,8 +184,19 @@ const CompleteProfile = createWithRemoteLoader({
       </ButtonFooter>
     );
 
-    const activeReviewData = reviewData || uploadState.parsed || {};
+    const activeReviewData = normalizeReviewProfileData(reviewData || uploadState.parsed || {});
     const resumeFile = Array.isArray(uploadState.resumes) ? uploadState.resumes[0] : null;
+    const canContinueUpload = (Array.isArray(uploadState.resumes) && uploadState.resumes.length > 0) || hasPrefilledReviewData(uploadState.parsed) || hasPrefilledReviewData(reviewData);
+
+    if (initialLoading) {
+      return (
+        <Page title={pageTitle} back toolbar={false}>
+          <Flex align="center" justify="center" className={style['initial-loading']}>
+            <Spin size="large" />
+          </Flex>
+        </Page>
+      );
+    }
 
     return (
       <Page title={pageTitle} back toolbar={false}>
@@ -141,6 +208,7 @@ const CompleteProfile = createWithRemoteLoader({
               {current === 0 && (
                 <div className={style['step-panel']}>
                   <div className={style['step-body']}>
+                    {prefillLoaded ? <Alert type="info" showIcon message={formatMessage({ id: 'tenantAdmin.assessmentRestartPrefilledHint' })} style={{ marginBottom: 16 }} /> : null}
                     <UploadStep usePreset={usePreset} DragAreaOuter={DragAreaOuter} UploadTips={UploadTips} UploadButton={UploadButton} FileList={FileList} ajax={ajax} apis={employeeApis} value={uploadState} onChange={setUploadState} />
                   </div>
                   <Footer
@@ -150,17 +218,13 @@ const CompleteProfile = createWithRemoteLoader({
                         size="middle"
                         className={style['primary-btn']}
                         onClick={() => {
-                          if (!Array.isArray(uploadState.resumes) || uploadState.resumes.length === 0) {
+                          if (!canContinueUpload) {
                             message.warning(formatMessage({ id: 'tenantAdmin.completeUploadRequired' }));
                             return;
                           }
                           setReviewData(prev => {
                             if (prev) return prev;
-                            const parsed = uploadState.parsed || {};
-                            return {
-                              ...parsed,
-                              skills: Array.isArray(parsed.skills) ? parsed.skills : []
-                            };
+                            return normalizeReviewProfileData(uploadState.parsed || {});
                           });
                           setCurrent(1);
                         }}
@@ -183,12 +247,18 @@ const CompleteProfile = createWithRemoteLoader({
                         message.error(formatMessage({ id: 'tenantAdmin.completePhoneOrEmailRequired' }));
                         return;
                       }
-                      setReviewData(data);
+                      setReviewData(normalizeReviewProfileData(data));
                       setCurrent(2);
                     }}
                   >
                     <div className={style['step-body']}>
-                      <ReviewStep FormInfo={FormInfo} resumeFile={resumeFile} parsedCount={countParsedFields(activeReviewData)} missing={getMissingLabels(activeReviewData, formatMessage)} />
+                      <ReviewStep
+                        FormInfo={FormInfo}
+                        resumeFile={resumeFile}
+                        parsedCount={countParsedFields(activeReviewData)}
+                        missing={getMissingLabels(activeReviewData, formatMessage)}
+                        positionListApi={apis.talentSaas.tenant.position.list}
+                      />
                     </div>
                     <Footer
                       showSkip={false}
@@ -204,26 +274,46 @@ const CompleteProfile = createWithRemoteLoader({
 
               {current === 2 && (
                 <div className={style['step-panel']}>
-                  <Form
-                    className={style['step-form']}
-                    data={projectsData || { projects: [{ name: '', role: '', description: '', skills: [], period: [] }] }}
-                    bordered
-                    onSubmit={data => {
-                      setProjectsData(data);
-                      setCurrent(3);
-                    }}
-                  >
-                    <div className={style['step-body']}>
-                      <ProjectsStep FormInfo={FormInfo} InfoPage={InfoPage} />
-                    </div>
-                    <Footer
-                      primary={
-                        <SubmitButton type="primary" size="middle" className={style['primary-btn']}>
+                  <div className={style['step-body']}>
+                    <ProjectsStep FormInfo={FormInfo} value={projectsData?.projects || []} onChange={projects => setProjectsData({ projects })} onEditingChange={setProjectsEditing} />
+                  </div>
+                  <Footer
+                    showSkip={false}
+                    primary={
+                      <Flex gap={16} wrap="wrap" justify="flex-end">
+                        <Button
+                          size="middle"
+                          className={style['skip-btn']}
+                          onClick={() => {
+                            if (projectsEditing) {
+                              message.warning(formatMessage({ id: 'tenantAdmin.completeFinishEditFirst' }));
+                              return;
+                            }
+                            setCurrent(1);
+                          }}
+                        >
+                          {formatMessage({ id: 'tenantAdmin.completeBack' })}
+                        </Button>
+                        <Button
+                          type="primary"
+                          size="middle"
+                          className={style['primary-btn']}
+                          onClick={() => {
+                            if (projectsEditing) {
+                              message.warning(formatMessage({ id: 'tenantAdmin.completeFinishEditFirst' }));
+                              return;
+                            }
+                            if (!projectsData) {
+                              setProjectsData({ projects: [] });
+                            }
+                            setCurrent(3);
+                          }}
+                        >
                           {formatMessage({ id: 'tenantAdmin.completeSaveContinue' })}
-                        </SubmitButton>
-                      }
-                    />
-                  </Form>
+                        </Button>
+                      </Flex>
+                    }
+                  />
                 </div>
               )}
 
@@ -240,6 +330,7 @@ const CompleteProfile = createWithRemoteLoader({
                   </div>
                   {interviewFinished ? (
                     <Footer
+                      showSkip={false}
                       primary={
                         <Button
                           type="primary"
