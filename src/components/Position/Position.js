@@ -110,6 +110,13 @@ const Position = createWithRemoteLoader({
                 }
               ]
             }
+          },
+          saveData: (data, { fetchOptions }) => {
+            const org = fetchOptions?.data?.orgEnums?.find(item => item.value === data.tenantOrgId);
+            return Object.assign({}, data, {
+              // 组织已删时按未设置处理，避免带失效 id 提交报错
+              tenantOrgId: org ? { name: org.description, id: org.value } : null
+            });
           }
         }}
       />

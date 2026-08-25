@@ -13,6 +13,23 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
       onClick: onDetail
     },
     {
+      name: 'department',
+      title: formatMessage({ id: 'employee.department' }),
+      getValueOf: (item, { context } = {}) => {
+        const data = context?.data || {};
+        const positionId = item.options?.position?.id || item.options?.position;
+        if (!positionId) {
+          return null;
+        }
+        const position = data.positionEnums?.find(target => String(target.value) === String(positionId));
+        if (!position?.tenantOrgId) {
+          return null;
+        }
+        const org = data.orgEnums?.find(target => String(target.value) === String(position.tenantOrgId));
+        return org?.description;
+      }
+    },
+    {
       name: 'position',
       title: formatMessage({ id: 'employee.position' }),
       renderType: 'main',
@@ -21,21 +38,6 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
         const data = context?.data || {};
         const position = item.options && data.positionEnums?.find(target => target.value === item.options.position);
         return position?.description;
-      }
-    },
-    {
-      name: 'department',
-      title: formatMessage({ id: 'employee.department' }),
-      getValueOf: (item, { context } = {}) => {
-        const data = context?.data || {};
-        const orgIds = Array.isArray(item.tenantOrgIds) ? item.tenantOrgIds : [];
-        return orgIds
-          .map(id => {
-            const org = data.orgEnums?.find(target => target.value === id);
-            return org?.description;
-          })
-          .filter(Boolean)
-          .join('、');
       }
     },
     {

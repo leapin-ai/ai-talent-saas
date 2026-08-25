@@ -160,11 +160,15 @@ const TalentProfile = createWithRemoteLoader({
             birthday: data.birthday,
             gender: data.gender,
             marital: data.marital,
-            department: (Array.isArray(data.tenantOrgIds) ? data.tenantOrgIds : [])
-              .map(id => data.orgEnums.find(item => item.value === id))
-              .filter(Boolean)
-              .map(org => org.description)
-              .join('、'),
+            department: (() => {
+              const positionId = data.options?.position?.id || data.options?.position;
+              const position = (data.positionEnums || []).find(item => String(item.value) === String(positionId));
+              const orgId = position?.tenantOrgId;
+              if (!orgId) {
+                return '';
+              }
+              return (data.orgEnums || []).find(item => String(item.value) === String(orgId))?.description || '';
+            })(),
             avatar: data.avatar,
             phone: data.phone,
             email: data.email,

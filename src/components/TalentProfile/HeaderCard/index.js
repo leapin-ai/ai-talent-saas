@@ -46,19 +46,16 @@ const HeaderCard = createWithRemoteLoader({
                 className={style['edit-btn']}
                 icon={<MdOutlineEdit />}
                 onClick={() => {
-                  const orgIds = Array.isArray(originData.tenantOrgIds) ? originData.tenantOrgIds : [];
-                  const tenantOrgs = orgIds
-                    .map(id => originData.orgEnums.find(item => item.value === id))
-                    .filter(Boolean)
-                    .map(org => ({ name: org.description, id: org.value }));
-                  const position = originData.positionEnums.find(item => item.value === originData.options?.position);
+                  const position = (originData.positionEnums || []).find(item => item.value === originData.options?.position);
+                  const orgIdFromPosition = position?.tenantOrgId;
+                  const orgIds = orgIdFromPosition ? [orgIdFromPosition] : Array.isArray(originData.tenantOrgIds) ? originData.tenantOrgIds : [];
+                  const org = orgIds.length ? (originData.orgEnums || []).find(item => String(item.value) === String(orgIds[0])) : null;
                   formModal({
                     title: formatMessage({ id: 'talentProfile.EditPersonalInfo' }),
                     size: 'small',
                     formProps: {
                       data: Object.assign({}, originData, {
-                        tenantOrgIds: orgIds,
-                        tenantOrgs,
+                        tenantOrgIds: org ? { name: org.description, id: org.value } : null,
                         options: Object.assign({}, originData.options, {
                           position: position ? { name: position.description, id: position.value } : null
                         })

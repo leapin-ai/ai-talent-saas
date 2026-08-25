@@ -1,5 +1,54 @@
 const fp = require('fastify-plugin');
 
+const positionSkillItemSchema = {
+  type: 'object',
+  required: ['id', 'name', 'origin', 'importanceNow', 'importanceYear', 'change'],
+  properties: {
+    id: { type: 'string' },
+    name: { type: 'string' },
+    origin: { type: 'string', enum: ['existing', 'new'] },
+    importanceNow: { type: 'number', minimum: 1, maximum: 5 },
+    importanceYear: { type: 'number', minimum: 1, maximum: 5 },
+    change: {
+      type: 'string',
+      enum: ['must_build', 'ai_emerging', 'new', 'enhanced', 'stable', 'declining']
+    },
+    aiExposure: { type: 'string', enum: ['high', 'medium', 'low'] },
+    confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+    jd: {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+        source: { type: 'string' }
+      }
+    },
+    shockReport: {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+        source: { type: 'string' }
+      }
+    }
+  }
+};
+
+const positionSkillSchema = {
+  type: 'array',
+  default: [],
+  items: positionSkillItemSchema
+};
+
+const positionVerdictSchema = {
+  type: 'object',
+  default: {},
+  properties: {
+    summary: { type: 'string' },
+    today: { type: 'string' },
+    future: { type: 'string' },
+    futureLabel: { type: 'string' }
+  }
+};
+
 module.exports = fp(async (fastify, options) => {
   const { services } = fastify[options.name];
   const { authenticate: tenantAuthenticate } = fastify.tenant;
@@ -66,10 +115,10 @@ module.exports = fp(async (fastify, options) => {
               default: 'on-site'
             },
             tenantOrgId: {
-              type: 'string'
+              type: ['string', 'null']
             }
           },
-          required: ['tenantId', 'name', 'tenantOrgId']
+          required: ['tenantId', 'name']
         }
       }
     },
@@ -171,8 +220,10 @@ module.exports = fp(async (fastify, options) => {
               type: 'object',
               default: {}
             },
+            skill: positionSkillSchema,
+            verdict: positionVerdictSchema,
             tenantOrgId: {
-              type: 'string'
+              type: ['string', 'null']
             },
             status: {
               type: 'string',
@@ -180,7 +231,7 @@ module.exports = fp(async (fastify, options) => {
               default: 'draft'
             }
           },
-          required: ['name', 'language', 'locationType', 'tenantOrgId']
+          required: ['name', 'language', 'locationType']
         }
       }
     },
@@ -232,8 +283,10 @@ module.exports = fp(async (fastify, options) => {
               type: 'object',
               default: {}
             },
+            skill: positionSkillSchema,
+            verdict: positionVerdictSchema,
             tenantOrgId: {
-              type: 'string'
+              type: ['string', 'null']
             }
           },
           required: ['id']

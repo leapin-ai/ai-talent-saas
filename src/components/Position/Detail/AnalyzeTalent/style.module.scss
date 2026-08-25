@@ -1,0 +1,168 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-height: 94px;
+  padding: 17px;
+  border-radius: 11px;
+  border: 1px solid rgba(20, 16, 60, 0.08);
+  background: #fcfbff;
+  box-sizing: border-box;
+}
+
+.metric-value {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 26px;
+  color: #334155;
+}
+
+.metric-value-assessed {
+  color: #4654d9;
+}
+
+.metric-value-outdated {
+  color: #edb80c;
+}
+
+.metric-value-never {
+  color: #cc4b4b;
+}
+
+.metric-label {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: #94a3b8;
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.person-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.person-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  color: #334155;
+}
+
+.person-manager {
+  font-size: 12px;
+  line-height: 16px;
+  color: #94a3b8;
+}
+
+.assessment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.assessment-assessed {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.assessment-outdated {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.assessment-never {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+.readiness {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.readiness-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.readiness-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #c7d2fe;
+}
+
+.readiness-fill-high {
+  background: #5b6cff;
+}
+
+.readiness-fill-low {
+  background: #f87171;
+}
+
+.readiness-value {
+  flex: 0 0 auto;
+  min-width: 36px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: #334155;
+  text-align: right;
+}
+
+.readiness-value-high {
+  color: #4654d9;
+}
+
+.readiness-value-low {
+  color: #cc4b4b;
+}
+
+.readiness-empty {
+  flex: 0 0 auto;
+  min-width: 36px;
+  font-size: 12px;
+  line-height: 16px;
+  color: #94a3b8;
+  text-align: right;
+}
+
+@include resp.mobile-container {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

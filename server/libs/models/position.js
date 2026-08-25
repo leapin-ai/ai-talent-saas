@@ -34,6 +34,10 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
         type: DataTypes.JSON,
         comment: '所需技能'
       },
+      verdict: {
+        type: DataTypes.JSON,
+        comment: '技能洞察结论（The Verdict）'
+      },
       salary: {
         type: DataTypes.JSON,
         comment: '薪资'
