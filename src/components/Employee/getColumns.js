@@ -3,33 +3,35 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
     {
       name: 'avatar',
       title: formatMessage({ id: 'employee.avatar' }),
-      type: 'avatar',
-      valueOf: (item, { name }) => Object.assign({}, { gender: item['gender'] || 'M' }, { id: item[name] })
+      renderType: 'avatar',
+      getValueOf: item => Object.assign({}, { gender: item.gender || 'M' }, { id: item.avatar })
     },
     {
       name: 'name',
       title: formatMessage({ id: 'employee.name' }),
-      onClick: onDetail,
-      type: 'mainInfo'
+      renderType: 'main',
+      onClick: onDetail
     },
     {
       name: 'position',
       title: formatMessage({ id: 'employee.position' }),
-      type: 'mainInfo',
+      renderType: 'main',
       onClick: onPositionDetail,
-      valueOf: (item, { data }) => {
-        const position = item.options && data.positionEnums.find(target => target.value === item.options.position);
+      getValueOf: (item, { context } = {}) => {
+        const data = context?.data || {};
+        const position = item.options && data.positionEnums?.find(target => target.value === item.options.position);
         return position?.description;
       }
     },
     {
       name: 'department',
       title: formatMessage({ id: 'employee.department' }),
-      valueOf: (item, { data }) => {
+      getValueOf: (item, { context } = {}) => {
+        const data = context?.data || {};
         const orgIds = Array.isArray(item.tenantOrgIds) ? item.tenantOrgIds : [];
         return orgIds
           .map(id => {
-            const org = data.orgEnums && data.orgEnums.find(target => target.value === id);
+            const org = data.orgEnums?.find(target => target.value === id);
             return org?.description;
           })
           .filter(Boolean)
@@ -39,8 +41,8 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
     {
       name: 'status',
       title: formatMessage({ id: 'employee.status' }),
-      type: 'tag',
-      valueOf: item => ({
+      renderType: 'tag',
+      getValueOf: item => ({
         isEnum: true,
         moduleName: 'employeeStatus',
         name: item.status
@@ -49,8 +51,8 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
     {
       name: 'gender',
       title: formatMessage({ id: 'employee.gender' }),
-      type: 'tag',
-      valueOf: item => ({
+      renderType: 'tag',
+      getValueOf: item => ({
         isEnum: true,
         moduleName: 'gender',
         name: item.gender
@@ -58,24 +60,21 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
     },
     {
       name: 'email',
-      title: formatMessage({ id: 'employee.email' }),
-      type: 'text'
+      title: formatMessage({ id: 'employee.email' })
     },
     {
       name: 'phone',
-      title: formatMessage({ id: 'employee.phone' }),
-      type: 'text'
+      title: formatMessage({ id: 'employee.phone' })
     },
     {
       name: 'college',
-      title: formatMessage({ id: 'employee.college' }),
-      type: 'text'
+      title: formatMessage({ id: 'employee.college' })
     },
     {
       name: 'degree',
       title: formatMessage({ id: 'employee.degree' }),
-      type: 'tag',
-      valueOf: item => ({
+      renderType: 'tag',
+      getValueOf: item => ({
         isEnum: true,
         moduleName: 'degreeEnum',
         name: item.degree
@@ -84,19 +83,18 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
     {
       name: 'city',
       title: formatMessage({ id: 'employee.city' }),
-      valueOf: item => {
-        return item.city && addressRender(item.city);
-      }
+      getValueOf: item => (item.city ? addressRender(item.city) : null)
     },
     {
       name: 'hireDate',
       title: formatMessage({ id: 'employee.hireDate' }),
-      type: 'date'
+      format: 'date'
     },
     {
       name: 'description',
       title: formatMessage({ id: 'employee.description' }),
-      type: 'description'
+      renderType: 'description',
+      ellipsis: true
     }
   ];
 };

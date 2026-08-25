@@ -1,21 +1,23 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
-import { useState } from 'react';
 import { Modal, message } from 'antd';
 import withLocale from './withLocale';
 import getColumns from './getColumns';
 import BaseFormInner, { createPaySalary } from './PositionForm';
 
+const mapFilterValue = (value, getFilterValue) => ({
+  filter: getFilterValue(value)
+});
+
 const Position = createWithRemoteLoader({
-  modules: ['components-admin:BizUnit', 'components-admin:Editor', 'components-core:Global@usePreset']
+  modules: ['components-admin:BizUnit', 'components-core:Global@usePreset']
 })(
-  withLocale(({ remoteModules, baseUrl, apis, onDetail, ...props }) => {
-    const [BizUnit, , usePreset] = remoteModules;
+  withLocale(({ remoteModules, apis, onDetail, ...props }) => {
+    const [BizUnit, usePreset] = remoteModules;
     const { formatMessage } = useIntl();
     const { ajax } = usePreset();
-    const [refreshKey, setRefreshKey] = useState(0);
 
-    const handleSetStatus = (id, status) => {
+    const handleSetStatus = (id, status, onSuccess) => {
       const isPublish = status === 'published';
       Modal.confirm({
         title: isPublish ? formatMessage({ id: 'position.publishConfirm' }) : formatMessage({ id: 'position.unpublishConfirm' }),
@@ -27,29 +29,31 @@ const Position = createWithRemoteLoader({
           }).then(({ data: res }) => {
             if (res.code === 0) {
               message.success(isPublish ? formatMessage({ id: 'action.publishSuccess' }) : formatMessage({ id: 'action.unpublishSuccess' }));
-              setRefreshKey(prev => prev + 1);
+              onSuccess && onSuccess();
             }
           });
         }
       });
     };
 
-    const getActionList = ({ data, ...actionProps }) => {
+    const getActionList = ({ data, onSuccess, ...actionProps }) => {
       const actions = [];
       if (data.status === 'published') {
         actions.push({
           ...actionProps,
           data,
+          onSuccess,
           index: 1,
           children: formatMessage({ id: 'action.unpublish' }),
-          onClick: () => handleSetStatus(data.id, 'draft')
+          onClick: () => handleSetStatus(data.id, 'draft', onSuccess)
         });
       } else {
         actions.push({
           ...actionProps,
           data,
+          onSuccess,
           children: formatMessage({ id: 'action.publish' }),
-          onClick: () => handleSetStatus(data.id, 'published')
+          onClick: () => handleSetStatus(data.id, 'published', onSuccess)
         });
       }
       return actions;
@@ -57,12 +61,12 @@ const Position = createWithRemoteLoader({
 
     return (
       <BizUnit
-        key={refreshKey}
         {...props}
+        isNext
         apis={apis}
         getColumns={() =>
           getColumns({
-            onDetail: colItem => onDetail(colItem),
+            onDetail,
             formatMessage
           })
         }
@@ -73,6 +77,7 @@ const Position = createWithRemoteLoader({
           bizName: formatMessage({ id: 'position.bizName' }),
           formSize: 'default',
           keywordFilterLabel: formatMessage({ id: 'position.keywordFilterLabel' }),
+          mapFilterValue,
           formProps: {
             rules: { PAY_SALARY: createPaySalary(formatMessage) }
           },
