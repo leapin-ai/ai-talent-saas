@@ -144,6 +144,12 @@ const TenantAdmin = createWithRemoteLoader({
               onDetail: ({ colItem }) => {
                 navigate(`${baseUrl}/position/${colItem.id}`);
               },
+              onCreate: () => {
+                navigate(`${baseUrl}/position/create`);
+              },
+              onEdit: ({ data }) => {
+                navigate(`${baseUrl}/position/${data.id}/edit`);
+              },
               children: renderProps => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
                   <Page title={formatMessage({ id: 'tenantAdmin.positionManagement' })}>
@@ -156,6 +162,44 @@ const TenantAdmin = createWithRemoteLoader({
               )
             },
             loader: () => import('@components/Position')
+          },
+          {
+            path: 'position/create',
+            title: 'Position/Create',
+            elementProps: {
+              baseUrl,
+              action: 'create',
+              apis: Object.assign({}, apis.talentSaas.tenant.position, {
+                orgList: apis.tenant.orgList
+              }),
+              children: ({ title, children }) => (
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                  <Page back title={title} noPadding>
+                    {({ className, render }) => render({ className, children })}
+                  </Page>
+                </Permissions>
+              )
+            },
+            loader: () => import('@components/Position/Form')
+          },
+          {
+            path: 'position/:id/edit',
+            title: 'Position/Edit',
+            elementProps: {
+              baseUrl,
+              action: 'edit',
+              apis: Object.assign({}, apis.talentSaas.tenant.position, {
+                orgList: apis.tenant.orgList
+              }),
+              children: ({ title, children }) => (
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                  <Page back title={title} noPadding>
+                    {({ className, render }) => render({ className, children })}
+                  </Page>
+                </Permissions>
+              )
+            },
+            loader: () => import('@components/Position/Form')
           },
           {
             path: 'position/:id',

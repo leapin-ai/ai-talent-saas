@@ -41,6 +41,23 @@ const enUS = {
   'position.insightBannerTitle': '3 roles shifted into High change magnitude this week',
   'position.insightBannerDescription': 'Customer Support Lead, Data Governance Manager and 1 more were re-scored after new skill signals arrived.',
   'position.insightBannerReview': 'Review →',
+  'position.createTitle': 'Add Position',
+  'position.editTitle': 'Edit Position',
+  'position.create': 'Add Position',
+  'position.save': 'Save',
+  'position.cancel': 'Cancel',
+  'position.createSuccess': 'Position created successfully',
+  'position.saveSuccess': 'Position saved successfully',
+  'position.formDescription': 'Provide role basics and requirements to support hiring and talent matching.',
+  'position.formTipsTitle': 'Writing Tips',
+  'position.formTipsDesc': 'Completing these details improves matching quality.',
+  'position.formTip1': 'Use a specific job title for search and matching',
+  'position.formTip2': 'Link the correct department for org context',
+  'position.formTip3': 'Describe responsibilities and collaborators clearly',
+  'position.formTip4': 'List must-have skills and experience thresholds',
+  'position.formTipsNote': 'You can save a draft first and complete missing fields later.',
+  'position.completenessTitle': 'Input Completeness',
+  'position.completenessDesc': 'Adding description and requirements typically raises matching confidence by ~12%.',
   inputPlaceholder: 'Please enter'
 };
 
