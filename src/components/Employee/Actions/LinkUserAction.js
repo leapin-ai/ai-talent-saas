@@ -1,63 +1,68 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { Button } from 'antd';
+import { Button, Modal, message } from 'antd';
+import { useState } from 'react';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
 
 const LinkUserAction = createWithRemoteLoader({
-  modules: ['components-core:FormInfo@useFormModal', 'components-admin:UserSelect', 'components-core:FormInfo', 'components-core:Global@usePreset']
+  modules: ['components-admin:Tenant@TenantUserSelect', 'components-core:Global@usePreset']
 })(
   withLocale(({ remoteModules, data, apis, onSuccess, ...props }) => {
     const { formatMessage } = useIntl();
-    const [useFormModal, UserSelect, FormInfo, usePreset] = remoteModules;
+    const [TenantUserSelect, usePreset] = remoteModules;
     const { ajax } = usePreset();
-    const formModal = useFormModal();
+    const [open, setOpen] = useState(false);
+    const [value, setValue] = useState(null);
+    const [confirmLoading, setConfirmLoading] = useState(false);
+
+    const close = () => {
+      setOpen(false);
+      setValue(null);
+    };
+
+    const handleOk = async () => {
+      const tenantUserId = value && (value.id ?? value);
+      if (!tenantUserId) {
+        message.warning(formatMessage({ id: 'employee.selectUser' }));
+        return;
+      }
+      setConfirmLoading(true);
+      try {
+        const { data: resData } = await ajax(
+          Object.assign({}, apis.linkTenantUser, {
+            data: {
+              id: data.id,
+              tenantUserId
+            }
+          })
+        );
+        if (resData.code !== 0) {
+          throw new Error(resData.msg || formatMessage({ id: 'employee.linkFailed' }));
+        }
+        close();
+        onSuccess && onSuccess();
+      } catch (e) {
+        message.error(e.message || formatMessage({ id: 'employee.linkFailed' }));
+      } finally {
+        setConfirmLoading(false);
+      }
+    };
 
     return (
-      <Button
-        {...props}
-        onClick={() => {
-          formModal({
-            title: formatMessage({ id: 'employee.linkUser' }),
-            size: 'small',
-            formProps: {
-              onSubmit: async formData => {
-                const { data: resData } = await ajax(
-                  Object.assign({}, apis.linkTenantUser, {
-                    data: {
-                      id: data.id,
-                      tenantUserId: formData.tenantUserId
-                    }
-                  })
-                );
-                if (resData.code !== 0) {
-                  throw new Error(resData.msg || formatMessage({ id: 'employee.linkFailed' }));
-                }
-                onSuccess && onSuccess();
-              }
-            },
-            children: (
-              <FormInfo
-                column={1}
-                list={[
-                  <UserSelect
-                    name="tenantUserId"
-                    label={formatMessage({ id: 'employee.selectUser' })}
-                    rule="REQ"
-                    single
-                    api={apis.userList}
-                    interceptor="object-output-value"
-                    getSearchProps={({ searchText }) => ({
-                      filter: { keyword: searchText }
-                    })}
-                  />
-                ]}
-              />
-            )
-          });
-        }}
-      >
-        {formatMessage({ id: 'employee.linkUser' })}
-      </Button>
+      <>
+        <Button
+          {...props}
+          onClick={() => {
+            setValue(null);
+            setOpen(true);
+          }}
+        >
+          {formatMessage({ id: 'employee.linkUser' })}
+        </Button>
+        <Modal title={formatMessage({ id: 'employee.linkUser' })} open={open} onCancel={close} onOk={handleOk} confirmLoading={confirmLoading} width={880} destroyOnHidden>
+          <TenantUserSelect.Field single value={value} onChange={setValue} userStatus="open" orgApi={apis.orgList} userApi={apis.userList} height={480} showSelectedFooter />
+        </Modal>
+      </>
     );
   })
 );
