@@ -86,6 +86,11 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
       getValueOf: item => (item.city ? addressRender(item.city) : null)
     },
     {
+      name: 'workLocation',
+      title: formatMessage({ id: 'employee.workLocation' }),
+      getValueOf: item => (item.options?.workLocation ? addressRender(item.options.workLocation) : null)
+    },
+    {
       name: 'hireDate',
       title: formatMessage({ id: 'employee.hireDate' }),
       format: 'date'
