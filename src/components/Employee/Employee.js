@@ -1,12 +1,13 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
-import { useEffect, useState } from 'react';
 import withLocale from './withLocale';
 import getColumns from './getColumns';
 import BaseFormInner from './EmployeeForm/BaseFormInner';
 import { LinkUserAction, UnlinkUserAction, ViewUserAction } from './Actions';
-import { Button } from 'antd';
-import { useSearchParams } from 'react-router-dom';
+
+const mapFilterValue = (value, getFilterValue) => ({
+  filter: getFilterValue(value)
+});
 
 const Employee = createWithRemoteLoader({
   modules: ['components-admin:BizUnit', 'components-core:Filter', 'components-core:Common@AddressEnum']
@@ -15,37 +16,6 @@ const Employee = createWithRemoteLoader({
     const [BizUnit, Filter, AddressEnum] = remoteModules;
     const { InputFilterItem, SuperSelectFilterItem } = Filter.fields;
     const { formatMessage } = useIntl();
-    const [refreshKey, setRefreshKey] = useState(0);
-    const [searchParams, setSearchParams] = useSearchParams();
-    const filterList = [
-      [
-        <InputFilterItem key="id" label="ID" name="id" />,
-        <SuperSelectFilterItem
-          key="status"
-          name="status"
-          label={formatMessage({ id: 'employee.status' })}
-          single
-          options={[
-            { label: formatMessage({ id: 'employeeStatus.ACTIVE' }), value: 'ACTIVE' },
-            { label: formatMessage({ id: 'employeeStatus.RESIGN' }), value: 'RESIGN' },
-            { label: formatMessage({ id: 'employeeStatus.STOP_SALARY' }), value: 'STOP_SALARY' },
-            { label: formatMessage({ id: 'employeeStatus.RETIRE' }), value: 'RETIRE' },
-            { label: formatMessage({ id: 'employeeStatus.INTERN' }), value: 'INTERN' },
-            { label: formatMessage({ id: 'employeeStatus.PRE_EMPLOYEE' }), value: 'PRE_EMPLOYEE' }
-          ]}
-        />,
-        <SuperSelectFilterItem
-          key="gender"
-          name="gender"
-          label={formatMessage({ id: 'employee.gender' })}
-          single
-          options={[
-            { label: formatMessage({ id: 'gender.M' }), value: 'M' },
-            { label: formatMessage({ id: 'gender.F' }), value: 'F' }
-          ]}
-        />
-      ]
-    ];
 
     const getActionList = ({ data, ...actionProps }) => {
       const actions = [];
@@ -61,16 +31,14 @@ const Employee = createWithRemoteLoader({
           ...actionProps,
           data,
           apis,
-          buttonComponent: UnlinkUserAction,
-          onSuccess: () => setRefreshKey(prev => prev + 1)
+          buttonComponent: UnlinkUserAction
         });
       } else {
         actions.push({
           ...actionProps,
           data,
           apis,
-          buttonComponent: LinkUserAction,
-          onSuccess: () => setRefreshKey(prev => prev + 1)
+          buttonComponent: LinkUserAction
         });
       }
       return actions;
@@ -78,26 +46,59 @@ const Employee = createWithRemoteLoader({
 
     return (
       <BizUnit
-        key={refreshKey}
         {...props}
+        isNext
         apis={apis}
         getColumns={() =>
           getColumns({
-            onDetail: colItem => onDetail(colItem),
-            onPositionDetail: colItem => onPositionDetail(colItem),
+            onDetail,
+            onPositionDetail,
             formatMessage,
             addressRender: value => <AddressEnum name={value} />
           })
         }
-        getFormInner={({ apis, action }) => <BaseFormInner apis={apis} action={action} />}
+        getFormInner={({ apis: formApis, action }) => <BaseFormInner apis={formApis} action={action} />}
         getActionList={getActionList}
         name="employee"
-        filterList={filterList}
-        urlFilterValue={[{ name: 'id', label: 'ID' }]}
+        searchParamsValue={[{ name: 'id', label: 'ID' }]}
+        filter={{
+          list: [
+            { type: InputFilterItem, props: { name: 'id', label: 'ID' } },
+            {
+              type: SuperSelectFilterItem,
+              props: {
+                name: 'status',
+                label: formatMessage({ id: 'employee.status' }),
+                single: true,
+                options: [
+                  { label: formatMessage({ id: 'employeeStatus.ACTIVE' }), value: 'ACTIVE' },
+                  { label: formatMessage({ id: 'employeeStatus.RESIGN' }), value: 'RESIGN' },
+                  { label: formatMessage({ id: 'employeeStatus.STOP_SALARY' }), value: 'STOP_SALARY' },
+                  { label: formatMessage({ id: 'employeeStatus.RETIRE' }), value: 'RETIRE' },
+                  { label: formatMessage({ id: 'employeeStatus.INTERN' }), value: 'INTERN' },
+                  { label: formatMessage({ id: 'employeeStatus.PRE_EMPLOYEE' }), value: 'PRE_EMPLOYEE' }
+                ]
+              }
+            },
+            {
+              type: SuperSelectFilterItem,
+              props: {
+                name: 'gender',
+                label: formatMessage({ id: 'employee.gender' }),
+                single: true,
+                options: [
+                  { label: formatMessage({ id: 'gender.M' }), value: 'M' },
+                  { label: formatMessage({ id: 'gender.F' }), value: 'F' }
+                ]
+              }
+            }
+          ]
+        }}
         options={{
           bizName: '员工档案',
           keywordFilterName: 'keyword',
           keywordFilterLabel: '员工关键字',
+          mapFilterValue,
           saveData: (data, { fetchOptions }) => {
             const orgIds = Array.isArray(data.tenantOrgIds) ? data.tenantOrgIds : [];
             const tenantOrgs = orgIds

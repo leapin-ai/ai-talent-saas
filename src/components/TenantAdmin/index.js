@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useRef } from 'react';
 import AppChildrenRouter from '@kne/app-children-router';
-import { Flex } from 'antd';
 import Layout from './Layout';
 import { Page } from '@kne/system-layout';
 import { useNavigate } from 'react-router-dom';
@@ -14,11 +13,11 @@ import { useIntl } from '@kne/react-intl';
 import { TENANT_ADMIN_PERMISSIONS } from './constants';
 
 const TenantAdmin = createWithRemoteLoader({
-  modules: ['components-admin:Tenant@Setting', 'components-core:Global@usePreset', 'components-core:Table@TablePage', 'components-core:Filter', 'components-core:File@PrintButton', 'components-core:Permissions']
+  modules: ['components-admin:Tenant@Setting', 'components-core:Global@usePreset', 'components-admin:BizUnit@TablePageRender', 'components-core:File@PrintButton', 'components-core:Permissions']
 })(
   withLocale(({ remoteModules, baseUrl }) => {
     const { formatMessage } = useIntl();
-    const [Setting, usePreset, TablePage, Filter, PrintButton, Permissions] = remoteModules;
+    const [Setting, usePreset, TablePageRender, PrintButton, Permissions] = remoteModules;
     const { apis } = usePreset();
     const profileRef = useRef(null);
     const navigate = useNavigate();
@@ -123,16 +122,13 @@ const TenantAdmin = createWithRemoteLoader({
               onPositionDetail: ({ colItem }) => {
                 navigate(`${baseUrl}/position/${colItem.options?.position}`);
               },
-              children: ({ filter, titleExtra, tableOptions }) => {
-                return (
-                  <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
-                    <Page title={formatMessage({ id: 'tenantAdmin.employeeProfile' })} extra={titleExtra}>
-                      <Filter {...filter} />
-                      <TablePage {...tableOptions} />
-                    </Page>
-                  </Permissions>
-                );
-              }
+              children: renderProps => (
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
+                  <Page title={formatMessage({ id: 'tenantAdmin.employeeProfile' })}>
+                    <TablePageRender {...renderProps} withPage={false} />
+                  </Page>
+                </Permissions>
+              )
             },
             loader: () => import('@components/Employee')
           },
@@ -146,13 +142,10 @@ const TenantAdmin = createWithRemoteLoader({
               onDetail: ({ colItem }) => {
                 navigate(`${baseUrl}/position/${colItem.id}`);
               },
-              children: ({ filter, titleExtra, tableOptions }) => (
+              children: renderProps => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
-                  <Page title={formatMessage({ id: 'tenantAdmin.positionManagement' })} extra={titleExtra}>
-                    <Flex vertical gap={8} flex={1}>
-                      <Filter {...filter} />
-                      <TablePage {...tableOptions} />
-                    </Flex>
+                  <Page title={formatMessage({ id: 'tenantAdmin.positionManagement' })}>
+                    <TablePageRender {...renderProps} withPage={false} />
                   </Page>
                 </Permissions>
               )

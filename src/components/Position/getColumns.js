@@ -3,22 +3,23 @@ const getColumns = ({ onDetail, formatMessage }) => {
     {
       name: 'name',
       title: formatMessage({ id: 'position.name' }),
-      onClick: onDetail,
-      type: 'mainInfo'
+      renderType: 'main',
+      onClick: onDetail
     },
     {
       name: 'department',
       title: formatMessage({ id: 'position.department' }),
-      valueOf: (item, { data }) => {
-        const org = data.orgEnums && data.orgEnums.find(target => target.value === item.tenantOrgId);
+      getValueOf: (item, { context } = {}) => {
+        const data = context?.data || {};
+        const org = data.orgEnums?.find(target => target.value === item.tenantOrgId);
         return org?.description || '-';
       }
     },
     {
       name: 'status',
       title: formatMessage({ id: 'position.status' }),
-      type: 'tag',
-      valueOf: item => ({
+      renderType: 'tag',
+      getValueOf: item => ({
         isEnum: true,
         moduleName: 'positionStatus',
         name: item.status
@@ -27,8 +28,8 @@ const getColumns = ({ onDetail, formatMessage }) => {
     {
       name: 'language',
       title: formatMessage({ id: 'position.language' }),
-      type: 'tag',
-      valueOf: item => ({
+      renderType: 'tag',
+      getValueOf: item => ({
         isEnum: true,
         moduleName: 'language',
         name: item.language
@@ -37,8 +38,9 @@ const getColumns = ({ onDetail, formatMessage }) => {
     {
       name: 'description',
       title: formatMessage({ id: 'position.description' }),
-      type: 'description',
-      valueOf: target => {
+      renderType: 'description',
+      ellipsis: true,
+      getValueOf: target => {
         if (!target.description) {
           return '-';
         }
@@ -48,12 +50,12 @@ const getColumns = ({ onDetail, formatMessage }) => {
     {
       name: 'publishAt',
       title: formatMessage({ id: 'position.publishAt' }),
-      type: 'datetime'
+      format: 'datetime'
     },
     {
       name: 'createdAt',
       title: formatMessage({ id: 'position.createdAt' }),
-      type: 'datetime'
+      format: 'datetime'
     }
   ];
 };
