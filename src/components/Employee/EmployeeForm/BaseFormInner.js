@@ -222,6 +222,7 @@ const BaseFormInner = createWithRemoteLoader({
               valueKey="id"
               interceptor="object-output-value"
               single
+              disabled={!effectiveOrgId}
               api={Object.assign({}, apis.positionList, {
                 params: Object.assign({}, apis.positionList?.params || {}, { filter: positionFilter })
               })}
