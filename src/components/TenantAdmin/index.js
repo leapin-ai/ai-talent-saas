@@ -10,6 +10,9 @@ import TalentProfile from '@components/TalentProfile';
 import PositionInsightBanner from '@components/Position/InsightBanner';
 import Home from './Home';
 import CompleteProfile from './CompleteProfile';
+import CompleteProfileApplicationEntry from './CompleteProfileApplicationEntry';
+import CompleteProfileApplications from './CompleteProfileApplications';
+import CompleteProfileApplicationDetail from './CompleteProfileApplicationDetail';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
 import { TENANT_ADMIN_PERMISSIONS } from './constants';
@@ -66,6 +69,24 @@ const TenantAdmin = createWithRemoteLoader({
             path: 'complete-profile',
             title: formatMessage({ id: 'tenantAdmin.completeMyProfile' }),
             element: <CompleteProfile baseUrl={baseUrl} />
+          },
+          {
+            path: 'complete-profile-applications',
+            title: formatMessage({ id: 'tenantAdmin.completeProfileApplications' }),
+            element: (
+              <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
+                <CompleteProfileApplications baseUrl={baseUrl} />
+              </Permissions>
+            )
+          },
+          {
+            path: 'complete-profile-applications/:id',
+            title: formatMessage({ id: 'tenantAdmin.completeProfileApplicationDetail' }),
+            element: (
+              <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
+                <CompleteProfileApplicationDetail baseUrl={baseUrl} />
+              </Permissions>
+            )
           },
           {
             path: 'market',
@@ -126,7 +147,7 @@ const TenantAdmin = createWithRemoteLoader({
               },
               children: renderProps => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
-                  <Page title={formatMessage({ id: 'tenantAdmin.employeeProfile' })}>
+                  <Page title={formatMessage({ id: 'tenantAdmin.employeeProfile' })} extra={<CompleteProfileApplicationEntry baseUrl={baseUrl} />}>
                     <TablePageRender {...renderProps} withPage={false} />
                   </Page>
                 </Permissions>

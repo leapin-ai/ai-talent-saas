@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom';
 import TenantAdmin from '@components/TenantAdmin';
 import TenantPortal from '@components/TenantPortal';
 import Admin from '@components/Admin';
+import { getManualTaskAction } from '@components/AssessmentGenerateTask';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
 import './index.scss';
@@ -97,7 +98,7 @@ const AppContent = withLocale(({ baseUrl, AfterUserLoginLayout, AfterAdminUserLo
                 },
                 {
                   path: 'task/*',
-                  element: <RemoteLoader module="components-admin:Task" baseUrl={baseUrl + '/admin'} />
+                  element: <RemoteLoader module="components-admin:Task" baseUrl={baseUrl + '/admin'} getManualTaskAction={getManualTaskAction} />
                 },
                 {
                   path: 'file/*',
