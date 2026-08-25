@@ -2,6 +2,7 @@ import React from 'react';
 import { preset as fetchPreset } from '@kne/react-fetch';
 import { Spin, Empty, message } from 'antd';
 import { preset as remoteLoaderPreset, loadModule } from '@kne/remote-loader';
+import { preset as boxPreset, createThemeColors } from '@kne/react-box';
 import createAjax from '@kne/axios-fetch';
 import { getToken } from '@kne/token-storage';
 import transform from 'lodash/transform';
@@ -10,10 +11,120 @@ import { getApis } from '@components/Apis';
 import { enums as talentEnums } from '@components/EnumLoader';
 import ensureSlash from '@kne/ensure-slash';
 import TenantUserPlugin, { personalCard, getUserListColumns, enhanceUserData, getUserListActions } from '@components/TenantUserPlugin';
+import '@kne/react-box/dist/index.css';
 
 window.PUBLIC_URL = window.runtimePublicUrl || process.env.PUBLIC_URL;
 
 const baseApiUrl = window.runtimeApiUrl || '';
+
+/** 岗位洞察横幅等多色渐变底 + 软边框 */
+const createBannerColors = (color, overrides = {}) =>
+  createThemeColors(color, {
+    backgroundImage: 'linear-gradient(99.56deg, rgba(79, 70, 229, 0.07) 0%, rgba(34, 211, 238, 0.07) 55%, rgba(240, 171, 252, 0.07) 100%)',
+    borderColor: 'rgba(79, 70, 229, 0.16)',
+    surface: 'transparent',
+    titleColor: '#0F172A',
+    mutedColor: '#64748B',
+    descriptionColor: '#64748B',
+    itemTitleColor: '#0F172A',
+    itemBackground: 'transparent',
+    itemBorderColor: 'transparent',
+    shadow: 'none',
+    hoverShadow: 'none',
+    hoverBorderColor: 'rgba(79, 70, 229, 0.16)',
+    transition: 'none',
+    ...overrides
+  });
+
+boxPreset({
+  card: {
+    createThemeColors: {
+      banner: createBannerColors
+    },
+    themes: {
+      banner: {
+        accent: true,
+        accentBar: false,
+        color: '#4F46E5',
+        radius: 15,
+        padding: '16px 19px',
+        borderWidth: 1,
+        titleFontSize: 14,
+        titleFontWeight: 600,
+        titleLineHeight: '20px',
+        descriptionFontSize: 12,
+        mediaGap: 18,
+        headerMarginBottom: 0,
+        contentGap: 0,
+        hover: false,
+        createThemeColors: 'banner',
+        css: `
+          & {
+            background-color: transparent;
+            background-image: var(--card-background-image);
+            box-shadow: none;
+          }
+          &:hover {
+            box-shadow: none;
+            border-color: var(--card-border);
+          }
+          & [data-slot="media"] {
+            align-items: center;
+            width: 100%;
+          }
+          & [data-slot="main"] {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            column-gap: 16px;
+            width: 100%;
+            min-width: 0;
+          }
+          & [data-slot="header"] {
+            display: contents;
+          }
+          & [data-slot="title-wrap"] {
+            grid-column: 1;
+            grid-row: 1;
+            min-width: 0;
+          }
+          & [data-slot="title"] {
+            color: var(--card-title, #0F172A);
+            font-size: var(--card-title-size, 14px);
+            font-weight: var(--card-title-weight, 600);
+            line-height: var(--card-title-leading, 20px);
+            white-space: normal;
+          }
+          & [data-slot="content"] {
+            grid-column: 1;
+            grid-row: 2;
+            padding: 0;
+            margin: 0;
+          }
+          & [data-slot="description"] {
+            line-height: 16px;
+            color: var(--card-description-color, #64748B);
+          }
+          & [data-slot="extra"] {
+            grid-column: 2;
+            grid-row: 1 / 3;
+            align-self: center;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--primary-color);
+            font-size: 13.5px;
+            font-weight: 700;
+            line-height: 1;
+          }
+          & [data-slot="prefix"] {
+            align-items: center;
+          }
+        `
+      }
+    }
+  }
+});
 
 export const globalInit = async () => {
   const ajax = createAjax({

@@ -38,6 +38,9 @@ const enUS = {
   'position.salary': 'Salary',
   'position.workContent': 'Work Content',
   'position.workRequirement': 'Work Requirement',
+  'position.insightBannerTitle': '3 roles shifted into High change magnitude this week',
+  'position.insightBannerDescription': 'Customer Support Lead, Data Governance Manager and 1 more were re-scored after new skill signals arrived.',
+  'position.insightBannerReview': 'Review →',
   inputPlaceholder: 'Please enter'
 };
 
