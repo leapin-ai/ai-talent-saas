@@ -19,7 +19,7 @@ const BaseFormInner = createWithRemoteLoader({
         column={1}
         list={[
           <Input name="name" label={formatMessage({ id: 'position.name' })} rule="REQ LEN-0-200" />,
-          <SuperSelectTree name="tenantOrgId" label={formatMessage({ id: 'position.department' })} api={apis.orgList} valueKey="id" labelKey="name" single interceptor="object-output-value" rule="REQ" />,
+          <SuperSelectTree name="tenantOrgId" label={formatMessage({ id: 'position.department' })} api={apis.orgList} valueKey="id" labelKey="name" single interceptor="object-output-value" />,
           <Select
             name="language"
             label={formatMessage({ id: 'position.language' })}

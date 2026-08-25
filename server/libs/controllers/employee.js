@@ -18,6 +18,9 @@ module.exports = fp(async (fastify, options) => {
               type: 'object',
               default: {}
             },
+            positionId: {
+              type: 'string'
+            },
             perPage: {
               type: 'number',
               default: 20
@@ -224,10 +227,20 @@ module.exports = fp(async (fastify, options) => {
               default: []
             },
             tenantOrgIds: {
-              type: 'array',
-              items: {
-                type: 'string'
-              },
+              anyOf: [
+                {
+                  type: 'array',
+                  items: {
+                    type: 'string'
+                  }
+                },
+                {
+                  type: 'string'
+                },
+                {
+                  type: 'null'
+                }
+              ],
               default: []
             },
             options: {
@@ -337,10 +350,20 @@ module.exports = fp(async (fastify, options) => {
               type: 'array'
             },
             tenantOrgIds: {
-              type: 'array',
-              items: {
-                type: 'string'
-              }
+              anyOf: [
+                {
+                  type: 'array',
+                  items: {
+                    type: 'string'
+                  }
+                },
+                {
+                  type: 'string'
+                },
+                {
+                  type: 'null'
+                }
+              ]
             },
             options: {
               type: 'object'

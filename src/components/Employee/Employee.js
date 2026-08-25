@@ -100,18 +100,16 @@ const Employee = createWithRemoteLoader({
           keywordFilterLabel: '员工关键字',
           mapFilterValue,
           saveData: (data, { fetchOptions }) => {
-            const orgIds = Array.isArray(data.tenantOrgIds) ? data.tenantOrgIds : [];
-            const tenantOrgs = orgIds
-              .map(id => fetchOptions.data.orgEnums.find(item => item.value === id))
-              .filter(Boolean)
-              .map(org => ({ name: org.description, id: org.value }));
-            const position = fetchOptions.data.positionEnums.find(item => item.value === data.options?.position);
+            const position = (fetchOptions.data.positionEnums || []).find(item => item.value === data.options?.position);
+            // 有岗位时部门展示/回填岗位所属部门
+            const orgIdFromPosition = position?.tenantOrgId;
+            const orgIds = orgIdFromPosition ? [orgIdFromPosition] : Array.isArray(data.tenantOrgIds) ? data.tenantOrgIds : data.tenantOrgIds ? [data.tenantOrgIds] : [];
+            const org = orgIds.length ? (fetchOptions.data.orgEnums || []).find(item => String(item.value) === String(orgIds[0])) : null;
             return Object.assign({}, data, {
-              tenantOrgIds: tenantOrgs,
+              tenantOrgIds: org ? { name: org.description, id: org.value } : null,
               options: Object.assign({}, data.options, {
                 position: position ? { name: position.description, id: position.value } : null
-              }),
-              tenantOrgs
+              })
             });
           }
         }}

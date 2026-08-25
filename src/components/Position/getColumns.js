@@ -16,6 +16,12 @@ const getColumns = ({ onDetail, formatMessage }) => {
       }
     },
     {
+      name: 'employeeCount',
+      title: formatMessage({ id: 'position.employeeCount' }),
+      type: 'otherSmall',
+      getValueOf: item => (item.employeeCount == null ? 0 : item.employeeCount)
+    },
+    {
       name: 'status',
       title: formatMessage({ id: 'position.status' }),
       renderType: 'tag',

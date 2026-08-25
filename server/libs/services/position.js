@@ -5,17 +5,18 @@ module.exports = fp(async (fastify, options) => {
   const { models, services } = fastify[options.name];
   const { Op } = fastify.sequelize.Sequelize;
 
-  const assertTenantOrgId = async (authenticatePayload, tenantOrgId) => {
+  // 组织已删除/关闭时按「未设置部门」处理，不抛错
+  const resolveTenantOrgId = async (authenticatePayload, tenantOrgId) => {
     if (tenantOrgId == null || tenantOrgId === '') {
-      throw new Error('组织部门不能为空');
+      return null;
     }
     const orgEnums = await fastify.tenant.services.org.enums(authenticatePayload, {
       ids: [tenantOrgId]
     });
     if (!orgEnums.length) {
-      throw new Error('组织部门不存在或已关闭');
+      return null;
     }
-    return orgEnums;
+    return tenantOrgId;
   };
 
   const create = async (authenticatePayload, { name, language, locationType, tenantOrgId, ...data }) => {
@@ -33,7 +34,7 @@ module.exports = fp(async (fastify, options) => {
       throw new Error('工作地点类型不能为空');
     }
 
-    await assertTenantOrgId(authenticatePayload, tenantOrgId);
+    const resolvedTenantOrgId = await resolveTenantOrgId(authenticatePayload, tenantOrgId);
 
     if ((await models.position.count({ where: { name, tenantId } })) > 0) {
       throw new Error('名称不能重复');
@@ -42,7 +43,7 @@ module.exports = fp(async (fastify, options) => {
     return await models.position.create(
       Object.assign({}, data, {
         tenantId,
-        tenantOrgId,
+        tenantOrgId: resolvedTenantOrgId,
         name,
         language,
         locationType,
@@ -67,6 +68,10 @@ module.exports = fp(async (fastify, options) => {
     const orgEnums = await fastify.tenant.services.org.enums(authenticatePayload, {
       ids: position.tenantOrgId ? [position.tenantOrgId] : []
     });
+    // 关联组织已删：对外当作未设置部门
+    if (position.tenantOrgId && !orgEnums.length) {
+      position.setDataValue('tenantOrgId', null);
+    }
     position.setDataValue('orgEnums', orgEnums);
 
     return position;
@@ -76,8 +81,9 @@ module.exports = fp(async (fastify, options) => {
     const position = await detail(authenticatePayload, { id });
     const { tenantId } = authenticatePayload;
 
+    let resolvedTenantOrgId;
     if (tenantOrgId !== undefined) {
-      await assertTenantOrgId(authenticatePayload, tenantOrgId);
+      resolvedTenantOrgId = await resolveTenantOrgId(authenticatePayload, tenantOrgId);
     }
 
     if (
@@ -92,7 +98,9 @@ module.exports = fp(async (fastify, options) => {
       throw new Error('名称不能重复');
     }
 
-    await position.update(Object.assign({}, omit(data, ['tenantId', 'publishAt', 'orgEnums']), name && { name }, language && { language }, locationType && { locationType }, tenantOrgId !== undefined && { tenantOrgId }));
+    await position.update(
+      Object.assign({}, omit(data, ['tenantId', 'publishAt', 'orgEnums']), name && { name }, language && { language }, locationType && { locationType }, tenantOrgId !== undefined && { tenantOrgId: resolvedTenantOrgId })
+    );
     return position;
   };
 
@@ -160,13 +168,60 @@ module.exports = fp(async (fastify, options) => {
     });
 
     const allOrgIds = [...new Set(rows.map(item => item.tenantOrgId).filter(id => id != null && id !== ''))];
-    const orgEnums = await fastify.tenant.services.org.enums(authenticatePayload, {
-      ids: allOrgIds
+    const orgEnums =
+      allOrgIds.length > 0
+        ? await fastify.tenant.services.org.enums(authenticatePayload, {
+            ids: allOrgIds
+          })
+        : [];
+    const validOrgIdSet = new Set(orgEnums.map(item => String(item.value)));
+
+    const positionIds = rows.map(item => String(item.id));
+    const employeeCountMap = new Map();
+    if (positionIds.length > 0) {
+      const sequelize = fastify.sequelize.instance;
+      const [countRows] = await sequelize.query(
+        `
+        SELECT CASE
+                 WHEN jsonb_typeof("options"->'position') = 'string' THEN "options"->>'position'
+                 ELSE COALESCE("options"->'position'->>'id', '')
+               END AS position_id,
+               COUNT(*)::int AS employee_count
+        FROM t_employee
+        WHERE deleted_at IS NULL
+          AND tenant_id = :tenantId
+          AND CASE
+                WHEN jsonb_typeof("options"->'position') = 'string' THEN "options"->>'position'
+                ELSE COALESCE("options"->'position'->>'id', '')
+              END IN (:positionIds)
+        GROUP BY 1
+        `,
+        {
+          replacements: {
+            tenantId,
+            positionIds
+          }
+        }
+      );
+      (countRows || []).forEach(row => {
+        if (row.position_id) {
+          employeeCountMap.set(String(row.position_id), Number(row.employee_count) || 0);
+        }
+      });
+    }
+
+    const pageData = rows.map(row => {
+      const plain = row.toJSON ? row.toJSON() : row;
+      const tenantOrgId = plain.tenantOrgId != null && plain.tenantOrgId !== '' && validOrgIdSet.has(String(plain.tenantOrgId)) ? plain.tenantOrgId : null;
+      return Object.assign({}, plain, {
+        tenantOrgId,
+        employeeCount: employeeCountMap.get(String(plain.id)) || 0
+      });
     });
 
     return {
       orgEnums,
-      pageData: rows,
+      pageData,
       totalCount: count
     };
   };
@@ -184,7 +239,8 @@ module.exports = fp(async (fastify, options) => {
     return positions.map(item => {
       return {
         value: item.id,
-        description: item.name
+        description: item.name,
+        tenantOrgId: item.tenantOrgId || null
       };
     });
   };

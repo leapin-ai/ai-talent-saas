@@ -206,7 +206,8 @@ const TenantAdmin = createWithRemoteLoader({
             title: 'Position/Detail',
             elementProps: {
               apis: Object.assign({}, apis.talentSaas.tenant.position, {
-                orgList: apis.tenant.orgList
+                orgList: apis.tenant.orgList,
+                employeeList: apis.talentSaas.tenant.employee.list
               }),
               children: ({ title, extra, children }) => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">

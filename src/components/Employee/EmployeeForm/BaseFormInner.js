@@ -1,9 +1,29 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
 import { Flex, Spin } from 'antd';
 import { FILE_DIRECTORY } from '@components/Apis';
+
+const resolveTenantOrgId = value => {
+  if (value == null || value === '') {
+    return null;
+  }
+  if (Array.isArray(value)) {
+    const first = value[0];
+    if (first == null || first === '') {
+      return null;
+    }
+    if (typeof first === 'object') {
+      return first.id || first.value || null;
+    }
+    return String(first);
+  }
+  if (typeof value === 'object') {
+    return value.id || value.value || null;
+  }
+  return String(value);
+};
 
 const BaseFormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo', 'components-core:Enum', 'components-core:Global@usePreset']
@@ -16,11 +36,25 @@ const BaseFormInner = createWithRemoteLoader({
     const { ajax, apis: presetApis } = usePreset();
     const { openApi } = useFormContext();
     const [parseResume, setParseResume] = useState(false);
+    // 编辑时 openApi.data 可能晚于首屏，不能只靠 useState 初始值
+    const [selectedTenantOrgId, setSelectedTenantOrgId] = useState(() => resolveTenantOrgId(openApi?.data?.tenantOrgIds));
+
+    useEffect(() => {
+      const id = resolveTenantOrgId(openApi?.data?.tenantOrgIds);
+      if (id) {
+        setSelectedTenantOrgId(id);
+      }
+    }, [openApi]);
+
+    const effectiveOrgId = selectedTenantOrgId || resolveTenantOrgId(openApi?.data?.tenantOrgIds);
     const uploadResume = ({ file, path } = {}) =>
       presetApis?.file?.upload?.({
         file,
         path: path || FILE_DIRECTORY.EMPLOYEE_RESUME
       });
+
+    const positionFilter = Object.assign({ status: 'published' }, effectiveOrgId ? { tenantOrgId: effectiveOrgId } : {});
+
     return (
       <Flex vertical gap={10}>
         {action !== 'edit' && (
@@ -166,25 +200,39 @@ const BaseFormInner = createWithRemoteLoader({
             </Enum>,
             <DatePicker name="hireDate" label={formatMessage({ id: 'employee.hireDate' })} />,
             <AddressSelect name="options.workLocation" label={formatMessage({ id: 'employee.workLocation' })} single />,
+            <SuperSelectTree
+              name="tenantOrgIds"
+              label={formatMessage({ id: 'employee.department' })}
+              api={apis.orgList}
+              valueKey="id"
+              labelKey="name"
+              single
+              interceptor="object-output-value"
+              onChange={value => {
+                const nextOrgId = resolveTenantOrgId(value);
+                setSelectedTenantOrgId(nextOrgId);
+                openApi.setFields([{ name: 'options.position', value: null }], { runValidate: false });
+              }}
+            />,
             <SuperSelect
+              key={effectiveOrgId || 'no-org'}
               name="options.position"
-              label="岗位"
+              label={formatMessage({ id: 'employee.position' })}
               labelKey="name"
               valueKey="id"
               interceptor="object-output-value"
               single
-              api={Object.assign({}, apis.positionList, { params: Object.assign({}, apis.positionList?.params || {}, { filter: { status: 'published' } }) })}
+              api={Object.assign({}, apis.positionList, {
+                params: Object.assign({}, apis.positionList?.params || {}, { filter: positionFilter })
+              })}
               getSearchProps={({ searchText }) => {
                 return {
-                  filter: {
-                    keyword: searchText,
-                    status: 'published'
-                  }
+                  filter: Object.assign({}, positionFilter, searchText ? { keyword: searchText } : {})
                 };
               }}
               dataFormat={data => {
                 return {
-                  list: data.pageData.map(item => {
+                  list: (data.pageData || []).map(item => {
                     return Object.assign({}, item, {
                       description: item.description ? item.description.replace(/<[^>]*>/g, '') : null
                     });
@@ -195,8 +243,7 @@ const BaseFormInner = createWithRemoteLoader({
               pagination={{
                 paramsType: 'params'
               }}
-            />,
-            <SuperSelectTree name="tenantOrgIds" label="部门" api={apis.orgList} valueKey="id" labelKey="name" interceptor="array-output-value" />
+            />
           ]}
         />
       </Flex>
