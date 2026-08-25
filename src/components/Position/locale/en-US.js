@@ -1,5 +1,6 @@
 const enUS = {
   'position.name': 'Position Name',
+  'position.department': 'Department',
   'position.status': 'Status',
   'position.language': 'Language',
   'position.locationType': 'Location Type',

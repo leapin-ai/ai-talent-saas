@@ -51,12 +51,21 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
       position.belongsTo(options.getTenantModels().tenant, {
         allowNull: false
       });
+      position.belongsTo(options.getTenantModels().tenantOrg, {
+        allowNull: true
+      });
     },
     options: {
       comment: '岗位信息',
       indexes: [
         {
           fields: ['name'],
+          where: {
+            deleted_at: null
+          }
+        },
+        {
+          fields: ['tenant_org_id'],
           where: {
             deleted_at: null
           }

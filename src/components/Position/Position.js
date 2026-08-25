@@ -66,7 +66,7 @@ const Position = createWithRemoteLoader({
             formatMessage
           })
         }
-        getFormInner={() => <BaseFormInner />}
+        getFormInner={({ apis: formApis }) => <BaseFormInner apis={formApis} />}
         getActionList={getActionList}
         name="position"
         options={{
@@ -75,6 +75,12 @@ const Position = createWithRemoteLoader({
           keywordFilterLabel: formatMessage({ id: 'position.keywordFilterLabel' }),
           formProps: {
             rules: { PAY_SALARY: createPaySalary(formatMessage) }
+          },
+          saveData: (data, { fetchOptions }) => {
+            const org = fetchOptions?.data?.orgEnums?.find(item => item.value === data.tenantOrgId);
+            return Object.assign({}, data, {
+              tenantOrgId: org ? { name: org.description, id: org.value } : data.tenantOrgId
+            });
           }
         }}
       />

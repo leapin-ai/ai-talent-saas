@@ -3,11 +3,22 @@ const omit = require('lodash/omit');
 
 module.exports = fp(async (fastify, options) => {
   const { models, services } = fastify[options.name];
-  const tenantServices = fastify.tenant.services;
-  const tenantModels = fastify.tenant.models;
   const { Op } = fastify.sequelize.Sequelize;
 
-  const create = async (authenticatePayload, { name, language, locationType, ...data }) => {
+  const assertTenantOrgId = async (authenticatePayload, tenantOrgId) => {
+    if (tenantOrgId == null || tenantOrgId === '') {
+      throw new Error('组织部门不能为空');
+    }
+    const orgEnums = await fastify.tenant.services.org.enums(authenticatePayload, {
+      ids: [tenantOrgId]
+    });
+    if (!orgEnums.length) {
+      throw new Error('组织部门不存在或已关闭');
+    }
+    return orgEnums;
+  };
+
+  const create = async (authenticatePayload, { name, language, locationType, tenantOrgId, ...data }) => {
     const { tenantId } = authenticatePayload;
 
     if (!name) {
@@ -22,6 +33,8 @@ module.exports = fp(async (fastify, options) => {
       throw new Error('工作地点类型不能为空');
     }
 
+    await assertTenantOrgId(authenticatePayload, tenantOrgId);
+
     if ((await models.position.count({ where: { name, tenantId } })) > 0) {
       throw new Error('名称不能重复');
     }
@@ -29,6 +42,7 @@ module.exports = fp(async (fastify, options) => {
     return await models.position.create(
       Object.assign({}, data, {
         tenantId,
+        tenantOrgId,
         name,
         language,
         locationType,
@@ -50,12 +64,21 @@ module.exports = fp(async (fastify, options) => {
       throw new Error('未找到职位');
     }
 
+    const orgEnums = await fastify.tenant.services.org.enums(authenticatePayload, {
+      ids: position.tenantOrgId ? [position.tenantOrgId] : []
+    });
+    position.setDataValue('orgEnums', orgEnums);
+
     return position;
   };
 
-  const save = async (authenticatePayload, { id, name, language, locationType, ...data }) => {
+  const save = async (authenticatePayload, { id, name, language, locationType, tenantOrgId, ...data }) => {
     const position = await detail(authenticatePayload, { id });
     const { tenantId } = authenticatePayload;
+
+    if (tenantOrgId !== undefined) {
+      await assertTenantOrgId(authenticatePayload, tenantOrgId);
+    }
 
     if (
       (await models.position.count({
@@ -69,7 +92,7 @@ module.exports = fp(async (fastify, options) => {
       throw new Error('名称不能重复');
     }
 
-    await position.update(Object.assign({}, omit(data, ['tenantId', 'publishAt']), name && { name }, language && { language }, locationType && { locationType }));
+    await position.update(Object.assign({}, omit(data, ['tenantId', 'publishAt', 'orgEnums']), name && { name }, language && { language }, locationType && { locationType }, tenantOrgId !== undefined && { tenantOrgId }));
     return position;
   };
 
@@ -97,7 +120,7 @@ module.exports = fp(async (fastify, options) => {
     const { tenantId } = authenticatePayload;
     const whereQuery = {};
 
-    ['status', 'language', 'locationType'].forEach(name => {
+    ['status', 'language', 'locationType', 'tenantOrgId'].forEach(name => {
       if (filter[name]) {
         whereQuery[name] = filter[name];
       }
@@ -136,7 +159,13 @@ module.exports = fp(async (fastify, options) => {
       ]
     });
 
+    const allOrgIds = [...new Set(rows.map(item => item.tenantOrgId).filter(id => id != null && id !== ''))];
+    const orgEnums = await fastify.tenant.services.org.enums(authenticatePayload, {
+      ids: allOrgIds
+    });
+
     return {
+      orgEnums,
       pageData: rows,
       totalCount: count
     };
