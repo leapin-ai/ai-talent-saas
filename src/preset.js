@@ -73,7 +73,7 @@ export const globalInit = async () => {
     //url: 'http://localhost:3001',
     //tpl: '{{url}}',
     remote: 'components-core',
-    defaultVersion: '0.5.44'
+    defaultVersion: '0.5.45'
   };
   remoteLoaderPreset({
     remotes: {
@@ -94,7 +94,7 @@ export const globalInit = async () => {
         //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.86'
+        defaultVersion: '1.1.87'
       },
       'components-thirdparty': {
         ...registry,
