@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Avatar, message } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
+import { useNavigate } from 'react-router-dom';
 import withLocale from '../../withLocale';
 import AssessmentTag from './AssessmentTag';
 import ReadinessBar from './ReadinessBar';
@@ -31,13 +32,21 @@ const formatInRole = (years, formatMessage) => {
 const AnalyzeTalent = createWithRemoteLoader({
   modules: ['components-core:Table@TablePage', 'components-core:Table', 'components-core:Filter']
 })(
-  withLocale(({ remoteModules, positionId, employeeListApi }) => {
+  withLocale(({ remoteModules, baseUrl = '', positionId, employeeListApi }) => {
     const [TablePage, Table, Filter] = remoteModules;
     const { formatMessage } = useIntl();
+    const navigate = useNavigate();
     const tableRef = useRef(null);
     const [pageList, setPageList] = useState([]);
     const [metrics, setMetrics] = useState(EMPTY_METRICS);
     const { selectedRows, getRowSelection, clearSelectedRows } = Table.useSelectedRow({ rowKey: 'id' });
+
+    const goTalentAnalysis = item => {
+      if (!item?.id || !positionId) {
+        return;
+      }
+      navigate(`${baseUrl}/position/${positionId}/talent/${item.id}`);
+    };
 
     const listApi = useMemo(() => {
       if (!employeeListApi || !positionId) {
@@ -66,7 +75,9 @@ const AnalyzeTalent = createWithRemoteLoader({
               {initialsOf(item.name || item.nameEn)}
             </Avatar>
             <div className={style['person-text']}>
-              <div className={style['person-name']}>{item.name || item.nameEn || '—'}</div>
+              <button type="button" className={style['person-name-link']} onClick={() => goTalentAnalysis(item)}>
+                {item.name || item.nameEn || '—'}
+              </button>
               <div className={style['person-manager']}>{formatMessage({ id: 'position.talentManager' }, { name: item.managerName || '—' })}</div>
             </div>
           </div>

@@ -348,4 +348,90 @@ module.exports = fp(async (fastify, options) => {
       return {};
     }
   );
+
+  fastify.get(
+    `${options.prefix}/tenant/position/skill-analysis-detail`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '岗位内员工技能分析详情',
+        query: {
+          type: 'object',
+          properties: {
+            positionId: { type: 'string' },
+            employeeId: { type: 'string' }
+          },
+          required: ['positionId', 'employeeId']
+        }
+      }
+    },
+    async request => {
+      return services.position.skillAnalysisDetail(request.tenantUserInfo, request.query);
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/position/skill-analysis-save`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '保存岗位内员工技能分析',
+        body: {
+          type: 'object',
+          properties: {
+            positionId: { type: 'string' },
+            employeeId: { type: 'string' },
+            readiness: { type: ['number', 'null'] },
+            summary: { type: 'string', default: '' },
+            metrics: {
+              type: 'object',
+              default: {},
+              properties: {
+                criticalGaps: { type: 'number' },
+                atOrAbove: { type: 'number' },
+                monthsToClose: { type: ['number', 'null'] }
+              }
+            },
+            skills: {
+              type: 'array',
+              default: [],
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  current: { type: 'number' },
+                  required: { type: 'number' },
+                  status: { type: 'string' },
+                  evidence: { type: 'string' }
+                }
+              }
+            },
+            priorityGaps: {
+              type: 'array',
+              default: [],
+              items: {
+                type: 'object',
+                properties: {
+                  rank: { type: 'number' },
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                  current: { type: 'number' },
+                  required: { type: 'number' }
+                }
+              }
+            },
+            developmentPlan: {
+              type: ['object', 'null'],
+              default: null
+            }
+          },
+          required: ['positionId', 'employeeId']
+        }
+      }
+    },
+    async request => {
+      return services.position.skillAnalysisSave(request.tenantUserInfo, request.body);
+    }
+  );
 });

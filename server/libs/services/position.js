@@ -245,7 +245,235 @@ module.exports = fp(async (fastify, options) => {
     });
   };
 
+  const normalizeReadiness = value => {
+    if (value == null || value === '') {
+      return null;
+    }
+    const num = Number(value);
+    if (!Number.isFinite(num)) {
+      return null;
+    }
+    return Math.min(100, Math.max(0, Math.round(num)));
+  };
+
+  const normalizeSkillRows = skills => {
+    if (!Array.isArray(skills)) {
+      return [];
+    }
+    const allowedStatus = new Set(['critical', 'gap', 'onTarget', 'above']);
+    return skills
+      .map(item => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        const name = typeof item.name === 'string' ? item.name.trim() : '';
+        if (!name) {
+          return null;
+        }
+        const current = Number(item.current);
+        const required = Number(item.required);
+        const status = typeof item.status === 'string' && allowedStatus.has(item.status) ? item.status : undefined;
+        const evidence = typeof item.evidence === 'string' ? item.evidence.trim().slice(0, 100) : '';
+        return {
+          id: typeof item.id === 'string' && item.id ? item.id : undefined,
+          name: name.slice(0, 200),
+          current: Number.isFinite(current) ? Math.min(5, Math.max(0, Math.round(current))) : 0,
+          required: Number.isFinite(required) ? Math.min(5, Math.max(0, Math.round(required))) : 0,
+          ...(status ? { status } : {}),
+          ...(evidence ? { evidence } : {})
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const normalizePriorityGaps = gaps => {
+    if (!Array.isArray(gaps)) {
+      return [];
+    }
+    return gaps
+      .map((item, index) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        const title = typeof item.title === 'string' ? item.title.trim() : '';
+        if (!title) {
+          return null;
+        }
+        const rank = Number(item.rank);
+        const current = Number(item.current);
+        const required = Number(item.required);
+        return {
+          rank: Number.isFinite(rank) ? Math.round(rank) : index + 1,
+          title: title.slice(0, 200),
+          description: typeof item.description === 'string' ? item.description : '',
+          ...(Number.isFinite(current) ? { current: Math.min(5, Math.max(0, Math.round(current))) } : {}),
+          ...(Number.isFinite(required) ? { required: Math.min(5, Math.max(0, Math.round(required))) } : {})
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const normalizeDevelopmentPlan = plan => {
+    if (!plan || typeof plan !== 'object' || Array.isArray(plan)) {
+      return null;
+    }
+    const horizons = Array.isArray(plan.horizons) ? plan.horizons : [];
+    const normalizedHorizons = horizons
+      .map((item, index) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        const items = Array.isArray(item.items)
+          ? item.items
+              .map(row => {
+                if (!row || typeof row !== 'object') {
+                  return null;
+                }
+                const title = typeof row.title === 'string' ? row.title.trim() : '';
+                if (!title) {
+                  return null;
+                }
+                return {
+                  tag: typeof row.tag === 'string' ? row.tag.trim().slice(0, 8) : '',
+                  title: title.slice(0, 200),
+                  meta: typeof row.meta === 'string' ? row.meta.slice(0, 120) : ''
+                };
+              })
+              .filter(Boolean)
+          : [];
+        return {
+          key: typeof item.key === 'string' ? item.key : String(index + 1),
+          label: typeof item.label === 'string' ? item.label.slice(0, 40) : '',
+          period: typeof item.period === 'string' ? item.period.slice(0, 40) : '',
+          title: typeof item.title === 'string' ? item.title.slice(0, 80) : '',
+          tone: typeof item.tone === 'string' ? item.tone.slice(0, 20) : undefined,
+          items,
+          target: typeof item.target === 'string' ? item.target.slice(0, 120) : ''
+        };
+      })
+      .filter(Boolean);
+
+    if (normalizedHorizons.length === 0) {
+      return null;
+    }
+
+    return {
+      subtitle: typeof plan.subtitle === 'string' ? plan.subtitle.slice(0, 80) : '',
+      horizons: normalizedHorizons
+    };
+  };
+
+  const normalizeMetrics = metrics => {
+    if (!metrics || typeof metrics !== 'object') {
+      return {};
+    }
+    const criticalGaps = Number(metrics.criticalGaps);
+    const atOrAbove = Number(metrics.atOrAbove);
+    const monthsToClose = Number(metrics.monthsToClose);
+    return {
+      criticalGaps: Number.isFinite(criticalGaps) ? Math.max(0, Math.round(criticalGaps)) : 0,
+      atOrAbove: Number.isFinite(atOrAbove) ? Math.max(0, Math.round(atOrAbove)) : 0,
+      monthsToClose: Number.isFinite(monthsToClose) ? Math.max(0, Math.round(monthsToClose)) : null
+    };
+  };
+
+  const skillAnalysisDetail = async (authenticatePayload, { positionId, employeeId }) => {
+    const { tenantId } = authenticatePayload;
+    if (!positionId || !employeeId) {
+      throw new Error('岗位与员工不能为空');
+    }
+
+    const position = await detail(authenticatePayload, { id: positionId });
+    const employee = await models.employee.findByPk(employeeId);
+    if (!employee || employee.tenantId !== tenantId) {
+      throw new Error('未找到员工');
+    }
+
+    const analysis = await models.positionEmployeeSkillAnalysis.findOne({
+      where: {
+        tenantId,
+        positionId: String(positionId),
+        employeeId: String(employeeId)
+      }
+    });
+
+    return {
+      position: {
+        id: position.id,
+        name: position.name
+      },
+      employee: {
+        id: employee.id,
+        name: employee.name || employee.nameEn || '',
+        nameEn: employee.nameEn || '',
+        avatar: employee.avatar || null
+      },
+      analysis: analysis
+        ? {
+            id: analysis.id,
+            readiness: analysis.readiness,
+            summary: analysis.summary || '',
+            metrics: analysis.metrics || {},
+            skills: analysis.skills || [],
+            priorityGaps: analysis.priorityGaps || [],
+            developmentPlan: analysis.developmentPlan || null
+          }
+        : null
+    };
+  };
+
+  const skillAnalysisSave = async (authenticatePayload, { positionId, employeeId, readiness, summary, metrics, skills, priorityGaps, developmentPlan }) => {
+    const { tenantId } = authenticatePayload;
+    if (!positionId || !employeeId) {
+      throw new Error('岗位与员工不能为空');
+    }
+
+    await detail(authenticatePayload, { id: positionId });
+    const employee = await models.employee.findByPk(employeeId);
+    if (!employee || employee.tenantId !== tenantId) {
+      throw new Error('未找到员工');
+    }
+
+    const payload = {
+      readiness: normalizeReadiness(readiness),
+      summary: typeof summary === 'string' ? summary : '',
+      metrics: normalizeMetrics(metrics),
+      skills: normalizeSkillRows(skills),
+      priorityGaps: normalizePriorityGaps(priorityGaps),
+      developmentPlan: normalizeDevelopmentPlan(developmentPlan)
+    };
+
+    let analysis = await models.positionEmployeeSkillAnalysis.findOne({
+      where: {
+        tenantId,
+        positionId: String(positionId),
+        employeeId: String(employeeId)
+      }
+    });
+
+    if (analysis) {
+      await analysis.update(payload);
+    } else {
+      analysis = await models.positionEmployeeSkillAnalysis.create({
+        tenantId,
+        positionId: String(positionId),
+        employeeId: String(employeeId),
+        ...payload
+      });
+    }
+
+    return {
+      id: analysis.id,
+      readiness: analysis.readiness,
+      summary: analysis.summary || '',
+      metrics: analysis.metrics || {},
+      skills: analysis.skills || [],
+      priorityGaps: analysis.priorityGaps || [],
+      developmentPlan: analysis.developmentPlan || null
+    };
+  };
+
   Object.assign(fastify[options.name].services, {
-    position: { create, list, detail, save, remove, setStatus, enums }
+    position: { create, list, detail, save, remove, setStatus, enums, skillAnalysisDetail, skillAnalysisSave }
   });
 });
