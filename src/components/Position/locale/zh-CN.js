@@ -41,6 +41,23 @@ const zhCN = {
   'position.insightBannerTitle': '本周有 3 个岗位进入高变动幅度',
   'position.insightBannerDescription': '客户支持主管、数据治理经理等岗位已根据新的技能信号重新评分。',
   'position.insightBannerReview': '查看 →',
+  'position.createTitle': '添加岗位',
+  'position.editTitle': '编辑岗位',
+  'position.create': '添加岗位',
+  'position.save': '保存',
+  'position.cancel': '取消',
+  'position.createSuccess': '添加岗位成功',
+  'position.saveSuccess': '保存岗位成功',
+  'position.formDescription': '填写岗位基本信息与任职要求，便于后续招聘与人才匹配。',
+  'position.formTipsTitle': '填写建议',
+  'position.formTipsDesc': '完善以下信息有助于提高岗位匹配准确度。',
+  'position.formTip1': '岗位名称尽量具体，便于检索与匹配',
+  'position.formTip2': '关联正确的组织部门，方便权限与汇报',
+  'position.formTip3': '描述中写清职责范围与协作对象',
+  'position.formTip4': '要求中写明必备技能与经验门槛',
+  'position.formTipsNote': '若暂缺部分信息，可先保存为草稿，后续再补充完善。',
+  'position.completenessTitle': '填写完整度',
+  'position.completenessDesc': '补充描述与要求通常可提升匹配置信度约 12%。',
   inputPlaceholder: '请输入'
 };
 

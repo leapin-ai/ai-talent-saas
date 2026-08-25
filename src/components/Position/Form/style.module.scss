@@ -1,0 +1,243 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  min-height: var(--content-height, 100%);
+  width: 100%;
+
+  /* Form 会包一层 span > ant-flex，需拉高才能让 footer sticky 贴底 */
+  > :global(span) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: inherit;
+    width: 100%;
+
+    > :global(.ant-flex) {
+      flex: 1;
+      min-height: inherit;
+      width: 100%;
+    }
+  }
+}
+
+.body {
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+  /* 内容区自己留边距；footer 全宽贴 Page */
+  padding: 12px 12px 24px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.main-card {
+  flex: 1;
+  min-width: 0;
+  /* 强制加大卡片内边距（覆盖 react-box size 的 --card-padding: 1.5rem） */
+  --card-padding: 24px 36px;
+  padding: 24px 36px !important;
+
+  :global([data-slot='content']) {
+    background: transparent;
+  }
+}
+
+.section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(140deg, var(--primary-color) 0%, var(--primary-color-6, var(--ant-color-primary-bg-hover, var(--primary-color))) 100%);
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--primary-color) 90%, transparent);
+}
+
+.aside {
+  width: 400px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 16px;
+  align-self: flex-start;
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  /* 侧栏卡片：半透明，透出页面背景 */
+  :global([data-slot='card']) {
+    --card-surface: rgba(255, 255, 255, 0.55);
+    --card-panel-from: rgba(255, 255, 255, 0.35);
+    --card-panel-to: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.55) !important;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.12) 42%) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+}
+
+.completeness-card {
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 12%, transparent);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 22px 50px -36px color-mix(in srgb, var(--primary-color) 45%, rgba(30, 27, 75, 0.45));
+  padding: 19px 21px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.completeness-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.completeness-label {
+  margin: 0;
+  color: #7e7ca8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.99px;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.completeness-percent {
+  color: var(--theme-primary-emphasis, var(--primary-color));
+  font-size: 12.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.completeness-track {
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+.completeness-bar {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--primary-color-4, color-mix(in srgb, var(--primary-color) 55%, #22d3ee)) 0%, var(--primary-color) 100%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary-color) 65%, transparent);
+  transition: width 0.25s ease;
+}
+
+.completeness-desc {
+  margin: 0;
+  color: #67658c;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.tip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--primary-color-06, color-mix(in srgb, var(--primary-color) 12%, #fff));
+  color: var(--primary-color);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.tip-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 12%, transparent);
+  color: #3f3d62;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.tip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color-4, var(--ant-color-primary-border, var(--primary-color))) 100%);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--primary-color) 55%, transparent);
+}
+
+.tip-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 14px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  /* 跟租户主题色，勿用 ant 默认 primary-bg（易仍是蓝） */
+  background: var(--primary-color-06, color-mix(in srgb, var(--primary-color) 10%, #fff));
+  border: 1px solid color-mix(in srgb, var(--primary-color) 18%, transparent);
+  color: #4b4972;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.tip-note-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--primary-color);
+}
+
+.footer {
+  position: sticky;
+  bottom: 1px;
+  z-index: 2;
+  margin-top: auto;
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.92);
+  border-top: 1px solid #e5eaf2;
+  box-shadow: 0 -8px 20px rgba(15, 23, 42, 0.04);
+}
+
+@include resp.mobile-container {
+  .body {
+    flex-direction: column;
+  }
+
+  .aside {
+    width: 100%;
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .footer {
+    bottom: calc(var(--toolbar-height, 0px) + 1px);
+    padding-bottom: calc(12px + var(--safe-area-inset-bottom, 0px));
+  }
+}

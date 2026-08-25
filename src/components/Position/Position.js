@@ -3,7 +3,7 @@ import { useIntl } from '@kne/react-intl';
 import { Modal, message } from 'antd';
 import withLocale from './withLocale';
 import getColumns from './getColumns';
-import BaseFormInner, { createPaySalary } from './PositionForm';
+import BaseFormInner from './PositionForm';
 
 const mapFilterValue = (value, getFilterValue) => ({
   filter: getFilterValue(value)
@@ -12,7 +12,7 @@ const mapFilterValue = (value, getFilterValue) => ({
 const Position = createWithRemoteLoader({
   modules: ['components-admin:BizUnit', 'components-core:Global@usePreset']
 })(
-  withLocale(({ remoteModules, apis, onDetail, ...props }) => {
+  withLocale(({ remoteModules, apis, onDetail, onCreate, onEdit, ...props }) => {
     const [BizUnit, usePreset] = remoteModules;
     const { formatMessage } = useIntl();
     const { ajax } = usePreset();
@@ -37,7 +37,20 @@ const Position = createWithRemoteLoader({
     };
 
     const getActionList = ({ data, onSuccess, ...actionProps }) => {
-      const actions = [];
+      const actions = [
+        {
+          ...actionProps,
+          data,
+          onSuccess,
+          index: 0,
+          children: formatMessage({ id: 'action.edit' }),
+          onClick: () => {
+            if (typeof onEdit === 'function') {
+              onEdit({ data });
+            }
+          }
+        }
+      ];
       if (data.status === 'published') {
         actions.push({
           ...actionProps,
@@ -59,11 +72,17 @@ const Position = createWithRemoteLoader({
       return actions;
     };
 
+    // 列表侧禁用弹框创建/编辑；表单走独立页面
+    const listApis = Object.assign({}, apis, {
+      create: null,
+      save: null
+    });
+
     return (
       <BizUnit
         {...props}
         isNext
-        apis={apis}
+        apis={listApis}
         getColumns={() =>
           getColumns({
             onDetail,
@@ -75,17 +94,22 @@ const Position = createWithRemoteLoader({
         name="position"
         options={{
           bizName: formatMessage({ id: 'position.bizName' }),
-          formSize: 'default',
           keywordFilterLabel: formatMessage({ id: 'position.keywordFilterLabel' }),
           mapFilterValue,
-          formProps: {
-            rules: { PAY_SALARY: createPaySalary(formatMessage) }
-          },
-          saveData: (data, { fetchOptions }) => {
-            const org = fetchOptions?.data?.orgEnums?.find(item => item.value === data.tenantOrgId);
-            return Object.assign({}, data, {
-              tenantOrgId: org ? { name: org.description, id: org.value } : data.tenantOrgId
-            });
+          tableProps: {
+            buttonGroup: {
+              list: [
+                {
+                  type: 'primary',
+                  children: formatMessage({ id: 'position.create' }),
+                  onClick: () => {
+                    if (typeof onCreate === 'function') {
+                      onCreate();
+                    }
+                  }
+                }
+              ]
+            }
           }
         }}
       />
