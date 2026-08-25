@@ -223,9 +223,28 @@ const TenantAdmin = createWithRemoteLoader({
             loader: () => import('@components/Position/Form')
           },
           {
+            path: 'position/:id/talent/:employeeId',
+            title: 'Position/TalentSkillAnalysis',
+            elementProps: {
+              baseUrl,
+              apis: Object.assign({}, apis.talentSaas.tenant.position, {
+                orgList: apis.tenant.orgList
+              }),
+              children: ({ title, extra, children }) => (
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                  <Page back title={title} extra={extra} noPadding>
+                    {children}
+                  </Page>
+                </Permissions>
+              )
+            },
+            loader: () => import('@components/Position/Detail/TalentSkillAnalysis')
+          },
+          {
             path: 'position/:id',
             title: 'Position/Detail',
             elementProps: {
+              baseUrl,
               apis: Object.assign({}, apis.talentSaas.tenant.position, {
                 orgList: apis.tenant.orgList,
                 employeeList: apis.talentSaas.tenant.employee.list

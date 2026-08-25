@@ -78,6 +78,14 @@ const getApis = options => {
           setStatus: {
             url: `${prefix}/tenant/position/set-status`,
             method: 'POST'
+          },
+          skillAnalysisDetail: {
+            url: `${prefix}/tenant/position/skill-analysis-detail`,
+            method: 'GET'
+          },
+          skillAnalysisSave: {
+            url: `${prefix}/tenant/position/skill-analysis-save`,
+            method: 'POST'
           }
         },
         market: {

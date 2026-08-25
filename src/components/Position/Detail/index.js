@@ -12,7 +12,7 @@ import AnalyzeTalent from './AnalyzeTalent';
 const Detail = createWithRemoteLoader({
   modules: ['components-core:InfoPage', 'components-core:InfoPage@CentralContent', 'components-core:Layout@Page', 'components-core:Layout@PageHeader', 'components-thirdparty:CKEditor.Content']
 })(
-  withLocale(({ remoteModules, baseUrl, apis, children }) => {
+  withLocale(({ remoteModules, baseUrl = '', apis, children }) => {
     const [InfoPage, CentralContent, Page, PageHeader, EditorContent] = remoteModules;
     const { formatMessage } = useIntl();
     const { id } = useParams();
@@ -105,7 +105,7 @@ const Detail = createWithRemoteLoader({
                 {
                   key: 'analyze',
                   label: formatMessage({ id: 'position.tabAnalyzeTalent' }),
-                  children: <AnalyzeTalent positionId={data.id} employeeListApi={apis.employeeList} />
+                  children: <AnalyzeTalent baseUrl={baseUrl} positionId={data.id} employeeListApi={apis.employeeList} />
                 }
               ]}
             />

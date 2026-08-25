@@ -33,7 +33,7 @@
 }
 
 .metric-value-assessed {
-  color: #4654d9;
+  color: var(--primary-color, #4183f0);
 }
 
 .metric-value-outdated {
@@ -70,6 +70,24 @@
   font-weight: 600;
   line-height: 20px;
   color: #334155;
+}
+
+.person-name-link {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--primary-color, #4183f0);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .person-manager {
@@ -123,11 +141,11 @@
 .readiness-fill {
   height: 100%;
   border-radius: 999px;
-  background: #c7d2fe;
+  background: color-mix(in srgb, var(--primary-color, #4183f0) 28%, #fff);
 }
 
 .readiness-fill-high {
-  background: #5b6cff;
+  background: var(--primary-color, #4183f0);
 }
 
 .readiness-fill-low {
@@ -145,7 +163,7 @@
 }
 
 .readiness-value-high {
-  color: #4654d9;
+  color: var(--primary-color, #4183f0);
 }
 
 .readiness-value-low {
