@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef } from 'react';
+import { Flex } from 'antd';
 import AppChildrenRouter from '@kne/app-children-router';
 import Layout from './Layout';
 import { Page } from '@kne/system-layout';
@@ -6,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import TalentMarket from '@components/TalentMarket';
 import TalentProfile from '@components/TalentProfile';
+import PositionInsightBanner from '@components/Position/InsightBanner';
 import Home from './Home';
 import CompleteProfile from './CompleteProfile';
 import withLocale from './withLocale';
@@ -145,7 +147,10 @@ const TenantAdmin = createWithRemoteLoader({
               children: renderProps => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
                   <Page title={formatMessage({ id: 'tenantAdmin.positionManagement' })}>
-                    <TablePageRender {...renderProps} withPage={false} />
+                    <Flex vertical gap={16} style={{ width: '100%' }}>
+                      <PositionInsightBanner />
+                      <TablePageRender {...renderProps} withPage={false} />
+                    </Flex>
                   </Page>
                 </Permissions>
               )

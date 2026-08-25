@@ -38,6 +38,9 @@ const zhCN = {
   'position.salary': '薪资',
   'position.workContent': '工作内容',
   'position.workRequirement': '工作要求',
+  'position.insightBannerTitle': '本周有 3 个岗位进入高变动幅度',
+  'position.insightBannerDescription': '客户支持主管、数据治理经理等岗位已根据新的技能信号重新评分。',
+  'position.insightBannerReview': '查看 →',
   inputPlaceholder: '请输入'
 };
 
