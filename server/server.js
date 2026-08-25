@@ -216,6 +216,9 @@ const createServer = () => {
           },
           'sync-org-send-message': ({ task, result }) => {
             return result;
+          },
+          'assessment-profile-review': ({ result }) => {
+            return result;
           }
         }
       });

@@ -1,0 +1,16 @@
+.modal-body {
+  max-height: calc(100vh - 160px);
+  overflow: auto;
+}
+
+.panel {
+  min-height: 320px;
+}
+
+.profile-wrap {
+  :global {
+    .talent-profile {
+      min-width: 0;
+    }
+  }
+}

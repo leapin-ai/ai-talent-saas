@@ -174,6 +174,34 @@ const getApis = options => {
           acceptPrevious: {
             url: `${prefix}/tenant/assessment/accept-previous`,
             method: 'POST'
+          },
+          list: {
+            url: `${prefix}/tenant/assessment/list`,
+            method: 'GET'
+          },
+          getDetail: {
+            url: `${prefix}/tenant/assessment/get-detail`,
+            method: 'GET'
+          },
+          markSubmitted: {
+            url: `${prefix}/tenant/assessment/mark-submitted`,
+            method: 'POST'
+          },
+          approve: {
+            url: `${prefix}/tenant/assessment/approve`,
+            method: 'POST'
+          },
+          reject: {
+            url: `${prefix}/tenant/assessment/reject`,
+            method: 'POST'
+          },
+          generateTaskContext: {
+            url: `${prefix}/tenant/assessment/generate-task-context`,
+            method: 'GET'
+          },
+          completeGenerate: {
+            url: `${prefix}/tenant/assessment/complete-generate`,
+            method: 'POST'
           }
         }
       }
