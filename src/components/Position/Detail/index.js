@@ -18,24 +18,30 @@ const Detail = createWithRemoteLoader({
           params: { id }
         })}
         render={({ data, reload }) => {
+          const department = (data.orgEnums || []).find(target => target.value === data.tenantOrgId)?.description || '-';
+          const dataSource = Object.assign({}, data, { department });
           const basicInfo = (
             <InfoPage>
               <InfoPage.Part bordered title={formatMessage({ id: 'position.basicInfo' })}>
                 <CentralContent
                   type="compact"
                   col={1}
-                  dataSource={data}
+                  dataSource={dataSource}
                   columns={[
                     {
                       name: 'name',
                       title: formatMessage({ id: 'position.name' })
+                    },
+                    {
+                      name: 'department',
+                      title: formatMessage({ id: 'position.department' })
                     }
                   ]}
                 />
                 <CentralContent
                   type="compact"
                   col={3}
-                  dataSource={data}
+                  dataSource={dataSource}
                   columns={[
                     {
                       name: 'status',
@@ -50,7 +56,7 @@ const Detail = createWithRemoteLoader({
                 <CentralContent
                   type="compact"
                   col={3}
-                  dataSource={data}
+                  dataSource={dataSource}
                   columns={[
                     { name: 'publishAt', title: formatMessage({ id: 'position.publishAt' }), format: 'datetime' },
                     { name: 'createdAt', title: formatMessage({ id: 'position.createdAt' }), format: 'datetime' },

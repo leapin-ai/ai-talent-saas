@@ -140,7 +140,9 @@ const TenantAdmin = createWithRemoteLoader({
             path: 'position',
             title: 'Position',
             elementProps: {
-              apis: apis.talentSaas.tenant.position,
+              apis: Object.assign({}, apis.talentSaas.tenant.position, {
+                orgList: apis.tenant.orgList
+              }),
               onDetail: ({ colItem }) => {
                 navigate(`${baseUrl}/position/${colItem.id}`);
               },
@@ -161,7 +163,9 @@ const TenantAdmin = createWithRemoteLoader({
             path: 'position/:id',
             title: 'Position/Detail',
             elementProps: {
-              apis: apis.talentSaas.tenant.position,
+              apis: Object.assign({}, apis.talentSaas.tenant.position, {
+                orgList: apis.tenant.orgList
+              }),
               children: ({ title, extra, children }) => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
                   <Page back title={title} extra={extra}>

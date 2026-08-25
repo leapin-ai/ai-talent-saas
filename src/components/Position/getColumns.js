@@ -7,6 +7,14 @@ const getColumns = ({ onDetail, formatMessage }) => {
       type: 'mainInfo'
     },
     {
+      name: 'department',
+      title: formatMessage({ id: 'position.department' }),
+      valueOf: (item, { data }) => {
+        const org = data.orgEnums && data.orgEnums.find(target => target.value === item.tenantOrgId);
+        return org?.description || '-';
+      }
+    },
+    {
       name: 'status',
       title: formatMessage({ id: 'position.status' }),
       type: 'tag',

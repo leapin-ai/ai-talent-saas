@@ -1,5 +1,6 @@
 const zhCN = {
   'position.name': '岗位名称',
+  'position.department': '组织部门',
   'position.status': '状态',
   'position.language': '语言',
   'position.locationType': '工作地点类型',

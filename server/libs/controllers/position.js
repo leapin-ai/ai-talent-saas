@@ -64,9 +64,12 @@ module.exports = fp(async (fastify, options) => {
               type: 'string',
               enum: ['on-site', 'remote'],
               default: 'on-site'
+            },
+            tenantOrgId: {
+              type: 'string'
             }
           },
-          required: ['tenantId', 'name']
+          required: ['tenantId', 'name', 'tenantOrgId']
         }
       }
     },
@@ -168,13 +171,16 @@ module.exports = fp(async (fastify, options) => {
               type: 'object',
               default: {}
             },
+            tenantOrgId: {
+              type: 'string'
+            },
             status: {
               type: 'string',
               enum: ['draft', 'published', 'closed'],
               default: 'draft'
             }
           },
-          required: ['name', 'language', 'locationType']
+          required: ['name', 'language', 'locationType', 'tenantOrgId']
         }
       }
     },
@@ -225,6 +231,9 @@ module.exports = fp(async (fastify, options) => {
             salary: {
               type: 'object',
               default: {}
+            },
+            tenantOrgId: {
+              type: 'string'
             }
           },
           required: ['id']
