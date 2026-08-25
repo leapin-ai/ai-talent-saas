@@ -165,6 +165,7 @@ const BaseFormInner = createWithRemoteLoader({
               }}
             </Enum>,
             <DatePicker name="hireDate" label={formatMessage({ id: 'employee.hireDate' })} />,
+            <AddressSelect name="options.workLocation" label={formatMessage({ id: 'employee.workLocation' })} single />,
             <SuperSelect
               name="options.position"
               label="岗位"
