@@ -293,7 +293,7 @@ module.exports = fp(async (fastify, options) => {
     return 'assessed';
   };
 
-  const enrichTalentRows = async (authenticatePayload, rows) => {
+  const enrichTalentRows = async (authenticatePayload, rows, { positionId } = {}) => {
     const { tenantId } = authenticatePayload;
     const tenantUserIds = [...new Set(rows.map(item => item.tenantUserId).filter(Boolean))];
     const assessmentMap = new Map();
@@ -307,6 +307,24 @@ module.exports = fp(async (fastify, options) => {
       assessments.forEach(row => {
         assessmentMap.set(row.tenantUserId, row);
       });
+    }
+
+    const analysisReadinessMap = new Map();
+    if (positionId && models.positionEmployeeSkillAnalysis) {
+      const employeeIds = [...new Set(rows.map(item => item.id).filter(Boolean))];
+      if (employeeIds.length) {
+        const analyses = await models.positionEmployeeSkillAnalysis.findAll({
+          where: {
+            tenantId,
+            positionId,
+            employeeId: { [Op.in]: employeeIds }
+          },
+          attributes: ['employeeId', 'readiness']
+        });
+        analyses.forEach(row => {
+          analysisReadinessMap.set(String(row.employeeId), row.readiness);
+        });
+      }
     }
 
     // 所属部门：优先岗位上的部门，其次员工 tenantOrgIds
@@ -328,9 +346,9 @@ module.exports = fp(async (fastify, options) => {
     }
 
     const resolveDepartmentOrgId = plain => {
-      const positionId = resolvePositionId(get(plain, 'options.position'));
-      if (positionId && positionOrgMap.has(String(positionId))) {
-        return positionOrgMap.get(String(positionId));
+      const posId = resolvePositionId(get(plain, 'options.position'));
+      if (posId && positionOrgMap.has(String(posId))) {
+        return positionOrgMap.get(String(posId));
       }
       const employeeOrgIds = getEmployeeOrgIds(plain);
       return employeeOrgIds[0] || null;
@@ -404,7 +422,9 @@ module.exports = fp(async (fastify, options) => {
       const options = plain.options && typeof plain.options === 'object' ? plain.options : {};
       const assessment = plain.tenantUserId ? assessmentMap.get(plain.tenantUserId) : null;
       const lastAssessment = resolveAssessmentStatus(assessment, now);
-      const readiness = lastAssessment === 'never' ? null : normalizeReadiness(options.readiness);
+      const fromAnalysis = analysisReadinessMap.has(String(plain.id)) ? normalizeReadiness(analysisReadinessMap.get(String(plain.id))) : null;
+      const fromOptions = lastAssessment === 'never' ? null : normalizeReadiness(options.readiness);
+      const readiness = fromAnalysis != null ? fromAnalysis : fromOptions;
       const departmentOrgId = resolveDepartmentOrgId(plain);
       const leaderUserId = departmentOrgId ? orgLeaderUserIdMap.get(String(departmentOrgId)) : null;
       const leaderEmployeeName = leaderUserId ? leaderEmployeeNameMap.get(String(leaderUserId)) : null;
@@ -502,7 +522,7 @@ module.exports = fp(async (fastify, options) => {
       ]
     });
 
-    const pageData = withTalentAnalysis ? await enrichTalentRows(authenticatePayload, rows) : rows;
+    const pageData = withTalentAnalysis ? await enrichTalentRows(authenticatePayload, rows, { positionId }) : rows;
 
     const positionEnums = await services.position.enums(authenticatePayload, {
       ids: pageData.map(item => get(item, 'options.position')).filter(item => !!item)
@@ -533,7 +553,7 @@ module.exports = fp(async (fastify, options) => {
         where: whereQuery,
         attributes: ['id', 'tenantUserId', 'hireDate', 'city', 'options', 'name', 'nameEn', 'avatar']
       });
-      const enrichedAll = await enrichTalentRows(authenticatePayload, allRows);
+      const enrichedAll = await enrichTalentRows(authenticatePayload, allRows, { positionId });
       result.talentMetrics = summarizeTalentMetrics(enrichedAll);
     }
 

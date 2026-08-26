@@ -87,24 +87,39 @@ export const createEmptySkill = () => ({
 });
 
 /** @returns {PositionSkillItem|null} */
-export const normalizeSkillItem = raw => {
+export const normalizeSkillItem = (raw, index = 0) => {
   if (!raw || typeof raw !== 'object') {
     return null;
   }
   const origin = ORIGIN_VALUES.includes(raw.origin) ? raw.origin : 'existing';
-  const change = CHANGE_VALUES.includes(raw.change) ? raw.change : 'stable';
+  const importanceNow = clampImportance(raw.importanceNow);
+  const importanceYear = clampImportance(raw.importanceYear);
+  let change = CHANGE_VALUES.includes(raw.change) ? raw.change : null;
+  if (!change) {
+    if (importanceYear <= importanceNow - 1) {
+      change = 'declining';
+    } else if (importanceYear >= importanceNow + 2 && origin === 'new') {
+      change = 'ai_emerging';
+    } else if (importanceYear >= importanceNow + 1) {
+      change = origin === 'new' ? 'new' : 'enhanced';
+    } else {
+      change = 'stable';
+    }
+  }
   const aiExposure = LEVEL_VALUES.includes(raw.aiExposure) ? raw.aiExposure : 'medium';
   const confidence = LEVEL_VALUES.includes(raw.confidence) ? raw.confidence : 'medium';
   const name = typeof raw.name === 'string' ? raw.name.trim() : '';
   if (!name) {
     return null;
   }
+  // Prefer persisted id; otherwise a stable fallback so hover/list lookups stay consistent across normalize passes.
+  const id = typeof raw.id === 'string' && raw.id ? raw.id : `skill-${index}-${name.slice(0, 40)}`;
   return {
-    id: typeof raw.id === 'string' && raw.id ? raw.id : createSkillId(),
+    id,
     name: name.slice(0, 200),
     origin,
-    importanceNow: clampImportance(raw.importanceNow),
-    importanceYear: clampImportance(raw.importanceYear),
+    importanceNow,
+    importanceYear,
     change,
     aiExposure,
     confidence,
@@ -118,7 +133,7 @@ export const normalizeSkills = skill => {
   if (!Array.isArray(skill)) {
     return [];
   }
-  return skill.map(normalizeSkillItem).filter(Boolean);
+  return skill.map((raw, index) => normalizeSkillItem(raw, index)).filter(Boolean);
 };
 
 export const countByChange = skills => {

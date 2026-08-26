@@ -1,6 +1,7 @@
 import { Button, message } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import CompleteAssessmentGenerateTask from './CompleteAssessmentGenerateTask';
+import CompletePositionAnalysisTask from '@components/PositionAnalysisTask';
 
 const DefaultManualCompleteTask = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']
@@ -41,7 +42,10 @@ export const getManualTaskAction = data => {
   if (data?.type === 'assessment-profile-review') {
     return CompleteAssessmentGenerateTask;
   }
+  if (data?.type === 'position-ai-analysis') {
+    return CompletePositionAnalysisTask;
+  }
   return DefaultManualCompleteTask;
 };
 
-export { CompleteAssessmentGenerateTask, DefaultManualCompleteTask };
+export { CompleteAssessmentGenerateTask, CompletePositionAnalysisTask, DefaultManualCompleteTask };

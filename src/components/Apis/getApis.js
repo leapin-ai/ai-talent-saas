@@ -59,6 +59,10 @@ const getApis = options => {
             url: `${prefix}/tenant/position/list`,
             method: 'GET'
           },
+          insight: {
+            url: `${prefix}/tenant/position/insight`,
+            method: 'GET'
+          },
           detail: {
             url: `${prefix}/tenant/position/detail`,
             method: 'GET'
@@ -85,6 +89,22 @@ const getApis = options => {
           },
           skillAnalysisSave: {
             url: `${prefix}/tenant/position/skill-analysis-save`,
+            method: 'POST'
+          },
+          startAnalysis: {
+            url: `${prefix}/tenant/position/start-analysis`,
+            method: 'POST'
+          },
+          analysisTaskContext: {
+            url: `${prefix}/tenant/position/analysis-task-context`,
+            method: 'GET'
+          },
+          completeAnalysis: {
+            url: `${prefix}/tenant/position/complete-analysis`,
+            method: 'POST'
+          },
+          analysisAiFill: {
+            url: `${prefix}/tenant/position/analysis-ai-fill`,
             method: 'POST'
           }
         },

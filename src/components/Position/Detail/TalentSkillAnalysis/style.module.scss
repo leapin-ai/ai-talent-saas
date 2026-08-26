@@ -507,6 +507,9 @@
   font-size: 12.5px;
   font-weight: 400;
   color: #7b79a0;
+  flex: 1 1 180px;
+  min-width: 0;
+  line-height: 1.4;
 }
 
 .plan-grid {
@@ -596,8 +599,9 @@
 
 .horizon-item {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
   padding: 12px 13px;
   border-radius: 11px;
   border: 1px solid color-mix(in srgb, var(--card-accent, var(--primary-color, #4183f0)) 12%, transparent);
@@ -605,18 +609,24 @@
 }
 
 .item-tag {
-  flex: 0 0 20px;
-  width: 20px;
-  height: 20px;
+  align-self: flex-start;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  padding: 3px 8px;
   border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--card-accent-deep, #3a2fa8);
-  background: color-mix(in srgb, var(--card-accent, var(--primary-color, #4183f0)) 10%, transparent);
+  background: color-mix(in srgb, var(--card-accent, var(--primary-color, #4183f0)) 12%, transparent);
 }
 
 .item-body {
@@ -633,24 +643,39 @@
 .item-meta {
   margin-top: 3px;
   font-size: 12px;
+  line-height: 1.45;
   color: #6f6d95;
 }
 
 .horizon-target {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: auto;
   padding-top: 13px;
   border-top: 1px solid color-mix(in srgb, var(--card-accent, var(--primary-color, #4183f0)) 12%, transparent);
   font-size: 12px;
   color: #6f6d95;
+}
 
-  strong {
-    font-size: 12.5px;
-    font-weight: 700;
-    color: var(--card-accent-deep, #3a2fa8);
-  }
+.horizon-target-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 16px;
+  color: #6f6d95;
+  white-space: nowrap;
+}
+
+.horizon-target-text {
+  display: block;
+  width: 100%;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--card-accent-deep, #3a2fa8);
 }
 
 @include resp.mobile-container {

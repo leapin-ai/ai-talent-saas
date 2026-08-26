@@ -14,12 +14,25 @@ const LevelTag = ({ level, prefixId }) => {
   );
 };
 
+const resolveSourceLabel = (source, formatMessage, messages) => {
+  if (!source) {
+    return '';
+  }
+  if (messages && Object.prototype.hasOwnProperty.call(messages, source)) {
+    return formatMessage({ id: source });
+  }
+  return source;
+};
+
 const SkillPreview = ({ skill }) => {
-  const { formatMessage } = useIntl();
+  const { formatMessage, messages } = useIntl();
 
   if (!skill) {
     return null;
   }
+
+  const jdSource = resolveSourceLabel(skill.jd?.source, formatMessage, messages);
+  const shockSource = resolveSourceLabel(skill.shockReport?.source, formatMessage, messages);
 
   return (
     <div className={style.preview}>
@@ -35,12 +48,12 @@ const SkillPreview = ({ skill }) => {
       <div className={style['preview-card']}>
         <div className={style['preview-card-title']}>{formatMessage({ id: 'position.skillJdTitle' })}</div>
         <div className={style['preview-card-body']}>{skill.jd?.text || formatMessage({ id: 'position.skillNoContent' })}</div>
-        {skill.jd?.source ? <div className={style['preview-card-source']}>{skill.jd.source}</div> : null}
+        {jdSource ? <div className={style['preview-card-source']}>{jdSource}</div> : null}
       </div>
       <div className={style['preview-card']}>
         <div className={style['preview-card-title']}>{formatMessage({ id: 'position.skillShockTitle' })}</div>
         <div className={style['preview-card-body']}>{skill.shockReport?.text || formatMessage({ id: 'position.skillNoContent' })}</div>
-        {skill.shockReport?.source ? <div className={style['preview-card-source']}>{skill.shockReport.source}</div> : null}
+        {shockSource ? <div className={style['preview-card-source']}>{shockSource}</div> : null}
       </div>
     </div>
   );

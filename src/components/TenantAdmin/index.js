@@ -7,7 +7,6 @@ import { useNavigate } from 'react-router-dom';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import TalentMarket from '@components/TalentMarket';
 import TalentProfile from '@components/TalentProfile';
-import PositionInsightBanner from '@components/Position/InsightBanner';
 import Home from './Home';
 import CompleteProfile from './CompleteProfile';
 import CompleteProfileApplicationEntry from './CompleteProfileApplicationEntry';
@@ -162,6 +161,7 @@ const TenantAdmin = createWithRemoteLoader({
               apis: Object.assign({}, apis.talentSaas.tenant.position, {
                 orgList: apis.tenant.orgList
               }),
+              withInsightBanner: true,
               onDetail: ({ colItem }) => {
                 navigate(`${baseUrl}/position/${colItem.id}`);
               },
@@ -171,11 +171,11 @@ const TenantAdmin = createWithRemoteLoader({
               onEdit: ({ data }) => {
                 navigate(`${baseUrl}/position/${data.id}/edit`);
               },
-              children: renderProps => (
+              children: ({ insightBanner, ...renderProps }) => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
                   <Page title={formatMessage({ id: 'tenantAdmin.positionManagement' })}>
                     <Flex vertical gap={16} style={{ width: '100%' }}>
-                      <PositionInsightBanner />
+                      {insightBanner}
                       <TablePageRender {...renderProps} withPage={false} />
                     </Flex>
                   </Page>
@@ -249,10 +249,10 @@ const TenantAdmin = createWithRemoteLoader({
                 orgList: apis.tenant.orgList,
                 employeeList: apis.talentSaas.tenant.employee.list
               }),
-              children: ({ title, extra, children }) => (
+              children: ({ title, extra, children, noPadding }) => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
-                  <Page back title={title} extra={extra}>
-                    {children}
+                  <Page back title={title} extra={extra} noPadding={noPadding}>
+                    {noPadding ? ({ className, render }) => render({ className, children }) : children}
                   </Page>
                 </Permissions>
               )

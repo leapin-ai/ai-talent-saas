@@ -293,7 +293,7 @@ const DevelopmentPlan = ({ plan, formatMessage, cardColor }) => {
               <div className={style['horizon-items']}>
                 {(horizon.items || []).map((item, itemIndex) => (
                   <div key={`${item.tag}-${item.title}-${itemIndex}`} className={style['horizon-item']}>
-                    <div className={style['item-tag']}>{item.tag}</div>
+                    {item.tag ? <div className={style['item-tag']}>{item.tag}</div> : null}
                     <div className={style['item-body']}>
                       <div className={style['item-title']}>{item.title}</div>
                       {item.meta ? <div className={style['item-meta']}>{item.meta}</div> : null}
@@ -303,8 +303,8 @@ const DevelopmentPlan = ({ plan, formatMessage, cardColor }) => {
               </div>
               {horizon.target ? (
                 <div className={style['horizon-target']}>
-                  <span>{formatMessage({ id: 'position.talentSkillPlanTargets' })}</span>
-                  <strong>{horizon.target}</strong>
+                  <span className={style['horizon-target-label']}>{formatMessage({ id: 'position.talentSkillPlanTargets' })}</span>
+                  <strong className={style['horizon-target-text']}>{horizon.target}</strong>
                 </div>
               ) : null}
             </div>
