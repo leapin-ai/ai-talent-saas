@@ -32,7 +32,7 @@
     "@kne/fastify-account": "^2.0.7",
     "@kne/fastify-aliyun": "^1.1.7",
     "@kne/fastify-aws": "^0.1.0",
-    "@kne/fastify-file-manager": "^3.0.6",
+    "@kne/fastify-file-manager": "^3.0.8",
     "@kne/fastify-message": "^1.0.13",
     "@kne/fastify-namespace": "^1.2.1",
     "@kne/fastify-response-data-format": "^1.0.0",

@@ -16,6 +16,7 @@ const enUS = {
   'employee.emergencyContact': 'Emergency Contact',
   'employee.emergencyPhone': 'Emergency Phone',
   'employee.city': 'City',
+  'employee.workLocation': 'Work Location',
   'employee.address': 'Address',
   'employee.major': 'Major',
   'employee.collegeType': 'College Type',

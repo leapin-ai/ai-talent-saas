@@ -26,7 +26,9 @@ const enUS = {
   'enumLoader.recruitAdultEdu': 'Adult Education',
   'enumLoader.recruitCorrespondence': 'Correspondence',
   'enumLoader.taskTypeSyncOrg': 'Org Sync',
-  'enumLoader.taskTypeParseResume': 'Resume Parsing'
+  'enumLoader.taskTypeParseResume': 'Resume Parsing',
+  'enumLoader.taskTypeAssessmentProfileReview': 'Profile Generate Review',
+  'enumLoader.taskTypePositionAiAnalysis': 'AI Position Analysis'
 };
 
 export default enUS;

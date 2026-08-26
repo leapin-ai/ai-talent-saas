@@ -5,6 +5,7 @@ import { useIntl } from '@kne/react-intl';
 import { useFileUpload } from '@kne/react-file';
 import '@kne/react-file/dist/index.css';
 import get from 'lodash/get';
+import { FILE_DIRECTORY } from '@components/Apis';
 import style from './style.module.scss';
 
 const ACCEPT = ['.pdf', '.doc', '.docx'];
@@ -83,7 +84,11 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
         uuid
       });
     },
-    onUpload: presetApis?.file?.upload
+    onUpload: ({ file }) =>
+      presetApis?.file?.upload?.({
+        file,
+        path: FILE_DIRECTORY.EMPLOYEE_RESUME
+      })
   });
 
   const previewList = useMemo(() => [...uploadingList, ...resumes], [uploadingList, resumes]);

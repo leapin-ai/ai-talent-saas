@@ -1,0 +1,65 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  vertical-align: middle;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.bars {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.bar {
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+  background: #e2e8f0;
+}
+
+/* 设计稿：Low = emerald / Medium = amber / High = rose */
+.low {
+  .tag {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .bar-on {
+    background: #34d399;
+  }
+}
+
+.medium {
+  .tag {
+    background: #fffbeb;
+    color: #b45309;
+  }
+
+  .bar-on {
+    background: #f59e0b;
+  }
+}
+
+.high {
+  .tag {
+    background: #fff1f2;
+    color: #be123c;
+  }
+
+  .bar-on {
+    background: #f43f5e;
+  }
+}

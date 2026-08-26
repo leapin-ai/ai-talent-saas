@@ -16,6 +16,7 @@ const zhCN = {
   'employee.emergencyContact': '紧急联系人',
   'employee.emergencyPhone': '紧急联系人电话',
   'employee.city': '所在城市',
+  'employee.workLocation': '工作地点',
   'employee.address': '详细住址',
   'employee.major': '专业',
   'employee.collegeType': '院校类型',

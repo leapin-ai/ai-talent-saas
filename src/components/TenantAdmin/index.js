@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react';
-import AppChildrenRouter from '@kne/app-children-router';
 import { Flex } from 'antd';
+import AppChildrenRouter from '@kne/app-children-router';
 import Layout from './Layout';
 import { Page } from '@kne/system-layout';
 import { useNavigate } from 'react-router-dom';
@@ -9,16 +9,19 @@ import TalentMarket from '@components/TalentMarket';
 import TalentProfile from '@components/TalentProfile';
 import Home from './Home';
 import CompleteProfile from './CompleteProfile';
+import CompleteProfileApplicationEntry from './CompleteProfileApplicationEntry';
+import CompleteProfileApplications from './CompleteProfileApplications';
+import CompleteProfileApplicationDetail from './CompleteProfileApplicationDetail';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
 import { TENANT_ADMIN_PERMISSIONS } from './constants';
 
 const TenantAdmin = createWithRemoteLoader({
-  modules: ['components-admin:Tenant@Setting', 'components-core:Global@usePreset', 'components-core:Table@TablePage', 'components-core:Filter', 'components-core:File@PrintButton', 'components-core:Permissions']
+  modules: ['components-admin:Tenant@Setting', 'components-core:Global@usePreset', 'components-admin:BizUnit@TablePageRender', 'components-core:File@PrintButton', 'components-core:Permissions']
 })(
   withLocale(({ remoteModules, baseUrl }) => {
     const { formatMessage } = useIntl();
-    const [Setting, usePreset, TablePage, Filter, PrintButton, Permissions] = remoteModules;
+    const [Setting, usePreset, TablePageRender, PrintButton, Permissions] = remoteModules;
     const { apis } = usePreset();
     const profileRef = useRef(null);
     const navigate = useNavigate();
@@ -65,6 +68,24 @@ const TenantAdmin = createWithRemoteLoader({
             path: 'complete-profile',
             title: formatMessage({ id: 'tenantAdmin.completeMyProfile' }),
             element: <CompleteProfile baseUrl={baseUrl} />
+          },
+          {
+            path: 'complete-profile-applications',
+            title: formatMessage({ id: 'tenantAdmin.completeProfileApplications' }),
+            element: (
+              <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
+                <CompleteProfileApplications baseUrl={baseUrl} />
+              </Permissions>
+            )
+          },
+          {
+            path: 'complete-profile-applications/:id',
+            title: formatMessage({ id: 'tenantAdmin.completeProfileApplicationDetail' }),
+            element: (
+              <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
+                <CompleteProfileApplicationDetail baseUrl={baseUrl} />
+              </Permissions>
+            )
           },
           {
             path: 'market',
@@ -123,16 +144,13 @@ const TenantAdmin = createWithRemoteLoader({
               onPositionDetail: ({ colItem }) => {
                 navigate(`${baseUrl}/position/${colItem.options?.position}`);
               },
-              children: ({ filter, titleExtra, tableOptions }) => {
-                return (
-                  <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
-                    <Page title={formatMessage({ id: 'tenantAdmin.employeeProfile' })} extra={titleExtra}>
-                      <Filter {...filter} />
-                      <TablePage {...tableOptions} />
-                    </Page>
-                  </Permissions>
-                );
-              }
+              children: renderProps => (
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
+                  <Page title={formatMessage({ id: 'tenantAdmin.employeeProfile' })} extra={<CompleteProfileApplicationEntry baseUrl={baseUrl} />}>
+                    <TablePageRender {...renderProps} withPage={false} />
+                  </Page>
+                </Permissions>
+              )
             },
             loader: () => import('@components/Employee')
           },
@@ -140,16 +158,25 @@ const TenantAdmin = createWithRemoteLoader({
             path: 'position',
             title: 'Position',
             elementProps: {
-              apis: apis.talentSaas.tenant.position,
+              apis: Object.assign({}, apis.talentSaas.tenant.position, {
+                orgList: apis.tenant.orgList
+              }),
+              withInsightBanner: true,
               onDetail: ({ colItem }) => {
                 navigate(`${baseUrl}/position/${colItem.id}`);
               },
-              children: ({ filter, titleExtra, tableOptions }) => (
+              onCreate: () => {
+                navigate(`${baseUrl}/position/create`);
+              },
+              onEdit: ({ data }) => {
+                navigate(`${baseUrl}/position/${data.id}/edit`);
+              },
+              children: ({ insightBanner, ...renderProps }) => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
-                  <Page title={formatMessage({ id: 'tenantAdmin.positionManagement' })} extra={titleExtra}>
-                    <Flex vertical gap={8} flex={1}>
-                      <Filter {...filter} />
-                      <TablePage {...tableOptions} />
+                  <Page title={formatMessage({ id: 'tenantAdmin.positionManagement' })}>
+                    <Flex vertical gap={16} style={{ width: '100%' }}>
+                      {insightBanner}
+                      <TablePageRender {...renderProps} withPage={false} />
                     </Flex>
                   </Page>
                 </Permissions>
@@ -158,14 +185,74 @@ const TenantAdmin = createWithRemoteLoader({
             loader: () => import('@components/Position')
           },
           {
+            path: 'position/create',
+            title: 'Position/Create',
+            elementProps: {
+              baseUrl,
+              action: 'create',
+              apis: Object.assign({}, apis.talentSaas.tenant.position, {
+                orgList: apis.tenant.orgList
+              }),
+              children: ({ title, children }) => (
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                  <Page back title={title} noPadding>
+                    {({ className, render }) => render({ className, children })}
+                  </Page>
+                </Permissions>
+              )
+            },
+            loader: () => import('@components/Position/Form')
+          },
+          {
+            path: 'position/:id/edit',
+            title: 'Position/Edit',
+            elementProps: {
+              baseUrl,
+              action: 'edit',
+              apis: Object.assign({}, apis.talentSaas.tenant.position, {
+                orgList: apis.tenant.orgList
+              }),
+              children: ({ title, children }) => (
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                  <Page back title={title} noPadding>
+                    {({ className, render }) => render({ className, children })}
+                  </Page>
+                </Permissions>
+              )
+            },
+            loader: () => import('@components/Position/Form')
+          },
+          {
+            path: 'position/:id/talent/:employeeId',
+            title: 'Position/TalentSkillAnalysis',
+            elementProps: {
+              baseUrl,
+              apis: Object.assign({}, apis.talentSaas.tenant.position, {
+                orgList: apis.tenant.orgList
+              }),
+              children: ({ title, extra, children }) => (
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                  <Page back title={title} extra={extra} noPadding>
+                    {children}
+                  </Page>
+                </Permissions>
+              )
+            },
+            loader: () => import('@components/Position/Detail/TalentSkillAnalysis')
+          },
+          {
             path: 'position/:id',
             title: 'Position/Detail',
             elementProps: {
-              apis: apis.talentSaas.tenant.position,
-              children: ({ title, extra, children }) => (
+              baseUrl,
+              apis: Object.assign({}, apis.talentSaas.tenant.position, {
+                orgList: apis.tenant.orgList,
+                employeeList: apis.talentSaas.tenant.employee.list
+              }),
+              children: ({ title, extra, children, noPadding }) => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
-                  <Page back title={title} extra={extra}>
-                    {children}
+                  <Page back title={title} extra={extra} noPadding={noPadding}>
+                    {noPadding ? ({ className, render }) => render({ className, children }) : children}
                   </Page>
                 </Permissions>
               )

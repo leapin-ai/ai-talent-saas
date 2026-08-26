@@ -1,0 +1,210 @@
+/* Position form field skin — 控件背景透明，保留边框圆角 */
+.position-form-info {
+  width: 100%;
+  --ant-color-bg-container: transparent;
+  --ant-color-fill-tertiary: transparent;
+  --ant-color-fill-secondary: transparent;
+  --ant-color-fill-alter: transparent;
+
+  .ant-form-item {
+    margin-bottom: 20px;
+  }
+
+  .ant-form-item-label {
+    padding-bottom: 8px;
+
+    > label {
+      height: auto;
+      color: #33314f;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.4;
+
+      &.ant-form-item-required:not(.ant-form-item-required-mark-optional)::before {
+        color: var(--ant-color-error, #e11d48);
+        font-family: inherit;
+        margin-inline-end: 2px;
+      }
+    }
+  }
+
+  .ant-form-item-control,
+  .ant-form-item-control-input,
+  .ant-form-item-control-input-content {
+    background: transparent !important;
+  }
+
+  .ant-input,
+  .ant-input-affix-wrapper,
+  .ant-input-number,
+  .ant-input-number-input,
+  .ant-input-number-group-wrapper,
+  .ant-picker,
+  .ant-select,
+  .ant-select-selector,
+  .ant-select-selection-search-input,
+  textarea.ant-input {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  .ant-input,
+  .ant-input-affix-wrapper,
+  .ant-input-number,
+  .ant-picker {
+    border-radius: 12px !important;
+    border-color: var(--ant-color-primary-border, color-mix(in srgb, var(--primary-color) 18%, transparent)) !important;
+    color: #1f1d3f;
+    font-size: 14.5px;
+    box-shadow: none !important;
+  }
+
+  /* Select：不要改 selector padding，否则 selection-item 会被裁切导致选中值不显示 */
+  .ant-select {
+    width: 100%;
+    color: #1f1d3f;
+    font-size: 14.5px;
+
+    .ant-select-selector {
+      border-radius: 12px !important;
+      border-color: var(--ant-color-primary-border, color-mix(in srgb, var(--primary-color) 18%, transparent)) !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      box-shadow: none !important;
+      color: #1f1d3f;
+    }
+
+    .ant-select-selection-item,
+    .ant-select-selection-placeholder {
+      color: #1f1d3f !important;
+      opacity: 1 !important;
+    }
+
+    .ant-select-selection-placeholder {
+      color: var(--ant-color-text-placeholder, #bfbfbf) !important;
+    }
+
+    .ant-select-selection-search-input {
+      color: #1f1d3f !important;
+    }
+
+    &.ant-select-focused .ant-select-selector,
+    &:not(.ant-select-disabled):hover .ant-select-selector {
+      border-color: var(--ant-color-primary-border-hover, color-mix(in srgb, var(--primary-color) 40%, transparent)) !important;
+    }
+
+    &.ant-select-focused .ant-select-selector {
+      border-color: var(--primary-color) !important;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 6%, transparent) !important;
+    }
+  }
+
+  .ant-input-affix-wrapper {
+    > input.ant-input {
+      background: transparent !important;
+      background-color: transparent !important;
+      box-shadow: none !important;
+      border: none !important;
+    }
+  }
+
+  .ant-input-number {
+    width: 100%;
+
+    .ant-input-number-input {
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+  }
+
+  .ant-input:hover,
+  .ant-input-affix-wrapper:not(.ant-input-affix-wrapper-disabled):hover,
+  .ant-input-number:hover,
+  .ant-picker:hover {
+    border-color: var(--ant-color-primary-border-hover, color-mix(in srgb, var(--primary-color) 40%, transparent)) !important;
+  }
+
+  .ant-input:focus,
+  .ant-input-focused,
+  .ant-input-affix-wrapper-focused,
+  .ant-input-number-focused,
+  .ant-picker-focused {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 6%, transparent) !important;
+  }
+
+  /* SuperSelect（组织部门等）：全局类 select-input */
+  .react-select__control,
+  .select-input,
+  .select-input-inner,
+  .super-select,
+  [class*='select-input'],
+  [class*='SelectInput'],
+  [class*='select-inner'] {
+    border-radius: 12px !important;
+    border-color: var(--ant-color-primary-border, color-mix(in srgb, var(--primary-color) 18%, transparent)) !important;
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  /*
+   * 城市 AddressSelect / 职能 FunctionSelect：
+   * SelectInnerInput 根节点硬编码 #fff，且无稳定全局类 → 直接盖掉表单项控件根节点
+   */
+  .ant-form-item-control-input-content > * {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  /* 薪资 PayDetails */
+  .pay-details,
+  [class*='pay-details'],
+  [class*='PayDetails'] {
+    background: transparent !important;
+
+    .ant-input,
+    .ant-input-affix-wrapper,
+    .ant-input-number,
+    .ant-input-number-input,
+    .ant-input-number-group,
+    .ant-input-number-group-addon,
+    .ant-select,
+    .ant-select-selector,
+    .ant-radio-button-wrapper {
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+
+    .ant-radio-group,
+    .ant-radio-wrapper {
+      background: transparent !important;
+    }
+
+    .ant-input-number-group-addon {
+      border-color: var(--ant-color-primary-border, color-mix(in srgb, var(--primary-color) 18%, transparent)) !important;
+    }
+  }
+
+  .ck-editor__editable,
+  .ck.ck-editor__main > .ck-editor__editable,
+  [class*='editor'] textarea,
+  textarea.ant-input {
+    min-height: 124px;
+    border-radius: 12px;
+    border-color: var(--ant-color-primary-border, color-mix(in srgb, var(--primary-color) 14%, transparent));
+    background: transparent !important;
+    color: #3f3d62;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+
+  .ck.ck-toolbar {
+    border-radius: 12px 12px 0 0;
+    border-color: var(--ant-color-primary-border, color-mix(in srgb, var(--primary-color) 14%, transparent));
+    background: transparent !important;
+  }
+
+  .ck.ck-editor__main > .ck-editor__editable {
+    border-radius: 0 0 12px 12px;
+  }
+}

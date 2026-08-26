@@ -4,11 +4,11 @@ import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
 
 const LinkEmployeeAction = createWithRemoteLoader({
-  modules: ['components-core:FormInfo@useFormModal', 'components-core:FormInfo', 'components-core:Global@usePreset', 'components-admin:UserSelect']
+  modules: ['components-core:FormInfo@useFormModal', 'components-core:FormInfo', 'components-core:Global@usePreset']
 })(
   withLocale(({ remoteModules, data, apis, onSuccess, ...props }) => {
     const { formatMessage } = useIntl();
-    const [useFormModal, FormInfo, usePreset, UserSelect] = remoteModules;
+    const [useFormModal, FormInfo, usePreset] = remoteModules;
     const { SuperSelect } = FormInfo.fields;
     const { ajax } = usePreset();
     const formModal = useFormModal();
@@ -40,16 +40,25 @@ const LinkEmployeeAction = createWithRemoteLoader({
               <FormInfo
                 column={1}
                 list={[
-                  <UserSelect
+                  <SuperSelect
                     name="employeeId"
                     label={formatMessage({ id: 'employee.selectEmployee' })}
                     rule="REQ"
                     single
-                    api={apis.employeeList}
+                    labelKey="name"
+                    valueKey="id"
                     interceptor="object-output-value"
+                    api={apis.employeeList}
                     getSearchProps={({ searchText }) => ({
                       filter: { keyword: searchText }
                     })}
+                    dataFormat={response => ({
+                      list: response.pageData || [],
+                      total: response.totalCount || 0
+                    })}
+                    pagination={{
+                      paramsType: 'params'
+                    }}
                   />
                 ]}
               />

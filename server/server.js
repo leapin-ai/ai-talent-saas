@@ -70,7 +70,17 @@ const createServer = () => {
 
         SYNC_ORG_SECRET: { type: 'string' },
         SYNC_ORG_HOST: { type: 'string' },
-        SYNC_ORG_TYPE: { type: 'string' }
+        SYNC_ORG_TYPE: { type: 'string' },
+
+        LLM_RUNNER_URL: { type: 'string', default: 'https://llm-runner.staging.leapin-ai.com' },
+        LLM_RUNNER_TOKEN: { type: 'string' },
+        LLM_POSITION_ANALYSIS_CONFIG_ID: { type: 'string', default: 'talent-saas-position-analysis-fill' },
+        LLM_POSITION_ANALYSIS_PROVIDER: { type: 'string', default: 'azure' },
+        AZURE_OPENAI_API_KEY: { type: 'string' },
+        AZURE_OPENAI_RESOURCE_NAME: { type: 'string' },
+        AZURE_OPENAI_API_VERSION: { type: 'string', default: '2024-08-01-preview' },
+        AZURE_OPENAI_CHAT_DEPLOYMENT: { type: 'string' },
+        AZURE_OPENAI_USE_DEPLOYMENT_URLS: { type: 'string', default: 'true' }
       }
     }
   });
@@ -215,6 +225,12 @@ const createServer = () => {
             return fastify.tenant.services.org.syncOrg(result);
           },
           'sync-org-send-message': ({ task, result }) => {
+            return result;
+          },
+          'assessment-profile-review': ({ result }) => {
+            return result;
+          },
+          'position-ai-analysis': ({ result }) => {
             return result;
           }
         }
