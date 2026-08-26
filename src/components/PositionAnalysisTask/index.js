@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
-import { App, Button, Flex, Select, Typography } from 'antd';
+import { App, Button, Select, Typography } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { CHANGE_VALUES, LEVEL_VALUES, ORIGIN_VALUES, createEmptySkill, createSkillId, normalizeSkills, normalizeVerdict } from '@components/Position/Detail/SkillList/skillModel';
+import AnalysisFormLayout from './AnalysisFormLayout';
 import style from './style.module.scss';
 
 const AI_FILL_LANGUAGE_OPTIONS = [
@@ -211,210 +212,222 @@ const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, default
   };
 
   return (
-    <Flex className={style['ai-fill-bar']} align="center" gap={12} wrap="wrap">
-      <Flex align="center" gap={8}>
-        <Typography.Text type="secondary">生成语言</Typography.Text>
-        <Select size="small" style={{ width: 120 }} value={language || 'zh-CN'} options={AI_FILL_LANGUAGE_OPTIONS} disabled={loading} onChange={changeLanguage} />
-      </Flex>
-      <FormApiButton
-        type="primary"
-        ghost
-        loading={loading}
-        disabled={loading}
-        onClick={async ({ openApi, formData }) => {
-          setLoading(true);
-          try {
-            const outputLanguage = languageRef?.current || language || 'zh-CN';
-            const { data: resData } = await ajax(
-              Object.assign({}, fillApi, {
-                data: {
-                  taskId,
-                  step,
-                  language: outputLanguage,
-                  draft: formData || {}
-                }
-              })
-            );
-            if (resData.code !== 0) {
-              throw new Error(resData.msg || 'AI 填充失败');
-            }
-            const nextData = resData.data?.data;
-            if (!nextData || typeof nextData !== 'object') {
-              throw new Error('AI 未返回可用数据');
-            }
-            // 嵌套 List/TableList：先垫满 3 阶段×3 条目槽位，再写入，避免 setFormData 丢中长期 items
-            let payload = nextData;
-            if (step === 'person' && Array.isArray(nextData.employees)) {
-              payload = {
-                ...nextData,
-                employees: nextData.employees.map(emp => {
-                  const plan = emp.developmentPlan || {};
-                  const horizons = [0, 1, 2].map(index => {
-                    const horizon = (plan.horizons || [])[index] || emptyHorizon(index);
-                    const base = emptyHorizon(index);
-                    return {
-                      key: horizon.key || base.key,
-                      label: horizon.label || base.label,
-                      period: horizon.period || base.period,
-                      title: horizon.title || '',
-                      tone: horizon.tone || base.tone,
-                      target: horizon.target || '',
-                      items: padPlanItems(horizon.items)
-                    };
-                  });
-                  return Object.assign({}, emp, {
-                    developmentPlan: {
-                      subtitle: plan.subtitle || '',
-                      horizons
-                    }
-                  });
+    <div className={style['ai-fill-bar']}>
+      <div className={style['ai-fill-main']}>
+        <label className={style['ai-fill-field']}>
+          <span className={style['ai-fill-label']}>生成语言</span>
+          <Select size="middle" className={style['ai-fill-select']} value={language || 'zh-CN'} options={AI_FILL_LANGUAGE_OPTIONS} disabled={loading} onChange={changeLanguage} />
+        </label>
+        <FormApiButton
+          type="primary"
+          className={style['ai-fill-action']}
+          loading={loading}
+          disabled={loading}
+          onClick={async ({ openApi, formData }) => {
+            setLoading(true);
+            try {
+              const outputLanguage = languageRef?.current || language || 'zh-CN';
+              const { data: resData } = await ajax(
+                Object.assign({}, fillApi, {
+                  data: {
+                    taskId,
+                    step,
+                    language: outputLanguage,
+                    draft: formData || {}
+                  }
                 })
-              };
+              );
+              if (resData.code !== 0) {
+                throw new Error(resData.msg || 'AI 填充失败');
+              }
+              const nextData = resData.data?.data;
+              if (!nextData || typeof nextData !== 'object') {
+                throw new Error('AI 未返回可用数据');
+              }
+              // 嵌套 List/TableList：先垫满 3 阶段×3 条目槽位，再写入，避免 setFormData 丢中长期 items
+              let payload = nextData;
+              if (step === 'person' && Array.isArray(nextData.employees)) {
+                payload = {
+                  ...nextData,
+                  employees: nextData.employees.map(emp => {
+                    const plan = emp.developmentPlan || {};
+                    const horizons = [0, 1, 2].map(index => {
+                      const horizon = (plan.horizons || [])[index] || emptyHorizon(index);
+                      const base = emptyHorizon(index);
+                      return {
+                        key: horizon.key || base.key,
+                        label: horizon.label || base.label,
+                        period: horizon.period || base.period,
+                        title: horizon.title || '',
+                        tone: horizon.tone || base.tone,
+                        target: horizon.target || '',
+                        items: padPlanItems(horizon.items)
+                      };
+                    });
+                    return Object.assign({}, emp, {
+                      developmentPlan: {
+                        subtitle: plan.subtitle || '',
+                        horizons
+                      }
+                    });
+                  })
+                };
+              }
+              openApi.setFormData(Object.assign({}, formData, payload), false);
+              message.success('已根据当前输入生成一版，可继续编辑');
+            } catch (e) {
+              message.error(e.message || 'AI 填充失败');
+            } finally {
+              setLoading(false);
             }
-            openApi.setFormData(Object.assign({}, formData, payload), false);
-            message.success('已根据当前输入生成一版，可继续编辑');
-          } catch (e) {
-            message.error(e.message || 'AI 填充失败');
-          } finally {
-            setLoading(false);
-          }
-        }}
-      >
-        AI 填充
-      </FormApiButton>
-      <Typography.Text type="secondary">基于当前表单与岗位上下文生成，不会自动提交</Typography.Text>
-    </Flex>
-  );
-};
-
-const OrgStep = ({ FormInfo, aiFillProps }) => {
-  const { Input } = FormInfo.fields;
-  return (
-    <div className={style.body}>
-      <AiFillToolbar FormInfo={FormInfo} step="org" {...aiFillProps} />
-      <FormInfo column={1} title="组织/部门" list={[<Input name="departmentName" label="部门" disabled key="departmentName" />, <Input name="tenantOrgId" label="tenantOrgId" hidden key="tenantOrgId" />]} />
+          }}
+        >
+          AI 填充
+        </FormApiButton>
+      </div>
+      <div className={style['ai-fill-hint']}>基于当前表单与岗位上下文生成，不会自动提交</div>
     </div>
   );
 };
 
-const PositionStep = ({ FormInfo, aiFillProps }) => {
+const OrgStep = ({ FormInfo, aiFillProps, context }) => {
+  const { Input } = FormInfo.fields;
+  return (
+    <AnalysisFormLayout context={context}>
+      <div className={style.body}>
+        <AiFillToolbar FormInfo={FormInfo} step="org" {...aiFillProps} />
+        <FormInfo column={1} title="组织/部门" list={[<Input name="departmentName" label="部门" disabled key="departmentName" />, <Input name="tenantOrgId" label="tenantOrgId" hidden key="tenantOrgId" />]} />
+      </div>
+    </AnalysisFormLayout>
+  );
+};
+
+const PositionStep = ({ FormInfo, aiFillProps, context }) => {
   const { List } = FormInfo;
   const { Input, TextArea, Select } = FormInfo.fields;
   return (
-    <div className={style.body}>
-      <AiFillToolbar FormInfo={FormInfo} step="position" {...aiFillProps} />
-      <FormInfo
-        column={1}
-        title="The Verdict"
-        list={[
-          <TextArea name="verdict.summary" label="洞察摘要" rule="REQ" block key="verdict.summary" />,
-          <TextArea name="verdict.today" label="今日结论" rule="REQ" block key="verdict.today" />,
-          <TextArea name="verdict.future" label="未来结论" rule="REQ" block key="verdict.future" />,
-          <Input name="verdict.futureLabel" label="未来标签" key="verdict.futureLabel" />
-        ]}
-      />
-      <List
-        name="skill"
-        title="岗位技能列表"
-        important
-        minLength={1}
-        addText="添加岗位技能"
-        itemTitle={({ index }) => `技能 ${index + 1}`}
-        list={[
-          <Input name="id" label="id" hidden />,
-          <Input name="name" label="技能名称" rule="REQ LEN-1-200" />,
-          <Select name="origin" label="来源" rule="REQ" options={ORIGIN_OPTIONS} />,
-          <Select name="importanceNow" label="当前重要性" rule="REQ" options={IMPORTANCE_OPTIONS} />,
-          <Select name="importanceYear" label="本年重要性" rule="REQ" options={IMPORTANCE_OPTIONS} />,
-          <Select name="change" label="变化" rule="REQ" options={CHANGE_OPTIONS} />,
-          <Select name="aiExposure" label="AI 暴露" options={LEVEL_OPTIONS} />,
-          <Select name="confidence" label="置信度" options={LEVEL_OPTIONS} />,
-          <TextArea name="jd.text" label="JD 说明" block rule="LEN-0-2000" />,
-          <Input name="jd.source" label="JD 来源" rule="LEN-0-200" />,
-          <TextArea name="shockReport.text" label="冲击说明" block rule="LEN-0-2000" />,
-          <Input name="shockReport.source" label="冲击来源" rule="LEN-0-200" />
-        ]}
-      />
-      <FormInfo column={1} title="工作内容 / 要求" list={[<TextArea name="description" label="工作内容" block key="description" />, <TextArea name="requirement" label="工作要求" block key="requirement" />]} />
-    </div>
+    <AnalysisFormLayout context={context}>
+      <div className={style.body}>
+        <AiFillToolbar FormInfo={FormInfo} step="position" {...aiFillProps} />
+        <FormInfo
+          column={1}
+          title="The Verdict"
+          list={[
+            <TextArea name="verdict.summary" label="洞察摘要" rule="REQ" block key="verdict.summary" />,
+            <TextArea name="verdict.today" label="今日结论" rule="REQ" block key="verdict.today" />,
+            <TextArea name="verdict.future" label="未来结论" rule="REQ" block key="verdict.future" />,
+            <Input name="verdict.futureLabel" label="未来标签" key="verdict.futureLabel" />
+          ]}
+        />
+        <List
+          name="skill"
+          title="岗位技能列表"
+          important
+          minLength={1}
+          addText="添加岗位技能"
+          itemTitle={({ index }) => `技能 ${index + 1}`}
+          list={[
+            <Input name="id" label="id" hidden />,
+            <Input name="name" label="技能名称" rule="REQ LEN-1-200" />,
+            <Select name="origin" label="来源" rule="REQ" options={ORIGIN_OPTIONS} />,
+            <Select name="importanceNow" label="当前重要性" rule="REQ" options={IMPORTANCE_OPTIONS} />,
+            <Select name="importanceYear" label="本年重要性" rule="REQ" options={IMPORTANCE_OPTIONS} />,
+            <Select name="change" label="变化" rule="REQ" options={CHANGE_OPTIONS} />,
+            <Select name="aiExposure" label="AI 暴露" options={LEVEL_OPTIONS} />,
+            <Select name="confidence" label="置信度" options={LEVEL_OPTIONS} />,
+            <TextArea name="jd.text" label="JD 说明" block rule="LEN-0-2000" />,
+            <Input name="jd.source" label="JD 来源" rule="LEN-0-200" />,
+            <TextArea name="shockReport.text" label="冲击说明" block rule="LEN-0-2000" />,
+            <Input name="shockReport.source" label="冲击来源" rule="LEN-0-200" />
+          ]}
+        />
+        <FormInfo column={1} title="工作内容 / 要求" list={[<TextArea name="description" label="工作内容" block key="description" />, <TextArea name="requirement" label="工作要求" block key="requirement" />]} />
+      </div>
+    </AnalysisFormLayout>
   );
 };
 
-const PersonStep = ({ FormInfo, employeeCount, aiFillProps }) => {
+const PersonStep = ({ FormInfo, employeeCount, aiFillProps, context }) => {
   const { List, TableList } = FormInfo;
   const { Input, TextArea, Select, InputNumber } = FormInfo.fields;
 
   if (!employeeCount) {
-    return <Typography.Text type="secondary">当前岗位暂无关联人员，完成时仅写回岗位分析结果。</Typography.Text>;
+    return (
+      <AnalysisFormLayout context={context}>
+        <Typography.Text type="secondary">当前岗位暂无关联人员，完成时仅写回岗位分析结果。</Typography.Text>
+      </AnalysisFormLayout>
+    );
   }
 
   return (
-    <div className={style.body}>
-      <AiFillToolbar FormInfo={FormInfo} step="person" {...aiFillProps} />
-      <List
-        name="employees"
-        title="个人人才分析"
-        important
-        minLength={employeeCount}
-        maxLength={employeeCount}
-        itemTitle={({ index }) => `人员 ${index + 1}`}
-        list={[
-          <Input name="employeeId" label="employeeId" hidden />,
-          <Input name="employeeName" label="姓名" disabled />,
-          <InputNumber name="readiness" label="就绪度 %" rule="REQ" min={0} max={100} />,
-          <TextArea name="summary" label="分析摘要" rule="REQ" block />,
-          <InputNumber name="metrics.criticalGaps" label="关键缺口" min={0} />,
-          <InputNumber name="metrics.atOrAbove" label="达标项" min={0} />,
-          <InputNumber name="metrics.monthsToClose" label="预计月数" min={0} />,
-          <List
-            name="skills"
-            title="技能对比"
-            block
-            addText="添加技能对比"
-            itemTitle={({ index }) => `技能 ${index + 1}`}
-            list={[
-              <Input name="id" label="id" hidden />,
-              <Input name="name" label="名称" rule="REQ LEN-1-200" />,
-              <InputNumber name="current" label="当前" min={0} max={5} />,
-              <InputNumber name="required" label="要求" min={0} max={5} />,
-              <Select name="status" label="状态" options={EMPLOYEE_SKILL_STATUS} />,
-              <Input name="evidence" label="证据" rule="LEN-0-100" />
-            ]}
-          />,
-          <List
-            name="priorityGaps"
-            title="优先差距"
-            block
-            addText="添加优先差距"
-            itemTitle={({ index }) => `差距 ${index + 1}`}
-            list={[
-              <InputNumber name="rank" label="排名" min={1} />,
-              <Input name="title" label="标题" rule="REQ LEN-1-200" />,
-              <TextArea name="description" label="描述" block />,
-              <InputNumber name="current" label="当前分" min={0} max={5} />,
-              <InputNumber name="required" label="要求分" min={0} max={5} />
-            ]}
-          />,
-          <Input name="developmentPlan.subtitle" label="发展计划副标题" rule="LEN-0-80" />,
-          <List
-            name="developmentPlan.horizons"
-            title="发展阶段"
-            block
-            addText="添加发展阶段"
-            itemTitle={({ index }) => `阶段 ${index + 1}`}
-            list={[
-              <Input name="key" label="key" hidden />,
-              <Input name="label" label="标签" rule="LEN-0-40" />,
-              <Input name="period" label="周期" rule="LEN-0-40" />,
-              <Select name="tone" label="色调" options={PLAN_TONES} />,
-              <Input name="title" label="阶段标题" rule="LEN-0-80" />,
-              <Input name="target" label="目标" rule="LEN-0-120" />,
-              <TableList name="items" title="阶段条目" block addText="添加条目" list={[<Input name="tag" label="Tag" rule="LEN-0-8" />, <Input name="title" label="标题" />, <Input name="meta" label="补充" rule="LEN-0-120" />]} />
-            ]}
-          />
-        ]}
-      />
-    </div>
+    <AnalysisFormLayout context={context}>
+      <div className={style.body}>
+        <AiFillToolbar FormInfo={FormInfo} step="person" {...aiFillProps} />
+        <List
+          name="employees"
+          title="个人人才分析"
+          important
+          minLength={employeeCount}
+          maxLength={employeeCount}
+          itemTitle={({ index }) => `人员 ${index + 1}`}
+          list={[
+            <Input name="employeeId" label="employeeId" hidden />,
+            <Input name="employeeName" label="姓名" disabled />,
+            <InputNumber name="readiness" label="就绪度 %" rule="REQ" min={0} max={100} />,
+            <TextArea name="summary" label="分析摘要" rule="REQ" block />,
+            <InputNumber name="metrics.criticalGaps" label="关键缺口" min={0} />,
+            <InputNumber name="metrics.atOrAbove" label="达标项" min={0} />,
+            <InputNumber name="metrics.monthsToClose" label="预计月数" min={0} />,
+            <List
+              name="skills"
+              title="技能对比"
+              block
+              addText="添加技能对比"
+              itemTitle={({ index }) => `技能 ${index + 1}`}
+              list={[
+                <Input name="id" label="id" hidden />,
+                <Input name="name" label="名称" rule="REQ LEN-1-200" />,
+                <InputNumber name="current" label="当前" min={0} max={5} />,
+                <InputNumber name="required" label="要求" min={0} max={5} />,
+                <Select name="status" label="状态" options={EMPLOYEE_SKILL_STATUS} />,
+                <Input name="evidence" label="证据" rule="LEN-0-100" />
+              ]}
+            />,
+            <List
+              name="priorityGaps"
+              title="优先差距"
+              block
+              addText="添加优先差距"
+              itemTitle={({ index }) => `差距 ${index + 1}`}
+              list={[
+                <InputNumber name="rank" label="排名" min={1} />,
+                <Input name="title" label="标题" rule="REQ LEN-1-200" />,
+                <TextArea name="description" label="描述" block />,
+                <InputNumber name="current" label="当前分" min={0} max={5} />,
+                <InputNumber name="required" label="要求分" min={0} max={5} />
+              ]}
+            />,
+            <Input name="developmentPlan.subtitle" label="发展计划副标题" rule="LEN-0-80" />,
+            <List
+              name="developmentPlan.horizons"
+              title="发展阶段"
+              block
+              addText="添加发展阶段"
+              itemTitle={({ index }) => `阶段 ${index + 1}`}
+              list={[
+                <Input name="key" label="key" hidden />,
+                <Input name="label" label="标签" rule="LEN-0-40" />,
+                <Input name="period" label="周期" rule="LEN-0-40" />,
+                <Select name="tone" label="色调" options={PLAN_TONES} />,
+                <Input name="title" label="阶段标题" rule="LEN-0-80" />,
+                <Input name="target" label="目标" rule="LEN-0-120" />,
+                <TableList name="items" title="阶段条目" block addText="添加条目" list={[<Input name="tag" label="Tag" rule="LEN-0-8" />, <Input name="title" label="标题" />, <Input name="meta" label="补充" rule="LEN-0-120" />]} />
+              ]}
+            />
+          ]}
+        />
+      </div>
+    </AnalysisFormLayout>
   );
 };
 
@@ -468,6 +481,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
       formStepModal({
         title: '完成 AI 岗位分析',
         size: 'large',
+        disabledScroller: true,
         completeText: '完成分析',
         nextText: '下一步',
         cancelText: '取消',
@@ -478,7 +492,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
               data: initial.org,
               onSubmit: () => {}
             },
-            children: <OrgStep FormInfo={FormInfo} aiFillProps={aiFillProps} />
+            children: <OrgStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} />
           },
           {
             title: '岗位',
@@ -491,7 +505,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
                 }
               }
             },
-            children: <PositionStep FormInfo={FormInfo} aiFillProps={aiFillProps} />
+            children: <PositionStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} />
           },
           {
             title: '个人',
@@ -534,7 +548,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
                 return true;
               }
             },
-            children: <PersonStep FormInfo={FormInfo} employeeCount={employeeCount} aiFillProps={aiFillProps} />
+            children: <PersonStep FormInfo={FormInfo} employeeCount={employeeCount} aiFillProps={aiFillProps} context={context} />
           }
         ]
       });

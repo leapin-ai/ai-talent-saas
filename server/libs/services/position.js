@@ -748,6 +748,30 @@ module.exports = fp(async (fastify, options) => {
     });
     const analysisMap = new Map(analyses.map(item => [String(item.employeeId), item]));
 
+    let company = null;
+    try {
+      const companyRow = await fastify.tenant.services.company.detail({ tenantId });
+      if (companyRow) {
+        company = {
+          id: companyRow.id,
+          name: companyRow.name || '',
+          fullName: companyRow.fullName || '',
+          logo: companyRow.logo || null,
+          industry: companyRow.industry || '',
+          scale: companyRow.scale || '',
+          address: companyRow.address || '',
+          phone: companyRow.phone || '',
+          email: companyRow.email || '',
+          website: companyRow.website || '',
+          foundedDate: companyRow.foundedDate || null,
+          description: companyRow.description || '',
+          companyTags: companyRow.companyTags || []
+        };
+      }
+    } catch (e) {
+      company = null;
+    }
+
     return {
       task: {
         id: task.id,
@@ -755,6 +779,7 @@ module.exports = fp(async (fastify, options) => {
         status: task.status,
         input: task.input
       },
+      company,
       position: {
         id: position.id,
         name: position.name,
@@ -762,6 +787,12 @@ module.exports = fp(async (fastify, options) => {
         requirement: position.requirement || '',
         tenantOrgId: position.tenantOrgId,
         language: position.language,
+        locationType: position.locationType || null,
+        location: position.location || {},
+        capacity: position.capacity || '',
+        salary: position.salary || {},
+        status: position.status || null,
+        changeMagnitude: position.changeMagnitude || null,
         skill: position.skill || [],
         verdict: position.verdict || {},
         analysisStatus: position.analysisStatus,
@@ -775,6 +806,15 @@ module.exports = fp(async (fastify, options) => {
           name: item.name || item.nameEn || '',
           nameEn: item.nameEn || '',
           avatar: item.avatar || null,
+          gender: item.gender || null,
+          email: item.email || '',
+          personalEmail: item.personalEmail || '',
+          phone: item.phone || '',
+          city: item.city || '',
+          address: item.address || '',
+          status: item.status || null,
+          hireDate: item.hireDate || null,
+          tenantOrgIds: item.tenantOrgIds || [],
           analysis: analysis
             ? {
                 readiness: analysis.readiness,
