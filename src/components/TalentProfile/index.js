@@ -3,6 +3,7 @@ import Fetch from '@kne/react-fetch';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Flex, Typography } from 'antd';
+import classnames from 'classnames';
 import { FaLightbulb } from 'react-icons/fa';
 import dayjs from 'dayjs';
 import withLocale from './withLocale';
@@ -33,6 +34,7 @@ const TalentProfile = createWithRemoteLoader({
       id: idProp,
       self,
       readOnly,
+      embed,
       empty,
       onData,
       /** 外部传入则不再请求 detail，用于完善档案生成任务等草稿编辑场景 */
@@ -320,7 +322,7 @@ const TalentProfile = createWithRemoteLoader({
           navigate(`${baseUrl}/position/${positionId}`);
         };
         return (
-          <Flex className={style['talent-profile']} vertical gap={16}>
+          <Flex className={classnames(style['talent-profile'], embed && style['talent-profile-embed'])} vertical gap={embed ? 12 : 16}>
             <DataNotifier data={data} onData={onData} />
             <HeaderCard
               apis={apis}

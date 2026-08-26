@@ -1,15 +1,309 @@
+.split-layout {
+  // antd Splitter 默认 height:100%，必须强制固定高度，否则被内容撑开无法滚动
+  height: min(70vh, 720px) !important;
+  max-height: min(70vh, 720px) !important;
+  width: 100%;
+  min-width: min(1040px, 88vw);
+  overflow: hidden !important;
+}
+
+.split-left {
+  position: relative !important;
+  overflow: hidden !important;
+  min-width: 0;
+  min-height: 0;
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+}
+
+.split-right {
+  position: relative !important;
+  overflow: hidden !important;
+  min-width: 0;
+  min-height: 0;
+}
+
+.form-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 0 4px 8px 12px;
+}
+
+.side-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.side-tabs {
+  flex: 1 1 0%;
+  height: 100%;
+  min-height: 0;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden;
+
+  :global {
+    .ant-tabs-nav {
+      margin-bottom: 8px;
+      flex: none !important;
+      flex-shrink: 0;
+    }
+
+    // antd 6：内容区是 body-holder / body，不是旧版 content-holder
+    .ant-tabs-body-holder,
+    .ant-tabs-content-holder {
+      flex: 1 1 0% !important;
+      min-height: 0 !important;
+      height: 0 !important; // 配合 flex:1 强制占满剩余高度，才能出现滚动条
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+    }
+
+    .ant-tabs-body,
+    .ant-tabs-content {
+      height: auto !important;
+    }
+
+    .ant-tabs-tabpane {
+      height: auto !important;
+    }
+
+    .ant-tabs-tabpane-active {
+      display: block !important;
+      height: auto !important;
+    }
+  }
+}
+
+.side-tab-body {
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.side-tab-body-employee {
+  padding-right: 0;
+}
+
+.info-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.info-card-head {
+  margin-bottom: 10px;
+}
+
+.info-card-body {
+  min-width: 0;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.meta-label {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.meta-value {
+  font-size: 13px;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.info-paragraph {
+  margin-bottom: 0 !important;
+  color: #334155;
+  white-space: pre-wrap;
+}
+
+.tag-row {
+  margin-top: 10px;
+}
+
+.employee-profile-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  min-height: 0;
+}
+
+.employee-switcher {
+  position: sticky;
+  top: 0;
+  width: 148px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: min(66vh, 680px);
+  border-right: 1px solid #e2e8f0;
+  padding-right: 8px;
+  background: #f8fafc;
+  z-index: 1;
+}
+
+.employee-switcher-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  padding: 4px 4px 8px;
+  flex-shrink: 0;
+}
+
+.employee-switcher-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 8px;
+}
+
+.employee-switch-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--ant-color-primary, var(--primary-color)) 35%, transparent);
+  }
+}
+
+.employee-switch-item-active {
+  border-color: var(--ant-color-primary, var(--primary-color));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ant-color-primary, var(--primary-color)) 25%, transparent);
+  background: var(--ant-color-primary-bg, color-mix(in srgb, var(--primary-color) 12%, #fff));
+}
+
+.employee-switch-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.employee-switch-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.employee-switch-sub {
+  display: block;
+  font-size: 11px;
+}
+
+.employee-profile-main {
+  flex: 1;
+  min-width: 0;
+  padding: 0 4px 8px 10px;
+  background: #fff;
+}
+
+.tenant-company-embed {
+  min-width: 0;
+}
+
 .body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-height: min(70vh, 720px);
-  overflow: auto;
-  padding-right: 4px;
 }
 
 .ai-fill-bar {
-  padding: 10px 12px;
-  border: 1px dashed #c7d2fe;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--ant-color-primary, var(--primary-color)) 18%, #e2e8f0);
   border-radius: 10px;
-  background: #f8fafc;
+  background: color-mix(in srgb, var(--ant-color-primary-bg, var(--primary-color-06, #f8fafc)) 70%, #fff);
+}
+
+.ai-fill-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ai-fill-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-height: 32px;
+  border: none;
+  background: transparent;
+  overflow: visible;
+}
+
+.ai-fill-label {
+  flex-shrink: 0;
+  padding: 0;
+  font-size: 13px;
+  line-height: 32px;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  white-space: nowrap;
+}
+
+.ai-fill-select {
+  width: 112px !important;
+  min-width: 112px;
+
+  :global(.ant-select-selector) {
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: 6px !important;
+    background: transparent !important;
+    height: 32px !important;
+    padding-inline: 4px 8px !important;
+  }
+
+  &:hover :global(.ant-select-selector),
+  &:global(.ant-select-focused) :global(.ant-select-selector) {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  :global(.ant-select-selection-item) {
+    line-height: 30px !important;
+  }
+}
+
+.ai-fill-action {
+  flex-shrink: 0;
+}
+
+.ai-fill-hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #94a3b8;
 }
