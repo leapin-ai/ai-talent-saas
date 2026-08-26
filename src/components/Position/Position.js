@@ -1,21 +1,25 @@
+import { useCallback, useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { Modal, message } from 'antd';
 import withLocale from './withLocale';
 import getColumns from './getColumns';
 import BaseFormInner from './PositionForm';
+import InsightBanner from './InsightBanner';
 
 const mapFilterValue = (value, getFilterValue) => ({
   filter: getFilterValue(value)
 });
 
 const Position = createWithRemoteLoader({
-  modules: ['components-admin:BizUnit', 'components-core:Global@usePreset']
+  modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter']
 })(
-  withLocale(({ remoteModules, apis, onDetail, onCreate, onEdit, ...props }) => {
-    const [BizUnit, usePreset] = remoteModules;
+  withLocale(({ remoteModules, apis, onDetail, onCreate, onEdit, withInsightBanner, children, ...props }) => {
+    const [BizUnit, usePreset, Filter] = remoteModules;
+    const { SuperSelectFilterItem } = Filter.fields;
     const { formatMessage } = useIntl();
     const { ajax } = usePreset();
+    const [filterValue, setFilterValue] = useState([]);
 
     const handleSetStatus = (id, status, onSuccess) => {
       const isPublish = status === 'published';
@@ -72,11 +76,26 @@ const Position = createWithRemoteLoader({
       return actions;
     };
 
+    const applyHighChangeFilter = useCallback(() => {
+      setFilterValue([
+        {
+          name: 'changeMagnitude',
+          label: formatMessage({ id: 'position.changeMagnitude' }),
+          value: {
+            label: formatMessage({ id: 'position.changeMagnitude.high' }),
+            value: 'high'
+          }
+        }
+      ]);
+    }, [formatMessage]);
+
     // 列表侧禁用弹框创建/编辑；表单走独立页面
     const listApis = Object.assign({}, apis, {
       create: null,
       save: null
     });
+
+    const insightBanner = withInsightBanner ? <InsightBanner apis={apis} onReview={applyHighChangeFilter} /> : null;
 
     return (
       <BizUnit
@@ -92,6 +111,25 @@ const Position = createWithRemoteLoader({
         getFormInner={({ apis: formApis }) => <BaseFormInner apis={formApis} />}
         getActionList={getActionList}
         name="position"
+        filter={{
+          value: filterValue,
+          onChange: setFilterValue,
+          list: [
+            {
+              type: SuperSelectFilterItem,
+              props: {
+                name: 'changeMagnitude',
+                label: formatMessage({ id: 'position.changeMagnitude' }),
+                single: true,
+                options: [
+                  { label: formatMessage({ id: 'position.changeMagnitude.low' }), value: 'low' },
+                  { label: formatMessage({ id: 'position.changeMagnitude.medium' }), value: 'medium' },
+                  { label: formatMessage({ id: 'position.changeMagnitude.high' }), value: 'high' }
+                ]
+              }
+            }
+          ]
+        }}
         options={{
           bizName: formatMessage({ id: 'position.bizName' }),
           keywordFilterLabel: formatMessage({ id: 'position.keywordFilterLabel' }),
@@ -119,7 +157,9 @@ const Position = createWithRemoteLoader({
             });
           }
         }}
-      />
+      >
+        {typeof children === 'function' ? renderProps => children({ ...renderProps, insightBanner }) : children}
+      </BizUnit>
     );
   })
 );

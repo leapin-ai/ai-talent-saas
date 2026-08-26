@@ -1,3 +1,6 @@
+import React from 'react';
+import ChangeMagnitude from './ChangeMagnitude';
+
 const getColumns = ({ onDetail, formatMessage }) => {
   return [
     {
@@ -14,6 +17,12 @@ const getColumns = ({ onDetail, formatMessage }) => {
         const org = data.orgEnums?.find(target => target.value === item.tenantOrgId);
         return org?.description || '-';
       }
+    },
+    {
+      name: 'changeMagnitude',
+      title: formatMessage({ id: 'position.changeMagnitude' }),
+      type: 'other',
+      getValueOf: item => <ChangeMagnitude value={item.changeMagnitude} />
     },
     {
       name: 'employeeCount',
@@ -66,4 +75,4 @@ const getColumns = ({ onDetail, formatMessage }) => {
   ];
 };
 
-module.exports = getColumns;
+export default getColumns;

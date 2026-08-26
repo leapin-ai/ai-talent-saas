@@ -185,10 +185,18 @@
   :global(.ant-table-tbody > tr) {
     cursor: pointer;
   }
-}
 
-.row-active {
-  background: #f8fafc !important;
+  :global(.ant-table-tbody > tr:hover:not([data-selected='true']) > td) {
+    background: #f8fafc !important;
+  }
+
+  :global(.ant-table-tbody > tr[data-selected='true'] > td) {
+    background: color-mix(in srgb, var(--primary-color) 8%, #fff) !important;
+  }
+
+  :global(.ant-table-tbody > tr[data-selected='true'] > td:first-child) {
+    box-shadow: inset 3px 0 0 var(--primary-color);
+  }
 }
 
 .importance {
@@ -196,14 +204,16 @@
   align-items: center;
   gap: 9px;
   width: 100%;
+  min-width: 0;
 }
 
 .importance-track {
   position: relative;
-  flex: 1;
+  flex: 1 1 170px;
   height: 6px;
-  min-width: 0;
-  border-radius: 99px;
+  min-width: 120px;
+  max-width: 170px;
+  border-radius: 999px;
   background: #e2e8f0;
   overflow: hidden;
 }
@@ -212,7 +222,7 @@
   position: absolute;
   top: 0;
   height: 6px;
-  border-radius: 99px;
+  border-radius: 999px;
 }
 
 .importance-fill-up {
@@ -220,7 +230,7 @@
 }
 
 .importance-fill-down {
-  background: #cc4b4b;
+  background: #f87171;
 }
 
 .importance-label {

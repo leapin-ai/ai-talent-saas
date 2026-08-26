@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Flex, Tabs } from 'antd';
+import { App, Button, Flex, Tabs } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
@@ -8,15 +8,19 @@ import { useParams } from 'react-router-dom';
 import SkillList from './SkillList';
 import SkillOverview from './SkillList/SkillOverview';
 import AnalyzeTalent from './AnalyzeTalent';
+import AiAnalysis from './AiAnalysis';
 
 const Detail = createWithRemoteLoader({
-  modules: ['components-core:InfoPage', 'components-core:InfoPage@CentralContent', 'components-core:Layout@Page', 'components-core:Layout@PageHeader', 'components-thirdparty:CKEditor.Content']
+  modules: ['components-core:InfoPage', 'components-core:InfoPage@CentralContent', 'components-core:Layout@Page', 'components-core:Layout@PageHeader', 'components-thirdparty:CKEditor.Content', 'components-core:Global@usePreset']
 })(
   withLocale(({ remoteModules, baseUrl = '', apis, children }) => {
-    const [InfoPage, CentralContent, Page, PageHeader, EditorContent] = remoteModules;
+    const [InfoPage, CentralContent, Page, PageHeader, EditorContent, usePreset] = remoteModules;
     const { formatMessage } = useIntl();
+    const { message } = App.useApp();
+    const { ajax } = usePreset();
     const { id } = useParams();
     const [activeTab, setActiveTab] = useState('role');
+    const [starting, setStarting] = useState(false);
 
     return (
       <Fetch
@@ -26,6 +30,36 @@ const Detail = createWithRemoteLoader({
         render={({ data, reload }) => {
           const department = (data.orgEnums || []).find(target => target.value === data.tenantOrgId)?.description || '-';
           const dataSource = Object.assign({}, data, { department });
+          const isGenerating = data.analysisStatus === 'generating';
+
+          const startAnalysis = async () => {
+            if (!apis?.startAnalysis || starting) {
+              return;
+            }
+            setStarting(true);
+            try {
+              const { data: resData } = await ajax(
+                Object.assign({}, apis.startAnalysis, {
+                  data: { id: data.id }
+                })
+              );
+              if (resData.code !== 0) {
+                throw new Error(resData.msg || formatMessage({ id: 'position.aiAnalysisStartFail' }));
+              }
+              message.success(formatMessage({ id: 'position.aiAnalysisStartSuccess' }));
+              reload();
+            } catch (e) {
+              message.error(e.message || formatMessage({ id: 'position.aiAnalysisStartFail' }));
+            } finally {
+              setStarting(false);
+            }
+          };
+
+          const extra = !isGenerating ? (
+            <Button type="primary" loading={starting} onClick={startAnalysis}>
+              {formatMessage({ id: 'position.aiAnalysisAction' })}
+            </Button>
+          ) : null;
 
           const positionInfoCard = (
             <InfoPage>
@@ -82,7 +116,9 @@ const Detail = createWithRemoteLoader({
             </InfoPage>
           );
 
-          const content = (
+          const content = isGenerating ? (
+            <AiAnalysis positionName={data.name} progress={data.analysisProgress} />
+          ) : (
             <Tabs
               activeKey={activeTab}
               onChange={setActiveTab}
@@ -116,12 +152,14 @@ const Detail = createWithRemoteLoader({
           if (typeof children === 'function') {
             return children({
               title,
+              extra,
+              noPadding: isGenerating,
               children: content
             });
           }
           return (
-            <Page headerFixed={false} header={<PageHeader title={title} />}>
-              {content}
+            <Page headerFixed={false} header={<PageHeader title={title} extra={extra} />} noPadding={isGenerating}>
+              {isGenerating ? ({ className, render }) => render({ className, children: content }) : content}
             </Page>
           );
         }}

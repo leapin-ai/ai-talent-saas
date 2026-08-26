@@ -1,6 +1,5 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Button, Flex } from 'antd';
-import { MdAdd } from 'react-icons/md';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Flex } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import classnames from 'classnames';
@@ -8,84 +7,64 @@ import withLocale from '../../withLocale';
 import ImportanceBar from './ImportanceBar';
 import ChangeTag from './ChangeTag';
 import SkillPreview from './SkillPreview';
-import SkillFormInner from './SkillFormInner';
-import { CHANGE_META, CHANGE_VALUES, countByChange, createEmptySkill, createSkillId, normalizeSkillItem, normalizeSkills, ORIGIN_META } from './skillModel';
+import { CHANGE_META, CHANGE_VALUES, countByChange, normalizeSkills, ORIGIN_META } from './skillModel';
 import style from './style.module.scss';
 
 const SkillList = createWithRemoteLoader({
-  modules: ['components-core:FormInfo@useFormModal', 'components-core:Global@usePreset', 'components-core:Table@TablePage']
+  modules: ['components-core:Table']
 })(
-  withLocale(({ remoteModules, positionId, skill, apis, reload }) => {
-    const [useFormModal, usePreset, TablePage] = remoteModules;
+  withLocale(({ remoteModules, skill }) => {
+    const [Table] = remoteModules;
     const { formatMessage } = useIntl();
-    const formModal = useFormModal();
-    const { ajax } = usePreset();
-    const tableRef = useRef(null);
     const [filter, setFilter] = useState('all');
-    const [hoveredId, setHoveredId] = useState(null);
+    const [selectedId, setSelectedId] = useState(null);
+    const tableWrapRef = useRef(null);
 
     const skills = useMemo(() => normalizeSkills(skill), [skill]);
     const counts = useMemo(() => countByChange(skills), [skills]);
     const currentYear = new Date().getFullYear();
 
-    const hoveredSkill = useMemo(() => {
-      if (!hoveredId) {
-        return null;
+    const displaySkills = useMemo(() => {
+      if (filter === 'all') {
+        return skills;
       }
-      return skills.find(item => item.id === hoveredId) || null;
-    }, [hoveredId, skills]);
+      return skills.filter(item => item.change === filter);
+    }, [skills, filter]);
 
-    const refresh = async () => {
-      reload && (await reload());
-      tableRef.current?.reload?.();
-    };
-
-    const saveSkills = async nextList => {
-      const normalized = normalizeSkills(nextList);
-      const { data: resData } = await ajax(
-        Object.assign({}, apis.save, {
-          data: { id: positionId, skill: normalized }
-        })
-      );
-      if (resData?.code !== 0) {
-        throw new Error(resData?.msg || formatMessage({ id: 'position.skillSaveFailed' }));
+    useEffect(() => {
+      if (displaySkills.length === 0) {
+        setSelectedId(null);
+        return;
       }
-      await refresh();
-      return true;
-    };
+      setSelectedId(prev => (prev && displaySkills.some(item => item.id === prev) ? prev : displaySkills[0].id));
+    }, [displaySkills]);
 
-    const openForm = (record = null) => {
-      const isEdit = !!record;
-      const base = isEdit ? Object.assign({}, createEmptySkill(), record) : createEmptySkill();
-      const initial = Object.assign({}, base, {
-        jdText: base.jd?.text || '',
-        jdSource: base.jd?.source || '',
-        shockText: base.shockReport?.text || '',
-        shockSource: base.shockReport?.source || ''
-      });
-      formModal({
-        title: formatMessage({ id: isEdit ? 'position.skillEdit' : 'position.skillAdd' }),
-        size: 'small',
-        formProps: {
-          data: initial,
-          onSubmit: async formData => {
-            const nextItem = normalizeSkillItem(
-              Object.assign({}, formData, {
-                id: isEdit ? record.id : formData.id || createSkillId(),
-                jd: { text: formData.jdText || '', source: formData.jdSource || '' },
-                shockReport: { text: formData.shockText || '', source: formData.shockSource || '' }
-              })
-            );
-            if (!nextItem) {
-              return false;
-            }
-            const nextList = isEdit ? skills.map(item => (item.id === record.id ? nextItem : item)) : skills.concat(nextItem);
-            await saveSkills(nextList);
-          }
-        },
-        children: <SkillFormInner />
-      });
-    };
+    const selectedSkill = useMemo(() => {
+      if (!selectedId) {
+        return displaySkills[0] || null;
+      }
+      return displaySkills.find(item => item.id === selectedId) || displaySkills[0] || null;
+    }, [selectedId, displaySkills]);
+
+    useEffect(() => {
+      const root = tableWrapRef.current;
+      if (!root) {
+        return undefined;
+      }
+
+      const syncSelectedRows = () => {
+        const rows = root.querySelectorAll('.ant-table-tbody > tr[data-row-key]');
+        rows.forEach(row => {
+          const active = !!(selectedSkill?.id && row.getAttribute('data-row-key') === selectedSkill.id);
+          row.setAttribute('data-selected', active ? 'true' : 'false');
+        });
+      };
+
+      syncSelectedRows();
+      const observer = new MutationObserver(syncSelectedRows);
+      observer.observe(root, { childList: true, subtree: true });
+      return () => observer.disconnect();
+    }, [selectedSkill?.id, displaySkills]);
 
     const filterItems = [
       { key: 'all', label: formatMessage({ id: 'position.skillFilterAll' }), count: skills.length },
@@ -121,32 +100,22 @@ const SkillList = createWithRemoteLoader({
         title: formatMessage({ id: 'position.skillChange' }),
         type: 'other',
         valueOf: item => <ChangeTag change={item.change} />
-      },
-      {
-        name: 'options',
-        title: formatMessage({ id: 'position.skillActions' }),
-        type: 'options',
-        fixed: 'right',
-        valueOf: item => [
-          {
-            children: formatMessage({ id: 'action.edit' }),
-            onClick: () => openForm(item)
-          },
-          {
-            children: formatMessage({ id: 'action.delete' }),
-            message: formatMessage({ id: 'position.skillDeleteConfirm' }),
-            isDelete: true,
-            onClick: async () => {
-              const nextList = skills.filter(target => target.id !== item.id);
-              await saveSkills(nextList);
-              if (hoveredId === item.id) {
-                setHoveredId(null);
-              }
-            }
-          }
-        ]
       }
     ];
+
+    const selectSkillById = id => {
+      if (id && id !== selectedId) {
+        setSelectedId(id);
+      }
+    };
+
+    const onTableMouseOver = e => {
+      const tr = e.target.closest?.('.ant-table-tbody > tr[data-row-key]');
+      if (!tr || !e.currentTarget.contains(tr)) {
+        return;
+      }
+      selectSkillById(tr.getAttribute('data-row-key'));
+    };
 
     return (
       <div className={style.root}>
@@ -176,40 +145,23 @@ const SkillList = createWithRemoteLoader({
               );
             })}
           </div>
-          <Button type="primary" icon={<MdAdd />} onClick={() => openForm()}>
-            {formatMessage({ id: 'position.skillAdd' })}
-          </Button>
         </Flex>
-        <div className={style.body} onMouseLeave={() => setHoveredId(null)}>
-          <div className={style.table}>
-            <TablePage
-              {...Object.assign({}, apis.detail, {
-                params: { id: positionId }
-              })}
-              key={filter}
-              ref={tableRef}
-              name="position-skill-list"
-              rowKey="id"
-              sticky={false}
-              pagination={{ open: false }}
+        <div className={style.body}>
+          <div ref={tableWrapRef} className={style.table} onMouseOver={onTableMouseOver}>
+            <Table
+              dataSource={displaySkills}
               columns={columns}
-              dataFormat={data => {
-                let list = normalizeSkills(data?.skill);
-                if (filter !== 'all') {
-                  list = list.filter(item => item.change === filter);
-                }
-                return {
-                  list,
-                  total: list.length
-                };
-              }}
+              rowKey="id"
+              name="position-skill-list"
+              sticky={false}
+              pagination={false}
+              controllerOpen={false}
               onRow={record => ({
-                onMouseEnter: () => setHoveredId(record.id),
-                className: hoveredSkill?.id === record.id ? style['row-active'] : undefined
+                onMouseEnter: () => selectSkillById(record.id)
               })}
             />
           </div>
-          {hoveredSkill ? <SkillPreview skill={hoveredSkill} /> : null}
+          {selectedSkill ? <SkillPreview skill={selectedSkill} /> : null}
         </div>
       </div>
     );

@@ -27,7 +27,8 @@ const enUS = {
   'enumLoader.recruitCorrespondence': 'Correspondence',
   'enumLoader.taskTypeSyncOrg': 'Org Sync',
   'enumLoader.taskTypeParseResume': 'Resume Parsing',
-  'enumLoader.taskTypeAssessmentProfileReview': 'Profile Generate Review'
+  'enumLoader.taskTypeAssessmentProfileReview': 'Profile Generate Review',
+  'enumLoader.taskTypePositionAiAnalysis': 'AI Position Analysis'
 };
 
 export default enUS;

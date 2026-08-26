@@ -159,6 +159,19 @@ module.exports = fp(async (fastify, options) => {
   );
 
   fastify.get(
+    `${options.prefix}/tenant/position/insight`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '岗位列表洞察（高变动幅度等）'
+      }
+    },
+    async request => {
+      return services.position.insight(request.tenantUserInfo);
+    }
+  );
+
+  fastify.get(
     `${options.prefix}/tenant/position/detail`,
     {
       onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
@@ -432,6 +445,123 @@ module.exports = fp(async (fastify, options) => {
     },
     async request => {
       return services.position.skillAnalysisSave(request.tenantUserInfo, request.body);
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/position/start-analysis`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '启动 AI 岗位分析（创建手动任务）',
+        body: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => {
+      return services.position.startAnalysis(request.tenantUserInfo, request.body);
+    }
+  );
+
+  fastify.get(
+    `${options.prefix}/tenant/position/analysis-task-context`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: 'AI岗位分析任务上下文',
+        query: {
+          type: 'object',
+          properties: {
+            taskId: { type: 'string' }
+          },
+          required: ['taskId']
+        }
+      }
+    },
+    async request => {
+      return services.position.getAnalysisTaskContext(request.userInfo, request.query);
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/position/complete-analysis`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: '完成 AI 岗位分析任务',
+        body: {
+          type: 'object',
+          properties: {
+            taskId: { type: 'string' },
+            org: {
+              type: 'object',
+              default: {},
+              properties: {
+                tenantOrgId: { type: ['string', 'null'] }
+              }
+            },
+            position: {
+              type: 'object',
+              default: {},
+              properties: {
+                description: { type: 'string' },
+                requirement: { type: 'string' },
+                skill: positionSkillSchema,
+                verdict: positionVerdictSchema
+              }
+            },
+            employees: {
+              type: 'array',
+              default: [],
+              items: {
+                type: 'object',
+                properties: {
+                  employeeId: { type: 'string' },
+                  readiness: { type: ['number', 'null'] },
+                  summary: { type: 'string' },
+                  metrics: { type: 'object' },
+                  skills: { type: 'array' },
+                  priorityGaps: { type: 'array' },
+                  developmentPlan: { type: ['object', 'null'] }
+                },
+                required: ['employeeId']
+              }
+            }
+          },
+          required: ['taskId']
+        }
+      }
+    },
+    async request => {
+      return services.position.completeAnalysis(request.userInfo, request.body);
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/position/analysis-ai-fill`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: 'AI 填充岗位分析完成表单（按步骤）',
+        body: {
+          type: 'object',
+          properties: {
+            taskId: { type: 'string' },
+            step: { type: 'string', enum: ['org', 'position', 'person'] },
+            language: { type: 'string', enum: ['zh-CN', 'en-US'] },
+            draft: { type: 'object', default: {} }
+          },
+          required: ['taskId', 'step']
+        }
+      }
+    },
+    async request => {
+      return services.position.aiFillAnalysis(request.userInfo, request.body);
     }
   );
 });
