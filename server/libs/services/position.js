@@ -1,6 +1,6 @@
 const fp = require('fastify-plugin');
 const omit = require('lodash/omit');
-const { requestPositionAnalysisFill, repairDevelopmentPlanItems, fillPersonDevelopmentPlanByHorizons } = require('../utils/llm-runner');
+const { requestPositionAnalysisFill, repairDevelopmentPlanItems } = require('../utils/llm-runner');
 
 const ANALYSIS_TASK_TYPE = 'position-ai-analysis';
 const ANALYSIS_PROGRESS_START = 18;
@@ -459,14 +459,66 @@ module.exports = fp(async (fastify, options) => {
       }
       return Math.min(5, Math.max(1, Math.round(num)));
     };
-    const normalizeTextBlock = value => {
-      if (!value || typeof value !== 'object') {
-        return { text: '', source: '' };
+    const normalizeContentItem = raw => {
+      if (!raw || typeof raw !== 'object') {
+        return null;
+      }
+      const title = typeof raw.title === 'string' ? raw.title.trim() : '';
+      const description =
+        typeof raw.description === 'string' ? raw.description.trim() : typeof raw.desc === 'string' ? raw.desc.trim() : typeof raw.text === 'string' ? raw.text.trim() : typeof raw.content === 'string' ? raw.content.trim() : '';
+      const source = typeof raw.source === 'string' ? raw.source.trim() : '';
+      if (!title && !description && !source) {
+        return null;
       }
       return {
-        text: typeof value.text === 'string' ? value.text : '',
-        source: typeof value.source === 'string' ? value.source : ''
+        title: title.slice(0, 200),
+        description: description.slice(0, 2000),
+        source: source.slice(0, 200)
       };
+    };
+    const normalizeContentItems = value => {
+      if (typeof value === 'string') {
+        const text = value.trim();
+        return text ? [{ title: '', description: text.slice(0, 2000), source: '' }] : [];
+      }
+      if (Array.isArray(value)) {
+        return value.map(normalizeContentItem).filter(Boolean);
+      }
+      if (value && typeof value === 'object') {
+        if (Array.isArray(value.items)) {
+          return normalizeContentItems(value.items);
+        }
+        if (typeof value.text === 'string' || typeof value.desc === 'string' || typeof value.content === 'string' || typeof value.source === 'string' || typeof value.title === 'string' || typeof value.description === 'string') {
+          const legacy = normalizeContentItem(value);
+          return legacy ? [legacy] : [];
+        }
+      }
+      return [];
+    };
+    const normalizeLegacyContentBlock = (value, defaultTitle) => {
+      const items = normalizeContentItems(value);
+      if (!items.length && typeof value === 'string' && value.trim()) {
+        return [{ title: defaultTitle, description: value.trim().slice(0, 2000), source: '' }];
+      }
+      return items.map(item => ({
+        ...item,
+        title: item.title || defaultTitle
+      }));
+    };
+    const normalizeSkillContentItems = raw => {
+      if (!raw || typeof raw !== 'object') {
+        return [];
+      }
+      const merged = [...normalizeContentItems(raw.contentItems), ...normalizeLegacyContentBlock(raw.jd, '职位描述 / 胜任力'), ...normalizeLegacyContentBlock(raw.shockReport, '冲击报告')];
+      const seen = new Set();
+      return merged.filter(item => {
+        const key = `${item.title}\0${item.description}\0${item.source}`;
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
     };
     const changeFromRaw = changeValues.includes(raw.change) ? raw.change : null;
     const importanceNow = clampImportance(raw.importanceNow);
@@ -493,8 +545,7 @@ module.exports = fp(async (fastify, options) => {
       change,
       aiExposure: levelValues.includes(raw.aiExposure) ? raw.aiExposure : 'medium',
       confidence: levelValues.includes(raw.confidence) ? raw.confidence : 'medium',
-      jd: normalizeTextBlock(raw.jd),
-      shockReport: normalizeTextBlock(raw.shockReport)
+      contentItems: normalizeSkillContentItems(raw)
     };
   };
 
@@ -928,6 +979,179 @@ module.exports = fp(async (fastify, options) => {
     return detail(auth, { id: positionId });
   };
 
+  const buildPositionOverviewSchemaHint = () => ({
+    verdict: { summary: 'string', today: 'string', future: 'string', futureLabel: 'string' },
+    description: 'string(html ok)',
+    requirement: 'string(html ok)',
+    skill: [
+      {
+        id: 'string',
+        name: 'string',
+        origin: 'existing|new'
+      }
+    ] // REQUIRED: skill list only (at least 3 items); no detail fields here
+  });
+
+  const buildPositionSkillDetailSchemaHint = () => ({
+    skill: [
+      {
+        id: 'string(keep input)',
+        name: 'string(keep input)',
+        origin: 'existing|new',
+        importanceNow: '1-5',
+        importanceYear: '1-5',
+        change: 'must_build|ai_emerging|new|enhanced|stable|declining',
+        aiExposure: 'high|medium|low',
+        confidence: 'high|medium|low',
+        contentItems: [
+          { title: 'string(custom basis title for THIS skill)', description: 'string', source: 'string' },
+          { title: 'string(another basis title)', description: 'string', source: 'string' }
+        ] // REQUIRED: >=2 依据 for THIS skill only; free-form title/description/source; no jd/shockReport
+      }
+    ] // REQUIRED: exactly 1 skill; never return other skills
+  });
+
+  /** 从单次 position-skill 响应中抽出目标技能（兼容 skill 为对象 / 根对象 / 误返回多条） */
+  const pickPositionSkillDetailFromRaw = (raw, skillStub) => {
+    const candidates = [];
+    const pushCandidate = value => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return;
+      }
+      candidates.push(value);
+    };
+
+    if (Array.isArray(raw?.skill)) {
+      raw.skill.forEach(pushCandidate);
+    } else {
+      pushCandidate(raw?.skill);
+    }
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      if (raw.name || raw.contentItems || raw.importanceNow != null || raw.change) {
+        pushCandidate(raw);
+      }
+    }
+
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    const stubId = skillStub?.id != null ? String(skillStub.id) : '';
+    const stubName = typeof skillStub?.name === 'string' ? skillStub.name.trim() : '';
+    const matchesTarget = item => {
+      if (stubId && item.id != null && String(item.id) === stubId) {
+        return true;
+      }
+      if (stubName && typeof item.name === 'string' && item.name.trim() === stubName) {
+        return true;
+      }
+      return false;
+    };
+    const contentCount = item => (normalizePositionSkillItem(item)?.contentItems || []).length;
+
+    // 只在目标技能候选里选，避免把其它技能的依据合并过来
+    let pool = candidates.filter(matchesTarget);
+    if (pool.length === 0 && candidates.length === 1) {
+      pool = candidates;
+    }
+    if (pool.length === 0) {
+      return null;
+    }
+
+    pool.sort((a, b) => contentCount(b) - contentCount(a));
+    return pool[0];
+  };
+
+  const requestOnePositionSkillDetail = async ({ promptContext, skillStub, draftItem, index, total, language }) => {
+    const draftContentItems = Array.isArray(draftItem.contentItems) ? draftItem.contentItems.filter(item => item && (item.title || item.description || item.source)) : [];
+    const singleSkillDraft = Object.assign({}, draftItem, skillStub, {
+      id: skillStub.id || draftItem.id,
+      name: skillStub.name || draftItem.name,
+      origin: skillStub.origin || draftItem.origin || 'existing'
+    });
+    delete singleSkillDraft.contentItems;
+    delete singleSkillDraft.jd;
+    delete singleSkillDraft.shockReport;
+    if (draftContentItems.length) {
+      singleSkillDraft.contentItems = draftContentItems;
+    }
+
+    const singleDraft = { skill: [singleSkillDraft] };
+    const singleContext = Object.assign({}, promptContext, {
+      targetSkill: {
+        id: skillStub.id,
+        name: skillStub.name,
+        origin: skillStub.origin || 'existing',
+        index: index + 1,
+        total
+      }
+    });
+
+    const callOnce = async () => {
+      const raw = await requestPositionAnalysisFill(fastify, {
+        step: 'position-skill',
+        schema: buildPositionSkillDetailSchemaHint(),
+        context: singleContext,
+        draft: singleDraft,
+        language
+      });
+      const picked = pickPositionSkillDetailFromRaw(raw, skillStub);
+      return (
+        normalizePositionSkillItem(
+          Object.assign({}, singleSkillDraft, picked || {}, {
+            id: skillStub.id || picked?.id || draftItem.id,
+            name: skillStub.name || picked?.name || draftItem.name
+          })
+        ) || normalizePositionSkillItem(Object.assign({}, draftItem, skillStub))
+      );
+    };
+
+    let filled = await callOnce();
+    // 无依据时再请求一次，避免模型误返回空 contentItems / 整表 skill
+    if (!(filled?.contentItems && filled.contentItems.length)) {
+      filled = await callOnce();
+    }
+    return Object.assign({}, filled, {
+      id: skillStub.id || filled.id,
+      name: skillStub.name || filled.name,
+      origin: skillStub.origin || filled.origin
+    });
+  };
+
+  const buildPersonEmployeeSchemaHint = () => ({
+    employees: [
+      {
+        employeeId: 'string(keep input)',
+        employeeName: 'string(keep input)',
+        readiness: '0-100',
+        summary: 'string',
+        metrics: { criticalGaps: 'number', atOrAbove: 'number', monthsToClose: 'number|null' },
+        skills: [{ id: 'string', name: 'string', current: '0-5', required: '0-5', status: 'critical|gap|onTarget|above', evidence: 'string' }],
+        priorityGaps: [{ rank: 'number', title: 'string', description: 'string', current: '0-5', required: '0-5' }],
+        developmentPlan: {
+          subtitle: 'string',
+          horizons: [
+            {
+              key: 'short|mid|long',
+              label: '短期|中期|长期',
+              period: '0-3个月|3-6个月|6-12个月',
+              title: 'string(required)',
+              tone: 'primary|cyan|rose',
+              target: 'string(required)',
+              items: [
+                {
+                  tag: 'string(required, skill or focus name)',
+                  title: 'string(required, action)',
+                  meta: 'string(required, detail)'
+                }
+              ] // REQUIRED: 2-3 items for EVERY horizon; never empty
+            }
+          ] // REQUIRED: exactly 3 horizons
+        }
+      }
+    ] // REQUIRED: exactly 1 employee in this response
+  });
+
   const buildAiFillSchemaHint = step => {
     if (step === 'org') {
       return {
@@ -936,58 +1160,128 @@ module.exports = fp(async (fastify, options) => {
       };
     }
     if (step === 'position') {
+      return buildPositionOverviewSchemaHint();
+    }
+    if (step === 'position-skill') {
+      return buildPositionSkillDetailSchemaHint();
+    }
+    if (step === 'person') {
+      return buildPersonEmployeeSchemaHint();
+    }
+    return {};
+  };
+
+  const fillPersonEmployeesIndividually = async ({ promptContext, context, draft, language }) => {
+    const contextEmployees = Array.isArray(context?.employees) ? context.employees : [];
+    const draftEmployees = Array.isArray(draft?.employees) ? draft.employees : [];
+
+    if (contextEmployees.length === 0) {
+      return { employees: [] };
+    }
+
+    const employees = await Promise.all(
+      contextEmployees.map(async employee => {
+        const draftItem = draftEmployees.find(item => String(item?.employeeId) === String(employee.id)) || draftEmployees[contextEmployees.indexOf(employee)] || {};
+        const employeeName = employee.name || employee.nameEn || employee.id;
+        const singleDraft = {
+          employees: [
+            Object.assign({}, draftItem, {
+              employeeId: employee.id,
+              employeeName: draftItem.employeeName || employeeName
+            })
+          ]
+        };
+        const singleContext = Object.assign({}, promptContext, {
+          employees: [
+            {
+              id: employee.id,
+              name: employee.name,
+              nameEn: employee.nameEn,
+              analysis: employee.analysis
+            }
+          ]
+        });
+
+        const raw = await requestPositionAnalysisFill(fastify, {
+          step: 'person',
+          schema: buildPersonEmployeeSchemaHint(),
+          context: singleContext,
+          draft: singleDraft,
+          language
+        });
+        const normalized = normalizeAiFillResult('person', raw, singleDraft, { employees: [employee] });
+        const item = normalized.employees[0];
+        return Object.assign({}, item, {
+          developmentPlan: fillEmptyHorizonItems(normalizeDevelopmentPlan(item.developmentPlan)) || item.developmentPlan
+        });
+      })
+    );
+
+    return { employees };
+  };
+
+  const fillPositionSkillsIndividually = async ({ promptContext, skillList, draft, language }) => {
+    const draftSkills = Array.isArray(draft?.skill) ? draft.skill : [];
+
+    if (skillList.length === 0) {
+      return [];
+    }
+
+    return Promise.all(
+      skillList.map(async (skillStub, index) => {
+        const draftItem = (skillStub?.id && draftSkills.find(item => String(item?.id) === String(skillStub.id))) || draftSkills[index] || {};
+        return requestOnePositionSkillDetail({
+          promptContext,
+          skillStub,
+          draftItem,
+          index,
+          total: skillList.length,
+          language
+        });
+      })
+    );
+  };
+
+  const fillPositionStepIndividually = async ({ promptContext, context, draft, language }) => {
+    const listRaw = await requestPositionAnalysisFill(fastify, {
+      step: 'position',
+      schema: buildPositionOverviewSchemaHint(),
+      context: promptContext,
+      draft: draft || {},
+      language
+    });
+
+    const verdict = normalizePositionVerdict(listRaw?.verdict || draft?.verdict || context.position?.verdict || {});
+    const description = typeof listRaw?.description === 'string' ? listRaw.description : draft?.description || context.position?.description || '';
+    const requirement = typeof listRaw?.requirement === 'string' ? listRaw.requirement : draft?.requirement || context.position?.requirement || '';
+
+    const skillList = normalizePositionSkills(listRaw?.skill || draft?.skill || context.position?.skill || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      origin: item.origin
+    }));
+
+    if (skillList.length === 0) {
       return {
-        verdict: { summary: 'string', today: 'string', future: 'string', futureLabel: 'string' },
-        description: 'string(html ok)',
-        requirement: 'string(html ok)',
-        skill: [
-          {
-            id: 'string',
-            name: 'string',
-            origin: 'existing|new',
-            importanceNow: '1-5',
-            importanceYear: '1-5',
-            change: 'must_build|ai_emerging|new|enhanced|stable|declining',
-            aiExposure: 'high|medium|low',
-            confidence: 'high|medium|low',
-            jd: { text: 'string', source: 'string' },
-            shockReport: { text: 'string', source: 'string' }
-          }
-        ]
+        verdict,
+        description,
+        requirement,
+        skill: normalizePositionSkills(context.position?.skill || [])
       };
     }
+
+    const skill = await fillPositionSkillsIndividually({
+      promptContext: Object.assign({}, promptContext, { verdict, description, requirement }),
+      skillList,
+      draft: draft || {},
+      language
+    });
+
     return {
-      employees: [
-        {
-          employeeId: 'string(keep input)',
-          employeeName: 'string(keep input)',
-          readiness: '0-100',
-          summary: 'string',
-          metrics: { criticalGaps: 'number', atOrAbove: 'number', monthsToClose: 'number|null' },
-          skills: [{ id: 'string', name: 'string', current: '0-5', required: '0-5', status: 'critical|gap|onTarget|above', evidence: 'string' }],
-          priorityGaps: [{ rank: 'number', title: 'string', description: 'string', current: '0-5', required: '0-5' }],
-          developmentPlan: {
-            subtitle: 'string',
-            horizons: [
-              {
-                key: 'short|mid|long',
-                label: '短期|中期|长期',
-                period: '0-3个月|3-6个月|6-12个月',
-                title: 'string(required)',
-                tone: 'primary|cyan|rose',
-                target: 'string(required)',
-                items: [
-                  {
-                    tag: 'string(required, skill or focus name)',
-                    title: 'string(required, action)',
-                    meta: 'string(required, detail)'
-                  }
-                ] // REQUIRED: 2-3 items for EVERY horizon; never empty
-              }
-            ] // REQUIRED: exactly 3 horizons
-          }
-        }
-      ]
+      verdict,
+      description,
+      requirement,
+      skill: skill.length ? skill : normalizePositionSkills(context.position?.skill || [])
     };
   };
 
@@ -1066,39 +1360,33 @@ module.exports = fp(async (fastify, options) => {
       }))
     };
 
-    const raw = await requestPositionAnalysisFill(fastify, {
-      step,
-      schema: buildAiFillSchemaHint(step),
-      context: promptContext,
-      draft: draft || {},
-      language: outputLanguage
-    });
+    const raw =
+      step === 'person' || step === 'position'
+        ? null
+        : await requestPositionAnalysisFill(fastify, {
+            step,
+            schema: buildAiFillSchemaHint(step),
+            context: promptContext,
+            draft: draft || {},
+            language: outputLanguage
+          });
 
-    let data = normalizeAiFillResult(step, raw, draft, context);
-    if (step === 'person' && Array.isArray(data.employees)) {
-      // 基础结果 + short/mid/long 分次生成 items，再合并
-      data = Object.assign({}, data, {
-        employees: await fillPersonDevelopmentPlanByHorizons(fastify, {
-          context: promptContext,
-          employees: data.employees,
-          alwaysKeys: ['short', 'mid', 'long'],
-          language: outputLanguage
-        })
-      });
-      data.employees = await Promise.all(
-        data.employees.map(async item =>
-          Object.assign({}, item, {
-            developmentPlan: await ensureDevelopmentPlan(item.developmentPlan, {
-              position: promptContext.position,
-              outputLanguage,
-              employeeName: item.employeeName,
-              summary: item.summary,
-              priorityGaps: item.priorityGaps
-            })
+    let data =
+      step === 'person'
+        ? await fillPersonEmployeesIndividually({
+            promptContext,
+            context,
+            draft: draft || {},
+            language: outputLanguage
           })
-        )
-      );
-    }
+        : step === 'position'
+          ? await fillPositionStepIndividually({
+              promptContext,
+              context,
+              draft: draft || {},
+              language: outputLanguage
+            })
+          : normalizeAiFillResult(step, raw, draft, context);
 
     return {
       step,

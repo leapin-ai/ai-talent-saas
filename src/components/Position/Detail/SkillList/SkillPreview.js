@@ -1,14 +1,14 @@
 import React from 'react';
 import { useIntl } from '@kne/react-intl';
 import ChangeTag from './ChangeTag';
-import { LEVEL_META } from './skillModel';
+import { LEVEL_META, normalizeSkillContentItems } from './skillModel';
 import style from './style.module.scss';
 
 const LevelTag = ({ level, prefixId }) => {
   const { formatMessage } = useIntl();
   const meta = LEVEL_META[level] || LEVEL_META.medium;
   return (
-    <span className={style['level-tag']}>
+    <span className={style['level-tag']} style={{ background: meta.bg, color: meta.color }}>
       {formatMessage({ id: prefixId })} {formatMessage({ id: meta.labelKey })}
     </span>
   );
@@ -31,8 +31,7 @@ const SkillPreview = ({ skill }) => {
     return null;
   }
 
-  const jdSource = resolveSourceLabel(skill.jd?.source, formatMessage, messages);
-  const shockSource = resolveSourceLabel(skill.shockReport?.source, formatMessage, messages);
+  const items = normalizeSkillContentItems(skill);
 
   return (
     <div className={style.preview}>
@@ -45,16 +44,23 @@ const SkillPreview = ({ skill }) => {
           <LevelTag level={skill.confidence} prefixId="position.skillConfidence" />
         </div>
       </div>
-      <div className={style['preview-card']}>
-        <div className={style['preview-card-title']}>{formatMessage({ id: 'position.skillJdTitle' })}</div>
-        <div className={style['preview-card-body']}>{skill.jd?.text || formatMessage({ id: 'position.skillNoContent' })}</div>
-        {jdSource ? <div className={style['preview-card-source']}>{jdSource}</div> : null}
-      </div>
-      <div className={style['preview-card']}>
-        <div className={style['preview-card-title']}>{formatMessage({ id: 'position.skillShockTitle' })}</div>
-        <div className={style['preview-card-body']}>{skill.shockReport?.text || formatMessage({ id: 'position.skillNoContent' })}</div>
-        {shockSource ? <div className={style['preview-card-source']}>{shockSource}</div> : null}
-      </div>
+      {items.length === 0 ? (
+        <div className={style['preview-card']}>
+          <div className={style['preview-card-body']}>{formatMessage({ id: 'position.skillNoContent' })}</div>
+        </div>
+      ) : (
+        items.map((item, index) => (
+          <div key={`${item.title}-${index}`} className={style['preview-card']}>
+            {item.title ? <div className={style['preview-card-title']}>{item.title}</div> : null}
+            {item.description ? <div className={style['preview-card-body']}>{item.description}</div> : null}
+            {item.source ? (
+              <div className={style['preview-card-source']}>
+                {formatMessage({ id: 'position.skillContentSource' })}：{resolveSourceLabel(item.source, formatMessage, messages)}
+              </div>
+            ) : null}
+          </div>
+        ))
+      )}
     </div>
   );
 };

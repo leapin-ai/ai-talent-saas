@@ -3,7 +3,8 @@
  * 1) azure：直连 Azure OpenAI（对齐 telent-coach live-components-ai 的环境变量）
  * 2) runner：LLM Runner completion（对齐 coach i18n-translate；需已注册 config_id）
  *
- * person 步发展计划：基础一次 + short/mid/long 分次生成 items，再合并。
+ * position 步：先出技能列表，再按技能逐条生成明细后合并。
+ * person 步：每位员工单独调用一次大模型，生成完整分析后再合并。
  */
 
 const parseJsonLoose = value => {
@@ -168,7 +169,7 @@ const languageInstruction = language => {
 
 /**
  * 岗位分析 AI 填充基础调用。
- * person 步由上层再按 short/mid/long 分次补 items 后合并。
+ * person 步由上层按员工逐人调用后合并。
  */
 const requestPositionAnalysisFill = async (fastify, { step, schema, context, draft, maxTokens, language }) => {
   const outputLanguage = normalizeOutputLanguage(language || context?.outputLanguage || context?.position?.language);
@@ -178,11 +179,12 @@ const requestPositionAnalysisFill = async (fastify, { step, schema, context, dra
   const instruction =
     '根据 CONTEXT 与 DRAFT 生成当前步骤可直接写入表单的 JSON。只返回 JSON 对象，不要 markdown。保留 DRAFT 中已有的 id/employeeId/employeeName。内容需与岗位详情/人才分析展示字段一致。' +
     languageInstruction(outputLanguage) +
-    (step === 'position'
-      ? ' skill 每项必须填写 change（must_build|ai_emerging|new|enhanced|stable|declining），按 importanceNow→importanceYear 与 origin 合理分配，禁止全部写成 stable；上升且 origin=new 优先 ai_emerging/new，下降优先 declining，关键缺口用 must_build。'
+    (step === 'position' ? ' 先输出岗位研判 verdict、工作内容 description、工作要求 requirement，以及 skill 技能列表（仅 id/name/origin，至少 3 项；禁止在此步输出 importanceNow/contentItems 等明细字段）。' : '') +
+    (step === 'position-skill'
+      ? ' 仅为 CONTEXT.targetSkill 指定的这一条技能生成完整明细。严格返回 { skill: [ 恰好 1 条 ] }，禁止返回其它技能、禁止返回 skill 列表。保留该技能 id/name/origin。必须含 importanceNow/importanceYear/change（must_build|ai_emerging|new|enhanced|stable|declining）、aiExposure/confidence。contentItems 是该技能的「依据」列表：至少 2 条，每条含 title（自定义标题，不要固定套「职位描述 / 胜任力」「冲击报告」）、description（具体说明，结合岗位与该技能）、source（来源，如岗位JD/行业报告/AI冲击分析）。contentItems 不可为空。禁止输出 jd/shockReport，禁止把其它技能的依据抄进来。'
       : '') +
     (step === 'person'
-      ? ' 生成每位员工的 readiness/summary/metrics/skills/priorityGaps，以及 developmentPlan.subtitle 与 horizons（恰好 short/mid/long，含 label/period/title/tone/target）。本轮可只写满短期 items；中长期 items 允许先空，后续会分次补全。horizons.label/period 也要使用 OUTPUT_LANGUAGE。'
+      ? ' 仅为 CONTEXT 中当前这一位员工生成完整人才分析。返回 { employees: [ 恰好 1 条 ] }，保留 employeeId/employeeName。必须含 readiness/summary/metrics/skills/priorityGaps，以及 developmentPlan（subtitle + 恰好 short/mid/long 三阶段，每阶段含 label/period/title/tone/target，且每阶段 2～3 条 items，items 不可为空）。horizons.label/period 使用 OUTPUT_LANGUAGE。'
       : '');
 
   const promptContext = Object.assign({}, context, { outputLanguage });
