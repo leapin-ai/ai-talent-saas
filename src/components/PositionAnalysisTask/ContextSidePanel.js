@@ -99,6 +99,11 @@ const PositionInfo = ({ position }) => {
           {text(position.requirement)}
         </Typography.Paragraph>
       </InfoCard>
+      <InfoCard title="发展目标">
+        <Typography.Paragraph className={style['info-paragraph']} ellipsis={{ rows: 8, expandable: true, symbol: '展开' }}>
+          {text(position.developmentGoal)}
+        </Typography.Paragraph>
+      </InfoCard>
     </Flex>
   );
 };

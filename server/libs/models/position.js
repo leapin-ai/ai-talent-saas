@@ -14,6 +14,10 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
         type: DataTypes.TEXT,
         comment: '岗位要求'
       },
+      developmentGoal: {
+        type: DataTypes.TEXT,
+        comment: '发展目标（未来业务目标）'
+      },
       language: {
         type: DataTypes.ENUM('zh-CN', 'en-US'),
         comment: '语言要求'
