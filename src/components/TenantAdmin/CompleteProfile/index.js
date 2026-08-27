@@ -149,7 +149,7 @@ const CompleteProfile = createWithRemoteLoader({
       formatMessage({ id: 'tenantAdmin.completeTitleInterview' })
     ][current];
 
-    const goHome = () => navigate(baseUrl || '/tenant');
+    const goHome = () => navigate(`${baseUrl}/home`);
 
     const skip = () => {
       if (current >= stepTitles.length - 1) {

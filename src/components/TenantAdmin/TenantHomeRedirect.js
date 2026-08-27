@@ -1,12 +1,10 @@
 import { Navigate } from 'react-router-dom';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
-import Home from './Home';
 import { normalizeHomePath, DEFAULT_HOME_PATH } from './constants';
 
 /**
- * /tenant 入口：按首页设置跳转。
- * homePath 为 / 时渲染首页；否则跳到 /tenant{homePath}（如 /market → /tenant/market）。
+ * /tenant 入口：按首页设置跳转到 {baseUrl}{homePath}（默认 /tenant/home）。
  */
 const TenantHomeRedirect = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']
@@ -18,12 +16,9 @@ const TenantHomeRedirect = createWithRemoteLoader({
   return (
     <Fetch
       {...apis.talentSaas.tenant.homeSetting.detail}
-      error={<Home baseUrl={baseUrl} />}
+      error={<Navigate to={`${tenantBase}${DEFAULT_HOME_PATH}`} replace />}
       render={({ data }) => {
         const homePath = normalizeHomePath(data?.homePath || DEFAULT_HOME_PATH);
-        if (homePath === '/') {
-          return <Home baseUrl={baseUrl} />;
-        }
         return <Navigate to={`${tenantBase}${homePath}`} replace />;
       }}
     />

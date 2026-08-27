@@ -90,13 +90,31 @@ const FormPageInner = ({ FormInfo, ajax, apis, action, baseUrl, data, cardColor 
 
   const formData = typeof data === 'object' && data ? data : undefined;
 
+  // 编辑页只改基础字段；不要把 detail 里的 skill/verdict/分析态原样回传（易被空数组盖掉）
+  const pickEditablePayload = values => {
+    const src = values || {};
+    return {
+      name: src.name,
+      tenantOrgId: src.tenantOrgId,
+      language: src.language,
+      locationType: src.locationType,
+      location: src.location,
+      capacity: src.capacity,
+      salary: src.salary,
+      description: src.description,
+      requirement: src.requirement,
+      developmentGoal: src.developmentGoal
+    };
+  };
+
   const onSubmit = async values => {
     if (isEdit) {
+      const payload = pickEditablePayload(values);
       const { data: resData } = await ajax(
         typeof apis.save === 'function'
-          ? apis.save({ formData: values, data, options: {} })
+          ? apis.save({ formData: payload, data, options: {} })
           : merge({}, apis.save, {
-              data: Object.assign({}, values, { id: data.id })
+              data: Object.assign({}, payload, { id: data.id })
             })
       );
       if (resData.code !== 0) {

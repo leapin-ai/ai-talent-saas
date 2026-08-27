@@ -11,7 +11,7 @@ export const TENANT_ADMIN_PERMISSIONS = {
   homeSetting: ['setting:home-setting', 'setting:home-setting:view']
 };
 
-export const DEFAULT_HOME_PATH = '/';
+export const DEFAULT_HOME_PATH = '/home';
 
 export const normalizeHomePath = value => {
   let path = value == null || value === '' ? DEFAULT_HOME_PATH : String(value).trim();
@@ -21,12 +21,16 @@ export const normalizeHomePath = value => {
   if (path.length > 1 && path.endsWith('/')) {
     path = path.replace(/\/+$/, '');
   }
-  return path || DEFAULT_HOME_PATH;
+  // 兼容旧配置：首页曾挂在 /tenant/，统一迁到 /tenant/home
+  if (!path || path === '/') {
+    return DEFAULT_HOME_PATH;
+  }
+  return path;
 };
 
-/** baseUrl 一般为 '' 或带前缀；homePath 如 / 或 /market → /tenant/ 或 /tenant/market */
+/** baseUrl 一般为 '' 或带前缀；homePath 如 /home 或 /market → /tenant/home 或 /tenant/market */
 export const resolveTenantHomeUrl = (baseUrl = '', homePath = DEFAULT_HOME_PATH) => {
   const path = normalizeHomePath(homePath);
   const tenantBase = `${baseUrl || ''}/tenant`.replace(/\/{2,}/g, '/').replace(/\/$/, '') || '/tenant';
-  return path === '/' ? `${tenantBase}/` : `${tenantBase}${path}`;
+  return `${tenantBase}${path}`;
 };

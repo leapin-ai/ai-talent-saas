@@ -106,12 +106,42 @@ module.exports = fp(async (fastify, options) => {
       throw new Error('名称不能重复');
     }
 
-    const nextData = Object.assign({}, omit(data, ['tenantId', 'publishAt', 'orgEnums']), name && { name }, language && { language }, locationType && { locationType }, tenantOrgId !== undefined && { tenantOrgId: resolvedTenantOrgId });
-    if (nextData.skill !== undefined) {
-      nextData.skill = normalizePositionSkills(nextData.skill);
-      nextData.changeMagnitude = deriveChangeMagnitude(nextData.skill);
+    // 基础编辑表单不含 skill/verdict/分析态；禁止被请求体里的空值或脏字段覆盖
+    const nextData = Object.assign(
+      {},
+      omit(data, ['tenantId', 'publishAt', 'orgEnums', 'analysisStatus', 'analysisProgress', 'analysisTaskId', 'id', 'createdAt', 'updatedAt', 'deletedAt']),
+      name && { name },
+      language && { language },
+      locationType && { locationType },
+      tenantOrgId !== undefined && { tenantOrgId: resolvedTenantOrgId }
+    );
+    if (Object.prototype.hasOwnProperty.call(nextData, 'skill')) {
+      if (!Array.isArray(nextData.skill)) {
+        delete nextData.skill;
+      } else {
+        const normalizedSkill = normalizePositionSkills(nextData.skill);
+        const existingSkill = Array.isArray(position.skill) ? position.skill : [];
+        // 基础编辑未带技能时常见空数组；有存量则跳过，避免把分析生成的 skill 盖掉
+        if (normalizedSkill.length === 0 && existingSkill.length > 0) {
+          delete nextData.skill;
+        } else {
+          nextData.skill = normalizedSkill;
+          nextData.changeMagnitude = deriveChangeMagnitude(nextData.skill);
+        }
+      }
     } else if (nextData.changeMagnitude !== undefined) {
       nextData.changeMagnitude = normalizeChangeMagnitude(nextData.changeMagnitude);
+    }
+    if (Object.prototype.hasOwnProperty.call(nextData, 'verdict')) {
+      const emptyVerdict = nextData.verdict == null || typeof nextData.verdict !== 'object' || Array.isArray(nextData.verdict) || Object.keys(nextData.verdict).length === 0;
+      const existingVerdict = position.verdict && typeof position.verdict === 'object' && !Array.isArray(position.verdict) ? position.verdict : null;
+      if (emptyVerdict && existingVerdict && Object.keys(existingVerdict).length > 0) {
+        delete nextData.verdict;
+      } else if (emptyVerdict) {
+        delete nextData.verdict;
+      } else {
+        nextData.verdict = normalizePositionVerdict(nextData.verdict);
+      }
     }
     await position.update(nextData);
     return position;

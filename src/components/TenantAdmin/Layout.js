@@ -57,7 +57,7 @@ const TenantAdminMenu = ({ baseUrl, tenant, tenantUserInfo, logout, formatMessag
   const menuItems = [
     allowHome
       ? {
-          path: '/',
+          path: '/home',
           label: formatMessage({ id: 'tenantAdmin.home' }),
           toolbar: true,
           icon: 'home'
