@@ -11,7 +11,7 @@ const RootHomeRedirect = createWithRemoteLoader({
   return (
     <Authenticate>
       {() => (
-        <Fetch {...apis.talentSaas.tenant.homeSetting.detail} error={<Navigate to={`${baseUrl}/tenant/`} replace />} render={({ data }) => <Navigate to={resolveTenantHomeUrl(baseUrl, data?.homePath || DEFAULT_HOME_PATH)} replace />} />
+        <Fetch {...apis.talentSaas.tenant.homeSetting.detail} error={<Navigate to={`${baseUrl}/tenant/home`} replace />} render={({ data }) => <Navigate to={resolveTenantHomeUrl(baseUrl, data?.homePath || DEFAULT_HOME_PATH)} replace />} />
       )}
     </Authenticate>
   );

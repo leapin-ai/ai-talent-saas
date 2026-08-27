@@ -3,7 +3,7 @@ const enUS = {
   'tenantAdmin.homeSetting': 'Home Settings',
   'tenantAdmin.homeSettingBasic': 'Home Path',
   'tenantAdmin.homePath': 'Default Path',
-  'tenantAdmin.homePathDesc': 'Visiting / redirects to /tenant + this path. Default is /',
+  'tenantAdmin.homePathDesc': 'Visiting / redirects to /tenant + this path. Default is /home (/tenant/home)',
   'tenantAdmin.homeSettingSaveSuccess': 'Saved',
   'tenantAdmin.homeSettingSave': 'Save',
   'tenantAdmin.homeSettingCancel': 'Cancel',

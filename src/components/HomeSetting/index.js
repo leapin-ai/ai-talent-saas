@@ -3,19 +3,7 @@ import { App, Button, Flex, Typography } from 'antd';
 import { FormOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
-
-const DEFAULT_HOME_PATH = '/';
-
-const normalizeHomePath = value => {
-  let path = value == null || value === '' ? DEFAULT_HOME_PATH : String(value).trim();
-  if (!path.startsWith('/')) {
-    path = `/${path}`;
-  }
-  if (path.length > 1 && path.endsWith('/')) {
-    path = path.replace(/\/+$/, '');
-  }
-  return path || DEFAULT_HOME_PATH;
-};
+import { DEFAULT_HOME_PATH, normalizeHomePath } from '@components/TenantAdmin/constants';
 
 const HomeSetting = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:InfoPage']
@@ -62,7 +50,7 @@ const HomeSetting = createWithRemoteLoader({
               }}
             >
               <FormInfo title="首页路径" list={[<Input name="homePath" label="默认路径" rule="REQ LEN-1-200" block placeholder={DEFAULT_HOME_PATH} key="homePath" />]} />
-              <Typography.Paragraph type="secondary">访问站点根路径 / 时，将跳转到 /tenant + 该路径，默认为 /</Typography.Paragraph>
+              <Typography.Paragraph type="secondary">访问站点根路径 / 时，将跳转到 /tenant + 该路径，默认为 /home（即 /tenant/home）</Typography.Paragraph>
               <Flex justify="center" gap={12}>
                 <SubmitButton>保存</SubmitButton>
                 <CancelButton
@@ -94,7 +82,7 @@ const HomeSetting = createWithRemoteLoader({
               }
             >
               <Typography.Paragraph>默认路径：{homePath}</Typography.Paragraph>
-              <Typography.Paragraph type="secondary">访问站点根路径 / 时，将跳转到 /tenant + 该路径，默认为 /</Typography.Paragraph>
+              <Typography.Paragraph type="secondary">访问站点根路径 / 时，将跳转到 /tenant + 该路径，默认为 /home（即 /tenant/home）</Typography.Paragraph>
             </InfoPage.Part>
           </InfoPage>
         );

@@ -197,6 +197,157 @@ const reshapeEmployees = list =>
     developmentPlan: item.developmentPlan || null
   }));
 
+const looksLikePositionPayload = raw => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return false;
+  }
+  return Array.isArray(raw.skill) || (raw.verdict && typeof raw.verdict === 'object') || typeof raw.roleName === 'string';
+};
+
+const normalizeImportedOrg = (raw, context) => {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const fallbackOrgId = context?.position?.tenantOrgId ?? null;
+  const fallbackName = (context?.position?.orgEnums || []).find(item => String(item.value) === String(fallbackOrgId))?.description || src.departmentName || '-';
+  return {
+    departmentName: typeof src.departmentName === 'string' && src.departmentName ? src.departmentName : fallbackName,
+    tenantOrgId: src.tenantOrgId !== undefined ? src.tenantOrgId : fallbackOrgId
+  };
+};
+
+const normalizeImportedPosition = (raw, context) => {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const skills = normalizeSkills(src.skill);
+  return {
+    verdict: normalizeVerdict(src.verdict || context?.position?.verdict),
+    description: typeof src.description === 'string' ? src.description : context?.position?.description || '',
+    requirement: typeof src.requirement === 'string' ? src.requirement : context?.position?.requirement || '',
+    developmentGoal: typeof src.developmentGoal === 'string' ? src.developmentGoal : context?.position?.developmentGoal || '',
+    skill: skills.length > 0 ? skills : normalizeSkills(context?.position?.skill).length ? normalizeSkills(context?.position?.skill) : [createEmptySkill()]
+  };
+};
+
+const normalizeImportedEmployees = (rawList, context) => {
+  const contextEmployees = Array.isArray(context?.employees) ? context.employees : [];
+  const incoming = Array.isArray(rawList) ? rawList : [];
+  const positionSkills = normalizeSkills(context?.position?.skill);
+  return contextEmployees.map((employee, index) => {
+    const byId = incoming.find(item => String(item?.employeeId || item?.id) === String(employee.id));
+    const item = byId || incoming[index] || {};
+    const analysis = item.analysis && typeof item.analysis === 'object' ? item.analysis : item;
+    return {
+      employeeId: employee.id,
+      employeeName: employee.name || employee.nameEn || employee.id,
+      readiness: analysis.readiness ?? null,
+      summary: analysis.summary || '',
+      metrics: {
+        criticalGaps: analysis.metrics?.criticalGaps ?? 0,
+        atOrAbove: analysis.metrics?.atOrAbove ?? 0,
+        monthsToClose: analysis.metrics?.monthsToClose ?? null
+      },
+      skills: seedEmployeeSkills(analysis, positionSkills),
+      priorityGaps: seedPriorityGaps(analysis),
+      developmentPlan: seedDevelopmentPlan(analysis)
+    };
+  });
+};
+
+/**
+ * 剪贴板 JSON 支持：
+ * 1) 岗位导出格式：{ roleName, verdict, skill, ... }（见 converted-skills/*.json）
+ * 2) 岗位数组：[{ roleName, verdict, skill }, ...]（按角色名匹配，否则取第一项）
+ * 3) 三步整包：{ org?, position?, employees? }；position 也可直接是格式 1
+ * 4) 完成分析提交体：{ org, position, employees }
+ */
+const parseClipboardImportPayload = (text, context) => {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (e) {
+    throw new Error('剪贴板不是合法 JSON');
+  }
+
+  let root = parsed;
+  if (Array.isArray(parsed)) {
+    if (!parsed.length) {
+      throw new Error('剪贴板 JSON 数组为空');
+    }
+    const roleName = context?.position?.name;
+    root = (roleName && parsed.find(item => item && typeof item === 'object' && String(item.roleName || '').toLowerCase() === String(roleName).toLowerCase())) || parsed.find(item => looksLikePositionPayload(item)) || parsed[0];
+  }
+
+  if (!root || typeof root !== 'object') {
+    throw new Error('无法识别剪贴板数据结构');
+  }
+
+  const hasBundleKeys = root.org != null || root.position != null || root.employees != null;
+  const positionRaw = hasBundleKeys
+    ? looksLikePositionPayload(root.position)
+      ? root.position
+      : root.position && typeof root.position === 'object'
+        ? root.position
+        : looksLikePositionPayload(root)
+          ? root
+          : null
+    : looksLikePositionPayload(root)
+      ? root
+      : null;
+
+  if (!positionRaw && !root.org && !Array.isArray(root.employees)) {
+    throw new Error('未识别到 org / position(skill|verdict) / employees');
+  }
+
+  const bundle = {
+    generation: Date.now(),
+    org: null,
+    position: null,
+    employees: null
+  };
+
+  if (root.org != null || positionRaw || hasBundleKeys) {
+    bundle.org = normalizeImportedOrg(root.org, context);
+  }
+  if (positionRaw) {
+    bundle.position = normalizeImportedPosition(positionRaw, context);
+  }
+  if (Array.isArray(root.employees)) {
+    bundle.employees = normalizeImportedEmployees(root.employees, context);
+  }
+
+  if (!bundle.org && !bundle.position && !bundle.employees) {
+    throw new Error('剪贴板没有可导入的字段');
+  }
+
+  return bundle;
+};
+
+const applyFormDataWithRetry = (openApi, formDataToSet, step) => {
+  if (!openApi?.setFormData || !formDataToSet) {
+    return;
+  }
+  openApi.setFormData(formDataToSet, false);
+  if ((step === 'position' && Array.isArray(formDataToSet.skill)) || (step === 'person' && Array.isArray(formDataToSet.employees))) {
+    setTimeout(() => {
+      openApi.setFormData(formDataToSet, false);
+    }, 500);
+  }
+};
+
+const formDataForStep = (step, bundle, formData) => {
+  if (!bundle) {
+    return null;
+  }
+  if (step === 'org' && bundle.org) {
+    return Object.assign({}, formData || {}, bundle.org);
+  }
+  if (step === 'position' && bundle.position) {
+    return Object.assign({}, formData || {}, bundle.position);
+  }
+  if (step === 'person' && Array.isArray(bundle.employees)) {
+    return Object.assign({}, formData || {}, { employees: bundle.employees });
+  }
+  return null;
+};
+
 const submitCompleteAnalysis = async ({ taskId, org, positionRaw, employeesInput, contextEmployees, ajax, completeApi, message, onSuccess }) => {
   const position = reshapePositionData(positionRaw);
   if (!position.skill.length) {
@@ -264,14 +415,59 @@ const RehydrateNestedFormData = ({ FormInfo, data, onceKey, onceRef }) => {
   return null;
 };
 
-const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, defaultLanguage, languageRef }) => {
+const ApplyClipboardImport = ({ FormInfo, step, importBundleRef }) => {
+  const { openApi } = FormInfo.useFormContext();
+  const appliedGenerationRef = useRef(0);
+
+  useEffect(() => {
+    if (!importBundleRef || !openApi?.setFormData) {
+      return undefined;
+    }
+
+    const apply = bundle => {
+      if (!bundle?.generation || appliedGenerationRef.current === bundle.generation) {
+        return;
+      }
+      const next = formDataForStep(step, bundle, openApi.formData || {});
+      if (!next) {
+        return;
+      }
+      appliedGenerationRef.current = bundle.generation;
+      // 晚于 RehydrateNestedFormData 的 500ms，避免被初始空数据盖住
+      setTimeout(() => {
+        applyFormDataWithRetry(openApi, next, step);
+      }, 600);
+    };
+
+    if (!importBundleRef.current) {
+      importBundleRef.current = { value: null, listeners: new Set() };
+    }
+    if (!(importBundleRef.current.listeners instanceof Set)) {
+      const existing = importBundleRef.current.value || importBundleRef.current;
+      importBundleRef.current = {
+        value: existing?.generation ? existing : null,
+        listeners: new Set()
+      };
+    }
+
+    const { listeners, value } = importBundleRef.current;
+    listeners.add(apply);
+    if (value) {
+      apply(value);
+    }
+    return () => {
+      listeners.delete(apply);
+    };
+  }, [FormInfo, openApi, step, importBundleRef]);
+
+  return null;
+};
+
+const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, defaultLanguage, languageRef, importBundleRef, context }) => {
   const { FormApiButton } = FormInfo;
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [language, setLanguage] = useState(() => languageRef?.current || defaultLanguage || 'zh-CN');
-
-  if (!fillApi) {
-    return null;
-  }
 
   const changeLanguage = value => {
     setLanguage(value);
@@ -280,117 +476,164 @@ const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, default
     }
   };
 
+  const onImportClipboard = async ({ openApi, formData }) => {
+    setImporting(true);
+    try {
+      if (!navigator?.clipboard?.readText) {
+        throw new Error('当前环境不支持读取剪贴板');
+      }
+      const text = await navigator.clipboard.readText();
+      if (!text || !String(text).trim()) {
+        throw new Error('剪贴板为空');
+      }
+      const bundle = parseClipboardImportPayload(String(text).trim(), context);
+      if (importBundleRef) {
+        if (!importBundleRef.current || !(importBundleRef.current.listeners instanceof Set)) {
+          importBundleRef.current = { value: null, listeners: new Set() };
+        }
+        importBundleRef.current.value = bundle;
+        importBundleRef.current.listeners.forEach(fn => {
+          try {
+            fn(bundle);
+          } catch (e) {
+            // ignore listener errors
+          }
+        });
+      }
+      const next = formDataForStep(step, bundle, formData || {});
+      if (next) {
+        applyFormDataWithRetry(openApi, next, step);
+      }
+      const parts = [];
+      if (bundle.org) {
+        parts.push('组织/部门');
+      }
+      if (bundle.position) {
+        parts.push('岗位');
+      }
+      if (bundle.employees) {
+        parts.push('个人');
+      }
+      message.success(`已从剪贴板导入：${parts.join('、')}${next ? '' : '（本步无对应字段，进入对应步骤时自动回填）'}`);
+    } catch (e) {
+      message.error(e.message || '导入失败');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className={style['ai-fill-bar']}>
       <div className={style['ai-fill-main']}>
-        <label className={style['ai-fill-field']}>
-          <span className={style['ai-fill-label']}>生成语言</span>
-          <Select size="middle" className={style['ai-fill-select']} value={language || 'zh-CN'} options={AI_FILL_LANGUAGE_OPTIONS} disabled={loading} onChange={changeLanguage} />
-        </label>
-        <FormApiButton
-          type="primary"
-          className={style['ai-fill-action']}
-          loading={loading}
-          disabled={loading}
-          onClick={async ({ openApi, formData }) => {
-            setLoading(true);
-            try {
-              const outputLanguage = languageRef?.current || language || 'zh-CN';
-              const { data: resData } = await ajax(
-                Object.assign({}, fillApi, {
-                  data: {
-                    taskId,
-                    step,
-                    language: outputLanguage,
-                    draft: formData || {}
-                  }
-                })
-              );
-              if (resData.code !== 0) {
-                throw new Error(resData.msg || 'AI 填充失败');
-              }
-              const nextData = resData.data?.data;
-              if (!nextData || typeof nextData !== 'object') {
-                throw new Error('AI 未返回可用数据');
-              }
-              // 嵌套 List/TableList：先垫满 3 阶段×3 条目槽位，再写入，避免 setFormData 丢中长期 items
-              let payload = nextData;
-              if (step === 'position' && Array.isArray(nextData.skill)) {
-                const draftSkills = Array.isArray(formData?.skill) ? formData.skill : [];
-                payload = {
-                  ...nextData,
-                  skill: normalizeSkills(
-                    nextData.skill.map((item, index) => {
-                      const draft = (item?.id && draftSkills.find(skill => skill.id === item.id)) || draftSkills[index] || {};
-                      return Object.assign({}, draft, item);
-                    })
-                  )
-                };
-              }
-              if (step === 'person' && Array.isArray(nextData.employees)) {
-                payload = {
-                  ...nextData,
-                  employees: nextData.employees.map(emp => {
-                    const plan = emp.developmentPlan || {};
-                    const horizons = [0, 1, 2].map(index => {
-                      const horizon = (plan.horizons || [])[index] || emptyHorizon(index);
-                      const base = emptyHorizon(index);
-                      return {
-                        key: horizon.key || base.key,
-                        label: horizon.label || base.label,
-                        period: horizon.period || base.period,
-                        title: horizon.title || '',
-                        tone: horizon.tone || base.tone,
-                        target: horizon.target || '',
-                        items: padPlanItems(horizon.items)
-                      };
-                    });
-                    return Object.assign({}, emp, {
-                      developmentPlan: {
-                        subtitle: plan.subtitle || '',
-                        horizons
-                      }
-                    });
-                  })
-                };
-              }
-              const formDataToSet = Object.assign({}, formData, payload);
-              openApi.setFormData(formDataToSet, false);
-              // 嵌套 List/TableList 首次 setFormData 常丢子项，延迟再写一次
-              if ((step === 'position' && Array.isArray(formDataToSet.skill)) || (step === 'person' && Array.isArray(formDataToSet.employees))) {
-                setTimeout(() => {
-                  openApi.setFormData(formDataToSet, false);
-                }, 500);
-              }
-              message.success('已根据当前输入生成一版，可继续编辑');
-            } catch (e) {
-              message.error(e.message || 'AI 填充失败');
-            } finally {
-              setLoading(false);
-            }
-          }}
-        >
-          AI 填充
+        {fillApi ? (
+          <label className={style['ai-fill-field']}>
+            <span className={style['ai-fill-label']}>生成语言</span>
+            <Select size="middle" className={style['ai-fill-select']} value={language || 'zh-CN'} options={AI_FILL_LANGUAGE_OPTIONS} disabled={loading || importing} onChange={changeLanguage} />
+          </label>
+        ) : null}
+        <FormApiButton className={style['ai-fill-action']} loading={importing} disabled={loading || importing} onClick={onImportClipboard}>
+          从剪贴板导入
         </FormApiButton>
+        {fillApi ? (
+          <FormApiButton
+            type="primary"
+            className={style['ai-fill-action']}
+            loading={loading}
+            disabled={loading || importing}
+            onClick={async ({ openApi, formData }) => {
+              setLoading(true);
+              try {
+                const outputLanguage = languageRef?.current || language || 'zh-CN';
+                const { data: resData } = await ajax(
+                  Object.assign({}, fillApi, {
+                    data: {
+                      taskId,
+                      step,
+                      language: outputLanguage,
+                      draft: formData || {}
+                    }
+                  })
+                );
+                if (resData.code !== 0) {
+                  throw new Error(resData.msg || 'AI 填充失败');
+                }
+                const nextData = resData.data?.data;
+                if (!nextData || typeof nextData !== 'object') {
+                  throw new Error('AI 未返回可用数据');
+                }
+                let payload = nextData;
+                if (step === 'position' && Array.isArray(nextData.skill)) {
+                  const draftSkills = Array.isArray(formData?.skill) ? formData.skill : [];
+                  payload = {
+                    ...nextData,
+                    skill: normalizeSkills(
+                      nextData.skill.map((item, index) => {
+                        const draft = (item?.id && draftSkills.find(skill => skill.id === item.id)) || draftSkills[index] || {};
+                        return Object.assign({}, draft, item);
+                      })
+                    )
+                  };
+                }
+                if (step === 'person' && Array.isArray(nextData.employees)) {
+                  payload = {
+                    ...nextData,
+                    employees: nextData.employees.map(emp => {
+                      const plan = emp.developmentPlan || {};
+                      const horizons = [0, 1, 2].map(index => {
+                        const horizon = (plan.horizons || [])[index] || emptyHorizon(index);
+                        const base = emptyHorizon(index);
+                        return {
+                          key: horizon.key || base.key,
+                          label: horizon.label || base.label,
+                          period: horizon.period || base.period,
+                          title: horizon.title || '',
+                          tone: horizon.tone || base.tone,
+                          target: horizon.target || '',
+                          items: padPlanItems(horizon.items)
+                        };
+                      });
+                      return Object.assign({}, emp, {
+                        developmentPlan: {
+                          subtitle: plan.subtitle || '',
+                          horizons
+                        }
+                      });
+                    })
+                  };
+                }
+                const formDataToSet = Object.assign({}, formData, payload);
+                applyFormDataWithRetry(openApi, formDataToSet, step);
+                message.success('已根据当前输入生成一版，可继续编辑');
+              } catch (e) {
+                message.error(e.message || 'AI 填充失败');
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            AI 填充
+          </FormApiButton>
+        ) : null}
       </div>
-      <div className={style['ai-fill-hint']}>基于当前表单与岗位上下文生成，不会自动提交</div>
+      <div className={style['ai-fill-hint']}>可粘贴岗位 JSON（含 verdict/skill）或 {'{ org, position, employees }'} 整包；导入后不会自动提交</div>
     </div>
   );
 };
 
-const OrgStep = ({ FormInfo, aiFillProps, context }) => {
+const OrgStep = ({ FormInfo, aiFillProps, context, importBundleRef }) => {
   const { Input } = FormInfo.fields;
   return (
     <AnalysisFormLayout context={context}>
       <div className={style.body}>
-        <AiFillToolbar FormInfo={FormInfo} step="org" {...aiFillProps} />
+        <ApplyClipboardImport FormInfo={FormInfo} step="org" importBundleRef={importBundleRef} />
+        <AiFillToolbar FormInfo={FormInfo} step="org" {...aiFillProps} importBundleRef={importBundleRef} context={context} />
         <FormInfo column={1} title="组织/部门" list={[<Input name="departmentName" label="部门" disabled key="departmentName" />, <Input name="tenantOrgId" label="tenantOrgId" hidden key="tenantOrgId" />]} />
       </div>
     </AnalysisFormLayout>
   );
 };
 
-const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef }) => {
+const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef, importBundleRef }) => {
   const { List } = FormInfo;
   const { Input, TextArea, Select } = FormInfo.fields;
   const initialData = useMemo(() => buildInitialValues(context).position, [context]);
@@ -399,7 +642,8 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef
     <AnalysisFormLayout context={context}>
       <div className={style.body}>
         <RehydrateNestedFormData FormInfo={FormInfo} data={initialData} onceKey={onceKey} onceRef={rehydrateOnceRef} />
-        <AiFillToolbar FormInfo={FormInfo} step="position" {...aiFillProps} />
+        <ApplyClipboardImport FormInfo={FormInfo} step="position" importBundleRef={importBundleRef} />
+        <AiFillToolbar FormInfo={FormInfo} step="position" {...aiFillProps} importBundleRef={importBundleRef} context={context} />
         <FormInfo
           column={1}
           title="The Verdict"
@@ -452,7 +696,7 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef
   );
 };
 
-const PersonStep = ({ FormInfo, aiFillProps, context, rehydrateOnceRef }) => {
+const PersonStep = ({ FormInfo, aiFillProps, context, rehydrateOnceRef, importBundleRef }) => {
   const { List, TableList } = FormInfo;
   const { Input, TextArea, Select, InputNumber } = FormInfo.fields;
   const employeeCount = (context?.employees || []).length;
@@ -463,7 +707,8 @@ const PersonStep = ({ FormInfo, aiFillProps, context, rehydrateOnceRef }) => {
     <AnalysisFormLayout context={context}>
       <div className={style.body}>
         <RehydrateNestedFormData FormInfo={FormInfo} data={initialData} onceKey={onceKey} onceRef={rehydrateOnceRef} />
-        <AiFillToolbar FormInfo={FormInfo} step="person" {...aiFillProps} />
+        <ApplyClipboardImport FormInfo={FormInfo} step="person" importBundleRef={importBundleRef} />
+        <AiFillToolbar FormInfo={FormInfo} step="person" {...aiFillProps} importBundleRef={importBundleRef} context={context} />
         <List
           name="employees"
           title="个人人才分析"
@@ -543,6 +788,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
   const [loading, setLoading] = useState(false);
   const fillLanguageRef = useRef('zh-CN');
   const rehydrateOnceRef = useRef({});
+  const importBundleRef = useRef(null);
 
   const contextApi = useMemo(() => {
     const api = apis?.talentSaas?.tenant?.position?.analysisTaskContext;
@@ -562,6 +808,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
     setLoading(true);
     try {
       rehydrateOnceRef.current = {};
+      importBundleRef.current = { value: null, listeners: new Set() };
       const { data: resData } = await ajax(contextApi);
       if (resData.code !== 0) {
         throw new Error(resData.msg || '加载任务上下文失败');
@@ -589,7 +836,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
           data: initial.org,
           onSubmit: () => {}
         },
-        children: <OrgStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} />
+        children: <OrgStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} importBundleRef={importBundleRef} />
       };
 
       const positionStep = {
@@ -613,7 +860,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
                 });
               }
         },
-        children: <PositionStep FormInfo={FormInfo} Editor={Editor} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} />
+        children: <PositionStep FormInfo={FormInfo} Editor={Editor} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} importBundleRef={importBundleRef} />
       };
 
       const personStep = hasEmployees
@@ -637,7 +884,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
                 });
               }
             },
-            children: <PersonStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} />
+            children: <PersonStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} importBundleRef={importBundleRef} />
           }
         : null;
 
