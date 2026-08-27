@@ -66,6 +66,11 @@ const TenantAdmin = createWithRemoteLoader({
             element: <TenantHomeRedirect baseUrl={baseUrl} />
           },
           {
+            path: 'home',
+            title: formatMessage({ id: 'tenantAdmin.home' }),
+            element: <Home baseUrl={baseUrl} />
+          },
+          {
             path: 'complete-profile',
             title: formatMessage({ id: 'tenantAdmin.completeMyProfile' }),
             element: (

@@ -60,9 +60,25 @@ const positionSkillSchema = {
   items: positionSkillItemSchema
 };
 
+/** 修改岗位：不能带 default，否则未传 skill/verdict 时 AJV 会注入 []/{} 把库里的分析数据盖掉 */
+const positionSkillSchemaNoDefault = {
+  type: 'array',
+  items: positionSkillItemSchema
+};
+
 const positionVerdictSchema = {
   type: 'object',
   default: {},
+  properties: {
+    summary: { type: 'string' },
+    today: { type: 'string' },
+    future: { type: 'string' },
+    futureLabel: { type: 'string' }
+  }
+};
+
+const positionVerdictSchemaNoDefault = {
+  type: 'object',
   properties: {
     summary: { type: 'string' },
     today: { type: 'string' },
@@ -326,8 +342,8 @@ module.exports = fp(async (fastify, options) => {
               type: 'object',
               default: {}
             },
-            skill: positionSkillSchema,
-            verdict: positionVerdictSchema,
+            skill: positionSkillSchemaNoDefault,
+            verdict: positionVerdictSchemaNoDefault,
             tenantOrgId: {
               type: ['string', 'null']
             }

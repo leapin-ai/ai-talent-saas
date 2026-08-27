@@ -3,7 +3,7 @@ const zhCN = {
   'tenantAdmin.homeSetting': '首页设置',
   'tenantAdmin.homeSettingBasic': '首页路径',
   'tenantAdmin.homePath': '默认路径',
-  'tenantAdmin.homePathDesc': '访问站点根路径 / 时，将跳转到 /tenant + 该路径，默认为 /',
+  'tenantAdmin.homePathDesc': '访问站点根路径 / 时，将跳转到 /tenant + 该路径，默认为 /home（即 /tenant/home）',
   'tenantAdmin.homeSettingSaveSuccess': '保存成功',
   'tenantAdmin.homeSettingSave': '保存',
   'tenantAdmin.homeSettingCancel': '取消',

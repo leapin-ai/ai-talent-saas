@@ -1,6 +1,6 @@
 const fp = require('fastify-plugin');
 
-const DEFAULT_HOME_PATH = '/';
+const DEFAULT_HOME_PATH = '/home';
 
 const normalizeHomePath = value => {
   let path = value == null || value === '' ? DEFAULT_HOME_PATH : String(value).trim();
@@ -10,7 +10,11 @@ const normalizeHomePath = value => {
   if (path.length > 1 && path.endsWith('/')) {
     path = path.replace(/\/+$/, '');
   }
-  return path || DEFAULT_HOME_PATH;
+  // 兼容旧配置：首页曾挂在 /tenant/，统一迁到 /tenant/home
+  if (!path || path === '/') {
+    return DEFAULT_HOME_PATH;
+  }
+  return path;
 };
 
 module.exports = fp(async (fastify, options) => {
