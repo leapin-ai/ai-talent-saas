@@ -679,6 +679,26 @@
 }
 
 @include resp.mobile-container {
+  .top {
+    flex-direction: column;
+  }
+
+  .halo-card {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .gaps-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .gaps-card {
+    width: 100%;
+  }
+
   .skills-row {
     grid-template-columns: 1fr;
     row-gap: 10px;
