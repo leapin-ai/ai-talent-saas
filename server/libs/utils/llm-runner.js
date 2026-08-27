@@ -109,7 +109,7 @@ const requestAzureChatJson = async (fastify, { system, user, maxTokens }) => {
     ],
     temperature: 0.3,
     response_format: { type: 'json_object' },
-    max_tokens: Number(maxTokens) > 0 ? Number(maxTokens) : 12288
+    max_completion_tokens: Number(maxTokens) > 0 ? Number(maxTokens) : 12288
   };
   const response = await fetch(url, {
     method: 'POST',
