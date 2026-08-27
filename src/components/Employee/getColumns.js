@@ -36,29 +36,23 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
       onClick: onPositionDetail,
       getValueOf: (item, { context } = {}) => {
         const data = context?.data || {};
-        const position = item.options && data.positionEnums?.find(target => target.value === item.options.position);
+        const position = item.options && data.positionEnums?.find(target => String(target.value) === String(item.options.position));
         return position?.description;
       }
     },
     {
       name: 'status',
       title: formatMessage({ id: 'employee.status' }),
-      renderType: 'tag',
-      getValueOf: item => ({
-        isEnum: true,
-        moduleName: 'employeeStatus',
-        name: item.status
-      })
+      renderType: 'enum',
+      moduleName: 'employeeStatus',
+      getValueOf: item => item.status && { moduleName: 'employeeStatus', name: item.status }
     },
     {
       name: 'gender',
       title: formatMessage({ id: 'employee.gender' }),
-      renderType: 'tag',
-      getValueOf: item => ({
-        isEnum: true,
-        moduleName: 'gender',
-        name: item.gender
-      })
+      renderType: 'enum',
+      moduleName: 'gender',
+      getValueOf: item => item.gender && { moduleName: 'gender', name: item.gender }
     },
     {
       name: 'email',
@@ -75,12 +69,9 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
     {
       name: 'degree',
       title: formatMessage({ id: 'employee.degree' }),
-      renderType: 'tag',
-      getValueOf: item => ({
-        isEnum: true,
-        moduleName: 'degreeEnum',
-        name: item.degree
-      })
+      renderType: 'enum',
+      moduleName: 'degreeEnum',
+      getValueOf: item => item.degree != null && item.degree !== '' && { moduleName: 'degreeEnum', name: item.degree }
     },
     {
       name: 'city',

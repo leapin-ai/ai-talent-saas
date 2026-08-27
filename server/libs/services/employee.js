@@ -158,10 +158,19 @@ module.exports = fp(async (fastify, options) => {
       }
     });
 
+    const normalizePositionRef = item => {
+      if (item == null || item === '') return null;
+      if (typeof item === 'object') {
+        return item.id || item.name || item.value || null;
+      }
+      return item;
+    };
+    const intentionRefs = (get(employee, 'profile.intentionPosition') || []).map(normalizePositionRef).filter(Boolean);
+    const currentPositionRef = normalizePositionRef(get(employee, 'options.position'));
     const positionEnums = await services.position.enums(authenticatePayload, {
-      ids: [get(employee, 'options.position')].filter(item => !!item),
+      ids: [currentPositionRef, ...intentionRefs].filter(Boolean),
       names: [
-        ...(get(employee, 'profile.intentionPosition') || []),
+        ...intentionRefs,
         ...(get(employee, 'profile.promotionHistory') || []).map(({ occupation }) => occupation),
         get(aiSuggest, 'shortTerm.target_position'),
         get(aiSuggest, 'longTerm.target_position'),

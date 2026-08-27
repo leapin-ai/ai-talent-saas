@@ -113,6 +113,8 @@ const enUS = {
   'tenantAdmin.completeProfileApproveSuccess': 'Application approved',
   'tenantAdmin.completeProfileRejectSuccess': 'Application rejected',
   'tenantAdmin.completeProfileActionFailed': 'Action failed, please try again',
+  'tenantAdmin.completeProfileSaveSuccess': 'Profile saved',
+  'tenantAdmin.completeProfileEditableHint': 'Editable for review',
   'tenantAdmin.completeProfileEmployee': 'Employee Profile',
   'tenantAdmin.completeProfileViewEmployee': 'View employee profile',
   'tenantAdmin.completeProfileNoEmployee': 'No linked employee profile',

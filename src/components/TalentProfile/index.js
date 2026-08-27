@@ -13,6 +13,7 @@ import LeftColumn from './LeftColumn';
 import MiddleColumn from './MiddleColumn';
 import RightColumn from './RightColumn';
 import style from './style.module.scss';
+import { resolveIntentionDisplay } from './intentionPositionUtils';
 
 const DataNotifier = ({ data, onData }) => {
   useEffect(() => {
@@ -181,8 +182,8 @@ const TalentProfile = createWithRemoteLoader({
           return data.data;
         };
 
-        const positionIdMapping = new Map((data.positionEnums || []).map(item => [item.value, item.description]));
-        const positionNameMapping = new Map((data.positionEnums || []).map(item => [item.description, item.value]));
+        const positionIdMapping = new Map((data.positionEnums || []).map(item => [String(item.value), item.description]));
+        const positionNameMapping = new Map((data.positionEnums || []).map(item => [item.description, String(item.value)]));
         const profileData = {
           name: data.name,
           englishName: data.nameEn,
@@ -238,12 +239,7 @@ const TalentProfile = createWithRemoteLoader({
 
         const skillTags = [...(data.profile?.skills?.cert_mapped || []), ...(data.profile?.skills?.interest_strength || []), ...(data.profile?.skills?.work_related || [])];
 
-        const targetPositions = (data.profile?.intentionPosition || []).map(position => {
-          return {
-            positionId: positionNameMapping.get(position),
-            position: position
-          };
-        });
+        const targetPositions = (data.profile?.intentionPosition || []).map(raw => resolveIntentionDisplay(raw, data.positionEnums)).filter(Boolean);
 
         const mobilityPreferences = data.profile?.workPreference
           ? [data.profile.workPreference.work_mode_preference, data.profile.workPreference.relocation_willingness, data.profile.workPreference.business_travel_willingness].filter(Boolean)
@@ -355,6 +351,8 @@ const TalentProfile = createWithRemoteLoader({
                 interests={interests}
                 performanceReviews={performanceReviews}
                 originData={data}
+                positionEnums={data.positionEnums}
+                positionListApi={apis.positionList}
                 skillRadarData={{ employee: data.profile?.aiInterviewReport || [], industry: [] }}
                 gotoPosition={gotoPosition}
               />

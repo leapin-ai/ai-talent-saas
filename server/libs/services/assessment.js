@@ -1,4 +1,5 @@
 const fp = require('fastify-plugin');
+const omit = require('lodash/omit');
 const dayjs = require('dayjs');
 const { requestAssessmentProfileFill, normalizeOutputLanguage } = require('../utils/llm-runner');
 
@@ -749,8 +750,16 @@ module.exports = fp(async (fastify, options) => {
     });
 
     const positionId = merged.options?.position;
-    const positionIds = [typeof positionId === 'object' && positionId ? positionId.id : positionId].filter(Boolean);
-    const positionNames = [...(merged.profile?.intentionPosition || []), ...(merged.profile?.promotionHistory || []).map(item => item.occupation)].filter(Boolean);
+    const normalizePositionRef = item => {
+      if (item == null || item === '') return null;
+      if (typeof item === 'object') {
+        return item.id || item.name || item.value || null;
+      }
+      return item;
+    };
+    const intentionRefs = (merged.profile?.intentionPosition || []).map(normalizePositionRef).filter(Boolean);
+    const positionIds = [typeof positionId === 'object' && positionId ? positionId.id : positionId, ...intentionRefs].filter(Boolean);
+    const positionNames = [...intentionRefs, ...(merged.profile?.promotionHistory || []).map(item => item.occupation)].filter(Boolean);
 
     let positionEnums = base.positionEnums || [];
     if (positionIds.length || positionNames.length) {
@@ -779,9 +788,10 @@ module.exports = fp(async (fastify, options) => {
     if (employee.id != null && String(employee.id).startsWith('draft-')) {
       delete employee.id;
     }
+    const cleanProfile = omit(profile || {}, ['id', 'employeeId', 'tenantId', 'createdAt', 'updatedAt', 'deletedAt']);
     return {
       employee,
-      profile: profile || {}
+      profile: cleanProfile
     };
   };
 
@@ -1089,7 +1099,8 @@ module.exports = fp(async (fastify, options) => {
       await services.employee.save(authenticatePayload, updates);
     }
 
-    const profileUpdate = Object.keys(reviewProfile).length > 0 ? reviewProfile : buildProfileUpdateFromAssessment(profileData);
+    const rawProfileUpdate = Object.keys(reviewProfile).length > 0 ? reviewProfile : buildProfileUpdateFromAssessment(profileData);
+    const profileUpdate = omit(rawProfileUpdate || {}, ['id', 'employeeId', 'tenantId', 'createdAt', 'updatedAt', 'deletedAt']);
     if (profileUpdate && Object.keys(profileUpdate).length > 0) {
       if (profileUpdate.options) {
         const existingProfile = await models.profile.findOne({
@@ -1097,10 +1108,8 @@ module.exports = fp(async (fastify, options) => {
         });
         profileUpdate.options = Object.assign({}, existingProfile?.options || {}, profileUpdate.options);
       }
-      await services.employee.saveProfile(authenticatePayload, {
-        id: employee.id,
-        ...profileUpdate
-      });
+      // id 必须放在最后，避免 profile.id（档案主键）覆盖员工 id
+      await services.employee.saveProfile(authenticatePayload, Object.assign({}, profileUpdate, { id: employee.id }));
     }
 
     row.status = 'approved';
@@ -1124,6 +1133,35 @@ module.exports = fp(async (fastify, options) => {
     return enrichAssessmentRow(row, employee ? employee.get({ plain: true }) : null);
   };
 
+  const saveReviewData = async (authenticatePayload, { id, reviewData, profileDetail }) => {
+    const row = await findById(authenticatePayload, id);
+    if (!row) {
+      throw new Error('申请记录不存在');
+    }
+    if (row.status !== 'submitted') {
+      throw new Error('仅已提交状态可编辑审核档案');
+    }
+    const payload = reviewData && typeof reviewData === 'object' ? reviewData : toReviewData(profileDetail);
+    const employeePart = payload.employee && typeof payload.employee === 'object' ? payload.employee : {};
+    const profilePart = payload.profile && typeof payload.profile === 'object' ? payload.profile : {};
+    const name = typeof employeePart.name === 'string' ? employeePart.name.trim() : '';
+    const phone = pickContact(employeePart.phone);
+    const email = pickContact(employeePart.email);
+    if (!name) {
+      throw new Error('请填写姓名');
+    }
+    if (!phone && !email) {
+      throw new Error('请至少填写手机号或邮箱');
+    }
+    row.reviewData = {
+      employee: Object.assign({}, employeePart, { name, phone, email }),
+      profile: profilePart
+    };
+    row.changed('reviewData', true);
+    await row.save();
+    return getDetail(authenticatePayload, { id: row.id });
+  };
+
   Object.assign(services, {
     assessment: {
       saveProfile,
@@ -1137,6 +1175,7 @@ module.exports = fp(async (fastify, options) => {
       getGenerateTaskContext,
       completeGenerate,
       aiFillGenerate,
+      saveReviewData,
       approve,
       reject
     }
