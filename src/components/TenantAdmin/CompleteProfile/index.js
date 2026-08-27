@@ -76,10 +76,13 @@ const CompleteProfile = createWithRemoteLoader({
           const assessmentRes = assessmentResult?.data;
           const employeeRes = employeeResult?.data;
           const employeeMapped = employeeRes?.code === 0 && employeeRes.data ? mapEmployeeToCompleteProfileData(employeeRes.data) : null;
-          const assessmentMapped = assessmentRes?.code === 0 && assessmentRes.data?.profileData && hasSavedProfileData(assessmentRes.data.profileData) ? splitAssessmentProfileData(assessmentRes.data.profileData) : null;
+          const savedProfileData = assessmentRes?.code === 0 ? assessmentRes.data?.profileData : null;
+          const assessmentMapped = savedProfileData && hasSavedProfileData(savedProfileData) ? splitAssessmentProfileData(savedProfileData) : null;
 
           const { review, projects } = mergeCompleteProfilePrefill(employeeMapped, assessmentMapped);
-          const hasPrefill = hasPrefilledReviewData(review) || hasSavedProjectsData(projects?.projects);
+          const savedResumes = Array.isArray(savedProfileData?.resumes) ? savedProfileData.resumes : [];
+          const savedResumeParsed = savedProfileData?.resumeParsed && typeof savedProfileData.resumeParsed === 'object' ? savedProfileData.resumeParsed : null;
+          const hasPrefill = hasPrefilledReviewData(review) || hasSavedProjectsData(projects?.projects) || savedResumes.length > 0 || !!savedResumeParsed;
           if (!hasPrefill) {
             return;
           }
@@ -92,7 +95,10 @@ const CompleteProfile = createWithRemoteLoader({
             if (Array.isArray(prev.resumes) && prev.resumes.length > 0) {
               return prev;
             }
-            return { resumes: [], parsed: review };
+            return {
+              resumes: savedResumes,
+              parsed: savedResumeParsed || review
+            };
           });
           setReviewData(prev => prev || review);
           setProjectsData(prev => prev || projects);
@@ -299,7 +305,12 @@ const CompleteProfile = createWithRemoteLoader({
                     <InterviewStep
                       profilePayload={{
                         ...(reviewData || uploadState.parsed || {}),
-                        projects: activeProjectsData?.projects || []
+                        projects: activeProjectsData?.projects || [],
+                        resumes: Array.isArray(uploadState.resumes) ? uploadState.resumes : [],
+                        resumeParsed:
+                          uploadState.parsed && typeof uploadState.parsed === 'object' && (uploadState.parsed.fileId || Array.isArray(uploadState.parsed.educationList) || Array.isArray(uploadState.parsed.workList))
+                            ? uploadState.parsed
+                            : null
                       }}
                       onInterviewComplete={handleInterviewComplete}
                     />

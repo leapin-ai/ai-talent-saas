@@ -1,5 +1,6 @@
 const fp = require('fastify-plugin');
 const dayjs = require('dayjs');
+const { requestAssessmentProfileFill, normalizeOutputLanguage } = require('../utils/llm-runner');
 
 const FEATURE_KEY = 'Assessment';
 const SHORTEN_TTL_HOURS = 24;
@@ -634,13 +635,13 @@ module.exports = fp(async (fastify, options) => {
       phone: pickContact(data.phone) || base.phone || '',
       email: pickContact(data.email) || base.email || '',
       personalEmail: base.personalEmail || '',
-      gender: base.gender || '',
+      gender: base.gender || data.gender || '',
       description: base.description || '',
-      city: base.city || '',
-      address: base.address || '',
-      college: base.college || '',
-      major: base.major || '',
-      degree: base.degree,
+      city: base.city || data.city || '',
+      address: base.address || data.address || '',
+      college: base.college || data.college || '',
+      major: base.major || data.major || '',
+      degree: base.degree != null ? base.degree : data.degree,
       status: base.status || 'ACTIVE',
       tenantOrgIds: Array.isArray(base.tenantOrgIds) ? base.tenantOrgIds : [],
       options: Object.assign({}, base.options || {}),
@@ -651,6 +652,37 @@ module.exports = fp(async (fastify, options) => {
         options: Object.assign({}, base.profile?.options || {}, data.linkedin ? { linkedin: data.linkedin } : {})
       }
     };
+  };
+
+  const pickResumeFiles = (profileData, employee) => {
+    const fromProfile = Array.isArray(profileData?.resumes) ? profileData.resumes.filter(item => item && (item.id || item.ossId || item.fileId)) : [];
+    if (fromProfile.length) {
+      return fromProfile;
+    }
+    const fromEmployee = Array.isArray(employee?.resumes) ? employee.resumes.filter(item => item && (item.id || item.ossId || item.fileId)) : [];
+    return fromEmployee;
+  };
+
+  const resolveResumeParsed = async (profileData, resumes) => {
+    if (profileData?.resumeParsed && typeof profileData.resumeParsed === 'object') {
+      return profileData.resumeParsed;
+    }
+    const fileId = resumes[0]?.id || resumes[0]?.ossId || resumes[0]?.fileId;
+    if (!fileId) {
+      return null;
+    }
+    try {
+      const file = await fastify.fileManager.services.getFileInstance({ id: fileId });
+      const hash = file?.hash;
+      if (!hash) {
+        return null;
+      }
+      const cached = await models.resume.findOne({ where: { fileMD5: hash } });
+      return cached ? cached.get({ plain: true }) : null;
+    } catch (e) {
+      fastify.log.warn(e, 'load resume parse cache failed');
+      return null;
+    }
   };
 
   /** 生成任务右侧 TalentProfile 用的档案详情（合并 draft，含 enums） */
@@ -712,6 +744,20 @@ module.exports = fp(async (fastify, options) => {
     return merged;
   };
 
+  const toReviewData = profileDetail => {
+    if (!profileDetail) {
+      return { employee: {}, profile: {} };
+    }
+    const { profile, performances, orgEnums, positionEnums, aiSuggest, createdAt, updatedAt, deletedAt, ...employee } = profileDetail;
+    if (employee.id != null && String(employee.id).startsWith('draft-')) {
+      delete employee.id;
+    }
+    return {
+      employee,
+      profile: profile || {}
+    };
+  };
+
   const getGenerateTaskContext = async (userInfo, { taskId }) => {
     if (!taskId) {
       throw new Error('任务ID不能为空');
@@ -757,6 +803,10 @@ module.exports = fp(async (fastify, options) => {
       draft
     });
 
+    const resumes = pickResumeFiles(row.profileData || {}, employee);
+    const resumeParsed = await resolveResumeParsed(row.profileData || {}, resumes);
+    const { resumes: _r, resumeParsed: _rp, ...submittedProfileData } = row.profileData || {};
+
     return {
       task: {
         id: task.id,
@@ -767,7 +817,10 @@ module.exports = fp(async (fastify, options) => {
       assessment,
       employee,
       draft,
-      profileDetail
+      profileDetail,
+      resumes,
+      resumeParsed,
+      submittedInfo: submittedProfileData
     };
   };
 
@@ -830,6 +883,129 @@ module.exports = fp(async (fastify, options) => {
     });
 
     return toPublicAssessment(row);
+  };
+
+  const buildAiFillSchemaHint = () => ({
+    employee: {
+      name: 'string',
+      phone: 'string|object',
+      email: 'string',
+      gender: 'M|F|N|string',
+      description: 'string',
+      city: 'string',
+      address: 'string',
+      college: 'string',
+      major: 'string',
+      degree: 'number|string',
+      options: 'object'
+    },
+    profile: {
+      skills: { work_related: ['string'], cert_mapped: ['string'], interest_strength: ['string'] },
+      intentionPosition: ['string'],
+      workPreference: 'object',
+      options: { linkedin: 'string' }
+    }
+  });
+
+  const shapeDraftForAi = profileDetail => {
+    if (!profileDetail) {
+      return { employee: {}, profile: {} };
+    }
+    if (profileDetail.employee || profileDetail.profile) {
+      return {
+        employee: profileDetail.employee && typeof profileDetail.employee === 'object' ? profileDetail.employee : {},
+        profile: profileDetail.profile && typeof profileDetail.profile === 'object' ? profileDetail.profile : {}
+      };
+    }
+    const { profile, performances, orgEnums, positionEnums, aiSuggest, createdAt, updatedAt, deletedAt, ...employee } = profileDetail;
+    return {
+      employee,
+      profile: profile || {}
+    };
+  };
+
+  const normalizeAiFillResult = (raw, draft, profileDetail) => {
+    const data = raw && typeof raw === 'object' ? raw : {};
+    const empRaw = data.employee && typeof data.employee === 'object' ? data.employee : data;
+    const profileRaw = data.profile && typeof data.profile === 'object' ? data.profile : {};
+    const draftEmployee = draft?.employee && typeof draft.employee === 'object' ? draft.employee : {};
+    const draftProfile = draft?.profile && typeof draft.profile === 'object' ? draft.profile : {};
+    const base = profileDetail || {};
+
+    const pickStr = (...values) => {
+      for (const value of values) {
+        if (typeof value === 'string' && value.trim()) {
+          return value.trim();
+        }
+      }
+      return '';
+    };
+
+    const employee = Object.assign({}, base, draftEmployee, empRaw, {
+      id: base.id,
+      name: pickStr(empRaw.name, draftEmployee.name, base.name),
+      phone: empRaw.phone != null && empRaw.phone !== '' ? empRaw.phone : (draftEmployee.phone ?? base.phone ?? ''),
+      email: pickStr(empRaw.email, draftEmployee.email, base.email),
+      gender: pickStr(empRaw.gender, draftEmployee.gender, base.gender),
+      description: pickStr(empRaw.description, draftEmployee.description, base.description),
+      city: pickStr(empRaw.city, draftEmployee.city, base.city),
+      address: pickStr(empRaw.address, draftEmployee.address, base.address),
+      college: pickStr(empRaw.college, draftEmployee.college, base.college),
+      major: pickStr(empRaw.major, draftEmployee.major, base.major),
+      degree: empRaw.degree != null ? empRaw.degree : (draftEmployee.degree ?? base.degree),
+      options: Object.assign({}, base.options || {}, draftEmployee.options || {}, empRaw.options || {}),
+      orgEnums: base.orgEnums,
+      positionEnums: base.positionEnums,
+      performances: base.performances || [],
+      aiSuggest: base.aiSuggest || null
+    });
+
+    const profile = Object.assign({}, base.profile || {}, draftProfile, profileRaw, {
+      skills: profileRaw.skills || draftProfile.skills || base.profile?.skills || {},
+      intentionPosition: Array.isArray(profileRaw.intentionPosition) ? profileRaw.intentionPosition : Array.isArray(draftProfile.intentionPosition) ? draftProfile.intentionPosition : base.profile?.intentionPosition || [],
+      workPreference: Object.assign({}, base.profile?.workPreference || {}, draftProfile.workPreference || {}, profileRaw.workPreference || {}),
+      options: Object.assign({}, base.profile?.options || {}, draftProfile.options || {}, profileRaw.options || {})
+    });
+
+    return Object.assign({}, employee, { profile });
+  };
+
+  /** AI 填充档案草稿：不落库，仅返回可写回右侧 TalentProfile 的数据 */
+  const aiFillGenerate = async (userInfo, { taskId, draft, language, resumeParsed, submittedInfo }) => {
+    if (!taskId) {
+      throw new Error('任务ID不能为空');
+    }
+    const context = await getGenerateTaskContext(userInfo, { taskId });
+    const outputLanguage = normalizeOutputLanguage(language || 'zh-CN');
+    const promptContext = {
+      outputLanguage,
+      assessment: {
+        id: context.assessment?.id,
+        name: context.assessment?.name,
+        phone: context.assessment?.phone,
+        email: context.assessment?.email,
+        projectName: context.assessment?.projectName
+      },
+      resumes: (context.resumes || []).map(item => ({
+        id: item.id || item.ossId || item.fileId,
+        filename: item.filename || item.originalName || item.name
+      })),
+      resumeParsed: resumeParsed || context.resumeParsed || null,
+      submittedInfo: submittedInfo || context.submittedInfo || null
+    };
+
+    const draftPayload = shapeDraftForAi(draft);
+    const raw = await requestAssessmentProfileFill(fastify, {
+      schema: buildAiFillSchemaHint(),
+      context: promptContext,
+      draft: draftPayload,
+      language: outputLanguage
+    });
+
+    return {
+      language: outputLanguage,
+      data: normalizeAiFillResult(raw, draftPayload, context.profileDetail)
+    };
   };
 
   const approve = async (authenticatePayload, { id }) => {
@@ -933,6 +1109,7 @@ module.exports = fp(async (fastify, options) => {
       markSubmitted,
       getGenerateTaskContext,
       completeGenerate,
+      aiFillGenerate,
       approve,
       reject
     }
