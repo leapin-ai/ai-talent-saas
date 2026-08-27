@@ -151,7 +151,7 @@ const enUS = {
   'position.talentSkillToClose': 'To close',
   'position.talentSkillMonthsValue': '~{months} mo',
   'position.talentSkillBySkillSubtitle': 'Skill-by-skill',
-  'position.talentSkillBySkillTitle': 'Against the role skill profile',
+  'position.talentSkillBySkillTitle': 'Future Skill Readiness',
   'position.talentSkillPriorityGaps': 'Priority Gaps',
   'position.talentSkillTopGaps': 'top {count}',
   'position.talentSkillGapScore': '{current} → {required}',

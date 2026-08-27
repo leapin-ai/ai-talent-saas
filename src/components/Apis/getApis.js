@@ -235,6 +235,10 @@ const getApis = options => {
             url: `${prefix}/tenant/assessment/mark-submitted`,
             method: 'POST'
           },
+          saveReviewData: {
+            url: `${prefix}/tenant/assessment/save-review-data`,
+            method: 'POST'
+          },
           approve: {
             url: `${prefix}/tenant/assessment/approve`,
             method: 'POST'

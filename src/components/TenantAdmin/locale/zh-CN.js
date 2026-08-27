@@ -113,6 +113,8 @@ const zhCN = {
   'tenantAdmin.completeProfileApproveSuccess': '已通过申请',
   'tenantAdmin.completeProfileRejectSuccess': '已拒绝申请',
   'tenantAdmin.completeProfileActionFailed': '操作失败，请稍后重试',
+  'tenantAdmin.completeProfileSaveSuccess': '档案已保存',
+  'tenantAdmin.completeProfileEditableHint': '可编辑审核档案',
   'tenantAdmin.completeProfileEmployee': '员工档案',
   'tenantAdmin.completeProfileViewEmployee': '查看员工档案',
   'tenantAdmin.completeProfileNoEmployee': '尚未关联员工档案',

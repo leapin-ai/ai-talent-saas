@@ -279,9 +279,11 @@ module.exports = fp(async (fastify, options) => {
 
   const enums = async (authenticatePayload, { ids, names }) => {
     const { tenantId } = authenticatePayload;
+    const idList = (ids || []).map(item => (item == null || item === '' ? null : String(typeof item === 'object' ? item.id || item.value : item))).filter(Boolean);
+    const nameList = (names || []).map(item => (item == null || item === '' ? null : String(typeof item === 'object' ? item.name || item.description : item))).filter(Boolean);
     const whereQuery = {
       tenantId,
-      [Op.or]: [{ id: { [Op.in]: ids || [] } }, { name: { [Op.in]: names || [] } }]
+      [Op.or]: [{ id: { [Op.in]: idList } }, { name: { [Op.in]: nameList } }]
     };
     const positions = await models.position.findAll({
       where: whereQuery
@@ -289,7 +291,7 @@ module.exports = fp(async (fastify, options) => {
 
     return positions.map(item => {
       return {
-        value: item.id,
+        value: item.id != null ? String(item.id) : item.id,
         description: item.name,
         tenantOrgId: item.tenantOrgId || null
       };
