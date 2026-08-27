@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Select } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { CHANGE_VALUES, LEVEL_VALUES, ORIGIN_VALUES, createEmptySkill, createSkillId, normalizeSkills, normalizeVerdict } from '@components/Position/Detail/SkillList/skillModel';
@@ -238,6 +238,32 @@ const validatePositionStep = (data, message) => {
   }
 };
 
+/**
+ * 嵌套 List/TableList 首次靠 formProps.data 灌入常丢子项。
+ * 仅在每个步骤「首次进入」时用 seed 回填；返回上一步时不再回填，以免覆盖 stepCache 里的编辑结果。
+ */
+const RehydrateNestedFormData = ({ FormInfo, data, onceKey, onceRef }) => {
+  const { openApi } = FormInfo.useFormContext();
+
+  useEffect(() => {
+    if (!openApi?.setFormData || !data || typeof data !== 'object' || !onceKey || !onceRef) {
+      return undefined;
+    }
+    if (onceRef.current[onceKey]) {
+      return undefined;
+    }
+    onceRef.current[onceKey] = true;
+    const apply = () => {
+      openApi.setFormData(data, false);
+    };
+    apply();
+    const timer = setTimeout(apply, 500);
+    return () => clearTimeout(timer);
+  }, [openApi, data, onceKey, onceRef]);
+
+  return null;
+};
+
 const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, defaultLanguage, languageRef }) => {
   const { FormApiButton } = FormInfo;
   const [loading, setLoading] = useState(false);
@@ -330,8 +356,8 @@ const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, default
               }
               const formDataToSet = Object.assign({}, formData, payload);
               openApi.setFormData(formDataToSet, false);
-              // 临时：嵌套 List(contentItems) 首次 setFormData 常丢后续技能依据，延迟再写一次
-              if (step === 'position' && Array.isArray(formDataToSet.skill)) {
+              // 嵌套 List/TableList 首次 setFormData 常丢子项，延迟再写一次
+              if ((step === 'position' && Array.isArray(formDataToSet.skill)) || (step === 'person' && Array.isArray(formDataToSet.employees))) {
                 setTimeout(() => {
                   openApi.setFormData(formDataToSet, false);
                 }, 500);
@@ -364,12 +390,15 @@ const OrgStep = ({ FormInfo, aiFillProps, context }) => {
   );
 };
 
-const PositionStep = ({ FormInfo, Editor, aiFillProps, context }) => {
+const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef }) => {
   const { List } = FormInfo;
   const { Input, TextArea, Select } = FormInfo.fields;
+  const initialData = useMemo(() => buildInitialValues(context).position, [context]);
+  const onceKey = `position:${aiFillProps?.taskId || 'task'}`;
   return (
     <AnalysisFormLayout context={context}>
       <div className={style.body}>
+        <RehydrateNestedFormData FormInfo={FormInfo} data={initialData} onceKey={onceKey} onceRef={rehydrateOnceRef} />
         <AiFillToolbar FormInfo={FormInfo} step="position" {...aiFillProps} />
         <FormInfo
           column={1}
@@ -423,14 +452,17 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context }) => {
   );
 };
 
-const PersonStep = ({ FormInfo, aiFillProps, context }) => {
+const PersonStep = ({ FormInfo, aiFillProps, context, rehydrateOnceRef }) => {
   const { List, TableList } = FormInfo;
   const { Input, TextArea, Select, InputNumber } = FormInfo.fields;
   const employeeCount = (context?.employees || []).length;
+  const initialData = useMemo(() => ({ employees: buildInitialValues(context).employees }), [context]);
+  const onceKey = `person:${aiFillProps?.taskId || 'task'}`;
 
   return (
     <AnalysisFormLayout context={context}>
       <div className={style.body}>
+        <RehydrateNestedFormData FormInfo={FormInfo} data={initialData} onceKey={onceKey} onceRef={rehydrateOnceRef} />
         <AiFillToolbar FormInfo={FormInfo} step="person" {...aiFillProps} />
         <List
           name="employees"
@@ -510,6 +542,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
   const formStepModal = useFormStepModal();
   const [loading, setLoading] = useState(false);
   const fillLanguageRef = useRef('zh-CN');
+  const rehydrateOnceRef = useRef({});
 
   const contextApi = useMemo(() => {
     const api = apis?.talentSaas?.tenant?.position?.analysisTaskContext;
@@ -528,6 +561,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
     }
     setLoading(true);
     try {
+      rehydrateOnceRef.current = {};
       const { data: resData } = await ajax(contextApi);
       if (resData.code !== 0) {
         throw new Error(resData.msg || '加载任务上下文失败');
@@ -579,7 +613,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
                 });
               }
         },
-        children: <PositionStep FormInfo={FormInfo} Editor={Editor} aiFillProps={aiFillProps} context={context} />
+        children: <PositionStep FormInfo={FormInfo} Editor={Editor} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} />
       };
 
       const personStep = hasEmployees
@@ -603,7 +637,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
                 });
               }
             },
-            children: <PersonStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} />
+            children: <PersonStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} />
           }
         : null;
 

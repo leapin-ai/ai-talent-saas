@@ -12,6 +12,16 @@ const getApis = options => {
           url: `${prefix}/tenant/admin/send-org-message`,
           method: 'POST'
         },
+        homeSetting: {
+          detail: {
+            url: `${prefix}/tenant/admin/home-setting`,
+            method: 'GET'
+          },
+          save: {
+            url: `${prefix}/tenant/admin/home-setting-save`,
+            method: 'POST'
+          }
+        },
         aiInterview: {
           detail: {
             url: `${prefix}/tenant/admin/ai-interview-setting`,
@@ -183,6 +193,12 @@ const getApis = options => {
           },
           list: {
             url: `${prefix}/tenant/resume/list`,
+            method: 'GET'
+          }
+        },
+        homeSetting: {
+          detail: {
+            url: `${prefix}/tenant/home-setting`,
             method: 'GET'
           }
         },
