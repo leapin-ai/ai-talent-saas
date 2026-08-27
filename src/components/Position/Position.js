@@ -20,6 +20,7 @@ const Position = createWithRemoteLoader({
     const { formatMessage } = useIntl();
     const { ajax } = usePreset();
     const [filterValue, setFilterValue] = useState([]);
+    const [listKey, setListKey] = useState(0);
 
     const handleSetStatus = (id, status, onSuccess) => {
       const isPublish = status === 'published';
@@ -87,6 +88,8 @@ const Position = createWithRemoteLoader({
           }
         }
       ]);
+      // TablePage 受控 filter.value 变更不会触发 reload；remount 后按首包种子重新拉列表
+      setListKey(key => key + 1);
     }, [formatMessage]);
 
     // 列表侧禁用弹框创建/编辑；表单走独立页面
@@ -158,7 +161,7 @@ const Position = createWithRemoteLoader({
           }
         }}
       >
-        {typeof children === 'function' ? renderProps => children({ ...renderProps, insightBanner }) : children}
+        {typeof children === 'function' ? renderProps => children({ ...renderProps, insightBanner, listKey }) : children}
       </BizUnit>
     );
   })
