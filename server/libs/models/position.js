@@ -54,7 +54,7 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
         type: DataTypes.STRING(32),
         allowNull: false,
         defaultValue: 'idle',
-        comment: 'AI岗位分析状态 idle|generating|completed（独立于发布状态）'
+        comment: 'AI岗位分析状态 idle|generating|locked|completed（独立于发布状态）'
       },
       analysisProgress: {
         type: DataTypes.INTEGER,

@@ -468,6 +468,26 @@ module.exports = fp(async (fastify, options) => {
     }
   );
 
+  fastify.post(
+    `${options.prefix}/tenant/position/lock-analysis`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '岗位分析动画结束，锁定完成卡片',
+        body: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => {
+      return services.position.lockAnalysis(request.tenantUserInfo, request.body);
+    }
+  );
+
   fastify.get(
     `${options.prefix}/tenant/position/analysis-task-context`,
     {

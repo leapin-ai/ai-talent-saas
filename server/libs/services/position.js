@@ -5,6 +5,7 @@ const { requestPositionAnalysisFill, repairDevelopmentPlanItems, fillPersonDevel
 const ANALYSIS_TASK_TYPE = 'position-ai-analysis';
 const ANALYSIS_PROGRESS_START = 18;
 const AI_FILL_STEPS = ['org', 'position', 'person'];
+const isAnalysisRunning = status => status === 'generating' || status === 'locked';
 
 module.exports = fp(async (fastify, options) => {
   const { models, services } = fastify[options.name];
@@ -700,7 +701,7 @@ module.exports = fp(async (fastify, options) => {
 
   const startAnalysis = async (authenticatePayload, { id }) => {
     const position = await detail(authenticatePayload, { id });
-    if (position.analysisStatus === 'generating' && position.analysisTaskId) {
+    if (isAnalysisRunning(position.analysisStatus) && position.analysisTaskId) {
       try {
         const existing = await fastify.task.services.detail({ id: position.analysisTaskId });
         if (existing && ['pending', 'running', 'waiting'].includes(existing.status)) {
@@ -717,6 +718,21 @@ module.exports = fp(async (fastify, options) => {
     const task = await ensureAnalysisTask(authenticatePayload, position);
     await position.reload();
     return { position, task };
+  };
+
+  const lockAnalysis = async (authenticatePayload, { id }) => {
+    const position = await detail(authenticatePayload, { id });
+    if (position.analysisStatus === 'locked' || position.analysisStatus === 'completed') {
+      return position;
+    }
+    if (position.analysisStatus !== 'generating') {
+      throw new Error('当前状态无法锁定分析卡片');
+    }
+    await position.update({
+      analysisStatus: 'locked',
+      analysisProgress: 100
+    });
+    return position;
   };
 
   const getAnalysisTaskContext = async (userInfo, { taskId }) => {
@@ -1134,6 +1150,7 @@ module.exports = fp(async (fastify, options) => {
       skillAnalysisDetail,
       skillAnalysisSave,
       startAnalysis,
+      lockAnalysis,
       getAnalysisTaskContext,
       completeAnalysis,
       aiFillAnalysis,

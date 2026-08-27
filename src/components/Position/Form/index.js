@@ -115,6 +115,11 @@ const FormPageInner = ({ FormInfo, ajax, apis, action, baseUrl, data, cardColor 
         return false;
       }
       message.success(formatMessage({ id: 'position.createSuccess' }));
+      const positionId = resData.data?.id;
+      if (positionId) {
+        navigate(baseUrl ? `${baseUrl}/position/${positionId}` : `/position/${positionId}`, { replace: true });
+        return;
+      }
     }
     goBack();
   };
