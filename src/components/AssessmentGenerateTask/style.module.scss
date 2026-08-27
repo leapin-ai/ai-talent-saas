@@ -1,0 +1,267 @@
+.modal-body {
+  height: min(70vh, 720px);
+  overflow: hidden;
+}
+
+.split-layout {
+  height: min(70vh, 720px) !important;
+  max-height: min(70vh, 720px) !important;
+  width: 100%;
+  min-width: min(960px, 92vw);
+  overflow: hidden !important;
+}
+
+.split-left {
+  position: relative !important;
+  overflow: hidden !important;
+  min-width: 0;
+  min-height: 0;
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+}
+
+.split-right {
+  position: relative !important;
+  overflow: hidden !important;
+  min-width: 0;
+  min-height: 0;
+}
+
+.form-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 0 4px 8px 12px;
+}
+
+.side-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.side-tabs {
+  flex: 1 1 0%;
+  height: 100%;
+  min-height: 0;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden;
+
+  :global {
+    .ant-tabs-nav {
+      margin-bottom: 8px;
+      flex: none !important;
+      flex-shrink: 0;
+    }
+
+    .ant-tabs-body-holder,
+    .ant-tabs-content-holder {
+      flex: 1 1 0% !important;
+      min-height: 0 !important;
+      height: 0 !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+    }
+
+    .ant-tabs-body,
+    .ant-tabs-content {
+      height: auto !important;
+    }
+
+    .ant-tabs-tabpane {
+      height: auto !important;
+    }
+
+    .ant-tabs-tabpane-active {
+      display: block !important;
+      height: auto !important;
+    }
+  }
+}
+
+.side-tab-body {
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.info-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.info-card-title {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.info-card-body {
+  min-width: 0;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.meta-item {
+  min-width: 0;
+}
+
+.meta-label {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.meta-value {
+  font-size: 13px;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.meta-foot {
+  font-size: 12px;
+}
+
+.info-paragraph {
+  margin-bottom: 0 !important;
+  color: #334155;
+}
+
+.nested-card {
+  padding-top: 8px;
+
+  &:not(:first-child) {
+    margin-top: 8px;
+    border-top: 1px solid #f1f5f9;
+  }
+}
+
+.resume-original {
+  min-height: 240px;
+}
+
+.resume-parsed {
+  min-width: 0;
+}
+
+.resume-section {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.resume-section-head {
+  margin-bottom: 8px;
+}
+
+.resume-list-item {
+  padding: 8px 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #f1f5f9;
+  }
+}
+
+.resume-list-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.right-panel {
+  min-width: 0;
+}
+
+.profile-wrap {
+  min-width: 0;
+
+  :global {
+    .talent-profile {
+      min-width: 0;
+    }
+  }
+}
+
+.ai-fill-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--ant-color-primary, var(--primary-color)) 18%, #e2e8f0);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ant-color-primary-bg, var(--primary-color-06, #f8fafc)) 70%, #fff);
+}
+
+.ai-fill-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ai-fill-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-height: 32px;
+  border: none;
+  background: transparent;
+  overflow: visible;
+}
+
+.ai-fill-label {
+  flex-shrink: 0;
+  padding: 0;
+  font-size: 13px;
+  line-height: 32px;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  white-space: nowrap;
+}
+
+.ai-fill-select {
+  width: 112px !important;
+  min-width: 112px;
+
+  :global(.ant-select-selector) {
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: 6px !important;
+    background: transparent !important;
+    height: 32px !important;
+    padding-inline: 4px 8px !important;
+  }
+
+  &:hover :global(.ant-select-selector),
+  &:global(.ant-select-focused) :global(.ant-select-selector) {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  :global(.ant-select-selection-item) {
+    line-height: 30px !important;
+  }
+}
+
+.ai-fill-action {
+  flex-shrink: 0;
+}
+
+.ai-fill-hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #94a3b8;
+}

@@ -12,7 +12,7 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
       },
       status: {
         type: DataTypes.STRING,
-        comment: 'pending|interviewing|generating',
+        comment: 'pending|interviewing|generating|submitted|approved|closed',
         defaultValue: 'pending',
         allowNull: false
       },
@@ -48,6 +48,15 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
         type: DataTypes.JSONB,
         comment: '面试同步信息',
         defaultValue: {}
+      },
+      reviewData: {
+        type: DataTypes.JSONB,
+        comment: '生成任务完成后写入的审核用档案数据',
+        defaultValue: {}
+      },
+      generateTaskId: {
+        type: DataTypes.STRING,
+        comment: '完善档案生成审核手动任务ID'
       }
     },
     associate: ({ assessment }) => {

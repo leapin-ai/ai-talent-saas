@@ -59,6 +59,10 @@ const getApis = options => {
             url: `${prefix}/tenant/position/list`,
             method: 'GET'
           },
+          insight: {
+            url: `${prefix}/tenant/position/insight`,
+            method: 'GET'
+          },
           detail: {
             url: `${prefix}/tenant/position/detail`,
             method: 'GET'
@@ -77,6 +81,34 @@ const getApis = options => {
           },
           setStatus: {
             url: `${prefix}/tenant/position/set-status`,
+            method: 'POST'
+          },
+          skillAnalysisDetail: {
+            url: `${prefix}/tenant/position/skill-analysis-detail`,
+            method: 'GET'
+          },
+          skillAnalysisSave: {
+            url: `${prefix}/tenant/position/skill-analysis-save`,
+            method: 'POST'
+          },
+          startAnalysis: {
+            url: `${prefix}/tenant/position/start-analysis`,
+            method: 'POST'
+          },
+          lockAnalysis: {
+            url: `${prefix}/tenant/position/lock-analysis`,
+            method: 'POST'
+          },
+          analysisTaskContext: {
+            url: `${prefix}/tenant/position/analysis-task-context`,
+            method: 'GET'
+          },
+          completeAnalysis: {
+            url: `${prefix}/tenant/position/complete-analysis`,
+            method: 'POST'
+          },
+          analysisAiFill: {
+            url: `${prefix}/tenant/position/analysis-ai-fill`,
             method: 'POST'
           }
         },
@@ -173,6 +205,38 @@ const getApis = options => {
           },
           acceptPrevious: {
             url: `${prefix}/tenant/assessment/accept-previous`,
+            method: 'POST'
+          },
+          list: {
+            url: `${prefix}/tenant/assessment/list`,
+            method: 'GET'
+          },
+          getDetail: {
+            url: `${prefix}/tenant/assessment/get-detail`,
+            method: 'GET'
+          },
+          markSubmitted: {
+            url: `${prefix}/tenant/assessment/mark-submitted`,
+            method: 'POST'
+          },
+          approve: {
+            url: `${prefix}/tenant/assessment/approve`,
+            method: 'POST'
+          },
+          reject: {
+            url: `${prefix}/tenant/assessment/reject`,
+            method: 'POST'
+          },
+          generateTaskContext: {
+            url: `${prefix}/tenant/assessment/generate-task-context`,
+            method: 'GET'
+          },
+          completeGenerate: {
+            url: `${prefix}/tenant/assessment/complete-generate`,
+            method: 'POST'
+          },
+          generateAiFill: {
+            url: `${prefix}/tenant/assessment/generate-ai-fill`,
             method: 'POST'
           }
         }

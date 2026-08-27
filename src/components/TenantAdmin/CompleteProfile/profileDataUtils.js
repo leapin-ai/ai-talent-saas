@@ -28,12 +28,12 @@ export const hasSkillTags = skills => {
 /** 将 assessment.profileData 拆成核对信息与项目经历 */
 export const splitAssessmentProfileData = profileData => {
   const data = profileData && typeof profileData === 'object' ? profileData : {};
-  const { projects, ...rest } = data;
+  const { projects, resumes, resumeParsed, educationList, workList, projectList, trainingList, skillList, languageList, certificateList, fileId, fileMD5, filename, ...rest } = data;
   const review = normalizeReviewProfileData(rest);
-  const projectList = Array.isArray(projects) && projects.length > 0 ? projects : [];
+  const projectListNormalized = Array.isArray(projects) && projects.length > 0 ? projects : [];
   return {
     review,
-    projects: { projects: projectList }
+    projects: { projects: projectListNormalized }
   };
 };
 

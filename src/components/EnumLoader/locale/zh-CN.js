@@ -26,7 +26,9 @@ const zhCN = {
   'enumLoader.recruitAdultEdu': '成教',
   'enumLoader.recruitCorrespondence': '函授',
   'enumLoader.taskTypeSyncOrg': '组织同步',
-  'enumLoader.taskTypeParseResume': '简历解析'
+  'enumLoader.taskTypeParseResume': '简历解析',
+  'enumLoader.taskTypeAssessmentProfileReview': '完善档案生成审核',
+  'enumLoader.taskTypePositionAiAnalysis': 'AI岗位分析'
 };
 
 export default zhCN;

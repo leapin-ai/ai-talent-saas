@@ -8,9 +8,9 @@ import '@kne/pay-details/dist/index.css';
 const BaseFormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo', 'components-admin:Editor']
 })(
-  withLocale(({ remoteModules, ...props }) => {
+  withLocale(({ remoteModules, apis, ...props }) => {
     const [FormInfo, Editor] = remoteModules;
-    const { Input, Select, AddressSelect, FunctionSelect } = FormInfo.fields;
+    const { Input, Select, AddressSelect, FunctionSelect, SuperSelectTree } = FormInfo.fields;
     const { formatMessage } = useIntl();
     const mobile = isMobile();
     return (
@@ -19,6 +19,7 @@ const BaseFormInner = createWithRemoteLoader({
         column={1}
         list={[
           <Input name="name" label={formatMessage({ id: 'position.name' })} rule="REQ LEN-0-200" />,
+          <SuperSelectTree name="tenantOrgId" label={formatMessage({ id: 'position.department' })} api={apis.orgList} valueKey="id" labelKey="name" single interceptor="object-output-value" />,
           <Select
             name="language"
             label={formatMessage({ id: 'position.language' })}

@@ -3,44 +3,48 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
     {
       name: 'avatar',
       title: formatMessage({ id: 'employee.avatar' }),
-      type: 'avatar',
-      valueOf: (item, { name }) => Object.assign({}, { gender: item['gender'] || 'M' }, { id: item[name] })
+      renderType: 'avatar',
+      getValueOf: item => Object.assign({}, { gender: item.gender || 'M' }, { id: item.avatar })
     },
     {
       name: 'name',
       title: formatMessage({ id: 'employee.name' }),
-      onClick: onDetail,
-      type: 'mainInfo'
-    },
-    {
-      name: 'position',
-      title: formatMessage({ id: 'employee.position' }),
-      type: 'mainInfo',
-      onClick: onPositionDetail,
-      valueOf: (item, { data }) => {
-        const position = item.options && data.positionEnums.find(target => target.value === item.options.position);
-        return position?.description;
-      }
+      renderType: 'main',
+      onClick: onDetail
     },
     {
       name: 'department',
       title: formatMessage({ id: 'employee.department' }),
-      valueOf: (item, { data }) => {
-        const orgIds = Array.isArray(item.tenantOrgIds) ? item.tenantOrgIds : [];
-        return orgIds
-          .map(id => {
-            const org = data.orgEnums && data.orgEnums.find(target => target.value === id);
-            return org?.description;
-          })
-          .filter(Boolean)
-          .join('、');
+      getValueOf: (item, { context } = {}) => {
+        const data = context?.data || {};
+        const positionId = item.options?.position?.id || item.options?.position;
+        if (!positionId) {
+          return null;
+        }
+        const position = data.positionEnums?.find(target => String(target.value) === String(positionId));
+        if (!position?.tenantOrgId) {
+          return null;
+        }
+        const org = data.orgEnums?.find(target => String(target.value) === String(position.tenantOrgId));
+        return org?.description;
+      }
+    },
+    {
+      name: 'position',
+      title: formatMessage({ id: 'employee.position' }),
+      renderType: 'main',
+      onClick: onPositionDetail,
+      getValueOf: (item, { context } = {}) => {
+        const data = context?.data || {};
+        const position = item.options && data.positionEnums?.find(target => target.value === item.options.position);
+        return position?.description;
       }
     },
     {
       name: 'status',
       title: formatMessage({ id: 'employee.status' }),
-      type: 'tag',
-      valueOf: item => ({
+      renderType: 'tag',
+      getValueOf: item => ({
         isEnum: true,
         moduleName: 'employeeStatus',
         name: item.status
@@ -49,8 +53,8 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
     {
       name: 'gender',
       title: formatMessage({ id: 'employee.gender' }),
-      type: 'tag',
-      valueOf: item => ({
+      renderType: 'tag',
+      getValueOf: item => ({
         isEnum: true,
         moduleName: 'gender',
         name: item.gender
@@ -58,24 +62,21 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
     },
     {
       name: 'email',
-      title: formatMessage({ id: 'employee.email' }),
-      type: 'text'
+      title: formatMessage({ id: 'employee.email' })
     },
     {
       name: 'phone',
-      title: formatMessage({ id: 'employee.phone' }),
-      type: 'text'
+      title: formatMessage({ id: 'employee.phone' })
     },
     {
       name: 'college',
-      title: formatMessage({ id: 'employee.college' }),
-      type: 'text'
+      title: formatMessage({ id: 'employee.college' })
     },
     {
       name: 'degree',
       title: formatMessage({ id: 'employee.degree' }),
-      type: 'tag',
-      valueOf: item => ({
+      renderType: 'tag',
+      getValueOf: item => ({
         isEnum: true,
         moduleName: 'degreeEnum',
         name: item.degree
@@ -84,19 +85,23 @@ const getColumns = ({ onDetail, onPositionDetail, addressRender, formatMessage }
     {
       name: 'city',
       title: formatMessage({ id: 'employee.city' }),
-      valueOf: item => {
-        return item.city && addressRender(item.city);
-      }
+      getValueOf: item => (item.city ? addressRender(item.city) : null)
+    },
+    {
+      name: 'workLocation',
+      title: formatMessage({ id: 'employee.workLocation' }),
+      getValueOf: item => (item.options?.workLocation ? addressRender(item.options.workLocation) : null)
     },
     {
       name: 'hireDate',
       title: formatMessage({ id: 'employee.hireDate' }),
-      type: 'date'
+      format: 'date'
     },
     {
       name: 'description',
       title: formatMessage({ id: 'employee.description' }),
-      type: 'description'
+      renderType: 'description',
+      ellipsis: true
     }
   ];
 };

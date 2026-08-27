@@ -11,6 +11,27 @@
   }
 }
 
+.talent-profile-embed {
+  .header-card {
+    margin-bottom: 8px;
+  }
+
+  .main-content {
+    grid-template-columns: 1fr;
+  }
+
+  .left-column,
+  .middle-column,
+  .right-column {
+    grid-column: span 1;
+  }
+
+  .edit-button {
+    top: 12px;
+    right: 12px;
+  }
+}
+
 .header-card {
   margin-bottom: 24px;
   border-radius: 12px;
