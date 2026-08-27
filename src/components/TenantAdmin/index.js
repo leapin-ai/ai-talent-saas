@@ -8,6 +8,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import TalentMarket from '@components/TalentMarket';
 import TalentProfile from '@components/TalentProfile';
 import Home from './Home';
+import TenantHomeRedirect from './TenantHomeRedirect';
 import CompleteProfile from './CompleteProfile';
 import CompleteProfileApplicationEntry from './CompleteProfileApplicationEntry';
 import CompleteProfileApplications from './CompleteProfileApplications';
@@ -62,12 +63,16 @@ const TenantAdmin = createWithRemoteLoader({
           {
             index: true,
             title: formatMessage({ id: 'tenantAdmin.home' }),
-            element: <Home baseUrl={baseUrl} />
+            element: <TenantHomeRedirect baseUrl={baseUrl} />
           },
           {
             path: 'complete-profile',
             title: formatMessage({ id: 'tenantAdmin.completeMyProfile' }),
-            element: <CompleteProfile baseUrl={baseUrl} />
+            element: (
+              <Permissions request={TENANT_ADMIN_PERMISSIONS.homeCompleteProfile} type="error">
+                <CompleteProfile baseUrl={baseUrl} />
+              </Permissions>
+            )
           },
           {
             path: 'complete-profile-applications',

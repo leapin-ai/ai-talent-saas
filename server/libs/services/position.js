@@ -720,6 +720,50 @@ module.exports = fp(async (fastify, options) => {
     const orgEnums = position.getDataValue?.('orgEnums') || [];
     const department = orgEnums.find(item => String(item.value) === String(position.tenantOrgId))?.description || '';
     const employees = await listRelatedEmployees(authenticatePayload, position.id);
+    const analyses = await models.positionEmployeeSkillAnalysis.findAll({
+      where: {
+        tenantId: position.tenantId,
+        positionId: String(position.id)
+      }
+    });
+    const analysisMap = new Map(analyses.map(item => [String(item.employeeId), item]));
+
+    const skillAnalysis = {
+      org: {
+        tenantOrgId: position.tenantOrgId || null,
+        department
+      },
+      position: {
+        id: position.id,
+        name: position.name || '',
+        description: position.description || '',
+        requirement: position.requirement || '',
+        developmentGoal: position.developmentGoal || '',
+        skill: Array.isArray(position.skill) ? position.skill : [],
+        verdict: position.verdict && typeof position.verdict === 'object' ? position.verdict : {},
+        changeMagnitude: position.changeMagnitude || null,
+        language: position.language || null
+      },
+      employees: employees.map(item => {
+        const analysis = analysisMap.get(String(item.id));
+        return {
+          id: item.id,
+          name: item.name || item.nameEn || '',
+          nameEn: item.nameEn || '',
+          avatar: item.avatar || null,
+          analysis: analysis
+            ? {
+                readiness: analysis.readiness,
+                summary: analysis.summary || '',
+                metrics: analysis.metrics || {},
+                skills: analysis.skills || [],
+                priorityGaps: analysis.priorityGaps || [],
+                developmentPlan: analysis.developmentPlan || null
+              }
+            : null
+        };
+      })
+    };
 
     const task = await fastify.task.services.create({
       type: ANALYSIS_TASK_TYPE,
@@ -738,7 +782,14 @@ module.exports = fp(async (fastify, options) => {
           name: item.name || item.nameEn || '',
           nameEn: item.nameEn || '',
           avatar: item.avatar || null
-        }))
+        })),
+        skillAnalysis,
+        // 取消任务时用于恢复开跑前的分析状态
+        analysisStateBefore: {
+          analysisStatus: position.analysisStatus || 'idle',
+          analysisProgress: Number.isFinite(Number(position.analysisProgress)) ? Number(position.analysisProgress) : 0,
+          analysisTaskId: position.analysisTaskId || null
+        }
       }
     });
 
@@ -839,36 +890,100 @@ module.exports = fp(async (fastify, options) => {
       company = null;
     }
 
+    const inputSkillAnalysis = task.input?.skillAnalysis && typeof task.input.skillAnalysis === 'object' ? task.input.skillAnalysis : null;
+    let previousOutput = null;
+    if (task.status === 'success') {
+      previousOutput = task.output || null;
+    } else if (!inputSkillAnalysis?.position) {
+      try {
+        previousOutput = await fastify.task.models.task.findOne({
+          where: {
+            type: ANALYSIS_TASK_TYPE,
+            targetId: String(positionId),
+            targetType: 'position',
+            status: 'success',
+            id: { [Op.ne]: task.id }
+          },
+          order: [['completedAt', 'DESC']]
+        });
+        previousOutput = previousOutput?.output || null;
+      } catch (e) {
+        previousOutput = null;
+      }
+    }
+
+    const snapshotPos =
+      (inputSkillAnalysis?.position && typeof inputSkillAnalysis.position === 'object' && inputSkillAnalysis.position) || (previousOutput?.position && typeof previousOutput.position === 'object' && previousOutput.position) || null;
+    const snapshotOrg = (inputSkillAnalysis?.org && typeof inputSkillAnalysis.org === 'object' && inputSkillAnalysis.org) || (previousOutput?.org && typeof previousOutput.org === 'object' && previousOutput.org) || null;
+    const snapshotEmployees = Array.isArray(inputSkillAnalysis?.employees) ? inputSkillAnalysis.employees : Array.isArray(previousOutput?.employees) ? previousOutput.employees : [];
+    const prevEmployeeMap = new Map(snapshotEmployees.map(item => [String(item.employeeId || item.id), item.analysis || item]));
+
+    const positionSkill = Array.isArray(position.skill) && position.skill.length ? position.skill : snapshotPos?.skill || [];
+    const positionVerdict = position.verdict && typeof position.verdict === 'object' && Object.keys(position.verdict).length > 0 ? position.verdict : snapshotPos?.verdict || {};
+    const positionDescription = position.description || snapshotPos?.description || '';
+    const positionRequirement = position.requirement || snapshotPos?.requirement || '';
+    const positionDevelopmentGoal = position.developmentGoal || snapshotPos?.developmentGoal || '';
+    const positionTenantOrgId = position.tenantOrgId != null ? position.tenantOrgId : (snapshotOrg?.tenantOrgId ?? null);
+
     return {
       task: {
         id: task.id,
         type: task.type,
         status: task.status,
-        input: task.input
+        input: task.input,
+        output: task.output || null
       },
+      previousSubmit:
+        inputSkillAnalysis || previousOutput
+          ? {
+              org: snapshotOrg,
+              position: snapshotPos,
+              employees: snapshotEmployees
+            }
+          : null,
       company,
       position: {
         id: position.id,
         name: position.name,
-        description: position.description || '',
-        requirement: position.requirement || '',
-        developmentGoal: position.developmentGoal || '',
-        tenantOrgId: position.tenantOrgId,
+        description: positionDescription,
+        requirement: positionRequirement,
+        developmentGoal: positionDevelopmentGoal,
+        tenantOrgId: positionTenantOrgId,
         language: position.language,
         locationType: position.locationType || null,
         location: position.location || {},
         capacity: position.capacity || '',
         salary: position.salary || {},
         status: position.status || null,
-        changeMagnitude: position.changeMagnitude || null,
-        skill: position.skill || [],
-        verdict: position.verdict || {},
+        changeMagnitude: position.changeMagnitude || prevPos?.changeMagnitude || null,
+        skill: positionSkill,
+        verdict: positionVerdict,
         analysisStatus: position.analysisStatus,
         analysisProgress: position.analysisProgress,
         orgEnums: position.getDataValue('orgEnums') || []
       },
       employees: employees.map(item => {
         const analysis = analysisMap.get(String(item.id));
+        const prevAnalysis = prevEmployeeMap.get(String(item.id));
+        const resolvedAnalysis = analysis
+          ? {
+              readiness: analysis.readiness,
+              summary: analysis.summary || '',
+              metrics: analysis.metrics || {},
+              skills: analysis.skills || [],
+              priorityGaps: analysis.priorityGaps || [],
+              developmentPlan: analysis.developmentPlan || null
+            }
+          : prevAnalysis && typeof prevAnalysis === 'object'
+            ? {
+                readiness: prevAnalysis.readiness,
+                summary: prevAnalysis.summary || '',
+                metrics: prevAnalysis.metrics || {},
+                skills: prevAnalysis.skills || [],
+                priorityGaps: prevAnalysis.priorityGaps || [],
+                developmentPlan: prevAnalysis.developmentPlan || null
+              }
+            : null;
         return {
           id: item.id,
           name: item.name || item.nameEn || '',
@@ -883,16 +998,7 @@ module.exports = fp(async (fastify, options) => {
           status: item.status || null,
           hireDate: item.hireDate || null,
           tenantOrgIds: item.tenantOrgIds || [],
-          analysis: analysis
-            ? {
-                readiness: analysis.readiness,
-                summary: analysis.summary || '',
-                metrics: analysis.metrics || {},
-                skills: analysis.skills || [],
-                priorityGaps: analysis.priorityGaps || [],
-                developmentPlan: analysis.developmentPlan || null
-              }
-            : null
+          analysis: resolvedAnalysis
         };
       })
     };
@@ -953,11 +1059,12 @@ module.exports = fp(async (fastify, options) => {
 
     await position.update(updateFields);
 
+    const savedEmployees = [];
     for (const item of employeeList) {
       if (!item?.employeeId) {
         continue;
       }
-      await skillAnalysisSave(auth, {
+      const saved = await skillAnalysisSave(auth, {
         positionId,
         employeeId: item.employeeId,
         readiness: item.readiness,
@@ -967,7 +1074,43 @@ module.exports = fp(async (fastify, options) => {
         priorityGaps: item.priorityGaps,
         developmentPlan: item.developmentPlan
       });
+      savedEmployees.push(
+        Object.assign(
+          {
+            employeeId: item.employeeId
+          },
+          saved && typeof saved === 'object'
+            ? {
+                readiness: saved.readiness,
+                summary: saved.summary || '',
+                metrics: saved.metrics || {},
+                skills: saved.skills || [],
+                priorityGaps: saved.priorityGaps || [],
+                developmentPlan: saved.developmentPlan || null
+              }
+            : {
+                readiness: item.readiness,
+                summary: item.summary || '',
+                metrics: item.metrics || {},
+                skills: item.skills || [],
+                priorityGaps: item.priorityGaps || [],
+                developmentPlan: item.developmentPlan || null
+              }
+        )
+      );
     }
+
+    const submittedOrg = {
+      tenantOrgId: updateFields.tenantOrgId !== undefined ? updateFields.tenantOrgId : position.tenantOrgId || null
+    };
+    const submittedPosition = {
+      description: updateFields.description !== undefined ? updateFields.description : position.description || '',
+      requirement: updateFields.requirement !== undefined ? updateFields.requirement : position.requirement || '',
+      developmentGoal: updateFields.developmentGoal !== undefined ? updateFields.developmentGoal : position.developmentGoal || '',
+      skill: updateFields.skill !== undefined ? updateFields.skill : position.skill || [],
+      verdict: updateFields.verdict !== undefined ? updateFields.verdict : position.verdict || {},
+      changeMagnitude: updateFields.changeMagnitude !== undefined ? updateFields.changeMagnitude : position.changeMagnitude || null
+    };
 
     await fastify.task.services.complete({
       id: task.id,
@@ -976,7 +1119,10 @@ module.exports = fp(async (fastify, options) => {
       output: {
         positionId,
         tenantId,
-        employeeCount: employeeList.length
+        employeeCount: savedEmployees.length,
+        org: submittedOrg,
+        position: submittedPosition,
+        employees: savedEmployees
       }
     });
 
@@ -1435,6 +1581,81 @@ module.exports = fp(async (fastify, options) => {
       sampleNames: samples.map(item => item.name).filter(Boolean)
     };
   };
+
+  const restoreAnalysisStateAfterCancel = async task => {
+    if (!task || task.type !== ANALYSIS_TASK_TYPE) {
+      return;
+    }
+    const positionId = task.input?.positionId || task.targetId;
+    const tenantId = task.input?.tenantId;
+    if (!positionId || !tenantId) {
+      return;
+    }
+    const position = await models.position.findByPk(positionId);
+    if (!position || String(position.tenantId) !== String(tenantId)) {
+      return;
+    }
+    // 仅当取消的是当前挂在岗位上的分析任务时才恢复，避免误伤后续新任务
+    if (position.analysisTaskId && String(position.analysisTaskId) !== String(task.id)) {
+      return;
+    }
+    const before = task.input?.analysisStateBefore && typeof task.input.analysisStateBefore === 'object' ? task.input.analysisStateBefore : {};
+    const nextStatus = typeof before.analysisStatus === 'string' && before.analysisStatus ? before.analysisStatus : 'idle';
+    const nextProgress = Number.isFinite(Number(before.analysisProgress)) ? Number(before.analysisProgress) : 0;
+    const nextTaskId = before.analysisTaskId || null;
+    await position.update({
+      analysisStatus: nextStatus,
+      analysisProgress: nextProgress,
+      analysisTaskId: nextTaskId
+    });
+  };
+
+  const collectAnalysisTasksForCancel = async ({ id, targetId, targetType, type }) => {
+    if (id) {
+      try {
+        const task = await fastify.task.services.detail({ id });
+        return task ? [task] : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    if (targetId && targetType && type) {
+      return fastify.task.models.task.findAll({
+        where: {
+          targetId,
+          targetType,
+          type,
+          status: {
+            [Op.in]: ['pending', 'running', 'waiting']
+          }
+        }
+      });
+    }
+    return [];
+  };
+
+  // 包装任务取消：取消 AI 岗位分析任务时恢复岗位分析状态
+  if (fastify.task?.services?.cancel && !fastify.task.services.cancel.__positionAnalysisWrapped) {
+    const originalCancel = fastify.task.services.cancel.bind(fastify.task.services);
+    const wrappedCancel = async params => {
+      const tasks = await collectAnalysisTasksForCancel(params || {});
+      const result = await originalCancel(params);
+      for (const task of tasks) {
+        try {
+          const latest = await fastify.task.models.task.findByPk(task.id);
+          if (!latest || latest.status !== 'canceled') {
+            continue;
+          }
+          await restoreAnalysisStateAfterCancel(task);
+        } catch (e) {
+          fastify.log.warn({ err: e, taskId: task?.id }, 'restore position analysis state after cancel failed');
+        }
+      }
+      return result;
+    };
+    wrappedCancel.__positionAnalysisWrapped = true;
+    fastify.task.services.cancel = wrappedCancel;
+  }
 
   Object.assign(fastify[options.name].services, {
     position: {

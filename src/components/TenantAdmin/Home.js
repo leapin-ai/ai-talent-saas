@@ -9,6 +9,7 @@ import AssessmentGeneratingBadge from './AssessmentGeneratingBadge';
 import AssessmentRegenerateButton from './AssessmentRegenerateButton';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
+import { TENANT_ADMIN_PERMISSIONS } from './constants';
 
 const SyncAssessmentStatus = ({ status, onChange }) => {
   useEffect(() => {
@@ -18,11 +19,11 @@ const SyncAssessmentStatus = ({ status, onChange }) => {
 };
 
 const Home = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
+  modules: ['components-core:Global@usePreset', 'components-core:Permissions']
 })(
   withLocale(({ remoteModules, baseUrl }) => {
     const { formatMessage } = useIntl();
-    const [usePreset] = remoteModules;
+    const [usePreset, Permissions] = remoteModules;
     const { apis } = usePreset();
     const navigate = useNavigate();
     const [hasProfile, setHasProfile] = useState(false);
@@ -39,53 +40,59 @@ const Home = createWithRemoteLoader({
     const showCompleteProfile = hasProfile && assessmentStatus !== 'generating';
 
     const completeProfileButton = (
-      <Button type="primary" onClick={() => navigate(`${baseUrl}/complete-profile`)}>
-        {formatMessage({ id: 'tenantAdmin.completeMyProfile' })}
-      </Button>
+      <Permissions request={TENANT_ADMIN_PERMISSIONS.homeCompleteProfile}>
+        <Button type="primary" onClick={() => navigate(`${baseUrl}/complete-profile`)}>
+          {formatMessage({ id: 'tenantAdmin.completeMyProfile' })}
+        </Button>
+      </Permissions>
     );
 
     return (
-      <Page
-        title={formatMessage({ id: 'tenantAdmin.myEmployeeProfile' })}
-        extra={
-          <Space wrap>
-            <Fetch
-              key={assessmentReloadKey}
-              {...apis.talentSaas.tenant.assessment.detail}
-              error={null}
-              render={({ data }) => (
-                <>
-                  <SyncAssessmentStatus status={data?.status} onChange={onAssessmentStatusChange} />
-                  {!data ? null : data.status === 'generating' ? (
-                    <Space wrap>
-                      <AssessmentGeneratingBadge />
-                      <AssessmentRegenerateButton baseUrl={baseUrl} onRestarted={() => setAssessmentReloadKey(k => k + 1)} />
-                    </Space>
-                  ) : data.status === 'interviewing' ? (
-                    <Button type="primary" onClick={() => navigate(`${baseUrl}/complete-profile?step=interview`)}>
-                      {formatMessage({ id: 'tenantAdmin.assessmentContinueInterview' })}
-                    </Button>
-                  ) : null}
-                </>
-              )}
-            />
-            {showCompleteProfile ? completeProfileButton : null}
-          </Space>
-        }
-      >
-        <TalentProfile
-          self
-          readOnly
-          baseUrl={baseUrl}
-          apis={employeeApis}
-          onData={onData}
-          empty={
-            <Empty description={formatMessage({ id: 'talentProfile.NoLinkedEmployee' })} style={{ padding: '80px 0' }}>
-              {assessmentStatus === 'generating' ? null : completeProfileButton}
-            </Empty>
+      <Permissions request={TENANT_ADMIN_PERMISSIONS.home} type="error">
+        <Page
+          title={formatMessage({ id: 'tenantAdmin.myEmployeeProfile' })}
+          extra={
+            <Space wrap>
+              <Fetch
+                key={assessmentReloadKey}
+                {...apis.talentSaas.tenant.assessment.detail}
+                error={null}
+                render={({ data }) => (
+                  <>
+                    <SyncAssessmentStatus status={data?.status} onChange={onAssessmentStatusChange} />
+                    {!data ? null : data.status === 'generating' ? (
+                      <Space wrap>
+                        <AssessmentGeneratingBadge />
+                        <AssessmentRegenerateButton baseUrl={baseUrl} onRestarted={() => setAssessmentReloadKey(k => k + 1)} />
+                      </Space>
+                    ) : data.status === 'interviewing' ? (
+                      <Permissions request={TENANT_ADMIN_PERMISSIONS.homeCompleteProfile}>
+                        <Button type="primary" onClick={() => navigate(`${baseUrl}/complete-profile?step=interview`)}>
+                          {formatMessage({ id: 'tenantAdmin.assessmentContinueInterview' })}
+                        </Button>
+                      </Permissions>
+                    ) : null}
+                  </>
+                )}
+              />
+              {showCompleteProfile ? completeProfileButton : null}
+            </Space>
           }
-        />
-      </Page>
+        >
+          <TalentProfile
+            self
+            readOnly
+            baseUrl={baseUrl}
+            apis={employeeApis}
+            onData={onData}
+            empty={
+              <Empty description={formatMessage({ id: 'talentProfile.NoLinkedEmployee' })} style={{ padding: '80px 0' }}>
+                {assessmentStatus === 'generating' ? null : completeProfileButton}
+              </Empty>
+            }
+          />
+        </Page>
+      </Permissions>
     );
   })
 );

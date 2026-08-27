@@ -275,6 +275,11 @@ export const globalInit = async () => {
         tenant: {
           appendSettingMenus: [
             {
+              key: 'home',
+              label: '首页设置',
+              component: loadable(() => import('@components/HomeSetting'))
+            },
+            {
               key: 'ai-interview',
               label: 'AI面试设置',
               component: loadable(() => import('@components/AIInterviewSetting'))
