@@ -339,6 +339,33 @@
   line-height: 20px;
   color: #334155;
   white-space: pre-wrap;
+}
+
+.preview-item {
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid #e2e8f0;
+
+  &:first-of-type {
+    padding-top: 0;
+    margin-top: 0;
+    border-top: none;
+  }
+}
+
+.preview-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  color: #334155;
+  margin-bottom: 4px;
+}
+
+.preview-item-body {
+  font-size: 13px;
+  line-height: 20px;
+  color: #334155;
+  white-space: pre-wrap;
   word-break: break-word;
 }
 
@@ -351,6 +378,16 @@
 @include resp.mobile-container {
   .overview {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .verdict {
+    flex: 0 0 auto;
+  }
+
+  .metrics {
+    flex: 0 0 auto;
+    grid-template-rows: auto;
   }
 
   .verdict-boxes {

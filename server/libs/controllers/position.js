@@ -16,17 +16,39 @@ const positionSkillItemSchema = {
     aiExposure: { type: 'string', enum: ['high', 'medium', 'low'] },
     confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
     jd: {
-      type: 'object',
-      properties: {
-        text: { type: 'string' },
-        source: { type: 'string' }
+      type: 'array',
+      default: [],
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          source: { type: 'string' }
+        }
       }
     },
     shockReport: {
-      type: 'object',
-      properties: {
-        text: { type: 'string' },
-        source: { type: 'string' }
+      type: 'array',
+      default: [],
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          source: { type: 'string' }
+        }
+      }
+    },
+    contentItems: {
+      type: 'array',
+      default: [],
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          source: { type: 'string' }
+        }
       }
     }
   }

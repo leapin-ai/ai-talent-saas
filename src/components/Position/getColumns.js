@@ -28,6 +28,7 @@ const getColumns = ({ onDetail, formatMessage }) => {
       name: 'employeeCount',
       title: formatMessage({ id: 'position.employeeCount' }),
       type: 'otherSmall',
+      hidden: true,
       getValueOf: item => (item.employeeCount == null ? 0 : item.employeeCount)
     },
     {
@@ -65,12 +66,14 @@ const getColumns = ({ onDetail, formatMessage }) => {
     {
       name: 'publishAt',
       title: formatMessage({ id: 'position.publishAt' }),
-      format: 'datetime'
+      format: 'datetime',
+      hidden: true
     },
     {
       name: 'createdAt',
       title: formatMessage({ id: 'position.createdAt' }),
-      format: 'datetime'
+      format: 'datetime',
+      hidden: true
     }
   ];
 };

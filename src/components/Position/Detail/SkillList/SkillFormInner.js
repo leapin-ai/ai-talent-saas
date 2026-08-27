@@ -8,12 +8,24 @@ const importanceOptions = Array.from({ length: IMPORTANCE_MAX - IMPORTANCE_MIN +
   return { label: String(value), value };
 });
 
+const contentItemFields = (FormInfo, Input, TextArea, formatMessage) => (
+  <FormInfo
+    column={1}
+    list={[
+      <Input name="title" label={formatMessage({ id: 'position.skillContentTitle' })} rule="LEN-0-200" block />,
+      <TextArea name="description" label={formatMessage({ id: 'position.skillContentDescription' })} block rule="LEN-0-2000" />,
+      <Input name="source" label={formatMessage({ id: 'position.skillContentSource' })} rule="LEN-0-200" block />
+    ]}
+  />
+);
+
 const SkillFormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo']
 })(
   withLocale(({ remoteModules }) => {
     const [FormInfo] = remoteModules;
     const { Input, Select, TextArea } = FormInfo.fields;
+    const { List } = FormInfo;
     const { formatMessage } = useIntl();
     const currentYear = new Date().getFullYear();
 
@@ -58,10 +70,14 @@ const SkillFormInner = createWithRemoteLoader({
               value
             }))}
           />,
-          <TextArea name="jdText" label={formatMessage({ id: 'position.skillJdText' })} block rule="LEN-0-2000" />,
-          <Input name="jdSource" label={formatMessage({ id: 'position.skillJdSource' })} rule="LEN-0-200" />,
-          <TextArea name="shockText" label={formatMessage({ id: 'position.skillShockText' })} block rule="LEN-0-2000" />,
-          <Input name="shockSource" label={formatMessage({ id: 'position.skillShockSource' })} rule="LEN-0-200" />
+          <List
+            name="contentItems"
+            title={formatMessage({ id: 'position.skillContentListTitle' })}
+            block
+            addText={formatMessage({ id: 'position.skillContentAdd' })}
+            itemTitle={({ index }) => formatMessage({ id: 'position.skillContentItemTitle' }, { index: index + 1 })}
+            list={[contentItemFields(FormInfo, Input, TextArea, formatMessage)]}
+          />
         ]}
       />
     );
