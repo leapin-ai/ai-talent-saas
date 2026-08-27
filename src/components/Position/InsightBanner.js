@@ -82,6 +82,10 @@ const InsightBanner = createWithRemoteLoader({
     const count = insight.highChangeCount;
     const namesText = formatNames(insight.sampleNames, formatMessage);
 
+    if (count <= 0) {
+      return null;
+    }
+
     return (
       <Card
         className={style.banner}
