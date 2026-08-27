@@ -46,6 +46,7 @@ const Layout = createWithRemoteLoader({
 );
 
 const TenantAdminMenu = ({ baseUrl, tenant, tenantUserInfo, logout, formatMessage, usePermissionsPass, Language, children }) => {
+  const allowHome = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.home });
   const allowTalentMarketplace = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.talentMarketplace });
   const allowPositionManagement = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionManagement });
   const allowEmployeeProfile = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeProfile });
@@ -54,12 +55,14 @@ const TenantAdminMenu = ({ baseUrl, tenant, tenantUserInfo, logout, formatMessag
   const allowUserManagement = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.userManagement });
 
   const menuItems = [
-    {
-      path: '/',
-      label: formatMessage({ id: 'tenantAdmin.home' }),
-      toolbar: true,
-      icon: 'home'
-    },
+    allowHome
+      ? {
+          path: '/',
+          label: formatMessage({ id: 'tenantAdmin.home' }),
+          toolbar: true,
+          icon: 'home'
+        }
+      : null,
     allowTalentMarketplace
       ? {
           path: '/market',

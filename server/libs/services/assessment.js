@@ -193,7 +193,27 @@ module.exports = fp(async (fastify, options) => {
       }
     }
 
-    const profileName = row.profileData?.name || '';
+    const profileData = row.profileData && typeof row.profileData === 'object' ? row.profileData : {};
+    let employee = null;
+    try {
+      const employeeRow = await models.employee.findOne({
+        where: { tenantId: row.tenantId, tenantUserId: row.tenantUserId },
+        include: [models.profile]
+      });
+      employee = employeeRow ? employeeRow.get({ plain: true }) : null;
+    } catch (e) {
+      employee = null;
+    }
+
+    const resumes = pickResumeFiles(profileData, employee);
+    const resumeParsed = await resolveResumeParsed(profileData, resumes);
+    const { resumes: _omitResumes, resumeParsed: _omitParsed, ...submittedInfo } = profileData;
+    const resumeFileIds = resumes
+      .map(item => item?.id || item?.ossId || item?.fileId)
+      .filter(Boolean)
+      .map(String);
+
+    const profileName = submittedInfo.name || profileData.name || '';
     const task = await fastify.task.services.create({
       type: GENERATE_TASK_TYPE,
       targetId: String(row.id),
@@ -203,7 +223,14 @@ module.exports = fp(async (fastify, options) => {
         name: profileName ? `完善档案生成审核：${profileName}` : `完善档案生成审核：${row.tenantUserId}`,
         assessmentId: row.id,
         tenantId: row.tenantId,
-        tenantUserId: row.tenantUserId
+        tenantUserId: row.tenantUserId,
+        // 员工填写信息（不含简历附件/解析缓存字段）
+        submittedInfo,
+        // 简历解析数据
+        resumeParsed: resumeParsed || null,
+        // 简历附件
+        resumes,
+        resumeFileIds
       }
     });
     row.generateTaskId = task.id;

@@ -2,6 +2,7 @@ import RemoteLoader, { createWithRemoteLoader } from '@kne/remote-loader';
 import AppChildrenRouter from '@kne/app-children-router';
 import { Navigate } from 'react-router-dom';
 import TenantAdmin from '@components/TenantAdmin';
+import RootHomeRedirect from '@components/TenantAdmin/RootHomeRedirect';
 import TenantPortal from '@components/TenantPortal';
 import Admin from '@components/Admin';
 import { getManualTaskAction } from '@components/AssessmentGenerateTask';
@@ -17,6 +18,10 @@ const AppContent = withLocale(({ baseUrl, AfterUserLoginLayout, AfterAdminUserLo
       notFoundPage
       baseUrl={baseUrl}
       list={[
+        {
+          index: true,
+          element: <RootHomeRedirect baseUrl={baseUrl} />
+        },
         {
           path: 'account/*',
           title: 'Account',
