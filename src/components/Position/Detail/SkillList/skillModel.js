@@ -1,8 +1,9 @@
 /**
  * Position skill list contract (embedded in position.skill JSON).
  *
- * @typedef {Object} PositionSkillJd
- * @property {string} text
+ * @typedef {Object} PositionSkillContentItem
+ * @property {string} title
+ * @property {string} description
  * @property {string} [source]
  *
  * @typedef {Object} PositionSkillItem
@@ -14,8 +15,7 @@
  * @property {'must_build'|'ai_emerging'|'new'|'enhanced'|'stable'|'declining'} change
  * @property {'high'|'medium'|'low'} [aiExposure]
  * @property {'high'|'medium'|'low'} [confidence]
- * @property {PositionSkillJd} [jd]
- * @property {PositionSkillJd} [shockReport]
+ * @property {PositionSkillContentItem[]} [contentItems]
  */
 
 export const ORIGIN_VALUES = ['existing', 'new'];
@@ -42,9 +42,9 @@ export const ORIGIN_META = {
 };
 
 export const LEVEL_META = {
-  high: { labelKey: 'position.skillLevel.high' },
-  medium: { labelKey: 'position.skillLevel.medium' },
-  low: { labelKey: 'position.skillLevel.low' }
+  high: { labelKey: 'position.skillLevel.high', bg: '#fce0d1', color: '#5f2d11' },
+  medium: { labelKey: 'position.skillLevel.medium', bg: '#d1dce7', color: '#132c5d' },
+  low: { labelKey: 'position.skillLevel.low', bg: '#ecf2ed', color: '#2a533c' }
 };
 
 const clampImportance = value => {
@@ -55,14 +55,73 @@ const clampImportance = value => {
   return Math.min(IMPORTANCE_MAX, Math.max(IMPORTANCE_MIN, Math.round(num)));
 };
 
-const normalizeTextBlock = value => {
-  if (!value || typeof value !== 'object') {
-    return { text: '', source: '' };
+const LEGACY_JD_TITLE = '职位描述 / 胜任力';
+const LEGACY_SHOCK_TITLE = '冲击报告';
+
+const normalizeContentItem = raw => {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const title = typeof raw.title === 'string' ? raw.title.trim() : '';
+  const description =
+    typeof raw.description === 'string' ? raw.description.trim() : typeof raw.desc === 'string' ? raw.desc.trim() : typeof raw.text === 'string' ? raw.text.trim() : typeof raw.content === 'string' ? raw.content.trim() : '';
+  const source = typeof raw.source === 'string' ? raw.source.trim() : '';
+  if (!title && !description && !source) {
+    return null;
   }
   return {
-    text: typeof value.text === 'string' ? value.text : '',
-    source: typeof value.source === 'string' ? value.source : ''
+    title: title.slice(0, 200),
+    description: description.slice(0, 2000),
+    source: source.slice(0, 200)
   };
+};
+
+export const normalizeContentItems = value => {
+  if (typeof value === 'string') {
+    const text = value.trim();
+    return text ? [{ title: '', description: text.slice(0, 2000), source: '' }] : [];
+  }
+  if (Array.isArray(value)) {
+    return value.map(normalizeContentItem).filter(Boolean);
+  }
+  if (value && typeof value === 'object') {
+    if (Array.isArray(value.items)) {
+      return normalizeContentItems(value.items);
+    }
+    if (typeof value.text === 'string' || typeof value.desc === 'string' || typeof value.content === 'string' || typeof value.source === 'string' || typeof value.title === 'string' || typeof value.description === 'string') {
+      const legacy = normalizeContentItem(value);
+      return legacy ? [legacy] : [];
+    }
+  }
+  return [];
+};
+
+const normalizeLegacyContentBlock = (value, defaultTitle) => {
+  const items = normalizeContentItems(value);
+  if (!items.length && typeof value === 'string' && value.trim()) {
+    return [{ title: defaultTitle, description: value.trim().slice(0, 2000), source: '' }];
+  }
+  return items.map(item => ({
+    ...item,
+    title: item.title || defaultTitle
+  }));
+};
+
+/** Merge contentItems with legacy jd / shockReport fields. @returns {PositionSkillContentItem[]} */
+export const normalizeSkillContentItems = raw => {
+  if (!raw || typeof raw !== 'object') {
+    return [];
+  }
+  const merged = [...normalizeContentItems(raw.contentItems), ...normalizeLegacyContentBlock(raw.jd, LEGACY_JD_TITLE), ...normalizeLegacyContentBlock(raw.shockReport, LEGACY_SHOCK_TITLE)];
+  const seen = new Set();
+  return merged.filter(item => {
+    const key = `${item.title}\0${item.description}\0${item.source}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 };
 
 export const createSkillId = () => {
@@ -82,8 +141,7 @@ export const createEmptySkill = () => ({
   change: 'stable',
   aiExposure: 'medium',
   confidence: 'medium',
-  jd: { text: '', source: '' },
-  shockReport: { text: '', source: '' }
+  contentItems: []
 });
 
 /** @returns {PositionSkillItem|null} */
@@ -123,8 +181,7 @@ export const normalizeSkillItem = (raw, index = 0) => {
     change,
     aiExposure,
     confidence,
-    jd: normalizeTextBlock(raw.jd),
-    shockReport: normalizeTextBlock(raw.shockReport)
+    contentItems: normalizeSkillContentItems(raw)
   };
 };
 

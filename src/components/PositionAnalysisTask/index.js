@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { App, Button, Select, Typography } from 'antd';
+import { App, Button, Select } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { CHANGE_VALUES, LEVEL_VALUES, ORIGIN_VALUES, createEmptySkill, createSkillId, normalizeSkills, normalizeVerdict } from '@components/Position/Detail/SkillList/skillModel';
 import AnalysisFormLayout from './AnalysisFormLayout';
@@ -195,6 +195,47 @@ const reshapeEmployees = list =>
     developmentPlan: item.developmentPlan || null
   }));
 
+const submitCompleteAnalysis = async ({ taskId, org, positionRaw, employeesInput, contextEmployees, ajax, completeApi, message, onSuccess }) => {
+  const position = reshapePositionData(positionRaw);
+  if (!position.skill.length) {
+    message.error('请至少填写一项有效岗位技能');
+    return false;
+  }
+  const employees = reshapeEmployees(employeesInput).map((item, index) =>
+    Object.assign({}, item, {
+      employeeId: item.employeeId || contextEmployees[index]?.id
+    })
+  );
+  if (employees.length > 0 && employees.some(item => !item.employeeId)) {
+    message.error('人员数据缺少 employeeId，请关闭后重试');
+    return false;
+  }
+
+  const { data: submitRes } = await ajax(
+    Object.assign({}, completeApi, {
+      data: {
+        taskId,
+        org: { tenantOrgId: org.tenantOrgId ?? null },
+        position,
+        employees
+      }
+    })
+  );
+  if (submitRes.code !== 0) {
+    throw new Error(submitRes.msg || '完成分析任务失败');
+  }
+  message.success('AI岗位分析已完成');
+  onSuccess && onSuccess();
+  return true;
+};
+
+const validatePositionStep = (data, message) => {
+  if (!normalizeSkills(data?.skill).length) {
+    message.error('请至少填写一项有效岗位技能');
+    return false;
+  }
+};
+
 const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, defaultLanguage, languageRef }) => {
   const { FormApiButton } = FormInfo;
   const [loading, setLoading] = useState(false);
@@ -246,6 +287,18 @@ const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, default
               }
               // 嵌套 List/TableList：先垫满 3 阶段×3 条目槽位，再写入，避免 setFormData 丢中长期 items
               let payload = nextData;
+              if (step === 'position' && Array.isArray(nextData.skill)) {
+                const draftSkills = Array.isArray(formData?.skill) ? formData.skill : [];
+                payload = {
+                  ...nextData,
+                  skill: normalizeSkills(
+                    nextData.skill.map((item, index) => {
+                      const draft = (item?.id && draftSkills.find(skill => skill.id === item.id)) || draftSkills[index] || {};
+                      return Object.assign({}, draft, item);
+                    })
+                  )
+                };
+              }
               if (step === 'person' && Array.isArray(nextData.employees)) {
                 payload = {
                   ...nextData,
@@ -273,7 +326,14 @@ const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, default
                   })
                 };
               }
-              openApi.setFormData(Object.assign({}, formData, payload), false);
+              const formDataToSet = Object.assign({}, formData, payload);
+              openApi.setFormData(formDataToSet, false);
+              // 临时：嵌套 List(contentItems) 首次 setFormData 常丢后续技能依据，延迟再写一次
+              if (step === 'position' && Array.isArray(formDataToSet.skill)) {
+                setTimeout(() => {
+                  openApi.setFormData(formDataToSet, false);
+                }, 500);
+              }
               message.success('已根据当前输入生成一版，可继续编辑');
             } catch (e) {
               message.error(e.message || 'AI 填充失败');
@@ -302,7 +362,7 @@ const OrgStep = ({ FormInfo, aiFillProps, context }) => {
   );
 };
 
-const PositionStep = ({ FormInfo, aiFillProps, context }) => {
+const PositionStep = ({ FormInfo, Editor, aiFillProps, context }) => {
   const { List } = FormInfo;
   const { Input, TextArea, Select } = FormInfo.fields;
   return (
@@ -335,29 +395,32 @@ const PositionStep = ({ FormInfo, aiFillProps, context }) => {
             <Select name="change" label="变化" rule="REQ" options={CHANGE_OPTIONS} />,
             <Select name="aiExposure" label="AI 暴露" options={LEVEL_OPTIONS} />,
             <Select name="confidence" label="置信度" options={LEVEL_OPTIONS} />,
-            <TextArea name="jd.text" label="JD 说明" block rule="LEN-0-2000" />,
-            <Input name="jd.source" label="JD 来源" rule="LEN-0-200" />,
-            <TextArea name="shockReport.text" label="冲击说明" block rule="LEN-0-2000" />,
-            <Input name="shockReport.source" label="冲击来源" rule="LEN-0-200" />
+            <List
+              name="contentItems"
+              title="依据"
+              block
+              addText="添加依据"
+              itemTitle={({ index }) => `依据 ${index + 1}`}
+              list={[
+                <FormInfo column={1} list={[<Input name="title" label="标题" rule="LEN-0-200" block />, <TextArea name="description" label="描述" block rule="LEN-0-2000" />, <Input name="source" label="来源" rule="LEN-0-200" block />]} />
+              ]}
+            />
           ]}
         />
-        <FormInfo column={1} title="工作内容 / 要求" list={[<TextArea name="description" label="工作内容" block key="description" />, <TextArea name="requirement" label="工作要求" block key="requirement" />]} />
+        <FormInfo
+          column={1}
+          title="工作内容 / 要求"
+          list={[<Editor name="description" label="工作内容" block rule="LEN-0-10000" key="description" />, <Editor name="requirement" label="工作要求" block rule="LEN-0-10000" key="requirement" />]}
+        />
       </div>
     </AnalysisFormLayout>
   );
 };
 
-const PersonStep = ({ FormInfo, employeeCount, aiFillProps, context }) => {
+const PersonStep = ({ FormInfo, aiFillProps, context }) => {
   const { List, TableList } = FormInfo;
   const { Input, TextArea, Select, InputNumber } = FormInfo.fields;
-
-  if (!employeeCount) {
-    return (
-      <AnalysisFormLayout context={context}>
-        <Typography.Text type="secondary">当前岗位暂无关联人员，完成时仅写回岗位分析结果。</Typography.Text>
-      </AnalysisFormLayout>
-    );
-  }
+  const employeeCount = (context?.employees || []).length;
 
   return (
     <AnalysisFormLayout context={context}>
@@ -432,9 +495,9 @@ const PersonStep = ({ FormInfo, employeeCount, aiFillProps, context }) => {
 };
 
 const CompletePositionAnalysisTask = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:FormInfo']
+  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-admin:Editor']
 })(({ remoteModules, data, onSuccess, children, ...props }) => {
-  const [usePreset, FormInfo] = remoteModules;
+  const [usePreset, FormInfo, Editor] = remoteModules;
   const { apis, ajax } = usePreset();
   const { message } = App.useApp();
   const useFormStepModal = FormInfo.useFormStepModal;
@@ -477,6 +540,66 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
         defaultLanguage,
         languageRef: fillLanguageRef
       };
+      const contextEmployees = context.employees || [];
+      const hasEmployees = employeeCount > 0;
+
+      const orgStep = {
+        title: '组织/部门',
+        formProps: {
+          data: initial.org,
+          onSubmit: () => {}
+        },
+        children: <OrgStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} />
+      };
+
+      const positionStep = {
+        title: '岗位',
+        formProps: {
+          data: initial.position,
+          onSubmit: hasEmployees
+            ? data => validatePositionStep(data, message)
+            : async (positionData, { stepCacheRef }) => {
+                const org = stepCacheRef.current[0]?.data || {};
+                return submitCompleteAnalysis({
+                  taskId: data.id,
+                  org,
+                  positionRaw: positionData,
+                  employeesInput: [],
+                  contextEmployees,
+                  ajax,
+                  completeApi,
+                  message,
+                  onSuccess
+                });
+              }
+        },
+        children: <PositionStep FormInfo={FormInfo} Editor={Editor} aiFillProps={aiFillProps} context={context} />
+      };
+
+      const personStep = hasEmployees
+        ? {
+            title: '个人',
+            formProps: {
+              data: { employees: initial.employees },
+              onSubmit: async (personData, { stepCacheRef }) => {
+                const org = stepCacheRef.current[0]?.data || {};
+                const positionRaw = stepCacheRef.current[1]?.data || {};
+                return submitCompleteAnalysis({
+                  taskId: data.id,
+                  org,
+                  positionRaw,
+                  employeesInput: personData?.employees,
+                  contextEmployees,
+                  ajax,
+                  completeApi,
+                  message,
+                  onSuccess
+                });
+              }
+            },
+            children: <PersonStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} />
+          }
+        : null;
 
       formStepModal({
         title: '完成 AI 岗位分析',
@@ -485,72 +608,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
         completeText: '完成分析',
         nextText: '下一步',
         cancelText: '取消',
-        items: [
-          {
-            title: '组织/部门',
-            formProps: {
-              data: initial.org,
-              onSubmit: () => {}
-            },
-            children: <OrgStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} />
-          },
-          {
-            title: '岗位',
-            formProps: {
-              data: initial.position,
-              onSubmit: data => {
-                if (!normalizeSkills(data?.skill).length) {
-                  message.error('请至少填写一项有效岗位技能');
-                  return false;
-                }
-              }
-            },
-            children: <PositionStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} />
-          },
-          {
-            title: '个人',
-            formProps: {
-              data: { employees: initial.employees },
-              onSubmit: async (personData, { stepCacheRef }) => {
-                const org = stepCacheRef.current[0]?.data || {};
-                const positionRaw = stepCacheRef.current[1]?.data || {};
-                const position = reshapePositionData(positionRaw);
-                if (!position.skill.length) {
-                  message.error('请至少填写一项有效岗位技能');
-                  return false;
-                }
-                const contextEmployees = context.employees || [];
-                const employees = reshapeEmployees(personData?.employees).map((item, index) =>
-                  Object.assign({}, item, {
-                    employeeId: item.employeeId || contextEmployees[index]?.id
-                  })
-                );
-                if (employees.some(item => !item.employeeId)) {
-                  message.error('人员数据缺少 employeeId，请关闭后重试');
-                  return false;
-                }
-
-                const { data: submitRes } = await ajax(
-                  Object.assign({}, completeApi, {
-                    data: {
-                      taskId: data.id,
-                      org: { tenantOrgId: org.tenantOrgId ?? null },
-                      position,
-                      employees
-                    }
-                  })
-                );
-                if (submitRes.code !== 0) {
-                  throw new Error(submitRes.msg || '完成分析任务失败');
-                }
-                message.success('AI岗位分析已完成');
-                onSuccess && onSuccess();
-                return true;
-              }
-            },
-            children: <PersonStep FormInfo={FormInfo} employeeCount={employeeCount} aiFillProps={aiFillProps} context={context} />
-          }
-        ]
+        items: hasEmployees ? [orgStep, positionStep, personStep] : [orgStep, positionStep]
       });
     } catch (e) {
       message.error(e.message || '打开完成任务表单失败');
