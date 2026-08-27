@@ -31,6 +31,10 @@ module.exports = {
               code: 'edit'
             },
             {
+              name: 'AI岗位分析',
+              code: 'analyze'
+            },
+            {
               name: '删除',
               code: 'remove'
             }

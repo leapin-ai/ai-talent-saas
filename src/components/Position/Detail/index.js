@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Flex, Tabs } from 'antd';
+import { App, Button, Flex, Tabs } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
 import Fetch from '@kne/react-fetch';
 import { useParams } from 'react-router-dom';
+import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
 import SkillList from './SkillList';
 import SkillOverview from './SkillList/SkillOverview';
 import AnalyzeTalent from './AnalyzeTalent';
@@ -13,14 +14,25 @@ import AiAnalysis from './AiAnalysis';
 const isAnalysisCardStatus = status => status === 'generating' || status === 'locked';
 
 const Detail = createWithRemoteLoader({
-  modules: ['components-core:InfoPage', 'components-core:InfoPage@CentralContent', 'components-core:Layout@Page', 'components-core:Layout@PageHeader', 'components-thirdparty:CKEditor.Content', 'components-core:Global@usePreset']
+  modules: [
+    'components-core:InfoPage',
+    'components-core:InfoPage@CentralContent',
+    'components-core:Layout@Page',
+    'components-core:Layout@PageHeader',
+    'components-thirdparty:CKEditor.Content',
+    'components-core:Global@usePreset',
+    'components-core:Permissions@usePermissionsPass'
+  ]
 })(
   withLocale(({ remoteModules, baseUrl = '', apis, children }) => {
-    const [InfoPage, CentralContent, Page, PageHeader, EditorContent, usePreset] = remoteModules;
+    const [InfoPage, CentralContent, Page, PageHeader, EditorContent, usePreset, usePermissionsPass] = remoteModules;
     const { ajax } = usePreset();
     const { formatMessage } = useIntl();
+    const { message } = App.useApp();
+    const canStartAnalysis = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionAnalysis });
     const { id } = useParams();
     const [activeTab, setActiveTab] = useState('role');
+    const [starting, setStarting] = useState(false);
 
     return (
       <Fetch
@@ -45,6 +57,36 @@ const Detail = createWithRemoteLoader({
               reload();
             }
           };
+
+          const startAnalysis = async () => {
+            if (!apis?.startAnalysis || starting) {
+              return;
+            }
+            setStarting(true);
+            try {
+              const { data: resData } = await ajax(
+                Object.assign({}, apis.startAnalysis, {
+                  data: { id: data.id }
+                })
+              );
+              if (resData.code !== 0) {
+                throw new Error(resData.msg || formatMessage({ id: 'position.aiAnalysisStartFail' }));
+              }
+              message.success(formatMessage({ id: 'position.aiAnalysisStartSuccess' }));
+              reload();
+            } catch (e) {
+              message.error(e.message || formatMessage({ id: 'position.aiAnalysisStartFail' }));
+            } finally {
+              setStarting(false);
+            }
+          };
+
+          const extra =
+            !showAnalysisCard && canStartAnalysis ? (
+              <Button type="primary" loading={starting} onClick={startAnalysis}>
+                {formatMessage({ id: 'position.aiAnalysisAction' })}
+              </Button>
+            ) : null;
 
           const positionInfoCard = (
             <InfoPage>
@@ -137,12 +179,13 @@ const Detail = createWithRemoteLoader({
           if (typeof children === 'function') {
             return children({
               title,
+              extra,
               noPadding: showAnalysisCard,
               children: content
             });
           }
           return (
-            <Page headerFixed={false} header={<PageHeader title={title} />} noPadding={showAnalysisCard}>
+            <Page headerFixed={false} header={<PageHeader title={title} extra={extra} />} noPadding={showAnalysisCard}>
               {showAnalysisCard ? ({ className, render }) => render({ className, children: content }) : content}
             </Page>
           );

@@ -171,12 +171,12 @@ const TenantAdmin = createWithRemoteLoader({
               onEdit: ({ data }) => {
                 navigate(`${baseUrl}/position/${data.id}/edit`);
               },
-              children: ({ insightBanner, ...renderProps }) => (
+              children: ({ insightBanner, listKey, ...renderProps }) => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
                   <Page title={formatMessage({ id: 'tenantAdmin.positionManagement' })}>
                     <Flex vertical gap={16} style={{ width: '100%' }}>
                       {insightBanner}
-                      <TablePageRender {...renderProps} withPage={false} />
+                      <TablePageRender key={listKey} {...renderProps} withPage={false} />
                     </Flex>
                   </Page>
                 </Permissions>
