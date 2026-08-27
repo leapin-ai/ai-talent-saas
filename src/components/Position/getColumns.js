@@ -34,22 +34,16 @@ const getColumns = ({ onDetail, formatMessage }) => {
     {
       name: 'status',
       title: formatMessage({ id: 'position.status' }),
-      renderType: 'tag',
-      getValueOf: item => ({
-        isEnum: true,
-        moduleName: 'positionStatus',
-        name: item.status
-      })
+      renderType: 'enum',
+      moduleName: 'positionStatus',
+      getValueOf: item => item.status && { moduleName: 'positionStatus', name: item.status }
     },
     {
       name: 'language',
       title: formatMessage({ id: 'position.language' }),
-      renderType: 'tag',
-      getValueOf: item => ({
-        isEnum: true,
-        moduleName: 'language',
-        name: item.language
-      })
+      renderType: 'enum',
+      moduleName: 'language',
+      getValueOf: item => item.language && { moduleName: 'language', name: item.language }
     },
     {
       name: 'description',

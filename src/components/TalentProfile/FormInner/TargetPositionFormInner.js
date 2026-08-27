@@ -24,8 +24,7 @@ const TargetPositionFormInner = createWithRemoteLoader({
               label={formatMessage({ id: 'talentProfile.PositionName' })}
               rule={required ? 'REQ' : undefined}
               labelKey="name"
-              valueKey="name"
-              interceptor="array-output-value"
+              valueKey="id"
               api={Object.assign({}, positionListApi, {
                 params: Object.assign({}, positionListApi?.params || {}, { filter: { status: 'published' } })
               })}

@@ -151,7 +151,7 @@ const zhCN = {
   'position.talentSkillToClose': '预计补齐',
   'position.talentSkillMonthsValue': '约 {months} 个月',
   'position.talentSkillBySkillSubtitle': '逐项技能对比',
-  'position.talentSkillBySkillTitle': '对照岗位技能要求',
+  'position.talentSkillBySkillTitle': '未来技能就绪度',
   'position.talentSkillPriorityGaps': '优先差距',
   'position.talentSkillTopGaps': '前 {count}',
   'position.talentSkillGapScore': '{current} → {required}',

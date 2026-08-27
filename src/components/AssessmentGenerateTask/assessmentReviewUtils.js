@@ -24,9 +24,16 @@ export const toReviewData = profileDetail => {
   if (employee.id != null && String(employee.id).startsWith('draft-')) {
     delete employee.id;
   }
+  const cleanProfile = Object.assign({}, profile || {});
+  delete cleanProfile.id;
+  delete cleanProfile.employeeId;
+  delete cleanProfile.tenantId;
+  delete cleanProfile.createdAt;
+  delete cleanProfile.updatedAt;
+  delete cleanProfile.deletedAt;
   return {
     employee,
-    profile: profile || {}
+    profile: cleanProfile
   };
 };
 

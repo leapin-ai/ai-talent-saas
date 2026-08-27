@@ -153,6 +153,28 @@ module.exports = fp(async (fastify, options) => {
   );
 
   fastify.post(
+    `${options.prefix}/tenant/assessment/save-review-data`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '保存完善档案申请审核草稿（reviewData）',
+        body: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            reviewData: { type: 'object' },
+            profileDetail: { type: 'object' }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => {
+      return services.assessment.saveReviewData(request.tenantUserInfo, request.body);
+    }
+  );
+
+  fastify.post(
     `${options.prefix}/tenant/assessment/approve`,
     {
       onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
