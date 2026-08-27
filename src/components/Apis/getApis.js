@@ -95,6 +95,10 @@ const getApis = options => {
             url: `${prefix}/tenant/position/start-analysis`,
             method: 'POST'
           },
+          lockAnalysis: {
+            url: `${prefix}/tenant/position/lock-analysis`,
+            method: 'POST'
+          },
           analysisTaskContext: {
             url: `${prefix}/tenant/position/analysis-task-context`,
             method: 'GET'

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { App, Button, Flex, Tabs } from 'antd';
+import { Flex, Tabs } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
@@ -10,17 +10,17 @@ import SkillOverview from './SkillList/SkillOverview';
 import AnalyzeTalent from './AnalyzeTalent';
 import AiAnalysis from './AiAnalysis';
 
+const isAnalysisCardStatus = status => status === 'generating' || status === 'locked';
+
 const Detail = createWithRemoteLoader({
   modules: ['components-core:InfoPage', 'components-core:InfoPage@CentralContent', 'components-core:Layout@Page', 'components-core:Layout@PageHeader', 'components-thirdparty:CKEditor.Content', 'components-core:Global@usePreset']
 })(
   withLocale(({ remoteModules, baseUrl = '', apis, children }) => {
     const [InfoPage, CentralContent, Page, PageHeader, EditorContent, usePreset] = remoteModules;
-    const { formatMessage } = useIntl();
-    const { message } = App.useApp();
     const { ajax } = usePreset();
+    const { formatMessage } = useIntl();
     const { id } = useParams();
     const [activeTab, setActiveTab] = useState('role');
-    const [starting, setStarting] = useState(false);
 
     return (
       <Fetch
@@ -30,36 +30,21 @@ const Detail = createWithRemoteLoader({
         render={({ data, reload }) => {
           const department = (data.orgEnums || []).find(target => target.value === data.tenantOrgId)?.description || '-';
           const dataSource = Object.assign({}, data, { department });
-          const isGenerating = data.analysisStatus === 'generating';
-
-          const startAnalysis = async () => {
-            if (!apis?.startAnalysis || starting) {
+          const showAnalysisCard = isAnalysisCardStatus(data.analysisStatus);
+          const isLocked = data.analysisStatus === 'locked';
+          const lockAnalysis = async () => {
+            if (!apis.lockAnalysis) {
               return;
             }
-            setStarting(true);
-            try {
-              const { data: resData } = await ajax(
-                Object.assign({}, apis.startAnalysis, {
-                  data: { id: data.id }
-                })
-              );
-              if (resData.code !== 0) {
-                throw new Error(resData.msg || formatMessage({ id: 'position.aiAnalysisStartFail' }));
-              }
-              message.success(formatMessage({ id: 'position.aiAnalysisStartSuccess' }));
+            const { data: resData } = await ajax({
+              url: apis.lockAnalysis.url,
+              method: apis.lockAnalysis.method,
+              data: { id: data.id }
+            });
+            if (resData.code === 0) {
               reload();
-            } catch (e) {
-              message.error(e.message || formatMessage({ id: 'position.aiAnalysisStartFail' }));
-            } finally {
-              setStarting(false);
             }
           };
-
-          const extra = !isGenerating ? (
-            <Button type="primary" loading={starting} onClick={startAnalysis}>
-              {formatMessage({ id: 'position.aiAnalysisAction' })}
-            </Button>
-          ) : null;
 
           const positionInfoCard = (
             <InfoPage>
@@ -116,8 +101,8 @@ const Detail = createWithRemoteLoader({
             </InfoPage>
           );
 
-          const content = isGenerating ? (
-            <AiAnalysis positionName={data.name} progress={data.analysisProgress} />
+          const content = showAnalysisCard ? (
+            <AiAnalysis positionName={data.name} progress={data.analysisProgress} locked={isLocked} animate={!isLocked} onAnimationComplete={lockAnalysis} />
           ) : (
             <Tabs
               activeKey={activeTab}
@@ -152,14 +137,13 @@ const Detail = createWithRemoteLoader({
           if (typeof children === 'function') {
             return children({
               title,
-              extra,
-              noPadding: isGenerating,
+              noPadding: showAnalysisCard,
               children: content
             });
           }
           return (
-            <Page headerFixed={false} header={<PageHeader title={title} extra={extra} />} noPadding={isGenerating}>
-              {isGenerating ? ({ className, render }) => render({ className, children: content }) : content}
+            <Page headerFixed={false} header={<PageHeader title={title} />} noPadding={showAnalysisCard}>
+              {showAnalysisCard ? ({ className, render }) => render({ className, children: content }) : content}
             </Page>
           );
         }}
