@@ -235,6 +235,10 @@ module.exports = fp(async (fastify, options) => {
               type: 'string',
               default: ''
             },
+            developmentGoal: {
+              type: 'string',
+              default: ''
+            },
             language: {
               type: 'string',
               enum: ['zh-CN', 'en-US']
@@ -295,6 +299,10 @@ module.exports = fp(async (fastify, options) => {
               default: ''
             },
             requirement: {
+              type: 'string',
+              default: ''
+            },
+            developmentGoal: {
               type: 'string',
               default: ''
             },
@@ -553,6 +561,7 @@ module.exports = fp(async (fastify, options) => {
               properties: {
                 description: { type: 'string' },
                 requirement: { type: 'string' },
+                developmentGoal: { type: 'string' },
                 skill: positionSkillSchema,
                 verdict: positionVerdictSchema
               }

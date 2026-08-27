@@ -154,6 +154,7 @@ const buildInitialValues = context => {
       verdict,
       description: context?.position?.description || '',
       requirement: context?.position?.requirement || '',
+      developmentGoal: context?.position?.developmentGoal || '',
       skill: positionSkills.length > 0 ? positionSkills : [createEmptySkill()]
     },
     employees: (context?.employees || []).map(employee => {
@@ -180,6 +181,7 @@ const buildInitialValues = context => {
 const reshapePositionData = data => ({
   description: data?.description || '',
   requirement: data?.requirement || '',
+  developmentGoal: data?.developmentGoal || '',
   skill: normalizeSkills(data?.skill),
   verdict: normalizeVerdict(data?.verdict)
 });
@@ -410,7 +412,11 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context }) => {
         <FormInfo
           column={1}
           title="工作内容 / 要求"
-          list={[<Editor name="description" label="工作内容" block rule="LEN-0-10000" key="description" />, <Editor name="requirement" label="工作要求" block rule="LEN-0-10000" key="requirement" />]}
+          list={[
+            <Editor name="description" label="工作内容" block rule="LEN-0-10000" key="description" />,
+            <Editor name="requirement" label="工作要求" block rule="LEN-0-10000" key="requirement" />,
+            <TextArea name="developmentGoal" label="发展目标" description="未来业务目标：2-3 年，这个岗位需要帮助业务实现什么？（选填）" block rule="LEN-0-2000" key="developmentGoal" />
+          ]}
         />
       </div>
     </AnalysisFormLayout>

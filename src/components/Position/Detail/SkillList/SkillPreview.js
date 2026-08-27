@@ -1,5 +1,6 @@
 import React from 'react';
 import { useIntl } from '@kne/react-intl';
+import { createWithRemoteLoader } from '@kne/remote-loader';
 import ChangeTag from './ChangeTag';
 import { LEVEL_META, normalizeSkillContentItems } from './skillModel';
 import style from './style.module.scss';
@@ -24,7 +25,10 @@ const resolveSourceLabel = (source, formatMessage, messages) => {
   return source;
 };
 
-const SkillPreview = ({ skill }) => {
+const SkillPreview = createWithRemoteLoader({
+  modules: ['components-core:Common@SimpleBar']
+})(({ remoteModules, skill }) => {
+  const [SimpleBar] = remoteModules;
   const { formatMessage, messages } = useIntl();
 
   if (!skill) {
@@ -32,6 +36,25 @@ const SkillPreview = ({ skill }) => {
   }
 
   const items = normalizeSkillContentItems(skill);
+
+  const body =
+    items.length === 0 ? (
+      <div className={style['preview-card']}>
+        <div className={style['preview-card-body']}>{formatMessage({ id: 'position.skillNoContent' })}</div>
+      </div>
+    ) : (
+      items.map((item, index) => (
+        <div key={`${item.title}-${index}`} className={style['preview-card']}>
+          {item.title ? <div className={style['preview-card-title']}>{item.title}</div> : null}
+          {item.description ? <div className={style['preview-card-body']}>{item.description}</div> : null}
+          {item.source ? (
+            <div className={style['preview-card-source']}>
+              {formatMessage({ id: 'position.skillContentSource' })}：{resolveSourceLabel(item.source, formatMessage, messages)}
+            </div>
+          ) : null}
+        </div>
+      ))
+    );
 
   return (
     <div className={style.preview}>
@@ -44,25 +67,13 @@ const SkillPreview = ({ skill }) => {
           <LevelTag level={skill.confidence} prefixId="position.skillConfidence" />
         </div>
       </div>
-      {items.length === 0 ? (
-        <div className={style['preview-card']}>
-          <div className={style['preview-card-body']}>{formatMessage({ id: 'position.skillNoContent' })}</div>
-        </div>
-      ) : (
-        items.map((item, index) => (
-          <div key={`${item.title}-${index}`} className={style['preview-card']}>
-            {item.title ? <div className={style['preview-card-title']}>{item.title}</div> : null}
-            {item.description ? <div className={style['preview-card-body']}>{item.description}</div> : null}
-            {item.source ? (
-              <div className={style['preview-card-source']}>
-                {formatMessage({ id: 'position.skillContentSource' })}：{resolveSourceLabel(item.source, formatMessage, messages)}
-              </div>
-            ) : null}
-          </div>
-        ))
-      )}
+      <div className={style['preview-body']}>
+        <SimpleBar style={{ height: '100%' }} autoHide>
+          {body}
+        </SimpleBar>
+      </div>
     </div>
   );
-};
+});
 
 export default SkillPreview;
