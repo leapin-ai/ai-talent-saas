@@ -852,6 +852,7 @@ module.exports = fp(async (fastify, options) => {
         name: position.name,
         description: position.description || '',
         requirement: position.requirement || '',
+        developmentGoal: position.developmentGoal || '',
         tenantOrgId: position.tenantOrgId,
         language: position.language,
         locationType: position.locationType || null,
@@ -931,6 +932,9 @@ module.exports = fp(async (fastify, options) => {
     if (posPart.requirement !== undefined) {
       updateFields.requirement = posPart.requirement;
     }
+    if (posPart.developmentGoal !== undefined) {
+      updateFields.developmentGoal = posPart.developmentGoal;
+    }
     if (posPart.skill !== undefined) {
       updateFields.skill = normalizePositionSkills(posPart.skill);
       updateFields.changeMagnitude = deriveChangeMagnitude(updateFields.skill);
@@ -983,6 +987,7 @@ module.exports = fp(async (fastify, options) => {
     verdict: { summary: 'string', today: 'string', future: 'string', futureLabel: 'string' },
     description: 'string(html ok)',
     requirement: 'string(html ok)',
+    developmentGoal: 'string(optional, future business goals for this role)',
     skill: [
       {
         id: 'string',
@@ -1254,6 +1259,7 @@ module.exports = fp(async (fastify, options) => {
     const verdict = normalizePositionVerdict(listRaw?.verdict || draft?.verdict || context.position?.verdict || {});
     const description = typeof listRaw?.description === 'string' ? listRaw.description : draft?.description || context.position?.description || '';
     const requirement = typeof listRaw?.requirement === 'string' ? listRaw.requirement : draft?.requirement || context.position?.requirement || '';
+    const developmentGoal = typeof listRaw?.developmentGoal === 'string' ? listRaw.developmentGoal : draft?.developmentGoal || context.position?.developmentGoal || '';
 
     const skillList = normalizePositionSkills(listRaw?.skill || draft?.skill || context.position?.skill || []).map(item => ({
       id: item.id,
@@ -1266,12 +1272,13 @@ module.exports = fp(async (fastify, options) => {
         verdict,
         description,
         requirement,
+        developmentGoal,
         skill: normalizePositionSkills(context.position?.skill || [])
       };
     }
 
     const skill = await fillPositionSkillsIndividually({
-      promptContext: Object.assign({}, promptContext, { verdict, description, requirement }),
+      promptContext: Object.assign({}, promptContext, { verdict, description, requirement, developmentGoal }),
       skillList,
       draft: draft || {},
       language
@@ -1281,6 +1288,7 @@ module.exports = fp(async (fastify, options) => {
       verdict,
       description,
       requirement,
+      developmentGoal,
       skill: skill.length ? skill : normalizePositionSkills(context.position?.skill || [])
     };
   };
@@ -1299,6 +1307,7 @@ module.exports = fp(async (fastify, options) => {
         verdict: normalizePositionVerdict(data.verdict || draft?.verdict || context.position?.verdict || {}),
         description: typeof data.description === 'string' ? data.description : draft?.description || context.position?.description || '',
         requirement: typeof data.requirement === 'string' ? data.requirement : draft?.requirement || context.position?.requirement || '',
+        developmentGoal: typeof data.developmentGoal === 'string' ? data.developmentGoal : draft?.developmentGoal || context.position?.developmentGoal || '',
         skill: skill.length ? skill : normalizePositionSkills(context.position?.skill || [])
       };
     }
@@ -1346,6 +1355,7 @@ module.exports = fp(async (fastify, options) => {
         name: context.position?.name,
         description: context.position?.description,
         requirement: context.position?.requirement,
+        developmentGoal: context.position?.developmentGoal,
         language: context.position?.language,
         tenantOrgId: context.position?.tenantOrgId,
         orgEnums: context.position?.orgEnums,
