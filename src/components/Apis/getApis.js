@@ -230,6 +230,10 @@ const getApis = options => {
           completeGenerate: {
             url: `${prefix}/tenant/assessment/complete-generate`,
             method: 'POST'
+          },
+          generateAiFill: {
+            url: `${prefix}/tenant/assessment/generate-ai-fill`,
+            method: 'POST'
           }
         }
       }

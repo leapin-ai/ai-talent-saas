@@ -207,7 +207,52 @@ const requestPositionAnalysisFill = async (fastify, { step, schema, context, dra
   }
 
   return requestAzureChatJson(fastify, {
-    system: `${instruction}\nSTEP=${step}\nSCHEMA=${JSON.stringify(schema)}`,
+    system: `${instruction}\nSCHEMA=${JSON.stringify(schema)}`,
+    user: JSON.stringify({
+      CONTEXT: promptContext,
+      DRAFT: draft || {}
+    }),
+    maxTokens: Number(maxTokens) > 0 ? Number(maxTokens) : 8192
+  });
+};
+
+/**
+ * 完善档案生成审核：根据简历解析/员工填写信息填充档案草稿。
+ */
+const requestAssessmentProfileFill = async (fastify, { schema, context, draft, maxTokens, language }) => {
+  const outputLanguage = normalizeOutputLanguage(language || context?.outputLanguage);
+  const provider = String(fastify.config.LLM_ASSESSMENT_PROFILE_PROVIDER || fastify.config.LLM_POSITION_ANALYSIS_PROVIDER || 'azure')
+    .trim()
+    .toLowerCase();
+  const instruction =
+    '根据 CONTEXT（简历解析、员工填写的完善档案信息）与 DRAFT（当前档案草稿）生成可直接写回员工档案编辑态的 JSON。' +
+    '只返回 JSON 对象，不要 markdown。结构必须为 { employee: {...}, profile: {...} }。' +
+    'employee 含姓名/联系方式/教育/城市等基础字段；profile 含 skills/intentionPosition/workPreference/options。' +
+    '保留 DRAFT 中已有的有效字段，仅补全或修正空缺与明显错误；不要编造无法从 CONTEXT 推断的敏感信息。' +
+    languageInstruction(outputLanguage);
+
+  const promptContext = Object.assign({}, context, { outputLanguage });
+
+  if (provider === 'runner') {
+    const configId = fastify.config.LLM_ASSESSMENT_PROFILE_CONFIG_ID || 'talent-saas-assessment-profile-fill';
+    const completionData = await requestCompletion(fastify, {
+      configId,
+      promptData: {
+        INSTRUCTION: instruction,
+        SCHEMA: JSON.stringify(schema),
+        CONTEXT: JSON.stringify(promptContext),
+        DRAFT: JSON.stringify(draft || {})
+      }
+    });
+    const raw = unwrapCompletionData(completionData);
+    if (!raw) {
+      throw new Error('LLM Runner 未返回有效 JSON 数据');
+    }
+    return raw;
+  }
+
+  return requestAzureChatJson(fastify, {
+    system: `${instruction}\nSCHEMA=${JSON.stringify(schema)}`,
     user: JSON.stringify({
       CONTEXT: promptContext,
       DRAFT: draft || {}
@@ -404,6 +449,7 @@ module.exports = {
   requestCompletion,
   requestAzureChatJson,
   requestPositionAnalysisFill,
+  requestAssessmentProfileFill,
   requestHorizonItemsFill,
   mergeHorizonItemsIntoEmployees,
   fillPersonDevelopmentPlanByHorizons,

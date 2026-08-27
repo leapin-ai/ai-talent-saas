@@ -1,93 +1,100 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Col, Descriptions, Flex, Row, Spin, Typography, message } from 'antd';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { App, Button, Flex, Select, Spin, Splitter, Typography, message } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
-import dayjs from 'dayjs';
 import TalentProfile from '@components/TalentProfile';
+import ContextSidePanel from './ContextSidePanel';
+import { toReviewData } from './assessmentReviewUtils';
 import style from './style.module.scss';
 
-const formatValue = value => {
-  if (value == null || value === '') {
-    return '-';
-  }
-  if (typeof value === 'object') {
-    const number = value.number ?? value.phone ?? value.value ?? value.email;
-    if (number != null && String(number).trim()) {
-      return String(number).trim();
-    }
-    try {
-      return JSON.stringify(value);
-    } catch (e) {
-      return '-';
-    }
-  }
-  return String(value);
-};
+const AI_FILL_LANGUAGE_OPTIONS = [
+  { label: '中文', value: 'zh-CN' },
+  { label: 'English', value: 'en-US' }
+];
 
-const LeftPanel = ({ assessment }) => {
-  const profileData = assessment?.profileData || {};
-  const interviewData = assessment?.interviewData || {};
-  const projects = Array.isArray(profileData.projects) ? profileData.projects : [];
-  const skills = profileData.skills?.work_related || profileData.skills;
+const AiFillToolbar = ({ taskId, ajax, fillApi, profileDetail, setProfileDetail, resumeParsed, submittedInfo, languageRef }) => {
+  const { message: msg } = App.useApp();
+  const [loading, setLoading] = useState(false);
+  const [language, setLanguage] = useState(() => languageRef?.current || 'zh-CN');
+
+  if (!fillApi) {
+    return null;
+  }
+
+  const changeLanguage = value => {
+    setLanguage(value);
+    if (languageRef) {
+      languageRef.current = value;
+    }
+  };
 
   return (
-    <Flex vertical gap={16} className={style['panel']}>
-      <Typography.Title level={5} style={{ margin: 0 }}>
-        面试报告 / 提交信息
-      </Typography.Title>
-      <Descriptions size="small" column={1} bordered>
-        <Descriptions.Item label="姓名">{formatValue(assessment?.name || profileData.name)}</Descriptions.Item>
-        <Descriptions.Item label="手机">{formatValue(assessment?.phone || profileData.phone)}</Descriptions.Item>
-        <Descriptions.Item label="邮箱">{formatValue(assessment?.email || profileData.email)}</Descriptions.Item>
-        <Descriptions.Item label="LinkedIn">{formatValue(profileData.linkedin)}</Descriptions.Item>
-        <Descriptions.Item label="面试项目">{formatValue(assessment?.projectName)}</Descriptions.Item>
-        <Descriptions.Item label="邀请码">{formatValue(assessment?.inviteCode)}</Descriptions.Item>
-        <Descriptions.Item label="面试状态">{formatValue(interviewData.interviewStatus)}</Descriptions.Item>
-        <Descriptions.Item label="面试ID">{formatValue(interviewData.interviewId)}</Descriptions.Item>
-        <Descriptions.Item label="更新时间">{assessment?.updatedAt ? dayjs(assessment.updatedAt).format('YYYY-MM-DD HH:mm') : '-'}</Descriptions.Item>
-      </Descriptions>
-
-      <div>
-        <Typography.Text strong>技能</Typography.Text>
-        <Typography.Paragraph type="secondary" style={{ marginTop: 8 }}>
-          {Array.isArray(skills) ? skills.join('、') || '-' : formatValue(skills)}
-        </Typography.Paragraph>
+    <div className={style['ai-fill-bar']}>
+      <div className={style['ai-fill-main']}>
+        <label className={style['ai-fill-field']}>
+          <span className={style['ai-fill-label']}>生成语言</span>
+          <Select size="middle" className={style['ai-fill-select']} value={language || 'zh-CN'} options={AI_FILL_LANGUAGE_OPTIONS} disabled={loading} onChange={changeLanguage} />
+        </label>
+        <Button
+          type="primary"
+          className={style['ai-fill-action']}
+          loading={loading}
+          disabled={loading || !profileDetail}
+          onClick={async () => {
+            if (!profileDetail) {
+              return;
+            }
+            setLoading(true);
+            try {
+              const outputLanguage = languageRef?.current || language || 'zh-CN';
+              const { data: resData } = await ajax(
+                Object.assign({}, fillApi, {
+                  data: {
+                    taskId,
+                    language: outputLanguage,
+                    draft: toReviewData(profileDetail),
+                    resumeParsed: resumeParsed || null,
+                    submittedInfo: submittedInfo || null
+                  }
+                })
+              );
+              if (resData.code !== 0) {
+                throw new Error(resData.msg || 'AI 填充失败');
+              }
+              const nextData = resData.data?.data;
+              if (!nextData || typeof nextData !== 'object') {
+                throw new Error('AI 未返回可用数据');
+              }
+              setProfileDetail(prev =>
+                Object.assign({}, prev, nextData, {
+                  id: prev?.id,
+                  orgEnums: prev?.orgEnums,
+                  positionEnums: prev?.positionEnums,
+                  performances: prev?.performances || [],
+                  aiSuggest: prev?.aiSuggest || null,
+                  profile: Object.assign({}, prev?.profile || {}, nextData.profile || {}, {
+                    options: Object.assign({}, prev?.profile?.options || {}, nextData.profile?.options || {})
+                  }),
+                  options: Object.assign({}, prev?.options || {}, nextData.options || {})
+                })
+              );
+              msg.success('已根据左侧信息生成一版，可继续编辑');
+            } catch (e) {
+              msg.error(e.message || 'AI 填充失败');
+            } finally {
+              setLoading(false);
+            }
+          }}
+        >
+          AI 填充
+        </Button>
       </div>
-
-      <div>
-        <Typography.Text strong>项目经历</Typography.Text>
-        {projects.length === 0 ? (
-          <Typography.Paragraph type="secondary" style={{ marginTop: 8 }}>
-            -
-          </Typography.Paragraph>
-        ) : (
-          projects.map((project, index) => (
-            <Descriptions key={index} size="small" column={1} bordered style={{ marginTop: 8 }} title={project.name || `项目 ${index + 1}`}>
-              <Descriptions.Item label="角色">{formatValue(project.role)}</Descriptions.Item>
-              <Descriptions.Item label="描述">{formatValue(project.description)}</Descriptions.Item>
-            </Descriptions>
-          ))
-        )}
-      </div>
-    </Flex>
+      <div className={style['ai-fill-hint']}>基于简历解析、填写信息与当前草稿生成，不会自动提交</div>
+    </div>
   );
 };
 
-const toReviewData = profileDetail => {
-  if (!profileDetail) {
-    return { employee: {}, profile: {} };
-  }
-  const { profile, performances, orgEnums, positionEnums, aiSuggest, createdAt, updatedAt, deletedAt, ...employee } = profileDetail;
-  if (employee.id != null && String(employee.id).startsWith('draft-')) {
-    delete employee.id;
-  }
-  return {
-    employee,
-    profile: profile || {}
-  };
-};
-
-const RightPanel = ({ employeeApis, profileDetail, setProfileDetail }) => {
+const ProfileEditorPanel = ({ employeeApis, profileDetail, setProfileDetail }) => {
   const saveEmployee = useCallback(
     async employeeData => {
       setProfileDetail(prev => {
@@ -159,23 +166,18 @@ const RightPanel = ({ employeeApis, profileDetail, setProfileDetail }) => {
   }
 
   return (
-    <Flex vertical gap={16} className={style['panel']}>
-      <Typography.Title level={5} style={{ margin: 0 }}>
-        员工档案
-      </Typography.Title>
-      <div className={style['profile-wrap']}>
-        <TalentProfile
-          baseUrl="/tenant"
-          apis={employeeApis}
-          data={profileDetail}
-          saveEmployee={saveEmployee}
-          saveProfile={saveProfile}
-          createPerformance={createPerformance}
-          removePerformance={removePerformance}
-          savePerformance={savePerformance}
-        />
-      </div>
-    </Flex>
+    <div className={style['profile-wrap']}>
+      <TalentProfile
+        baseUrl="/tenant"
+        apis={employeeApis}
+        data={profileDetail}
+        saveEmployee={saveEmployee}
+        saveProfile={saveProfile}
+        createPerformance={createPerformance}
+        removePerformance={removePerformance}
+        savePerformance={savePerformance}
+      />
+    </div>
   );
 };
 
@@ -184,9 +186,11 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
 })(({ remoteModules, data, onSuccess, children, ...props }) => {
   const [usePreset, Modal] = remoteModules;
   const { apis, ajax } = usePreset();
+  const { message: msg } = App.useApp();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [profileDetail, setProfileDetail] = useState(null);
+  const fillLanguageRef = useRef('zh-CN');
 
   const employeeApis = useMemo(
     () =>
@@ -197,6 +201,8 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
       }),
     [apis]
   );
+
+  const fillApi = apis?.talentSaas?.tenant?.assessment?.generateAiFill;
 
   const handleComplete = async currentDetail => {
     setSubmitting(true);
@@ -213,12 +219,12 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
       if (resData.code !== 0) {
         throw new Error(resData.msg || '完成生成任务失败');
       }
-      message.success('已完成生成并提交审核');
+      msg.success('已完成生成并提交审核');
       setOpen(false);
       onSuccess && onSuccess();
       return true;
     } catch (e) {
-      message.error(e.message || '完成生成任务失败');
+      msg.error(e.message || '完成生成任务失败');
       return false;
     } finally {
       setSubmitting(false);
@@ -241,6 +247,7 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
         title="完善档案生成审核"
         size="large"
         destroyOnHidden
+        disabledScroller
         onCancel={() => {
           if (!submitting) {
             setOpen(false);
@@ -284,7 +291,7 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
                 </Flex>
               );
             }
-            return <TaskContextBody context={context} profileDetail={profileDetail} setProfileDetail={setProfileDetail} employeeApis={employeeApis} />;
+            return <TaskContextBody taskId={data.id} context={context} profileDetail={profileDetail} setProfileDetail={setProfileDetail} employeeApis={employeeApis} ajax={ajax} fillApi={fillApi} fillLanguageRef={fillLanguageRef} />;
           }}
         />
       </Modal>
@@ -292,24 +299,38 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
   );
 });
 
-const TaskContextBody = ({ context, profileDetail, setProfileDetail, employeeApis }) => {
+const TaskContextBody = ({ taskId, context, profileDetail, setProfileDetail, employeeApis, ajax, fillApi, fillLanguageRef }) => {
+  const [resumeParsed, setResumeParsed] = useState(() => context?.resumeParsed || null);
+
   useEffect(() => {
     if (context?.profileDetail) {
       setProfileDetail(prev => prev || context.profileDetail);
     }
   }, [context?.profileDetail, setProfileDetail]);
 
+  useEffect(() => {
+    setResumeParsed(context?.resumeParsed || null);
+  }, [context?.resumeParsed]);
+
   const currentDetail = profileDetail || context.profileDetail;
 
   return (
-    <Row gutter={24} className={style['modal-body']}>
-      <Col xs={24} lg={8}>
-        <LeftPanel assessment={context.assessment} />
-      </Col>
-      <Col xs={24} lg={16}>
-        <RightPanel employeeApis={employeeApis} profileDetail={currentDetail} setProfileDetail={setProfileDetail} />
-      </Col>
-    </Row>
+    <Splitter className={style['split-layout']}>
+      <Splitter.Panel defaultSize="48%" min="320" max="70%" className={style['split-left']}>
+        <ContextSidePanel context={context} resumeParsed={resumeParsed} onResumeParsedChange={setResumeParsed} />
+      </Splitter.Panel>
+      <Splitter.Panel className={style['split-right']}>
+        <div className={style['form-scroll']}>
+          <Flex vertical gap={12} className={style['right-panel']}>
+            <Typography.Title level={5} style={{ margin: 0 }}>
+              员工档案
+            </Typography.Title>
+            <AiFillToolbar taskId={taskId} ajax={ajax} fillApi={fillApi} profileDetail={currentDetail} setProfileDetail={setProfileDetail} resumeParsed={resumeParsed} submittedInfo={context?.submittedInfo} languageRef={fillLanguageRef} />
+            <ProfileEditorPanel employeeApis={employeeApis} profileDetail={currentDetail} setProfileDetail={setProfileDetail} />
+          </Flex>
+        </div>
+      </Splitter.Panel>
+    </Splitter>
   );
 };
 

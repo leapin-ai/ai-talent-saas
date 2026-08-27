@@ -232,4 +232,28 @@ module.exports = fp(async (fastify, options) => {
       return services.assessment.completeGenerate(request.userInfo, request.body);
     }
   );
+
+  fastify.post(
+    `${options.prefix}/tenant/assessment/generate-ai-fill`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: '完善档案生成任务 AI 填充档案草稿',
+        body: {
+          type: 'object',
+          properties: {
+            taskId: { type: 'string' },
+            language: { type: 'string' },
+            draft: { type: 'object' },
+            resumeParsed: { type: 'object' },
+            submittedInfo: { type: 'object' }
+          },
+          required: ['taskId']
+        }
+      }
+    },
+    async request => {
+      return services.assessment.aiFillGenerate(request.userInfo, request.body);
+    }
+  );
 });
