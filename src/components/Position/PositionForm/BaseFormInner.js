@@ -10,7 +10,7 @@ const BaseFormInner = createWithRemoteLoader({
 })(
   withLocale(({ remoteModules, apis, ...props }) => {
     const [FormInfo, Editor] = remoteModules;
-    const { Input, Select, AddressSelect, FunctionSelect, SuperSelectTree } = FormInfo.fields;
+    const { Input, Select, AddressSelect, FunctionSelect, SuperSelectTree, TextArea } = FormInfo.fields;
     const { formatMessage } = useIntl();
     const mobile = isMobile();
     return (
@@ -50,7 +50,8 @@ const BaseFormInner = createWithRemoteLoader({
           <FunctionSelect name="capacity" label={formatMessage({ id: 'position.capacity' })} single isPopup={false} />,
           <PayDetails name="salary" label={formatMessage({ id: 'position.salary' })} defaultValue={{ currency: 'CNY' }} rule="PAY_SALARY" />,
           <Editor name="description" label={formatMessage({ id: 'position.description' })} block rule="LEN-0-10000" />,
-          <Editor name="requirement" label={formatMessage({ id: 'position.requirement' })} block rule="LEN-0-10000" />
+          <Editor name="requirement" label={formatMessage({ id: 'position.requirement' })} block rule="LEN-0-10000" />,
+          <TextArea name="developmentGoal" label={formatMessage({ id: 'position.developmentGoal' })} description={formatMessage({ id: 'position.developmentGoalDesc' })} block rule="LEN-0-2000" />
         ]}
       />
     );
