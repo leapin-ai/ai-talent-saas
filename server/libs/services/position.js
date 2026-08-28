@@ -41,6 +41,9 @@ module.exports = fp(async (fastify, options) => {
     }
 
     const resolvedTenantOrgId = await resolveTenantOrgId(authenticatePayload, tenantOrgId);
+    if (!resolvedTenantOrgId) {
+      throw new Error('组织部门不能为空');
+    }
 
     if ((await models.position.count({ where: { name, tenantId } })) > 0) {
       throw new Error('名称不能重复');
@@ -92,6 +95,9 @@ module.exports = fp(async (fastify, options) => {
     let resolvedTenantOrgId;
     if (tenantOrgId !== undefined) {
       resolvedTenantOrgId = await resolveTenantOrgId(authenticatePayload, tenantOrgId);
+      if (!resolvedTenantOrgId) {
+        throw new Error('组织部门不能为空');
+      }
     }
 
     if (
