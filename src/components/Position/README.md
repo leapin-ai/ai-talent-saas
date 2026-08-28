@@ -2,11 +2,11 @@
 
 ### 概述
 
-#### Position 模块
+# Position 模块
 
 Position 模块是职位管理的业务组件，提供完整的职位 CRUD 功能。
 
-##### 主要功能
+## 主要功能
 
 - 职位列表展示，支持筛选和搜索
 - 创建职位
@@ -14,7 +14,7 @@ Position 模块是职位管理的业务组件，提供完整的职位 CRUD 功�
 - 删除职位
 - 查看职位详情
 
-##### 技术栈
+## 技术栈
 
 - React 18+
 - Ant Design 5.x
@@ -61,7 +61,7 @@ render(<BaseExample />);
 
 ### API
 
-#### Position 主组件
+## Position 主组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
@@ -72,9 +72,9 @@ render(<BaseExample />);
 | apis.tenant.position.save | 保存API | object | - |
 | onDetail | 查看详情回调 | function | - |
 
-#### 数据结构
+## 数据结构
 
-##### Position 列表返回数据
+### Position 列表返回数据
 | 字段 | 说明 | 类型 |
 |------|------|------|
 | id | ID | string |
@@ -87,20 +87,20 @@ render(<BaseExample />);
 | publishAt | 发布时间 | date |
 | createdAt | 创建时间 | date |
 
-##### 状态枚举
+### 状态枚举
 | 值 | 说明 |
 |---|---|
 | draft | 草稿 |
 | published | 已发布 |
 | closed | 已关闭 |
 
-##### 语言枚举
+### 语言枚举
 | 值 | 说明 |
 |---|---|
 | zh-CN | 中文 |
 | en-US | 英文 |
 
-##### 工作地点类型枚举
+### 工作地点类型枚举
 | 值 | 说明 |
 |---|---|
 | on-site | 现场 |

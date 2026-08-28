@@ -1,10 +1,10 @@
 const enUS = {
-  'tenantUser.position': 'Position',
+  'tenantUser.position': 'Role',
   'tenantUser.joinDate': 'Join Date',
   'tenantUser.workStartDate': 'Work Start Date',
-  'tenantUser.addPosition': 'Add Position',
-  'tenantUser.addPositionFailed': 'Failed to add position',
-  'tenantUser.positionName': 'Position Name',
+  'tenantUser.addPosition': 'Add Role',
+  'tenantUser.addPositionFailed': 'Failed to add role',
+  'tenantUser.positionName': 'Role Name',
   inputPlaceholder: 'Please enter'
 };
 

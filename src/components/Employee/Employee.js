@@ -111,7 +111,7 @@ const Employee = createWithRemoteLoader({
           ]
         }}
         options={{
-          bizName: '员工档案',
+          bizName: formatMessage({ id: 'employee.bizName' }),
           keywordFilterName: 'keyword',
           keywordFilterLabel: '员工关键字',
           mapFilterValue,

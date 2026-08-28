@@ -15,8 +15,6 @@ const SkillOverview = ({ skill, verdict }) => {
   const skills = useMemo(() => normalizeSkills(skill), [skill]);
   const metrics = useMemo(() => getSkillMetrics(skills), [skills]);
   const verdictData = useMemo(() => normalizeVerdict(verdict), [verdict]);
-  const year = new Date().getFullYear();
-  const futureLabel = verdictData.futureLabel || formatMessage({ id: 'position.skillVerdictFutureLabel' }, { start: year, end: year + 4 });
   const empty = formatMessage({ id: 'position.skillVerdictEmpty' });
 
   return (
@@ -30,7 +28,7 @@ const SkillOverview = ({ skill, verdict }) => {
             <p className={style['verdict-box-body']}>{verdictData.today || empty}</p>
           </div>
           <div className={style['verdict-box']}>
-            <div className={style['verdict-box-title']}>{futureLabel}</div>
+            <div className={style['verdict-box-title']}>{formatMessage({ id: 'position.skillVerdictFuture' })}</div>
             <p className={style['verdict-box-body']}>{verdictData.future || empty}</p>
           </div>
         </div>

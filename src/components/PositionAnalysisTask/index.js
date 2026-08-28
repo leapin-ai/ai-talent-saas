@@ -646,7 +646,7 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef
         <AiFillToolbar FormInfo={FormInfo} step="position" {...aiFillProps} importBundleRef={importBundleRef} context={context} />
         <FormInfo
           column={1}
-          title="The Verdict"
+          title="Role Outlook"
           list={[
             <TextArea name="verdict.summary" label="洞察摘要" rule="REQ" block key="verdict.summary" />,
             <TextArea name="verdict.today" label="今日结论" rule="REQ" block key="verdict.today" />,

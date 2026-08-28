@@ -21,6 +21,7 @@ const zhCN = {
   'talentProfile.NoPromotionHistory': '暂无晋升历史',
   'talentProfile.NoData': '暂无数据',
   'talentProfile.NoLinkedEmployee': '当前账号尚未关联员工档案',
+  'talentProfile.LoadFailed': '档案加载失败，请刷新后重试',
   'talentProfile.HybridWork': '混合办公',
   'talentProfile.RemoteWork': '远程办公',
   'talentProfile.OnSiteWork': '现场办公',

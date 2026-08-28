@@ -1,8 +1,11 @@
 const enUS = {
+  'employee.bizName': 'Employee',
+  'employee.create': 'Add Employee',
+  'employee.createSuccess': 'Employee added successfully',
   'employee.avatar': 'Avatar',
   'employee.name': 'Name',
   'employee.nameEn': 'Name (English)',
-  'employee.position': 'Position',
+  'employee.position': 'Role',
   'employee.department': 'Department',
   'employee.status': 'Status',
   'employee.gender': 'Gender',
