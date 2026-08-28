@@ -277,13 +277,38 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
+  const isPositionBigintId = value => /^\d+$/.test(value);
+
   const enums = async (authenticatePayload, { ids, names }) => {
     const { tenantId } = authenticatePayload;
-    const idList = (ids || []).map(item => (item == null || item === '' ? null : String(typeof item === 'object' ? item.id || item.value : item))).filter(Boolean);
+    const idList = [];
     const nameList = (names || []).map(item => (item == null || item === '' ? null : String(typeof item === 'object' ? item.name || item.description : item))).filter(Boolean);
+    (ids || [])
+      .map(item => (item == null || item === '' ? null : String(typeof item === 'object' ? item.id || item.value : item)))
+      .filter(Boolean)
+      .forEach(value => {
+        if (isPositionBigintId(value)) {
+          idList.push(value);
+        } else {
+          // options.position / intentionPosition 可能存岗位名，不能放进 bigint id IN
+          nameList.push(value);
+        }
+      });
+    const uniqueIds = [...new Set(idList)];
+    const uniqueNames = [...new Set(nameList)];
+    if (!uniqueIds.length && !uniqueNames.length) {
+      return [];
+    }
+    const orConditions = [];
+    if (uniqueIds.length) {
+      orConditions.push({ id: { [Op.in]: uniqueIds } });
+    }
+    if (uniqueNames.length) {
+      orConditions.push({ name: { [Op.in]: uniqueNames } });
+    }
     const whereQuery = {
       tenantId,
-      [Op.or]: [{ id: { [Op.in]: idList } }, { name: { [Op.in]: nameList } }]
+      ...(orConditions.length === 1 ? orConditions[0] : { [Op.or]: orConditions })
     };
     const positions = await models.position.findAll({
       where: whereQuery
