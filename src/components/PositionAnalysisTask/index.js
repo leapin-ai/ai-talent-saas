@@ -663,7 +663,7 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef
           itemTitle={({ index }) => `技能 ${index + 1}`}
           list={[
             <Input name="id" label="id" hidden />,
-            <Input name="name" label="技能名称" rule="REQ LEN-1-200" />,
+            <Input name="name" label="技能名称" rule="REQ LEN-1-400" />,
             <Select name="origin" label="来源" rule="REQ" options={ORIGIN_OPTIONS} />,
             <Select name="importanceNow" label="当前重要性" rule="REQ" options={IMPORTANCE_OPTIONS} />,
             <Select name="importanceYear" label="本年重要性" rule="REQ" options={IMPORTANCE_OPTIONS} />,
@@ -677,7 +677,7 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef
               addText="添加依据"
               itemTitle={({ index }) => `依据 ${index + 1}`}
               list={[
-                <FormInfo column={1} list={[<Input name="title" label="标题" rule="LEN-0-200" block />, <TextArea name="description" label="描述" block rule="LEN-0-2000" />, <Input name="source" label="来源" rule="LEN-0-200" block />]} />
+                <FormInfo column={1} list={[<Input name="title" label="标题" rule="LEN-0-400" block />, <TextArea name="description" label="描述" block rule="LEN-0-4000" />, <Input name="source" label="来源" rule="LEN-0-400" block />]} />
               ]}
             />
           ]}
@@ -686,9 +686,9 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef
           column={1}
           title="工作内容 / 要求"
           list={[
-            <Editor name="description" label="工作内容" block rule="LEN-0-10000" key="description" />,
-            <Editor name="requirement" label="工作要求" block rule="LEN-0-10000" key="requirement" />,
-            <TextArea name="developmentGoal" label="发展目标" description="未来业务目标：2-3 年，这个岗位需要帮助业务实现什么？（选填）" block rule="LEN-0-2000" key="developmentGoal" />
+            <Editor name="description" label="工作内容" block rule="LEN-0-20000" key="description" />,
+            <Editor name="requirement" label="工作要求" block rule="LEN-0-20000" key="requirement" />,
+            <TextArea name="developmentGoal" label="发展目标" description="未来业务目标：2-3 年，这个岗位需要帮助业务实现什么？（选填）" block rule="LEN-0-4000" key="developmentGoal" />
           ]}
         />
       </div>
@@ -732,11 +732,11 @@ const PersonStep = ({ FormInfo, aiFillProps, context, rehydrateOnceRef, importBu
               itemTitle={({ index }) => `技能 ${index + 1}`}
               list={[
                 <Input name="id" label="id" hidden />,
-                <Input name="name" label="名称" rule="REQ LEN-1-200" />,
+                <Input name="name" label="名称" rule="REQ LEN-1-400" />,
                 <InputNumber name="current" label="当前" min={0} max={5} />,
                 <InputNumber name="required" label="要求" min={0} max={5} />,
                 <Select name="status" label="状态" options={EMPLOYEE_SKILL_STATUS} />,
-                <Input name="evidence" label="证据" rule="LEN-0-100" />
+                <Input name="evidence" label="证据" rule="LEN-0-200" />
               ]}
             />,
             <List
@@ -747,13 +747,13 @@ const PersonStep = ({ FormInfo, aiFillProps, context, rehydrateOnceRef, importBu
               itemTitle={({ index }) => `差距 ${index + 1}`}
               list={[
                 <InputNumber name="rank" label="排名" min={1} />,
-                <Input name="title" label="标题" rule="REQ LEN-1-200" />,
+                <Input name="title" label="标题" rule="REQ LEN-1-400" />,
                 <TextArea name="description" label="描述" block />,
                 <InputNumber name="current" label="当前分" min={0} max={5} />,
                 <InputNumber name="required" label="要求分" min={0} max={5} />
               ]}
             />,
-            <Input name="developmentPlan.subtitle" label="发展计划副标题" rule="LEN-0-80" />,
+            <Input name="developmentPlan.subtitle" label="发展计划副标题" rule="LEN-0-160" />,
             <List
               name="developmentPlan.horizons"
               title="发展阶段"
@@ -762,12 +762,12 @@ const PersonStep = ({ FormInfo, aiFillProps, context, rehydrateOnceRef, importBu
               itemTitle={({ index }) => `阶段 ${index + 1}`}
               list={[
                 <Input name="key" label="key" hidden />,
-                <Input name="label" label="标签" rule="LEN-0-40" />,
-                <Input name="period" label="周期" rule="LEN-0-40" />,
+                <Input name="label" label="标签" rule="LEN-0-80" />,
+                <Input name="period" label="周期" rule="LEN-0-80" />,
                 <Select name="tone" label="色调" options={PLAN_TONES} />,
-                <Input name="title" label="阶段标题" rule="LEN-0-80" />,
-                <Input name="target" label="目标" rule="LEN-0-120" />,
-                <TableList name="items" title="阶段条目" block addText="添加条目" list={[<Input name="tag" label="Tag" rule="LEN-0-8" />, <Input name="title" label="标题" />, <Input name="meta" label="补充" rule="LEN-0-120" />]} />
+                <Input name="title" label="阶段标题" rule="LEN-0-160" />,
+                <Input name="target" label="目标" rule="LEN-0-240" />,
+                <TableList name="items" title="阶段条目" block addText="添加条目" list={[<Input name="tag" label="Tag" rule="LEN-0-16" />, <Input name="title" label="标题" />, <Input name="meta" label="补充" rule="LEN-0-240" />]} />
               ]}
             />
           ]}

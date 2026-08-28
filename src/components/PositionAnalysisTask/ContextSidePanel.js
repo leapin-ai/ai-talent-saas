@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Avatar, Empty, Flex, Tabs, Tag, Typography } from 'antd';
+import { Empty, Flex, Tabs, Tag, Typography } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import classnames from 'classnames';
@@ -119,33 +119,36 @@ const TenantCompanyPane = createWithRemoteLoader({
   return <Fetch {...Object.assign({}, apis?.tenant?.companyDetail)} render={({ data }) => <CompanyInfo data={data} tenantId={tenantId} hasEdit={false} />} />;
 });
 
-const EmployeeSwitcher = ({ employees, selectedId, onSelect }) => (
-  <div className={style['employee-switcher']}>
-    <div className={style['employee-switcher-title']}>关联人员</div>
-    <div className={style['employee-switcher-list']}>
-      {employees.map(item => {
-        const active = String(item.id) === String(selectedId);
-        return (
-          <button key={item.id} type="button" className={classnames(style['employee-switch-item'], active && style['employee-switch-item-active'])} onClick={() => onSelect(item.id)}>
-            <Avatar src={item.avatar?.url || item.avatar} size={36}>
-              {(item.name || '?').slice(0, 1)}
-            </Avatar>
-            <div className={style['employee-switch-text']}>
-              <Typography.Text ellipsis className={style['employee-switch-name']}>
-                {item.name || item.nameEn || item.id}
-              </Typography.Text>
-              {item.nameEn ? (
-                <Typography.Text type="secondary" ellipsis className={style['employee-switch-sub']}>
-                  {item.nameEn}
+const EmployeeSwitcher = createWithRemoteLoader({
+  modules: ['components-core:Image.Avatar']
+})(({ remoteModules, employees, selectedId, onSelect }) => {
+  const [Avatar] = remoteModules;
+  return (
+    <div className={style['employee-switcher']}>
+      <div className={style['employee-switcher-title']}>关联人员</div>
+      <div className={style['employee-switcher-list']}>
+        {employees.map(item => {
+          const active = String(item.id) === String(selectedId);
+          return (
+            <button key={item.id} type="button" className={classnames(style['employee-switch-item'], active && style['employee-switch-item-active'])} onClick={() => onSelect(item.id)}>
+              <Avatar id={item.avatar} gender={item.gender || 'M'} size={36} />
+              <div className={style['employee-switch-text']}>
+                <Typography.Text ellipsis className={style['employee-switch-name']}>
+                  {item.name || item.nameEn || item.id}
                 </Typography.Text>
-              ) : null}
-            </div>
-          </button>
-        );
-      })}
+                {item.nameEn ? (
+                  <Typography.Text type="secondary" ellipsis className={style['employee-switch-sub']}>
+                    {item.nameEn}
+                  </Typography.Text>
+                ) : null}
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
-  </div>
-);
+  );
+});
 
 const EmployeeProfilePane = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']

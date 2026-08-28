@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Avatar, Button, Empty, Flex } from 'antd';
+import { Button, Empty, Flex } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -14,18 +14,6 @@ import iconClipboard from './assets/icon-clipboard.svg';
 import iconPlan from './assets/icon-plan.svg';
 
 const DEFAULT_PRIMARY = '#4183F0';
-
-const initialsOf = name => {
-  const text = String(name || '').trim();
-  if (!text) {
-    return '?';
-  }
-  const parts = text.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-  return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
-};
 
 const padRank = rank => String(rank).padStart(2, '0');
 
@@ -371,10 +359,10 @@ const TalentSkillAnalysisContent = ({ data, formatMessage, isMobile, themeColor 
 };
 
 const TalentSkillAnalysis = createWithRemoteLoader({
-  modules: ['components-core:Global@useGlobalValue']
+  modules: ['components-core:Global@useGlobalValue', 'components-core:Image.Avatar']
 })(
   withLocale(({ remoteModules, baseUrl = '', apis, children }) => {
-    const [useGlobalValue] = remoteModules;
+    const [useGlobalValue, Avatar] = remoteModules;
     const themeToken = useGlobalValue('themeToken') || {};
     const themeColor = themeToken.colorPrimary || DEFAULT_PRIMARY;
     const { formatMessage } = useIntl();
@@ -405,9 +393,7 @@ const TalentSkillAnalysis = createWithRemoteLoader({
           const displayName = data?.employee?.name || data?.employee?.nameEn || formatMessage({ id: 'position.talentSkillPageTitle' });
           const title = (
             <Flex align="center" gap={10} className={style['page-title']}>
-              <Avatar size={28} src={data?.employee?.avatar || undefined}>
-                {initialsOf(displayName)}
-              </Avatar>
+              <Avatar size={28} id={data?.employee?.avatar} gender={data?.employee?.gender || 'M'} />
               <span>{displayName}</span>
             </Flex>
           );
