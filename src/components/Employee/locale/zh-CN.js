@@ -1,4 +1,7 @@
 const zhCN = {
+  'employee.bizName': '员工',
+  'employee.create': '添加员工',
+  'employee.createSuccess': '添加员工成功',
   'employee.avatar': '头像',
   'employee.name': '姓名',
   'employee.nameEn': '姓名(英文)',

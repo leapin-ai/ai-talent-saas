@@ -1,6 +1,6 @@
 const enUS = {
-  'employeeInfoForm.targetPosition': 'Target Position',
-  'employeeInfoForm.targetPositionPlaceholder': 'Enter target position',
+  'employeeInfoForm.targetPosition': 'Target Role',
+  'employeeInfoForm.targetPositionPlaceholder': 'Enter target role',
   'employeeInfoForm.skill': 'Skills',
   'employeeInfoForm.skillPlaceholder': 'Enter skill',
   'employeeInfoForm.interest': 'Interests',

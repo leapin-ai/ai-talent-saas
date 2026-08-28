@@ -216,30 +216,30 @@ render(<RightColumnExample />);
 
 ### API
 
-#### TalentProfile 主组件
+## TalentProfile 主组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
 
-#### HeaderCard 子组件
+## HeaderCard 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
 |profileData|员工档案数据|object|-|
 
-#### AdvantagesCard 子组件
+## AdvantagesCard 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
 |advantages|优势数据列表|array|-|
 
-#### SkillRadarChart 子组件
+## SkillRadarChart 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
 |data|雷达图数据|object|-|
 
-#### LeftColumn 子组件
+## LeftColumn 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
@@ -248,7 +248,7 @@ render(<RightColumnExample />);
 |certificates|证书列表|array|-|
 |promotionHistory|晋升历史|array|-|
 
-#### MiddleColumn 子组件
+## MiddleColumn 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
@@ -259,7 +259,7 @@ render(<RightColumnExample />);
 |performanceReviews|绩效评价|array|-|
 |skillRadarData|技能雷达图数据|object|-|
 
-#### RightColumn 子组件
+## RightColumn 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
