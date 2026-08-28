@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import TalentMarket from '@components/TalentMarket';
 import TalentProfile from '@components/TalentProfile';
+import PositionDetail from '@components/Position/Detail';
 import Home from './Home';
 import TenantHomeRedirect from './TenantHomeRedirect';
 import CompleteProfile from './CompleteProfile';
@@ -253,21 +254,23 @@ const TenantAdmin = createWithRemoteLoader({
           {
             path: 'position/:id',
             title: 'Position/Detail',
-            elementProps: {
-              baseUrl,
-              apis: Object.assign({}, apis.talentSaas.tenant.position, {
-                orgList: apis.tenant.orgList,
-                employeeList: apis.talentSaas.tenant.employee.list
-              }),
-              children: ({ title, extra, children, noPadding }) => (
-                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
-                  <Page back title={title} extra={extra} noPadding={noPadding}>
-                    {noPadding ? ({ className, render }) => render({ className, children }) : children}
-                  </Page>
-                </Permissions>
-              )
-            },
-            loader: () => import('@components/Position/Detail')
+            element: (
+              <PositionDetail
+                baseUrl={baseUrl}
+                apis={Object.assign({}, apis.talentSaas.tenant.position, {
+                  orgList: apis.tenant.orgList,
+                  employeeList: apis.talentSaas.tenant.employee.list
+                })}
+              >
+                {({ title, extra, children, noPadding }) => (
+                  <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                    <Page back title={title} extra={extra} noPadding={noPadding}>
+                      {noPadding ? ({ className, render }) => render({ className, children }) : children}
+                    </Page>
+                  </Permissions>
+                )}
+              </PositionDetail>
+            )
           },
           {
             path: 'hiring/*',

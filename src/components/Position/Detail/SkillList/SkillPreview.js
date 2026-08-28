@@ -59,7 +59,6 @@ const SkillPreview = createWithRemoteLoader({
   return (
     <div className={style.preview}>
       <div className={style['preview-header']}>
-        <div className={style['preview-eyebrow']}>{formatMessage({ id: 'position.skillPreviewTitle' })}</div>
         <div className={style['preview-name']}>{skill.name}</div>
         <div className={style['preview-tags']}>
           <ChangeTag change={skill.change} />

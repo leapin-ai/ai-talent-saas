@@ -12,6 +12,7 @@ import { enums as talentEnums } from '@components/EnumLoader';
 import ensureSlash from '@kne/ensure-slash';
 import TenantUserPlugin, { personalCard, getUserListColumns, enhanceUserData, getUserListActions } from '@components/TenantUserPlugin';
 import '@kne/react-box/dist/index.css';
+import './locale/registerRemoteMessages';
 
 window.PUBLIC_URL = window.runtimePublicUrl || process.env.PUBLIC_URL;
 
@@ -184,9 +185,21 @@ export const globalInit = async () => {
     //url: 'http://localhost:3001',
     //tpl: '{{url}}',
     remote: 'components-core',
-    defaultVersion: '0.5.46'
+    defaultVersion: '0.5.47'
   };
   remoteLoaderPreset({
+    fallback: (
+      <Spin
+        delay={500}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          padding: '10px',
+          transform: 'translateX(-50%)'
+        }}
+      />
+    ),
+    error: <Empty description="Failed to load remote module" />,
     remotes: {
       default: componentsCoreRemote,
       'components-core': componentsCoreRemote,
