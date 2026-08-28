@@ -41,7 +41,8 @@ const zhCN = {
   'talentMarket.MatchHighlights': '匹配亮点',
   'talentMarket.ViewFullProfile': '查看完整档案',
   'talentMarket.Recommend': '推荐',
-  'talentMarket.ViewMoreTalents': '查看更多人才'
+  'talentMarket.ViewMoreTalents': '查看更多人才',
+  'talentMarket.LoadFailed': '推荐内容加载失败，请刷新后重试'
 };
 
 export default zhCN;
