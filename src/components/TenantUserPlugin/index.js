@@ -173,7 +173,7 @@ export const getUserListColumns = ({ columns }) => {
 const UserListAction = createWithRemoteLoader({
   modules: ['components-core:ButtonGroup']
 })(
-  withLocale(({ remoteModules, itemClassName, list, moreType, ...props }) => {
+  withLocale(({ remoteModules, itemClassName, list, moreType, showLength, ...props }) => {
     const [ButtonGroup] = remoteModules;
     const actionList = list.slice(0);
     if (props?.data.employee) {
@@ -196,7 +196,7 @@ const UserListAction = createWithRemoteLoader({
         buttonComponent: Actions.LinkEmployeeAction
       });
     }
-    return <ButtonGroup itemClassName={itemClassName} list={actionList} moreType={moreType} />;
+    return <ButtonGroup itemClassName={itemClassName} list={actionList} moreType={moreType} showLength={showLength} />;
   })
 );
 
