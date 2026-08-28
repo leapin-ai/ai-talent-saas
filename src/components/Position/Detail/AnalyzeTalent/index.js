@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Avatar, message } from 'antd';
+import { message } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useNavigate } from 'react-router-dom';
@@ -10,18 +10,6 @@ import style from './style.module.scss';
 
 const EMPTY_METRICS = { total: 0, assessed: 0, outdated: 0, never: 0 };
 
-const initialsOf = name => {
-  const text = String(name || '').trim();
-  if (!text) {
-    return '?';
-  }
-  const parts = text.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-  return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
-};
-
 const formatInRole = (years, formatMessage) => {
   if (years == null || years === '') {
     return '—';
@@ -30,10 +18,10 @@ const formatInRole = (years, formatMessage) => {
 };
 
 const AnalyzeTalent = createWithRemoteLoader({
-  modules: ['components-core:Table@TablePage', 'components-core:Table', 'components-core:Filter']
+  modules: ['components-core:Table@TablePage', 'components-core:Table', 'components-core:Filter', 'components-core:Image.Avatar']
 })(
   withLocale(({ remoteModules, baseUrl = '', positionId, employeeListApi }) => {
-    const [TablePage, Table, Filter] = remoteModules;
+    const [TablePage, Table, Filter, Avatar] = remoteModules;
     const { formatMessage } = useIntl();
     const navigate = useNavigate();
     const tableRef = useRef(null);
@@ -71,9 +59,7 @@ const AnalyzeTalent = createWithRemoteLoader({
         type: 'other',
         valueOf: item => (
           <div className={style.person}>
-            <Avatar size={32} src={item.avatar || undefined}>
-              {initialsOf(item.name || item.nameEn)}
-            </Avatar>
+            <Avatar size={32} id={item.avatar} gender={item.gender || 'M'} />
             <div className={style['person-text']}>
               <button type="button" className={style['person-name-link']} onClick={() => goTalentAnalysis(item)}>
                 {item.name || item.nameEn || '—'}

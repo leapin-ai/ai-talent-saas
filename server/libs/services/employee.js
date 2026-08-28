@@ -259,10 +259,12 @@ module.exports = fp(async (fastify, options) => {
     if (value == null || value === '') {
       return null;
     }
-    if (typeof value === 'object' && value.id != null) {
-      return String(value.id);
+    const id = typeof value === 'object' ? value.id : value;
+    if (id == null || id === '') {
+      return null;
     }
-    return String(value);
+    const str = String(id);
+    return /^\d+$/.test(str) ? str : null;
   };
 
   const yearsInRole = hireDate => {

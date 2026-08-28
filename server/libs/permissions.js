@@ -81,22 +81,7 @@ module.exports = {
     {
       name: '设置',
       code: 'setting',
-      modules: [
-        {
-          name: '首页设置',
-          code: 'home-setting',
-          permissions: [
-            {
-              name: '查看',
-              code: 'view'
-            },
-            {
-              name: '编辑',
-              code: 'edit'
-            }
-          ]
-        }
-      ]
+      modules: []
     },
     {
       name: '员工端',
