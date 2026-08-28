@@ -1,3 +1,5 @@
+const employeeArchiveCard = code => [`tenant-admin:employee-archive:${code}`, `tenant-admin:employee-archive:${code}:view`];
+
 export const TENANT_ADMIN_PERMISSIONS = {
   home: ['tenant-admin:home', 'tenant-admin:home:view'],
   homeCompleteProfile: ['tenant-admin:home:complete-profile'],
@@ -17,6 +19,22 @@ export const TENANT_ADMIN_PERMISSIONS = {
   orgSetting: ['setting:org', 'setting:org:view'],
   userManagement: ['setting:user-manager', 'setting:user-manager:view'],
   homeSetting: ['setting:home-setting', 'setting:home-setting:view']
+};
+
+/** 员工档案各 Card 显示权限；传给 TalentProfile 的 permissions，未传的 Card 默认展示 */
+export const TALENT_PROFILE_CARD_PERMISSIONS = {
+  header: employeeArchiveCard('header'),
+  advantages: employeeArchiveCard('advantages'),
+  duration: employeeArchiveCard('duration'),
+  certificates: employeeArchiveCard('certificates'),
+  promotionHistory: employeeArchiveCard('promotion-history'),
+  skillMetrics: employeeArchiveCard('skill-metrics'),
+  targetPosition: employeeArchiveCard('target-position'),
+  mobilityPreference: employeeArchiveCard('mobility-preference'),
+  hobbies: employeeArchiveCard('hobbies'),
+  performanceReview: employeeArchiveCard('performance-review'),
+  careerPlan: employeeArchiveCard('career-plan'),
+  aiRecommend: employeeArchiveCard('ai-recommend')
 };
 
 export const DEFAULT_HOME_PATH = '/home';
