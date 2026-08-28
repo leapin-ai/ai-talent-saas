@@ -45,6 +45,10 @@ module.exports = {
               code: 'edit'
             },
             {
+              name: '发布',
+              code: 'publish'
+            },
+            {
               name: 'AI岗位分析',
               code: 'analyze'
             },
@@ -71,8 +75,138 @@ module.exports = {
               code: 'edit'
             },
             {
+              name: '关联用户',
+              code: 'link-user'
+            },
+            {
               name: '删除',
               code: 'remove'
+            }
+          ]
+        },
+        {
+          name: '员工档案',
+          code: 'employee-archive',
+          modules: [
+            {
+              name: '个人信息',
+              code: 'header',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
+              name: '优势',
+              code: 'advantages',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
+              name: '任职时长',
+              code: 'duration',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
+              name: '证书与执照',
+              code: 'certificates',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
+              name: '晋升历史',
+              code: 'promotion-history',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
+              name: '技能指标',
+              code: 'skill-metrics',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
+              name: '意向岗位',
+              code: 'target-position',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
+              name: '流动性偏好',
+              code: 'mobility-preference',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
+              name: '兴趣爱好',
+              code: 'hobbies',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
+              name: '绩效评价',
+              code: 'performance-review',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
+              name: 'AI职业成长规划',
+              code: 'career-plan',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
+              name: 'AI 推荐',
+              code: 'ai-recommend',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
             }
           ]
         }

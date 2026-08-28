@@ -6,21 +6,26 @@ import withLocale from './withLocale';
 import getColumns from './getColumns';
 import BaseFormInner from './PositionForm';
 import InsightBanner from './InsightBanner';
+import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
 
 const mapFilterValue = (value, getFilterValue) => ({
   filter: getFilterValue(value)
 });
 
 const Position = createWithRemoteLoader({
-  modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter']
+  modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter', 'components-core:Permissions@usePermissionsPass']
 })(
   withLocale(({ remoteModules, apis, onDetail, onCreate, onEdit, withInsightBanner, children, ...props }) => {
-    const [BizUnit, usePreset, Filter] = remoteModules;
+    const [BizUnit, usePreset, Filter, usePermissionsPass] = remoteModules;
     const { SuperSelectFilterItem } = Filter.fields;
     const { formatMessage } = useIntl();
     const { ajax } = usePreset();
     const [filterValue, setFilterValue] = useState([]);
     const [listKey, setListKey] = useState(0);
+    const canCreate = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionCreate });
+    const canEdit = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionEdit });
+    const canPublish = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionPublish });
+    const canRemove = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionRemove });
 
     const handleSetStatus = (id, status, onSuccess) => {
       const isPublish = status === 'published';
@@ -42,8 +47,9 @@ const Position = createWithRemoteLoader({
     };
 
     const getActionList = ({ data, onSuccess, ...actionProps }) => {
-      const actions = [
-        {
+      const actions = [];
+      if (canEdit) {
+        actions.push({
           ...actionProps,
           data,
           onSuccess,
@@ -54,25 +60,28 @@ const Position = createWithRemoteLoader({
               onEdit({ data });
             }
           }
+        });
+      }
+      if (canPublish) {
+        if (data.status === 'published') {
+          actions.push({
+            ...actionProps,
+            data,
+            onSuccess,
+            index: actions.length,
+            children: formatMessage({ id: 'action.unpublish' }),
+            onClick: () => handleSetStatus(data.id, 'draft', onSuccess)
+          });
+        } else {
+          actions.push({
+            ...actionProps,
+            data,
+            onSuccess,
+            index: actions.length,
+            children: formatMessage({ id: 'action.publish' }),
+            onClick: () => handleSetStatus(data.id, 'published', onSuccess)
+          });
         }
-      ];
-      if (data.status === 'published') {
-        actions.push({
-          ...actionProps,
-          data,
-          onSuccess,
-          index: 1,
-          children: formatMessage({ id: 'action.unpublish' }),
-          onClick: () => handleSetStatus(data.id, 'draft', onSuccess)
-        });
-      } else {
-        actions.push({
-          ...actionProps,
-          data,
-          onSuccess,
-          children: formatMessage({ id: 'action.publish' }),
-          onClick: () => handleSetStatus(data.id, 'published', onSuccess)
-        });
       }
       return actions;
     };
@@ -92,10 +101,12 @@ const Position = createWithRemoteLoader({
       setListKey(key => key + 1);
     }, [formatMessage]);
 
-    // 列表侧禁用弹框创建/编辑；表单走独立页面
+    // 列表侧禁用弹框创建/编辑；表单走独立页面。发布走自定义按钮，勿用 BizUnit 默认 open/close
     const listApis = Object.assign({}, apis, {
       create: null,
-      save: null
+      save: null,
+      setStatus: null,
+      remove: canRemove ? apis.remove : null
     });
 
     const insightBanner = withInsightBanner ? <InsightBanner apis={apis} onReview={applyHighChangeFilter} /> : null;
@@ -139,17 +150,19 @@ const Position = createWithRemoteLoader({
           mapFilterValue,
           tableProps: {
             buttonGroup: {
-              list: [
-                {
-                  type: 'primary',
-                  children: formatMessage({ id: 'position.create' }),
-                  onClick: () => {
-                    if (typeof onCreate === 'function') {
-                      onCreate();
+              list: canCreate
+                ? [
+                    {
+                      type: 'primary',
+                      children: formatMessage({ id: 'position.create' }),
+                      onClick: () => {
+                        if (typeof onCreate === 'function') {
+                          onCreate();
+                        }
+                      }
                     }
-                  }
-                }
-              ]
+                  ]
+                : []
             }
           },
           saveData: (data, { fetchOptions }) => {
