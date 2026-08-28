@@ -4,36 +4,52 @@ import withLocale from './withLocale';
 import getColumns from './getColumns';
 import BaseFormInner from './EmployeeForm/BaseFormInner';
 import { LinkUserAction, UnlinkUserAction, ViewUserAction } from './Actions';
+import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
 
 const mapFilterValue = (value, getFilterValue) => ({
   filter: getFilterValue(value)
 });
 
 const Employee = createWithRemoteLoader({
-  modules: ['components-admin:BizUnit', 'components-core:Filter', 'components-core:Common@AddressEnum']
+  modules: ['components-admin:BizUnit', 'components-core:Filter', 'components-core:Common@AddressEnum', 'components-core:Permissions@usePermissionsPass']
 })(
   withLocale(({ remoteModules, baseUrl, apis, onDetail, onPositionDetail, ...props }) => {
-    const [BizUnit, Filter, AddressEnum] = remoteModules;
+    const [BizUnit, Filter, AddressEnum, usePermissionsPass] = remoteModules;
     const { InputFilterItem, SuperSelectFilterItem } = Filter.fields;
     const { formatMessage } = useIntl();
+    const canCreate = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeCreate });
+    const canEdit = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeEdit });
+    const canRemove = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeRemove });
+    const canLinkUser = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeLinkUser });
+    const canViewUser = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.userManagement });
+
+    const listApis = Object.assign({}, apis, {
+      create: canCreate ? apis.create : null,
+      save: canEdit ? apis.save : null,
+      remove: canRemove ? apis.remove : null
+    });
 
     const getActionList = ({ data, ...actionProps }) => {
       const actions = [];
       if (data.tenantUserId) {
-        actions.push({
-          ...actionProps,
-          data,
-          baseUrl,
-          children: '查看用户',
-          buttonComponent: ViewUserAction
-        });
-        actions.push({
-          ...actionProps,
-          data,
-          apis,
-          buttonComponent: UnlinkUserAction
-        });
-      } else {
+        if (canViewUser) {
+          actions.push({
+            ...actionProps,
+            data,
+            baseUrl,
+            children: '查看用户',
+            buttonComponent: ViewUserAction
+          });
+        }
+        if (canLinkUser) {
+          actions.push({
+            ...actionProps,
+            data,
+            apis,
+            buttonComponent: UnlinkUserAction
+          });
+        }
+      } else if (canLinkUser) {
         actions.push({
           ...actionProps,
           data,
@@ -48,7 +64,7 @@ const Employee = createWithRemoteLoader({
       <BizUnit
         {...props}
         isNext
-        apis={apis}
+        apis={listApis}
         getColumns={() =>
           getColumns({
             onDetail,
