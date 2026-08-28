@@ -9,7 +9,7 @@ import AssessmentGeneratingBadge from './AssessmentGeneratingBadge';
 import AssessmentRegenerateButton from './AssessmentRegenerateButton';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
-import { TENANT_ADMIN_PERMISSIONS } from './constants';
+import { TENANT_ADMIN_PERMISSIONS, TALENT_PROFILE_CARD_PERMISSIONS } from './constants';
 
 const SyncAssessmentStatus = ({ status, onChange }) => {
   useEffect(() => {
@@ -85,6 +85,7 @@ const Home = createWithRemoteLoader({
             baseUrl={baseUrl}
             apis={employeeApis}
             onData={onData}
+            permissions={TALENT_PROFILE_CARD_PERMISSIONS}
             empty={
               <Empty description={formatMessage({ id: 'talentProfile.NoLinkedEmployee' })} style={{ padding: '80px 0' }}>
                 {assessmentStatus === 'generating' ? null : completeProfileButton}
