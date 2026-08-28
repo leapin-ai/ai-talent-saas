@@ -156,7 +156,7 @@ module.exports = fp(async (fastify, options) => {
               type: ['string', 'null']
             }
           },
-          required: ['tenantId', 'name']
+          required: ['tenantId', 'name', 'tenantOrgId']
         }
       }
     },
@@ -286,7 +286,7 @@ module.exports = fp(async (fastify, options) => {
               default: 'draft'
             }
           },
-          required: ['name', 'language', 'locationType']
+          required: ['name', 'language', 'locationType', 'tenantOrgId']
         }
       }
     },

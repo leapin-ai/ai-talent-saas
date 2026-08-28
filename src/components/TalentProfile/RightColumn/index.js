@@ -9,6 +9,7 @@ import style from '../style.module.scss';
 import '@kne/react-box/dist/index.css';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
+import CardGate from '../CardGate';
 
 const { Title, Text } = Typography;
 
@@ -178,7 +179,7 @@ const AiRecommendCard = ({ aiRecommendations, renderMatchRing, formatMessage }) 
   );
 };
 
-const RightColumn = withLocale(({ careerPath, aiRecommendations, gotoPosition }) => {
+const RightColumn = withLocale(({ careerPath, aiRecommendations, gotoPosition, permissions }) => {
   const { formatMessage } = useIntl();
   const EmptyState = ({ text }) => (
     <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: '20px 0' }}>
@@ -218,16 +219,20 @@ const RightColumn = withLocale(({ careerPath, aiRecommendations, gotoPosition })
 
   return (
     <div className={style['right-column']}>
-      <Card className={style['career-card']}>
-        <RightCardTitle color="#8B5CF6" title={formatMessage({ id: 'talentProfile.AICareerPlan' })} description={formatMessage({ id: 'talentProfile.CareerPathRecommend' })} icon={<FaLightbulb />} gotoPosition={gotoPosition} />
-        {careerPath && careerPath.length > 0 ? (
-          <CareerPath careerPath={careerPath} renderProgress={renderProgress} getPriorityText={getPriorityText} gotoPosition={gotoPosition} formatMessage={formatMessage} />
-        ) : (
-          <EmptyState text={formatMessage({ id: 'talentProfile.NoCareerPlan' })} />
-        )}
-      </Card>
+      <CardGate request={permissions?.careerPlan}>
+        <Card className={style['career-card']}>
+          <RightCardTitle color="#8B5CF6" title={formatMessage({ id: 'talentProfile.AICareerPlan' })} description={formatMessage({ id: 'talentProfile.CareerPathRecommend' })} icon={<FaLightbulb />} gotoPosition={gotoPosition} />
+          {careerPath && careerPath.length > 0 ? (
+            <CareerPath careerPath={careerPath} renderProgress={renderProgress} getPriorityText={getPriorityText} gotoPosition={gotoPosition} formatMessage={formatMessage} />
+          ) : (
+            <EmptyState text={formatMessage({ id: 'talentProfile.NoCareerPlan' })} />
+          )}
+        </Card>
+      </CardGate>
 
-      <AiRecommendCard aiRecommendations={aiRecommendations} renderMatchRing={renderMatchRing} gotoPosition={gotoPosition} formatMessage={formatMessage} />
+      <CardGate request={permissions?.aiRecommend}>
+        <AiRecommendCard aiRecommendations={aiRecommendations} renderMatchRing={renderMatchRing} gotoPosition={gotoPosition} formatMessage={formatMessage} />
+      </CardGate>
     </div>
   );
 });
