@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import TalentProfile from '@components/TalentProfile';
 import { toReviewData } from '@components/AssessmentGenerateTask/assessmentReviewUtils';
 import { ensurePositionEnums, fromIntentionSelectValue } from '@components/TalentProfile/intentionPositionUtils';
+import { TALENT_PROFILE_CARD_PERMISSIONS } from './constants';
 import withLocale from './withLocale';
 
 const STATUS_LABEL_IDS = {
@@ -151,6 +152,7 @@ const ApplicationProfileEditor = ({ baseUrl, employeeApis, ajax, positionDetailA
         apis={employeeApis}
         data={profileDetail}
         readOnly={!canEdit}
+        permissions={TALENT_PROFILE_CARD_PERMISSIONS}
         saveEmployee={canEdit ? saveEmployee : undefined}
         saveProfile={canEdit ? saveProfile : undefined}
         createPerformance={canEdit ? createPerformance : undefined}

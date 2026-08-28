@@ -12,6 +12,7 @@ import HeaderCard from './HeaderCard';
 import LeftColumn from './LeftColumn';
 import MiddleColumn from './MiddleColumn';
 import RightColumn from './RightColumn';
+import CardGate from './CardGate';
 import style from './style.module.scss';
 import { resolveIntentionDisplay } from './intentionPositionUtils';
 
@@ -45,7 +46,9 @@ const TalentProfile = createWithRemoteLoader({
       createPerformance: controlledCreatePerformance,
       removePerformance: controlledRemovePerformance,
       savePerformance: controlledSavePerformance,
-      reload: controlledReload
+      reload: controlledReload,
+      /** 各 Card 显示权限，key 见 TALENT_PROFILE_CARD_PERMISSIONS；未传的 Card 默认展示 */
+      permissions: cardPermissions
     }) => {
       const [usePreset] = remoteModules;
       const { formatMessage } = useIntl();
@@ -320,24 +323,35 @@ const TalentProfile = createWithRemoteLoader({
         return (
           <Flex className={classnames(style['talent-profile'], embed && style['talent-profile-embed'])} vertical gap={embed ? 12 : 16}>
             <DataNotifier data={data} onData={onData} />
-            <HeaderCard
-              apis={apis}
-              originData={data}
-              saveEmployee={saveEmployee}
-              profileData={profileData}
-              readOnly={readOnly}
-              title={
-                <Typography.Link
-                  onClick={() => {
-                    gotoPosition(profileData.positionId);
-                  }}
-                >
-                  {profileData.position}
-                </Typography.Link>
-              }
-            />
+            <CardGate request={cardPermissions?.header}>
+              <HeaderCard
+                apis={apis}
+                originData={data}
+                saveEmployee={saveEmployee}
+                profileData={profileData}
+                readOnly={readOnly}
+                title={
+                  <Typography.Link
+                    onClick={() => {
+                      gotoPosition(profileData.positionId);
+                    }}
+                  >
+                    {profileData.position}
+                  </Typography.Link>
+                }
+              />
+            </CardGate>
             <div className={style['main-content']}>
-              <LeftColumn readOnly={readOnly} saveProfile={saveProfile} profileData={profileData} advantages={advantages} certificates={certificates} promotionHistory={promotionHistory} gotoPosition={gotoPosition} />
+              <LeftColumn
+                readOnly={readOnly}
+                saveProfile={saveProfile}
+                profileData={profileData}
+                advantages={advantages}
+                certificates={certificates}
+                promotionHistory={promotionHistory}
+                gotoPosition={gotoPosition}
+                permissions={cardPermissions}
+              />
               <MiddleColumn
                 readOnly={readOnly}
                 employeeId={employeeId}
@@ -355,8 +369,9 @@ const TalentProfile = createWithRemoteLoader({
                 positionListApi={apis.positionList}
                 skillRadarData={{ employee: data.profile?.aiInterviewReport || [], industry: [] }}
                 gotoPosition={gotoPosition}
+                permissions={cardPermissions}
               />
-              <RightColumn saveProfile={saveProfile} careerPath={careerPath} aiRecommendations={aiRecommendations} gotoPosition={gotoPosition} />
+              <RightColumn saveProfile={saveProfile} careerPath={careerPath} aiRecommendations={aiRecommendations} gotoPosition={gotoPosition} permissions={cardPermissions} />
             </div>
           </Flex>
         );

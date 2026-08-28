@@ -15,7 +15,7 @@ import CompleteProfileApplications from './CompleteProfileApplications';
 import CompleteProfileApplicationDetail from './CompleteProfileApplicationDetail';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
-import { TENANT_ADMIN_PERMISSIONS } from './constants';
+import { TENANT_ADMIN_PERMISSIONS, TALENT_PROFILE_CARD_PERMISSIONS } from './constants';
 
 const TenantAdmin = createWithRemoteLoader({
   modules: ['components-admin:Tenant@Setting', 'components-core:Global@usePreset', 'components-admin:BizUnit@TablePageRender', 'components-core:File@PrintButton', 'components-core:Permissions']
@@ -128,6 +128,7 @@ const TenantAdmin = createWithRemoteLoader({
                         parseResume: apis.talentSaas.tenant.resume.parseFileId,
                         orgList: apis.tenant.orgList
                       })}
+                      permissions={TALENT_PROFILE_CARD_PERMISSIONS}
                     />
                   </div>
                 </Page>
@@ -204,7 +205,7 @@ const TenantAdmin = createWithRemoteLoader({
                 orgList: apis.tenant.orgList
               }),
               children: ({ title, children }) => (
-                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionCreate} type="error">
                   <Page back title={title} noPadding>
                     {({ className, render }) => render({ className, children })}
                   </Page>
@@ -223,7 +224,7 @@ const TenantAdmin = createWithRemoteLoader({
                 orgList: apis.tenant.orgList
               }),
               children: ({ title, children }) => (
-                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionEdit} type="error">
                   <Page back title={title} noPadding>
                     {({ className, render }) => render({ className, children })}
                   </Page>
