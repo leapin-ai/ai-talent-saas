@@ -178,10 +178,13 @@ const buildInitialValues = context => {
   };
 };
 
+// 表单里没有该字段时不能伪造空串，否则 completeAnalysis 会把库里的内容清掉；主动清空拿到的是 ''，照常提交
+const pickSubmittedText = (data, name) => (typeof data?.[name] === 'string' ? { [name]: data[name] } : {});
+
 const reshapePositionData = data => ({
-  description: data?.description || '',
-  requirement: data?.requirement || '',
-  developmentGoal: data?.developmentGoal || '',
+  ...pickSubmittedText(data, 'description'),
+  ...pickSubmittedText(data, 'requirement'),
+  ...pickSubmittedText(data, 'developmentGoal'),
   skill: normalizeSkills(data?.skill),
   verdict: normalizeVerdict(data?.verdict)
 });
