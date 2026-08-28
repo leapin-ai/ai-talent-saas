@@ -449,6 +449,11 @@
   line-height: 1.6;
 }
 
+.advantage-list,
+.review-comment {
+  white-space: pre-wrap;
+}
+
 .right-card-header {
   margin-bottom: 16px;
 
