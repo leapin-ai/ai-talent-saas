@@ -45,6 +45,10 @@ module.exports = {
               code: 'edit'
             },
             {
+              name: '发布',
+              code: 'publish'
+            },
+            {
               name: 'AI岗位分析',
               code: 'analyze'
             },
@@ -69,6 +73,10 @@ module.exports = {
             {
               name: '编辑',
               code: 'edit'
+            },
+            {
+              name: '关联用户',
+              code: 'link-user'
             },
             {
               name: '删除',

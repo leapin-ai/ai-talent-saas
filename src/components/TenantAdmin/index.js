@@ -204,7 +204,7 @@ const TenantAdmin = createWithRemoteLoader({
                 orgList: apis.tenant.orgList
               }),
               children: ({ title, children }) => (
-                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionCreate} type="error">
                   <Page back title={title} noPadding>
                     {({ className, render }) => render({ className, children })}
                   </Page>
@@ -223,7 +223,7 @@ const TenantAdmin = createWithRemoteLoader({
                 orgList: apis.tenant.orgList
               }),
               children: ({ title, children }) => (
-                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionEdit} type="error">
                   <Page back title={title} noPadding>
                     {({ className, render }) => render({ className, children })}
                   </Page>
