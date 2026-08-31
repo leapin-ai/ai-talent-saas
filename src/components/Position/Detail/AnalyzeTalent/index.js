@@ -3,6 +3,7 @@ import { message } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useNavigate } from 'react-router-dom';
+import { registerTablePageMessages } from '@root/locale/registerRemoteMessages';
 import withLocale from '../../withLocale';
 import AssessmentTag from './AssessmentTag';
 import ReadinessBar from './ReadinessBar';
@@ -22,6 +23,8 @@ const AnalyzeTalent = createWithRemoteLoader({
 })(
   withLocale(({ remoteModules, baseUrl = '', positionId, employeeListApi }) => {
     const [TablePage, Table, Filter, Avatar] = remoteModules;
+    // 此处远程模块已加载完成，覆盖才不会被 table-page 自带语言包盖掉
+    registerTablePageMessages();
     const { formatMessage } = useIntl();
     const navigate = useNavigate();
     const tableRef = useRef(null);
