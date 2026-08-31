@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { isMobile } from '@kne/system-layout';
 import { Flex, Button } from 'antd';
 import useResize from '@kne/use-resize';
+import { useIsMobile, MOBILE_BREAKPOINT } from '@kne/responsive-utils';
 import { PersonalCard } from '@kne/react-box';
 import { IoMdLink } from 'react-icons/io';
 import dayjs from 'dayjs';
@@ -19,19 +19,19 @@ const HeaderCard = createWithRemoteLoader({
   withLocale(({ remoteModules, title, profileData, originData, saveEmployee, apis, readOnly }) => {
     const { formatMessage } = useIntl();
     const [Avatar, Enum, AddressEnum, useFormModal] = remoteModules;
-    const [width, setWidth] = useState(window.innerWidth - 302);
+    // 只存阈值判断结果而非像素值：PersonalCard 把 InfoItem 定义在渲染函数内，
+    // 每次重渲染都会重挂子树，令异步的 Enum 值闪空，故此处必须避免无意义的 setState
+    const [isNarrow, setIsNarrow] = useState(false);
     const formModal = useFormModal();
-    const mobile = isMobile();
+    const mobile = useIsMobile();
     const ref = useResize(el => {
-      setWidth(el.clientWidth);
+      const narrow = el.clientWidth < MOBILE_BREAKPOINT;
+      setIsNarrow(prev => (prev === narrow ? prev : narrow));
     });
-    useEffect(() => {
-      ref.current && setWidth(ref.current.clientWidth);
-    }, [ref]);
     return (
       <div ref={ref}>
         <PersonalCard
-          mode={mobile || width < 768 ? 'vertical' : 'horizontal'}
+          mode={mobile || isNarrow ? 'vertical' : 'horizontal'}
           avatar={props => (
             <div className={style['header-avatar']}>
               <Avatar {...props} id={profileData.avatar} />
