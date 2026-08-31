@@ -1,5 +1,5 @@
 const enUS = {
-  'position.name': 'Role Name',
+  'position.name': 'Role',
   'position.department': 'Function',
   'position.employeeCount': 'People in Role',
   'position.status': 'Status',
