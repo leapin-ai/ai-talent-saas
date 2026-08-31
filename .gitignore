@@ -132,3 +132,6 @@ package-lock.json
 prompts
 
 graphify-out
+
+# macOS Finder metadata
+.DS_Store
