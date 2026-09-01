@@ -1,0 +1,88 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.label {
+  color: #33314f;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.required {
+  color: #e11d48;
+  margin-inline-start: 2px;
+}
+
+.ai-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+.ai-icon {
+  flex-shrink: 0;
+}
+
+.input-shell {
+  position: relative;
+  min-height: 124px;
+  padding: 12px 15px 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(79, 70, 229, 0.14);
+  background: #fcfcfe;
+  box-sizing: border-box;
+
+  &.input-shell-no-counter {
+    padding-bottom: 12px;
+  }
+
+  :global(.ant-form-item) {
+    margin-bottom: 0 !important;
+  }
+
+  :global(.ant-form-item-label) {
+    display: none !important;
+  }
+
+  :global(.ant-form-item-control-input-content) {
+    background: transparent !important;
+  }
+}
+
+.counter {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  color: #a5a3c2;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
