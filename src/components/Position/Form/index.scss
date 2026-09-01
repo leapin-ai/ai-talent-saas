@@ -6,6 +6,18 @@
   --ant-color-fill-secondary: transparent;
   --ant-color-fill-alter: transparent;
 
+  /* 隐藏挂载的 details 占位栅格（子树仍挂载，字段保持注册） */
+  .ant-col:has([data-position-details-hidden]),
+  .react-form__field:has([data-position-details-hidden]) {
+    display: none !important;
+    width: 0 !important;
+    max-width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
   .ant-form-item {
     margin-bottom: 20px;
   }

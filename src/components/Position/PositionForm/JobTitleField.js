@@ -6,7 +6,7 @@ import { isMobile } from '@kne/system-layout';
 import SparkIcon from './SparkIcon';
 import { createPaySalary } from './PAY_SALARY';
 import { buildDetailsFields } from './detailsFields';
-import { pickDetailsFormData, pickDetailsPayload } from './payload';
+import { pickDetailsFormData, toSavePayload } from './payload';
 import { savePosition } from './savePosition';
 import style from './jobTitleField.module.scss';
 
@@ -19,7 +19,7 @@ const TaxonomyLink = ({ onClick, children }) => (
   </button>
 );
 
-const JobTitleField = ({ FormInfo, formModal, apis, isEdit, ajax, recordData, detailsDraft, onDetailsDraftChange }) => {
+const JobTitleField = ({ FormInfo, formModal, apis, isEdit, ajax, recordData }) => {
   const { useFormContext, fields } = FormInfo;
   const FormInfoList = FormInfo;
   const { Input } = fields;
@@ -32,13 +32,12 @@ const JobTitleField = ({ FormInfo, formModal, apis, isEdit, ajax, recordData, de
   const mobile = isMobile();
 
   const getFormSnapshot = useCallback(() => {
-    const live = openApi?.getFormData?.() ?? formDataRef.current ?? {};
-    return Object.assign({}, recordData || {}, detailsDraft || {}, live);
-  }, [detailsDraft, openApi, recordData]);
+    return openApi?.getFormData?.() ?? formDataRef.current ?? {};
+  }, [openApi]);
 
   const openDetailsModal = useCallback(() => {
     const snapshot = getFormSnapshot();
-    const modalApi = formModal({
+    formModal({
       title: formatMessage({ id: 'position.editBasicsTitle' }),
       size: 'small',
       formProps: {
@@ -48,26 +47,23 @@ const JobTitleField = ({ FormInfo, formModal, apis, isEdit, ajax, recordData, de
           message.warning(formatMessage({ id: 'position.completeBasicsHint' }));
         },
         onSubmit: async values => {
-          const details = pickDetailsPayload(values);
-          onDetailsDraftChange?.(details);
-          const merged = Object.assign({}, snapshot, details);
+          const live = getFormSnapshot();
+          const details = pickDetailsFormData(values);
+          const merged = Object.assign({}, live, details);
+          openApi.setFormData(merged, false);
           if (isEdit) {
-            const resData = await savePosition({ ajax, apis, payload: merged, record: recordData || merged });
+            const payload = toSavePayload(merged);
+            const resData = await savePosition({ ajax, apis, payload, record: recordData || merged });
             if (resData.code !== 0) {
               throw new Error(resData.msg || formatMessage({ id: 'position.saveFailed' }));
             }
             message.success(formatMessage({ id: 'position.saveSuccess' }));
           }
-          const live = openApi?.getFormData?.() ?? formDataRef.current ?? {};
-          openApi.setFormData(Object.assign({}, live, details), false);
-          if (modalApi?.close) {
-            modalApi.close();
-          }
         }
       },
-      children: <FormInfoList column={1} className={FORM_INFO_CLASS} list={buildDetailsFields({ FormInfo, apis, formatMessage, mobile })} />
+      children: <FormInfoList column={1} className={FORM_INFO_CLASS} list={buildDetailsFields({ FormInfo, apis, formatMessage, mobile, required: true, orgInterceptor: false })} />
     });
-  }, [ajax, apis, detailsDraft, formModal, formatMessage, FormInfo, FormInfoList, getFormSnapshot, isEdit, message, mobile, onDetailsDraftChange, openApi, recordData]);
+  }, [ajax, apis, formModal, formatMessage, FormInfo, FormInfoList, getFormSnapshot, isEdit, message, mobile, openApi, recordData]);
 
   const onTaxonomyClick = () => {
     message.info(formatMessage({ id: 'position.matchedInTaxonomyComingSoon' }));

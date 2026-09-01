@@ -10,7 +10,7 @@ import Fetch from '@kne/react-fetch';
 import merge from 'lodash/merge';
 import { useIsMobile } from '@kne/responsive-utils';
 import withLocale from '../withLocale';
-import BaseFormInner, { createPaySalary, pickBasicPayload, pickDetailsFormData, savePosition, toSavePayload } from '../PositionForm';
+import BaseFormInner, { createPaySalary, pickBasicPayload, savePosition, toSavePayload } from '../PositionForm';
 import style from './style.module.scss';
 import './index.scss';
 
@@ -71,13 +71,11 @@ const computeCompleteness = formData => {
   return Math.round((filled / checks.length) * 100);
 };
 
-const mergeWithDetailsDraft = (detailsDraft, formData) => Object.assign({}, detailsDraft || {}, formData || {});
-
-const CompletenessCard = ({ FormInfo, detailsDraft }) => {
+const CompletenessCard = ({ FormInfo }) => {
   const { useFormContext } = FormInfo;
   const { formData } = useFormContext();
   const { formatMessage } = useIntl();
-  const percent = computeCompleteness(mergeWithDetailsDraft(detailsDraft, formData));
+  const percent = computeCompleteness(formData);
 
   return (
     <div className={style['completeness-card']}>
@@ -121,27 +119,21 @@ const FormPageInner = ({ FormInfo, useFormModal, ajax, apis, action, baseUrl, da
   };
 
   const formData = typeof data === 'object' && data ? data : undefined;
-  const [detailsDraft, setDetailsDraft] = useState(() => pickDetailsFormData(formData));
-
-  useEffect(() => {
-    setDetailsDraft(pickDetailsFormData(data));
-  }, [data]);
 
   const onSubmit = async values => {
-    const merged = mergeWithDetailsDraft(detailsDraft, values);
-    if (!isBasicsComplete(merged)) {
+    if (!isBasicsComplete(values)) {
       message.warning(formatMessage({ id: 'position.completeBasicsHint' }));
       return false;
     }
 
+    const payload = toSavePayload(values);
     if (isEdit) {
-      const resData = await savePosition({ ajax, apis, payload: merged, record: data });
+      const resData = await savePosition({ ajax, apis, payload, record: data });
       if (resData.code !== 0) {
         return false;
       }
       message.success(formatMessage({ id: 'position.saveSuccess' }));
     } else {
-      const payload = toSavePayload(merged);
       const { data: resData } = await ajax(
         typeof apis.create === 'function'
           ? apis.create({ formData: payload, options: {} })
@@ -183,7 +175,7 @@ const FormPageInner = ({ FormInfo, useFormModal, ajax, apis, action, baseUrl, da
           }
           description={formatMessage({ id: 'position.formDescription' })}
         >
-          <BaseFormInner apis={apis} variant="content" formModal={formModal} isEdit={isEdit} ajax={ajax} recordData={data} detailsDraft={detailsDraft} onDetailsDraftChange={setDetailsDraft} className={FORM_INFO_CLASS} outer={<div />} />
+          <BaseFormInner apis={apis} variant="content" formModal={formModal} isEdit={isEdit} ajax={ajax} recordData={data} className={FORM_INFO_CLASS} outer={<div />} />
         </Card>
 
         {!isMobile && (
@@ -209,7 +201,7 @@ const FormPageInner = ({ FormInfo, useFormModal, ajax, apis, action, baseUrl, da
                 <span>{formatMessage({ id: 'position.formTipsNote' })}</span>
               </div>
             </Card>
-            <CompletenessCard FormInfo={FormInfo} detailsDraft={detailsDraft} />
+            <CompletenessCard FormInfo={FormInfo} />
           </aside>
         )}
       </div>

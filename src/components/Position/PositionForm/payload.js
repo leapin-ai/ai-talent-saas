@@ -53,9 +53,8 @@ export const pickEditablePayload = src => Object.assign(pickBasicPayload(src), p
 /** 提交 save/create 前把表单对象字段转成接口字段 */
 export const toSavePayload = src => {
   const payload = pickEditablePayload(src);
-  const tenantOrgId = payload.tenantOrgId;
-  if (tenantOrgId != null && typeof tenantOrgId === 'object') {
-    payload.tenantOrgId = tenantOrgId.id ?? null;
+  if (payload.capacity != null && typeof payload.capacity === 'object') {
+    payload.capacity = payload.capacity.id ?? payload.capacity.value ?? '';
   }
   return payload;
 };

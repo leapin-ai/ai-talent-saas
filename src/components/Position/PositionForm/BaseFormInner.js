@@ -5,9 +5,10 @@ import { isMobile } from '@kne/system-layout';
 import RoleContentField from './RoleContentField';
 import JobTitleField from './JobTitleField';
 import { buildDetailsFields } from './detailsFields';
+import style from './baseFormInner.module.scss';
 import '@kne/pay-details/dist/index.css';
 
-const buildFieldList = ({ variant, FormInfo, apis, formatMessage, mobile, formModal, isEdit, ajax, recordData, detailsDraft, onDetailsDraftChange }) => {
+const buildFieldList = ({ variant, FormInfo, apis, formatMessage, mobile, formModal, isEdit, ajax, recordData }) => {
   const { TextArea } = FormInfo.fields;
   const detailsFields = buildDetailsFields({ FormInfo, apis, formatMessage, mobile });
 
@@ -21,11 +22,16 @@ const buildFieldList = ({ variant, FormInfo, apis, formatMessage, mobile, formMo
     return detailsFields;
   }
   if (variant === 'content') {
-    const jobTitle =
-      formModal != null
-        ? [<JobTitleField key="jobTitle" FormInfo={FormInfo} formModal={formModal} apis={apis} isEdit={isEdit} ajax={ajax} recordData={recordData} detailsDraft={detailsDraft} onDetailsDraftChange={onDetailsDraftChange} />]
-        : [];
-    return [...jobTitle, ...contentFields];
+    const jobTitle = formModal != null ? [<JobTitleField key="jobTitle" FormInfo={FormInfo} formModal={formModal} apis={apis} isEdit={isEdit} ajax={ajax} recordData={recordData} />] : [];
+    // 隐藏挂载 details：字段仍注册进主表单，setFormData / 底栏提交 / 完整度才能读到
+    // required:false，避免底栏提交时在不可见区域报 REQ；完整性由弹窗 + isBasicsComplete 把关
+    // display:none 不卸载 React 子树，字段保持注册；合并为一个 list 项避免占多行空白
+    const hiddenDetails = (
+      <div key="details-hidden" className={style['details-hidden']} data-position-details-hidden aria-hidden="true">
+        {buildDetailsFields({ FormInfo, apis, formatMessage, mobile, required: false, orgInterceptor: false })}
+      </div>
+    );
+    return [...jobTitle, hiddenDetails, ...contentFields];
   }
   return [...detailsFields, ...contentFields];
 };
@@ -33,11 +39,11 @@ const buildFieldList = ({ variant, FormInfo, apis, formatMessage, mobile, formMo
 const BaseFormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo']
 })(
-  withLocale(({ remoteModules, apis, variant = 'full', formModal, isEdit, ajax, recordData, detailsDraft, onDetailsDraftChange, ...props }) => {
+  withLocale(({ remoteModules, apis, variant = 'full', formModal, isEdit, ajax, recordData, ...props }) => {
     const [FormInfo] = remoteModules;
     const { formatMessage } = useIntl();
     const mobile = isMobile();
-    const list = buildFieldList({ variant, FormInfo, apis, formatMessage, mobile, formModal, isEdit, ajax, recordData, detailsDraft, onDetailsDraftChange });
+    const list = buildFieldList({ variant, FormInfo, apis, formatMessage, mobile, formModal, isEdit, ajax, recordData });
 
     return <FormInfo {...props} column={1} list={list} />;
   })

@@ -1,0 +1,4 @@
+/* display:none 不卸载子树，react-form 字段仍会注册；仅从布局中移除 */
+.details-hidden {
+  display: none;
+}

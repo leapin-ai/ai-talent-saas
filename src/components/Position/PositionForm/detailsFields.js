@@ -1,15 +1,26 @@
 import PayDetails from '@kne/pay-details';
 
-export const buildDetailsFields = ({ FormInfo, apis, formatMessage, mobile }) => {
+export const buildDetailsFields = ({ FormInfo, apis, formatMessage, mobile, required = true, orgInterceptor = true }) => {
   const { Select, AddressSelect, FunctionSelect, SuperSelectTree } = FormInfo.fields;
+  const req = required ? 'REQ' : undefined;
 
   return [
-    <SuperSelectTree key="tenantOrgId" name="tenantOrgId" label={formatMessage({ id: 'position.department' })} api={apis.orgList} valueKey="id" labelKey="name" single interceptor="object-output-value" rule="REQ" />,
+    <SuperSelectTree
+      key="tenantOrgId"
+      name="tenantOrgId"
+      label={formatMessage({ id: 'position.department' })}
+      api={apis.orgList}
+      valueKey="id"
+      labelKey="name"
+      single
+      {...(orgInterceptor ? { interceptor: 'object-output-value' } : {})}
+      rule={req}
+    />,
     <Select
       key="language"
       name="language"
       label={formatMessage({ id: 'position.language' })}
-      rule="REQ"
+      rule={req}
       options={[
         { label: formatMessage({ id: 'language.zh-CN' }), value: 'zh-CN' },
         { label: formatMessage({ id: 'language.en-US' }), value: 'en-US' }
@@ -19,7 +30,7 @@ export const buildDetailsFields = ({ FormInfo, apis, formatMessage, mobile }) =>
       key="locationType"
       name="locationType"
       label={formatMessage({ id: 'position.locationType' })}
-      rule="REQ"
+      rule={req}
       options={[
         { label: formatMessage({ id: 'locationType.on-site' }), value: 'on-site' },
         { label: formatMessage({ id: 'locationType.remote' }), value: 'remote' }
