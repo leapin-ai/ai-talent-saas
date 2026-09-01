@@ -185,26 +185,45 @@
     }
   }
 
-  .ck-editor__editable,
-  .ck.ck-editor__main > .ck-editor__editable,
-  [class*='editor'] textarea,
-  textarea.ant-input {
-    min-height: 124px;
-    border-radius: 12px;
-    border-color: var(--ant-color-primary-border, color-mix(in srgb, var(--primary-color) 14%, transparent));
-    background: transparent !important;
-    color: #3f3d62;
-    font-size: 13.5px;
-    line-height: 1.6;
+  /* RoleContentField：三字段统一 plain textarea 容器 */
+  [data-role-content-field] {
+    textarea.ant-input {
+      min-height: 88px;
+      padding: 0 !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      color: #3f3d62;
+      font-size: 13.5px;
+      line-height: 1.62;
+      resize: vertical;
+    }
+
+    textarea.ant-input:focus {
+      box-shadow: none !important;
+    }
   }
 
-  .ck.ck-toolbar {
-    border-radius: 12px 12px 0 0;
-    border-color: var(--ant-color-primary-border, color-mix(in srgb, var(--primary-color) 14%, transparent));
-    background: transparent !important;
-  }
+  /* JobTitleField：容器承担边框与外发光，内部 input 无边框 */
+  [data-job-title-field] {
+    .ant-input,
+    .ant-input-outlined,
+    .ant-input:focus,
+    .ant-input-focused,
+    .ant-input-affix-wrapper,
+    .ant-input-affix-wrapper-focused {
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      outline: none !important;
+      background: transparent !important;
+    }
 
-  .ck.ck-editor__main > .ck-editor__editable {
-    border-radius: 0 0 12px 12px;
+    .ant-form-item-control,
+    .ant-form-item-control-input,
+    .ant-form-item-control-input-content {
+      overflow: visible !important;
+    }
   }
 }

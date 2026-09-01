@@ -224,6 +224,22 @@
   box-shadow: 0 -8px 20px rgba(15, 23, 42, 0.04);
 }
 
+.header-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  color: #67658c;
+
+  &:hover {
+    color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+  }
+}
+
 @include resp.mobile-container {
   .body {
     flex-direction: column;
