@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -9,12 +10,22 @@ import Fetch from '@kne/react-fetch';
 import merge from 'lodash/merge';
 import { useIsMobile } from '@kne/responsive-utils';
 import withLocale from '../withLocale';
-import BaseFormInner, { createPaySalary } from '../PositionForm';
+import BaseFormInner, { createPaySalary, pickBasicPayload, savePosition, toSavePayload } from '../PositionForm';
 import style from './style.module.scss';
 import './index.scss';
 
 const FORM_INFO_CLASS = 'position-form-info';
 const DEFAULT_PRIMARY = '#4183F0';
+
+const stripRichTextToPlain = value => {
+  if (value == null || value === '') {
+    return value;
+  }
+  return String(value)
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .trim();
+};
 
 const hasValue = value => {
   if (value == null) {
@@ -36,6 +47,11 @@ const hasValue = value => {
     return Object.keys(value).length > 0;
   }
   return true;
+};
+
+const isBasicsComplete = formData => {
+  const basics = pickBasicPayload(formData || {});
+  return hasValue(basics.name) && hasValue(basics.tenantOrgId) && hasValue(basics.language) && hasValue(basics.locationType) && (basics.locationType === 'remote' ? true : hasValue(basics.location));
 };
 
 const computeCompleteness = formData => {
@@ -75,8 +91,22 @@ const CompletenessCard = ({ FormInfo }) => {
   );
 };
 
-const FormPageInner = ({ FormInfo, ajax, apis, action, baseUrl, data, cardColor }) => {
+const EditPageTitleBridge = ({ FormInfo, setPageShell, formatMessage }) => {
+  const { useFormContext } = FormInfo;
+  const { formData } = useFormContext();
+
+  useEffect(() => {
+    setPageShell({
+      title: formData?.name || formatMessage({ id: 'position.editTitle' })
+    });
+  }, [formData?.name, formatMessage, setPageShell]);
+
+  return null;
+};
+
+const FormPageInner = ({ FormInfo, useFormModal, ajax, apis, action, baseUrl, data, cardColor, setPageShell }) => {
   const { Form, SubmitButton } = FormInfo;
+  const formModal = useFormModal();
   const { message } = App.useApp();
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
@@ -90,33 +120,15 @@ const FormPageInner = ({ FormInfo, ajax, apis, action, baseUrl, data, cardColor 
 
   const formData = typeof data === 'object' && data ? data : undefined;
 
-  // 编辑页只改基础字段；不要把 detail 里的 skill/verdict/分析态原样回传（易被空数组盖掉）
-  const pickEditablePayload = values => {
-    const src = values || {};
-    return {
-      name: src.name,
-      tenantOrgId: src.tenantOrgId,
-      language: src.language,
-      locationType: src.locationType,
-      location: src.location,
-      capacity: src.capacity,
-      salary: src.salary,
-      description: src.description,
-      requirement: src.requirement,
-      developmentGoal: src.developmentGoal
-    };
-  };
-
   const onSubmit = async values => {
+    if (!isBasicsComplete(values)) {
+      message.warning(formatMessage({ id: 'position.completeBasicsHint' }));
+      return false;
+    }
+
+    const payload = toSavePayload(values);
     if (isEdit) {
-      const payload = pickEditablePayload(values);
-      const { data: resData } = await ajax(
-        typeof apis.save === 'function'
-          ? apis.save({ formData: payload, data, options: {} })
-          : merge({}, apis.save, {
-              data: Object.assign({}, payload, { id: data.id })
-            })
-      );
+      const resData = await savePosition({ ajax, apis, payload, record: data });
       if (resData.code !== 0) {
         return false;
       }
@@ -124,9 +136,9 @@ const FormPageInner = ({ FormInfo, ajax, apis, action, baseUrl, data, cardColor 
     } else {
       const { data: resData } = await ajax(
         typeof apis.create === 'function'
-          ? apis.create({ formData: values, options: {} })
+          ? apis.create({ formData: payload, options: {} })
           : merge({}, apis.create, {
-              data: values
+              data: payload
             })
       );
       if (resData.code !== 0) {
@@ -146,6 +158,7 @@ const FormPageInner = ({ FormInfo, ajax, apis, action, baseUrl, data, cardColor 
 
   return (
     <Form className={style['form']} data={formData} rules={{ PAY_SALARY: createPaySalary(formatMessage) }} onSubmit={onSubmit}>
+      {isEdit && setPageShell ? <EditPageTitleBridge FormInfo={FormInfo} setPageShell={setPageShell} formatMessage={formatMessage} /> : null}
       <div className={style['body']}>
         <Card
           className={style['main-card']}
@@ -157,12 +170,12 @@ const FormPageInner = ({ FormInfo, ajax, apis, action, baseUrl, data, cardColor 
               <span className={style['section-icon']}>
                 <MdWorkOutline size={17} />
               </span>
-              <span>{formatMessage({ id: 'position.basicInfo' })}</span>
+              <span>{formatMessage({ id: 'position.formBasicInfo' })}</span>
             </Flex>
           }
           description={formatMessage({ id: 'position.formDescription' })}
         >
-          <BaseFormInner apis={apis} className={FORM_INFO_CLASS} outer={<div />} />
+          <BaseFormInner apis={apis} variant="content" formModal={formModal} isEdit={isEdit} ajax={ajax} recordData={data} className={FORM_INFO_CLASS} outer={<div />} />
         </Card>
 
         {!isMobile && (
@@ -201,11 +214,24 @@ const FormPageInner = ({ FormInfo, ajax, apis, action, baseUrl, data, cardColor 
   );
 };
 
+const EditFormPageShell = ({ data, FormInfo, useFormModal, ajax, apis, action, baseUrl, cardColor, shellChildren, pageTitle }) => {
+  const [pageShell, setPageShell] = useState({ title: data?.name });
+
+  const content = <FormPageInner FormInfo={FormInfo} useFormModal={useFormModal} ajax={ajax} apis={apis} action={action} baseUrl={baseUrl} data={data} cardColor={cardColor} setPageShell={setPageShell} />;
+
+  if (typeof shellChildren === 'function') {
+    const title = pageShell?.title ?? data?.name ?? pageTitle;
+    return shellChildren({ children: content, title });
+  }
+
+  return content;
+};
+
 const FormPage = createWithRemoteLoader({
-  modules: ['components-core:FormInfo', 'components-core:Global@usePreset', 'components-core:Global@useGlobalValue']
+  modules: ['components-core:FormInfo', 'components-core:FormInfo@useFormModal', 'components-core:Global@usePreset', 'components-core:Global@useGlobalValue']
 })(
   withLocale(({ remoteModules, apis, baseUrl, action: actionProp, children }) => {
-    const [FormInfo, usePreset, useGlobalValue] = remoteModules;
+    const [FormInfo, useFormModal, usePreset, useGlobalValue] = remoteModules;
     const { ajax } = usePreset();
     const themeToken = useGlobalValue('themeToken') || {};
     const cardColor = themeToken.colorPrimary || DEFAULT_PRIMARY;
@@ -215,7 +241,11 @@ const FormPage = createWithRemoteLoader({
     const pageTitle = action === 'edit' ? formatMessage({ id: 'position.editTitle' }) : formatMessage({ id: 'position.createTitle' });
 
     const renderInner = data => {
-      const content = <FormPageInner FormInfo={FormInfo} ajax={ajax} apis={apis} action={action} baseUrl={baseUrl} data={data} cardColor={cardColor} />;
+      if (action === 'edit') {
+        return <EditFormPageShell data={data} FormInfo={FormInfo} useFormModal={useFormModal} ajax={ajax} apis={apis} action={action} baseUrl={baseUrl} cardColor={cardColor} shellChildren={children} pageTitle={pageTitle} />;
+      }
+
+      const content = <FormPageInner FormInfo={FormInfo} useFormModal={useFormModal} ajax={ajax} apis={apis} action={action} baseUrl={baseUrl} data={data} cardColor={cardColor} />;
       if (typeof children === 'function') {
         return children({ children: content, title: pageTitle });
       }
@@ -231,7 +261,9 @@ const FormPage = createWithRemoteLoader({
           render={({ data }) => {
             const org = (data.orgEnums || []).find(item => item.value === data.tenantOrgId);
             const prepared = Object.assign({}, data, {
-              tenantOrgId: org ? { name: org.description, id: org.value } : data.tenantOrgId
+              tenantOrgId: org ? { name: org.description, id: org.value } : data.tenantOrgId,
+              description: stripRichTextToPlain(data.description),
+              requirement: stripRichTextToPlain(data.requirement)
             });
             return renderInner(prepared);
           }}

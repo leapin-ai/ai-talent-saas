@@ -7,7 +7,6 @@ import { useIntl } from '@kne/react-intl';
 import { useFetch } from '@kne/react-fetch';
 import { useLocation, useMatch, useNavigate, useParams } from 'react-router-dom';
 import { Page } from '@kne/system-layout';
-import dayjs from 'dayjs';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
 import SkillList from './SkillList';
 import SkillOverview from './SkillList/SkillOverview';
@@ -22,14 +21,6 @@ const text = value => {
     return '-';
   }
   return String(value);
-};
-
-const formatDateTime = value => {
-  if (!value) {
-    return '-';
-  }
-  const parsed = dayjs(value);
-  return parsed.isValid() ? parsed.format('YYYY-MM-DD HH:mm') : '-';
 };
 
 const MetaGrid = ({ items }) => (
@@ -72,7 +63,7 @@ const resolvePositionId = ({ paramId, pathname, baseUrl = '' }) => {
   return candidate;
 };
 
-/** 岗位描述/要求来自 components-admin:Editor 的 HTML */
+/** 岗位描述/要求：表单为纯文本；历史数据可能含 HTML */
 const RichContent = ({ html }) => {
   const content = html == null || html === '' ? '' : String(html);
   if (!content) {
@@ -207,10 +198,7 @@ const Detail = createWithRemoteLoader({
                 { label: formatMessage({ id: 'position.name' }), value: text(data.name) },
                 { label: formatMessage({ id: 'position.department' }), value: text(department) },
                 { label: formatMessage({ id: 'position.status' }), value: enumLabel('positionStatus', data.status) },
-                { label: formatMessage({ id: 'position.language' }), value: enumLabel('language', data.language) },
-                { label: formatMessage({ id: 'position.publishAt' }), value: formatDateTime(data.publishAt) },
-                { label: formatMessage({ id: 'position.createdAt' }), value: formatDateTime(data.createdAt) },
-                { label: formatMessage({ id: 'position.updatedAt' }), value: formatDateTime(data.updatedAt) }
+                { label: formatMessage({ id: 'position.language' }), value: enumLabel('language', data.language) }
               ]}
             />
           </section>

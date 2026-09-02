@@ -136,12 +136,12 @@ render(<CertificateCardExample />);
 
 ### API
 
-## EmployeeInfoForm 主组件
+#### EmployeeInfoForm 主组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
 
-## ProfileCard 子组件
+#### ProfileCard 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
@@ -149,7 +149,7 @@ render(<CertificateCardExample />);
 |onFinish|表单提交回调|(values: object) => void|-|
 |avatarUrl|头像 URL|string|-|
 
-## TagInputCard 子组件
+#### TagInputCard 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
@@ -162,14 +162,14 @@ render(<CertificateCardExample />);
 |placeholder|输入框占位符|string|-|
 |buttonClassName|按钮样式类名|string|-|
 
-## MobilityCard 子组件
+#### MobilityCard 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
 |mobilityData|流动性数据|object|-|
 |onChange|数据变化回调|(data: object) => void|-|
 
-## CertificateCard 子组件
+#### CertificateCard 子组件
 
 |属性名|说明|类型|默认值|
 |---|---|---|---|
