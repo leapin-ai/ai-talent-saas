@@ -5,6 +5,8 @@ import { ButtonFooter } from '@kne/button-group';
 import '@kne/button-group/dist/index.css';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ResultCard } from '@kne/react-box';
+import '@kne/react-box/dist/index.css';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
 import Stepper from './Stepper';
@@ -12,7 +14,17 @@ import UploadStep from './UploadStep';
 import ReviewStep from './ReviewStep';
 import ProjectsStep from './ProjectsStep';
 import InterviewStep from './InterviewStep';
-import { hasPrefilledReviewData, hasSavedProfileData, hasSavedProjectsData, mapEmployeeToCompleteProfileData, mergeCompleteProfilePrefill, normalizeReviewProfileData, splitAssessmentProfileData } from './profileDataUtils';
+import {
+  hasPrefilledReviewData,
+  hasSavedProfileData,
+  hasSavedProjectsData,
+  joinLinkedinUrl,
+  mapEmployeeToCompleteProfileData,
+  mergeCompleteProfilePrefill,
+  normalizeReviewProfileData,
+  splitAssessmentProfileData,
+  stripLinkedinPrefix
+} from './profileDataUtils';
 import style from './style.module.scss';
 
 const hasContactValue = value => {
@@ -25,10 +37,21 @@ const hasContactValue = value => {
   return true;
 };
 
+const stripInviteContact = data => {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+  const next = { ...data };
+  delete next.name;
+  delete next.email;
+  delete next.phone;
+  return next;
+};
+
 const CompleteProfile = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:FileList@DragAreaOuter', 'components-core:FileList@UploadTips', 'components-core:FileList@UploadButton', 'components-core:File@List']
 })(
-  withLocale(({ remoteModules, baseUrl = '/tenant' }) => {
+  withLocale(({ remoteModules, baseUrl = '/tenant', mode = 'assessment', code: codeProp }) => {
     const { formatMessage } = useIntl();
     if (!Array.isArray(remoteModules) || remoteModules.length < 6) {
       return null;
@@ -41,17 +64,84 @@ const CompleteProfile = createWithRemoteLoader({
     const { apis, ajax } = usePreset();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const code = codeProp || searchParams.get('code') || '';
+    const isCollect = mode === 'collect';
     const [current, setCurrent] = useState(() => (searchParams.get('step') === 'interview' ? 3 : 0));
-    const [uploadState, setUploadState] = useState({ resumes: [], parsed: null });
+    const [uploadState, setUploadState] = useState({ resumes: [], parsed: null, linkedin: '' });
     const [reviewData, setReviewData] = useState(null);
     const [projectsData, setProjectsData] = useState(null);
     const [projectsEditing, setProjectsEditing] = useState(false);
     const [interviewFinished, setInterviewFinished] = useState(false);
     const [prefillLoaded, setPrefillLoaded] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
+    const [inviteMeta, setInviteMeta] = useState(null);
+    const [bootError, setBootError] = useState('');
     const prefillAppliedRef = useRef(false);
+
+    const collectApis = useMemo(() => {
+      if (!isCollect || !code) {
+        return null;
+      }
+      const publicApis = apis.talentSaas.public.talentCollectInvite;
+      return {
+        skipPreviousInterview: true,
+        detail: async () => {
+          const { data } = await ajax(
+            Object.assign({}, publicApis.detail, {
+              params: { code }
+            })
+          );
+          if (data.code !== 0) {
+            throw new Error(data.msg || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
+          }
+          return data.data;
+        },
+        saveProfile: async profileData => {
+          const { data } = await ajax(
+            Object.assign({}, publicApis.saveProfile, {
+              data: {
+                code,
+                profileData: stripInviteContact(profileData)
+              }
+            })
+          );
+          if (data.code !== 0) {
+            throw new Error(data.msg || formatMessage({ id: 'tenantAdmin.completeInterviewSaveFailed' }));
+          }
+          return data.data;
+        },
+        ensureInvite: async (options = {}) => {
+          const { data } = await ajax(
+            Object.assign({}, publicApis.ensureInvite, {
+              data: Object.assign({ code }, options)
+            })
+          );
+          if (data.code !== 0) {
+            throw new Error(data.msg || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
+          }
+          return data.data;
+        },
+        markDone: async ({ interviewId } = {}) => {
+          const { data } = await ajax(
+            Object.assign({}, publicApis.markDone, {
+              data: { code, interviewId }
+            })
+          );
+          if (data.code !== 0) {
+            throw new Error(data.msg || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
+          }
+          return data.data;
+        }
+      };
+    }, [ajax, apis, formatMessage, isCollect, code]);
+
     const handleInterviewComplete = useCallback(
       event => {
+        if (isCollect) {
+          setInterviewFinished(true);
+          message.success(formatMessage({ id: 'tenantAdmin.completeFinishTip' }));
+          return;
+        }
         if (event?.directFinish) {
           message.success(formatMessage({ id: 'tenantAdmin.completeFinishTip' }));
           navigate(baseUrl || '/tenant');
@@ -59,7 +149,7 @@ const CompleteProfile = createWithRemoteLoader({
         }
         setInterviewFinished(true);
       },
-      [baseUrl, formatMessage, navigate]
+      [baseUrl, formatMessage, isCollect, navigate]
     );
 
     useEffect(() => {
@@ -68,6 +158,57 @@ const CompleteProfile = createWithRemoteLoader({
 
       (async () => {
         try {
+          if (isCollect) {
+            if (!code) {
+              setBootError(formatMessage({ id: 'tenantAdmin.collectInviteInvalid' }));
+              return;
+            }
+            const detail = await collectApis.detail();
+            if (cancelled) {
+              return;
+            }
+            setInviteMeta(detail);
+            if (detail?.inviteType === 'manager') {
+              setCurrent(0);
+              return;
+            }
+            const savedProfileData = detail?.profileData;
+            const inviteContact = {
+              name: detail?.name || '',
+              email: detail?.email || '',
+              phone: detail?.phone || ''
+            };
+            const assessmentMapped = savedProfileData && hasSavedProfileData(savedProfileData) ? splitAssessmentProfileData(savedProfileData) : null;
+            const reviewBase = Object.assign({}, assessmentMapped?.review || {}, inviteContact);
+            const projects = assessmentMapped?.projects || { projects: [] };
+            const savedResumes = Array.isArray(savedProfileData?.resumes) ? savedProfileData.resumes : [];
+            const savedResumeParsed = savedProfileData?.resumeParsed && typeof savedProfileData.resumeParsed === 'object' ? savedProfileData.resumeParsed : null;
+            const hasPrefill = hasPrefilledReviewData(reviewBase) || hasSavedProjectsData(projects?.projects) || savedResumes.length > 0 || !!savedResumeParsed;
+
+            setUploadState(prev => {
+              if (Array.isArray(prev.resumes) && prev.resumes.length > 0) {
+                return {
+                  ...prev,
+                  linkedin: stripLinkedinPrefix(reviewBase.linkedin || '')
+                };
+              }
+              return {
+                resumes: savedResumes,
+                parsed: savedResumeParsed || reviewBase,
+                linkedin: stripLinkedinPrefix(reviewBase.linkedin || '')
+              };
+            });
+            setReviewData(prev => prev || normalizeReviewProfileData(reviewBase));
+            setProjectsData(prev => prev || projects);
+            if (hasPrefill) {
+              setPrefillLoaded(true);
+            }
+            if (detail?.status === 'interviewing' || detail?.status === 'done' || detail?.shorten) {
+              setCurrent(3);
+            }
+            return;
+          }
+
           const [assessmentResult, employeeResult] = await Promise.all([ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail)), ajax(Object.assign({}, apis.talentSaas.tenant.employee.myDetail))]);
           if (cancelled) {
             return;
@@ -93,11 +234,15 @@ const CompleteProfile = createWithRemoteLoader({
 
           setUploadState(prev => {
             if (Array.isArray(prev.resumes) && prev.resumes.length > 0) {
-              return prev;
+              return {
+                ...prev,
+                linkedin: stripLinkedinPrefix(review.linkedin || '')
+              };
             }
             return {
               resumes: savedResumes,
-              parsed: savedResumeParsed || review
+              parsed: savedResumeParsed || review,
+              linkedin: stripLinkedinPrefix(review.linkedin || '')
             };
           });
           setReviewData(prev => prev || review);
@@ -111,7 +256,11 @@ const CompleteProfile = createWithRemoteLoader({
           }
         } catch (e) {
           if (!cancelled) {
-            message.error(e.message || formatMessage({ id: 'tenantAdmin.assessmentRestartFailed' }));
+            if (isCollect) {
+              setBootError(e.message || formatMessage({ id: 'tenantAdmin.collectInviteInvalid' }));
+            } else {
+              message.error(e.message || formatMessage({ id: 'tenantAdmin.assessmentRestartFailed' }));
+            }
           }
         } finally {
           if (!cancelled) {
@@ -123,33 +272,54 @@ const CompleteProfile = createWithRemoteLoader({
       return () => {
         cancelled = true;
       };
-    }, [ajax, apis, formatMessage, searchParams]);
+    }, [ajax, apis, collectApis, formatMessage, isCollect, searchParams, code]);
 
-    const employeeApis = useMemo(
-      () =>
-        Object.assign({}, apis.talentSaas.tenant.employee, {
-          positionList: apis.talentSaas.tenant.position.list,
-          parseResume: apis.talentSaas.tenant.resume.parseFileId,
-          orgList: apis.tenant.orgList
-        }),
-      [apis]
-    );
+    const employeeApis = useMemo(() => {
+      if (isCollect) {
+        return {
+          parseResume: Object.assign({}, apis.talentSaas.public.talentCollectInvite.parseResume, {
+            data: { code }
+          }),
+          positionList: null,
+          orgList: null
+        };
+      }
+      return Object.assign({}, apis.talentSaas.tenant.employee, {
+        positionList: apis.talentSaas.tenant.position.list,
+        parseResume: apis.talentSaas.tenant.resume.parseFileId,
+        orgList: apis.tenant.orgList
+      });
+    }, [apis, isCollect, code]);
 
-    const stepTitles = [
-      formatMessage({ id: 'tenantAdmin.completeStepUpload' }),
-      formatMessage({ id: 'tenantAdmin.completeStepReview' }),
-      formatMessage({ id: 'tenantAdmin.completeStepProjects' }),
-      formatMessage({ id: 'tenantAdmin.completeStepInterview' })
-    ];
+    const isManagerCollect = isCollect && inviteMeta?.inviteType === 'manager';
 
-    const pageTitle = [
-      formatMessage({ id: 'tenantAdmin.completeTitleUpload' }),
-      formatMessage({ id: 'tenantAdmin.completeTitleReview' }),
-      formatMessage({ id: 'tenantAdmin.completeTitleProjects' }),
-      formatMessage({ id: 'tenantAdmin.completeTitleInterview' })
-    ][current];
+    const stepTitles = isManagerCollect
+      ? [formatMessage({ id: 'tenantAdmin.completeStepInterview' })]
+      : [
+          formatMessage({ id: 'tenantAdmin.completeStepUpload' }),
+          formatMessage({ id: 'tenantAdmin.completeStepReview' }),
+          formatMessage({ id: 'tenantAdmin.completeStepProjects' }),
+          formatMessage({ id: 'tenantAdmin.completeStepInterview' })
+        ];
 
-    const goHome = () => navigate(`${baseUrl}/home`);
+    const pageTitle = isManagerCollect
+      ? formatMessage({ id: 'tenantAdmin.completeTitleInterview' })
+      : isCollect
+        ? formatMessage({ id: 'tenantAdmin.collectPageTitle' })
+        : [
+            formatMessage({ id: 'tenantAdmin.completeTitleUpload' }),
+            formatMessage({ id: 'tenantAdmin.completeTitleReview' }),
+            formatMessage({ id: 'tenantAdmin.completeTitleProjects' }),
+            formatMessage({ id: 'tenantAdmin.completeTitleInterview' })
+          ][current];
+
+    const goHome = () => {
+      if (isCollect) {
+        message.success(formatMessage({ id: 'tenantAdmin.collectInviteDone' }));
+        return;
+      }
+      navigate(`${baseUrl}/home`);
+    };
 
     const skip = () => {
       if (current >= stepTitles.length - 1) {
@@ -172,13 +342,25 @@ const CompleteProfile = createWithRemoteLoader({
       </ButtonFooter>
     );
 
-    const activeReviewData = normalizeReviewProfileData(reviewData || uploadState.parsed || {});
+    const activeReviewData = normalizeReviewProfileData(
+      Object.assign(
+        {},
+        reviewData || uploadState.parsed || {},
+        isCollect
+          ? {
+              name: inviteMeta?.name || reviewData?.name || '',
+              email: inviteMeta?.email || reviewData?.email || '',
+              phone: inviteMeta?.phone || reviewData?.phone || ''
+            }
+          : {}
+      )
+    );
     const activeProjectsData = projectsData || splitAssessmentProfileData(uploadState.parsed || {}).projects;
     const canContinueUpload = (Array.isArray(uploadState.resumes) && uploadState.resumes.length > 0) || hasPrefilledReviewData(uploadState.parsed) || hasPrefilledReviewData(reviewData);
 
     if (initialLoading) {
       return (
-        <Page title={pageTitle} back toolbar={false}>
+        <Page title={pageTitle} back={!isCollect} toolbar={false}>
           <Flex align="center" justify="center" className={style['initial-loading']}>
             <Spin size="large" />
           </Flex>
@@ -186,8 +368,46 @@ const CompleteProfile = createWithRemoteLoader({
       );
     }
 
+    if (bootError) {
+      return (
+        <Page title={pageTitle} back={false} toolbar={false}>
+          <Flex align="center" justify="center" className={style['invite-invalid-panel']}>
+            <ResultCard.Error width={560} title={formatMessage({ id: 'tenantAdmin.collectInviteInvalidTitle' })} description={bootError || formatMessage({ id: 'tenantAdmin.collectInviteInvalidDesc' })} />
+          </Flex>
+        </Page>
+      );
+    }
+
+    if (isManagerCollect) {
+      return (
+        <Page title={pageTitle} back={false} toolbar={false}>
+          <div className={style['complete-profile']}>
+            <div className={style.content}>
+              <div className={style['content-inner']}>
+                <div className={style['step-panel']}>
+                  <div className={style['step-body']}>
+                    <InterviewStep profilePayload={null} onInterviewComplete={handleInterviewComplete} apisAdapter={collectApis || undefined} />
+                  </div>
+                  {interviewFinished ? (
+                    <Footer
+                      showSkip={false}
+                      primary={
+                        <Button type="primary" size="middle" className={style['primary-btn']} onClick={() => message.success(formatMessage({ id: 'tenantAdmin.collectInviteDone' }))}>
+                          {formatMessage({ id: 'tenantAdmin.completeFinish' })}
+                        </Button>
+                      }
+                    />
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Page>
+      );
+    }
+
     return (
-      <Page title={pageTitle} back toolbar={false}>
+      <Page title={pageTitle} back={!isCollect} toolbar={false}>
         <div className={style['complete-profile']}>
           <Stepper items={stepTitles} current={current} />
 
@@ -210,9 +430,18 @@ const CompleteProfile = createWithRemoteLoader({
                             message.warning(formatMessage({ id: 'tenantAdmin.completeUploadRequired' }));
                             return;
                           }
+                          const linkedinUrl = joinLinkedinUrl(uploadState.linkedin);
                           setReviewData(prev => {
-                            if (prev) return prev;
-                            return normalizeReviewProfileData(uploadState.parsed || {});
+                            const base = prev ? Object.assign({}, prev) : Object.assign({}, uploadState.parsed || {});
+                            if (isCollect) {
+                              Object.assign(base, {
+                                name: inviteMeta?.name || base.name || '',
+                                email: inviteMeta?.email || base.email || '',
+                                phone: inviteMeta?.phone || base.phone || ''
+                              });
+                            }
+                            base.linkedin = linkedinUrl;
+                            return normalizeReviewProfileData(base);
                           });
                           setCurrent(1);
                         }}
@@ -231,6 +460,21 @@ const CompleteProfile = createWithRemoteLoader({
                     data={activeReviewData}
                     bordered
                     onSubmit={data => {
+                      if (isCollect) {
+                        // 联系方式只读，强制用邀请写入值
+                        const locked = Object.assign({}, data, {
+                          name: inviteMeta?.name || data?.name,
+                          email: inviteMeta?.email || data?.email,
+                          phone: inviteMeta?.phone || data?.phone
+                        });
+                        if (!hasContactValue(locked?.phone) && !hasContactValue(locked?.email)) {
+                          message.error(formatMessage({ id: 'tenantAdmin.completePhoneOrEmailRequired' }));
+                          return;
+                        }
+                        setReviewData(normalizeReviewProfileData(locked));
+                        setCurrent(2);
+                        return;
+                      }
                       if (!hasContactValue(data?.phone) && !hasContactValue(data?.email)) {
                         message.error(formatMessage({ id: 'tenantAdmin.completePhoneOrEmailRequired' }));
                         return;
@@ -240,7 +484,7 @@ const CompleteProfile = createWithRemoteLoader({
                     }}
                   >
                     <div className={style['step-body']}>
-                      <ReviewStep FormInfo={FormInfo} positionListApi={apis.talentSaas.tenant.position.list} />
+                      <ReviewStep FormInfo={FormInfo} positionListApi={isCollect ? null : apis.talentSaas.tenant.position.list} contactReadonly={isCollect} />
                     </div>
                     <Footer
                       showSkip={false}
@@ -303,16 +547,29 @@ const CompleteProfile = createWithRemoteLoader({
                 <div className={style['step-panel']}>
                   <div className={style['step-body']}>
                     <InterviewStep
-                      profilePayload={{
-                        ...(reviewData || uploadState.parsed || {}),
-                        projects: activeProjectsData?.projects || [],
-                        resumes: Array.isArray(uploadState.resumes) ? uploadState.resumes : [],
-                        resumeParsed:
-                          uploadState.parsed && typeof uploadState.parsed === 'object' && (uploadState.parsed.fileId || Array.isArray(uploadState.parsed.educationList) || Array.isArray(uploadState.parsed.workList))
-                            ? uploadState.parsed
-                            : null
-                      }}
+                      profilePayload={
+                        isCollect
+                          ? stripInviteContact({
+                              ...(reviewData || uploadState.parsed || {}),
+                              projects: activeProjectsData?.projects || [],
+                              resumes: Array.isArray(uploadState.resumes) ? uploadState.resumes : [],
+                              resumeParsed:
+                                uploadState.parsed && typeof uploadState.parsed === 'object' && (uploadState.parsed.fileId || Array.isArray(uploadState.parsed.educationList) || Array.isArray(uploadState.parsed.workList))
+                                  ? uploadState.parsed
+                                  : null
+                            })
+                          : {
+                              ...(reviewData || uploadState.parsed || {}),
+                              projects: activeProjectsData?.projects || [],
+                              resumes: Array.isArray(uploadState.resumes) ? uploadState.resumes : [],
+                              resumeParsed:
+                                uploadState.parsed && typeof uploadState.parsed === 'object' && (uploadState.parsed.fileId || Array.isArray(uploadState.parsed.educationList) || Array.isArray(uploadState.parsed.workList))
+                                  ? uploadState.parsed
+                                  : null
+                            }
+                      }
                       onInterviewComplete={handleInterviewComplete}
+                      apisAdapter={collectApis || undefined}
                     />
                   </div>
                   {interviewFinished ? (
@@ -324,8 +581,10 @@ const CompleteProfile = createWithRemoteLoader({
                           size="middle"
                           className={style['primary-btn']}
                           onClick={() => {
-                            message.success(formatMessage({ id: 'tenantAdmin.completeFinishTip' }));
-                            goHome();
+                            message.success(formatMessage({ id: isCollect ? 'tenantAdmin.collectInviteDone' : 'tenantAdmin.completeFinishTip' }));
+                            if (!isCollect) {
+                              goHome();
+                            }
                           }}
                         >
                           {formatMessage({ id: 'tenantAdmin.completeFinish' })}
