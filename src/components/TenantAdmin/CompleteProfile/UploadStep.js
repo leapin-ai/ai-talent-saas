@@ -1,5 +1,5 @@
-import { Spin, Typography, message } from 'antd';
-import { CloudUploadOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { Input, Spin, Typography, message } from 'antd';
+import { CloudUploadOutlined, InfoCircleOutlined, LinkedinFilled, LockOutlined } from '@ant-design/icons';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useIntl } from '@kne/react-intl';
 import { useFileUpload } from '@kne/react-file';
@@ -29,16 +29,16 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
       const done = list.filter(item => item && item.type !== 'uploading' && (item.id || item.ossId));
       if (done.length === 0) {
         parsedIdRef.current = null;
-        onChange?.({ resumes: list, parsed: null });
+        onChange?.({ resumes: list, parsed: null, linkedin: value?.linkedin || '' });
         return;
       }
       const file = done[0];
       const fileId = file.id || file.ossId;
       if (parsedIdRef.current === fileId && value?.parsed) {
-        onChange?.({ resumes: list, parsed: value.parsed });
+        onChange?.({ resumes: list, parsed: value.parsed, linkedin: value?.linkedin || '' });
         return;
       }
-      onChange?.({ resumes: list, parsed: value?.parsed || null });
+      onChange?.({ resumes: list, parsed: value?.parsed || null, linkedin: value?.linkedin || '' });
       setParsing(true);
       try {
         const { data } = await ajax(
@@ -49,16 +49,16 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
         if (data.code !== 0) {
           parsedIdRef.current = null;
           message.warning(data.msg || formatMessage({ id: 'tenantAdmin.completeUploadRequired' }));
-          onChange?.({ resumes: list, parsed: null });
+          onChange?.({ resumes: list, parsed: null, linkedin: value?.linkedin || '' });
           return;
         }
         parsedIdRef.current = fileId;
-        onChange?.({ resumes: list, parsed: data.data || null });
+        onChange?.({ resumes: list, parsed: data.data || null, linkedin: value?.linkedin || '' });
       } finally {
         setParsing(false);
       }
     },
-    [ajax, apis.parseResume, formatMessage, onChange, value?.parsed]
+    [ajax, apis.parseResume, formatMessage, onChange, value?.linkedin, value?.parsed]
   );
 
   const setList = useCallback(
@@ -106,71 +106,129 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
   };
 
   return (
-    <Spin
-      spinning={parsing || uploadingList.length > 0}
-      tip={formatMessage({
-        id: parsing ? 'tenantAdmin.completeResumeParsing' : 'tenantAdmin.completeResumeUploading'
-      })}
-    >
-      <div className={style['upload-wrap']}>
-        <DragAreaOuter accept={ACCEPT} fileSize={FILE_SIZE_MB} maxLength={1} onFileSelected={onFileSelected}>
-          <div
-            className={style['upload-zone']}
-            onDragEnter={e => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onDragOver={e => {
-              e.preventDefault();
-              e.stopPropagation();
-              e.dataTransfer.dropEffect = 'copy';
-            }}
-            onDrop={onDropFiles}
-          >
-            {hasFiles ? (
-              <div className={style['upload-list']}>
-                <FileList
-                  dataSource={previewList}
-                  getPermission={type => ['preview', 'delete'].indexOf(type) > -1}
-                  apis={{
-                    onDelete: target => {
-                      const next = resumes.filter(item => {
-                        if (target.uuid && item.uuid) return item.uuid !== target.uuid;
-                        if (target.id && item.id) return item.id !== target.id;
-                        return item !== target;
-                      });
-                      applyList(next);
-                    }
-                  }}
-                />
-                <div className={style['upload-cta']}>
-                  <UploadButton>{formatMessage({ id: 'tenantAdmin.completeChooseFile' })}</UploadButton>
-                </div>
-              </div>
-            ) : (
-              <div className={style['upload-guide']}>
-                <UploadTips
-                  icon={
-                    <div className={style['upload-icon']}>
-                      <CloudUploadOutlined />
-                    </div>
-                  }
-                  title={formatMessage({ id: 'tenantAdmin.completeDragTip' })}
-                  renderTips={() => formatMessage({ id: 'tenantAdmin.completeUploadHint' })}
-                />
-                <div className={style['upload-cta']}>
-                  <UploadButton>{formatMessage({ id: 'tenantAdmin.completeChooseFile' })}</UploadButton>
-                </div>
-              </div>
-            )}
+    <div className={style['career-step']}>
+      <section className={style['career-card']}>
+        <div className={style['career-card-head']}>
+          <div className={style['career-card-titles']}>
+            <span className={style['career-card-title']}>{formatMessage({ id: 'tenantAdmin.completeCvSectionTitle' })}</span>
+            <span className={style['badge-required']}>{formatMessage({ id: 'tenantAdmin.completeRequiredBadge' })}</span>
           </div>
-        </DragAreaOuter>
+          <p className={style['career-card-desc']}>{formatMessage({ id: 'tenantAdmin.completeCvSectionDesc' })}</p>
+        </div>
+        <Spin
+          spinning={parsing || uploadingList.length > 0}
+          tip={formatMessage({
+            id: parsing ? 'tenantAdmin.completeResumeParsing' : 'tenantAdmin.completeResumeUploading'
+          })}
+        >
+          <DragAreaOuter accept={ACCEPT} fileSize={FILE_SIZE_MB} maxLength={1} onFileSelected={onFileSelected}>
+            <div
+              className={style['upload-zone']}
+              onDragEnter={e => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDragOver={e => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'copy';
+              }}
+              onDrop={onDropFiles}
+            >
+              {hasFiles ? (
+                <div className={style['upload-list']}>
+                  <FileList
+                    dataSource={previewList}
+                    getPermission={type => ['preview', 'delete'].indexOf(type) > -1}
+                    apis={{
+                      onDelete: target => {
+                        const next = resumes.filter(item => {
+                          if (target.uuid && item.uuid) return item.uuid !== target.uuid;
+                          if (target.id && item.id) return item.id !== target.id;
+                          return item !== target;
+                        });
+                        applyList(next);
+                      }
+                    }}
+                  />
+                  <div className={style['upload-cta-outline']}>
+                    <UploadButton>{formatMessage({ id: 'tenantAdmin.completeChooseFile' })}</UploadButton>
+                  </div>
+                </div>
+              ) : (
+                <div className={style['upload-guide']}>
+                  <UploadTips
+                    icon={
+                      <div className={style['upload-icon']}>
+                        <CloudUploadOutlined />
+                      </div>
+                    }
+                    title={formatMessage({ id: 'tenantAdmin.completeDragTip' })}
+                    renderTips={() => formatMessage({ id: 'tenantAdmin.completeUploadHint' })}
+                  />
+                  <div className={style['upload-cta-outline']}>
+                    <UploadButton>{formatMessage({ id: 'tenantAdmin.completeChooseFile' })}</UploadButton>
+                  </div>
+                </div>
+              )}
+            </div>
+          </DragAreaOuter>
+        </Spin>
         <div className={style['upload-privacy']}>
           <InfoCircleOutlined />
           <Typography.Text type="secondary">{formatMessage({ id: 'tenantAdmin.completeUploadPrivacy' })}</Typography.Text>
         </div>
-      </div>
-    </Spin>
+      </section>
+
+      <section className={style['career-card']}>
+        <div className={style['career-card-head']}>
+          <div className={style['career-card-titles']}>
+            <span className={style['career-card-title']}>{formatMessage({ id: 'tenantAdmin.completeLinkedinSectionTitle' })}</span>
+            <span className={style['badge-optional']}>{formatMessage({ id: 'tenantAdmin.completeOptionalBadge' })}</span>
+          </div>
+          <p className={style['career-card-desc']}>{formatMessage({ id: 'tenantAdmin.completeLinkedinSectionDesc' })}</p>
+        </div>
+        <div className={style['linkedin-field']}>
+          <div className={style['linkedin-label']}>{formatMessage({ id: 'tenantAdmin.completeLinkedinUrlLabel' })}</div>
+          <Input
+            className={style['linkedin-input']}
+            addonBefore={
+              <span className={style['linkedin-prefix']}>
+                <LinkedinFilled />
+                {formatMessage({ id: 'tenantAdmin.completeLinkedinPrefix' })}
+              </span>
+            }
+            value={value?.linkedin || ''}
+            placeholder={formatMessage({ id: 'tenantAdmin.completeLinkedinPlaceholder' })}
+            onChange={e =>
+              onChange?.({
+                ...value,
+                resumes: value?.resumes || [],
+                parsed: value?.parsed ?? null,
+                linkedin: e.target.value
+              })
+            }
+            allowClear
+          />
+        </div>
+        <div className={style['linkedin-tips']}>
+          <div className={style['linkedin-tip']}>
+            <LockOutlined />
+            <div>
+              <div className={style['linkedin-tip-title']}>{formatMessage({ id: 'tenantAdmin.completeLinkedinPrivacyTitle' })}</div>
+              <div className={style['linkedin-tip-body']}>{formatMessage({ id: 'tenantAdmin.completeLinkedinPrivacyBody' })}</div>
+            </div>
+          </div>
+          <div className={style['linkedin-tip']}>
+            <InfoCircleOutlined />
+            <div>
+              <div className={style['linkedin-tip-title']}>{formatMessage({ id: 'tenantAdmin.completeLinkedinUseTitle' })}</div>
+              <div className={style['linkedin-tip-body']}>{formatMessage({ id: 'tenantAdmin.completeLinkedinUseBody' })}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 };
 
