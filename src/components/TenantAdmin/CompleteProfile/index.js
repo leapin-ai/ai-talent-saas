@@ -305,7 +305,7 @@ const CompleteProfile = createWithRemoteLoader({
     const pageTitle = isManagerCollect
       ? formatMessage({ id: 'tenantAdmin.completeTitleInterview' })
       : isCollect
-        ? formatMessage({ id: 'tenantAdmin.collectPageTitle' })
+        ? formatMessage({ id: current === 0 ? 'tenantAdmin.completeTitleUpload' : 'tenantAdmin.collectPageTitle' })
         : [
             formatMessage({ id: 'tenantAdmin.completeTitleUpload' }),
             formatMessage({ id: 'tenantAdmin.completeTitleReview' }),
@@ -321,10 +321,29 @@ const CompleteProfile = createWithRemoteLoader({
       navigate(`${baseUrl}/home`);
     };
 
+    const mergeLinkedinIntoReview = () => {
+      const linkedinUrl = joinLinkedinUrl(uploadState.linkedin);
+      setReviewData(prev => {
+        const base = prev ? Object.assign({}, prev) : Object.assign({}, uploadState.parsed || {});
+        if (isCollect) {
+          Object.assign(base, {
+            name: inviteMeta?.name || base.name || '',
+            email: inviteMeta?.email || base.email || '',
+            phone: inviteMeta?.phone || base.phone || ''
+          });
+        }
+        base.linkedin = linkedinUrl;
+        return normalizeReviewProfileData(base);
+      });
+    };
+
     const skip = () => {
       if (current >= stepTitles.length - 1) {
         goHome();
         return;
+      }
+      if (current === 0) {
+        mergeLinkedinIntoReview();
       }
       setCurrent(c => c + 1);
     };
@@ -430,19 +449,7 @@ const CompleteProfile = createWithRemoteLoader({
                             message.warning(formatMessage({ id: 'tenantAdmin.completeUploadRequired' }));
                             return;
                           }
-                          const linkedinUrl = joinLinkedinUrl(uploadState.linkedin);
-                          setReviewData(prev => {
-                            const base = prev ? Object.assign({}, prev) : Object.assign({}, uploadState.parsed || {});
-                            if (isCollect) {
-                              Object.assign(base, {
-                                name: inviteMeta?.name || base.name || '',
-                                email: inviteMeta?.email || base.email || '',
-                                phone: inviteMeta?.phone || base.phone || ''
-                              });
-                            }
-                            base.linkedin = linkedinUrl;
-                            return normalizeReviewProfileData(base);
-                          });
+                          mergeLinkedinIntoReview();
                           setCurrent(1);
                         }}
                       >
