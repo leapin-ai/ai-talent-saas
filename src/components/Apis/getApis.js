@@ -202,6 +202,34 @@ const getApis = options => {
             method: 'GET'
           }
         },
+        aiInterview: {
+          projects: {
+            url: `${prefix}/tenant/ai-interview-projects`,
+            method: 'GET'
+          }
+        },
+        talentCollectInvite: {
+          send: {
+            url: `${prefix}/tenant/position/talent-collect-invite/send`,
+            method: 'POST'
+          },
+          resend: {
+            url: `${prefix}/tenant/position/talent-collect-invite/resend`,
+            method: 'POST'
+          },
+          link: {
+            url: `${prefix}/tenant/position/talent-collect-invite/link`,
+            method: 'GET'
+          },
+          list: {
+            url: `${prefix}/tenant/position/talent-collect-invite/list`,
+            method: 'GET'
+          },
+          interviewResult: {
+            url: `${prefix}/tenant/position/talent-collect-invite/interview-result`,
+            method: 'GET'
+          }
+        },
         assessment: {
           saveProfile: {
             url: `${prefix}/tenant/assessment/save-profile`,
@@ -257,6 +285,30 @@ const getApis = options => {
           },
           generateAiFill: {
             url: `${prefix}/tenant/assessment/generate-ai-fill`,
+            method: 'POST'
+          }
+        }
+      },
+      public: {
+        talentCollectInvite: {
+          detail: {
+            url: `${prefix}/public/talent-collect-invite`,
+            method: 'GET'
+          },
+          saveProfile: {
+            url: `${prefix}/public/talent-collect-invite/save-profile`,
+            method: 'POST'
+          },
+          parseResume: {
+            url: `${prefix}/public/talent-collect-invite/parse-resume`,
+            method: 'POST'
+          },
+          ensureInvite: {
+            url: `${prefix}/public/talent-collect-invite/ensure-invite`,
+            method: 'POST'
+          },
+          markDone: {
+            url: `${prefix}/public/talent-collect-invite/mark-done`,
             method: 'POST'
           }
         }

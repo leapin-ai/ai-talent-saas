@@ -1,0 +1,53 @@
+<!-- subject -->
+邀请完善档案并参与评估
+<!-- html -->
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>邀请完善档案并参与评估</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            font-family: Arial, sans-serif;
+        }
+
+        .header {
+            background: <%=themeColor%>;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 25px;
+            background: #f9f9f9;
+        }
+
+        .link {
+            word-break: break-all;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>完善档案邀请</h1>
+    </div>
+    <div class="content">
+        <p><%= name %>，您好！</p>
+        <p>【<%= companyName || tenantName %>】邀请您完善「<%= positionName %>」相关档案（<%= inviteTypeLabel %>），请点击下方链接完成填写并进入评估：</p>
+        <p>
+            <a href="<%= inviteUrl %>" target="_blank" style="color: <%= themeColor %>; text-decoration: underline;">点击完善档案</a>
+        </p>
+        <div class="link" style="color: <%= themeColor %>; text-decoration: underline;"><%= inviteUrl %></div>
+        <p style="margin-top: 16px; color: #666; font-size: 12px;">如非本人操作，请忽略本邮件。</p>
+    </div>
+</div>
+</body>
+</html>
+<!-- signature -->
+LeapIn
+<!-- text -->
+<%= name %>，您好！【<%= companyName || tenantName %>】邀请您完善「<%= positionName %>」相关档案（<%= inviteTypeLabel %>），请打开链接完成填写：<%= inviteUrl %>

@@ -37,6 +37,7 @@
     "@kne/fastify-namespace": "^1.2.1",
     "@kne/fastify-response-data-format": "^1.0.0",
     "@kne/fastify-sequelize": "^4.0.3",
+    "@kne/fastify-shorten": "^1.0.16",
     "@kne/fastify-signature": "^1.0.2",
     "@kne/fastify-task": "3.0.0-alpha.15",
     "@kne/fastify-tenant": "1.0.0-alpha.48",

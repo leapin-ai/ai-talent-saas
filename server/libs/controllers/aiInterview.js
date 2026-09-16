@@ -3,6 +3,7 @@ const fp = require('fastify-plugin');
 module.exports = fp(async (fastify, options) => {
   const { services } = fastify[options.name];
   const { authenticate } = fastify.account;
+  const { authenticate: tenantAuthenticate } = fastify.tenant;
 
   fastify.get(
     `${options.prefix}/tenant/admin/ai-interview-setting`,
@@ -114,6 +115,32 @@ module.exports = fp(async (fastify, options) => {
     },
     async request => {
       return services.aiInterview.removeFeatureBinding(request.body);
+    }
+  );
+
+  fastify.get(
+    `${options.prefix}/tenant/ai-interview-projects`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '租户-通过 open-api 获取 AI 面试项目列表（支持分页下拉）',
+        query: {
+          type: 'object',
+          properties: {
+            currentPage: { type: 'number', default: 1 },
+            perPage: { type: 'number', default: 20 },
+            filter: { type: 'object' }
+          }
+        }
+      }
+    },
+    async request => {
+      return services.aiInterview.getProjects({
+        tenantId: request.tenantUserInfo.tenantId,
+        currentPage: request.query.currentPage,
+        perPage: request.query.perPage,
+        filter: request.query.filter || {}
+      });
     }
   );
 });

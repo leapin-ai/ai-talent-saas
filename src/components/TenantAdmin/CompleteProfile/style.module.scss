@@ -78,7 +78,7 @@ $surface: #fafafe;
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 24px;
+  padding: 24px 24px 0;
   min-height: 0;
 }
 
@@ -96,9 +96,18 @@ $surface: #fafafe;
   min-height: 240px;
 }
 
+.invite-invalid-panel {
+  flex: 1;
+  min-height: 60vh;
+  width: 100%;
+  padding: 48px 24px;
+  box-sizing: border-box;
+}
+
 .step-body {
   flex: 1;
   min-height: 0;
+  padding-bottom: 16px;
 }
 
 .step-panel {
@@ -122,14 +131,50 @@ $surface: #fafafe;
   bottom: 0;
   z-index: 10;
   margin-top: auto;
+  margin-left: -24px;
+  margin-right: -24px;
   flex-shrink: 0;
-  width: 100%;
-  padding: 16px 0;
-  background: transparent;
+  align-self: stretch;
+  width: calc(100% + 48px);
+  box-sizing: border-box;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.04);
 }
 
 .footer-actions {
   width: 100%;
+}
+
+// 设备检测阶段：贴底半透明条，上一步靠右（不遮挡中间面试组件按钮时可点）
+.footer-interview-prestart {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  margin: 0 !important;
+  width: 100% !important;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.04);
+  pointer-events: none;
+
+  .footer-actions {
+    max-width: 100%;
+    pointer-events: none;
+    justify-content: flex-end !important;
+  }
+
+  .skip-btn {
+    pointer-events: auto;
+  }
 }
 
 .skip-btn {
@@ -144,6 +189,130 @@ $surface: #fafafe;
 
 .upload-wrap {
   width: 100%;
+}
+
+.career-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.career-card {
+  padding: 20px 24px 24px;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.career-card-head {
+  margin-bottom: 16px;
+}
+
+.career-card-titles {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.career-card-title {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.career-card-desc {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.badge-required {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-optional {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.linkedin-field {
+  margin-bottom: 16px;
+}
+
+.linkedin-label {
+  margin-bottom: 8px;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.linkedin-prefix {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 260px;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  :global(.anticon) {
+    flex-shrink: 0;
+    color: #0a66c2;
+  }
+}
+
+.linkedin-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #eff6ff;
+}
+
+.linkedin-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #334155;
+  font-size: 13px;
+  line-height: 20px;
+
+  :global(.anticon) {
+    margin-top: 2px;
+    color: #0087ef;
+  }
+}
+
+.linkedin-tip-title {
+  margin-bottom: 2px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.linkedin-tip-body {
+  color: #475569;
 }
 
 .upload-drag-outer {
@@ -255,6 +424,31 @@ $surface: #fafafe;
     :global(.anticon),
     span {
       color: #fff !important;
+    }
+  }
+}
+
+.upload-cta-outline {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+
+  :global(.ant-btn) {
+    height: 40px !important;
+    min-width: 140px;
+    padding: 0 28px !important;
+    border: 1px solid var(--primary-color) !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    color: var(--primary-color) !important;
+    font-weight: 600 !important;
+
+    &:hover,
+    &:focus {
+      border-color: var(--primary-color) !important;
+      background: color-mix(in srgb, var(--primary-color) 6%, #fff) !important;
+      color: var(--primary-color) !important;
     }
   }
 }

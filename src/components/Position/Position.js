@@ -7,6 +7,7 @@ import getColumns from './getColumns';
 import BaseFormInner from './PositionForm';
 import InsightBanner from './InsightBanner';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
+import useTablePaginationSearchParams from '../../commons/useTablePaginationSearchParams';
 
 const mapFilterValue = (value, getFilterValue) => ({
   filter: getFilterValue(value)
@@ -19,6 +20,7 @@ const Position = createWithRemoteLoader({
     const [BizUnit, usePreset, Filter, usePermissionsPass] = remoteModules;
     const { SuperSelectFilterItem } = Filter.fields;
     const { formatMessage } = useIntl();
+    const paginationSearchParams = useTablePaginationSearchParams();
     const { ajax } = usePreset();
     const [filterValue, setFilterValue] = useState([]);
     const [listKey, setListKey] = useState(0);
@@ -149,6 +151,10 @@ const Position = createWithRemoteLoader({
           keywordFilterLabel: formatMessage({ id: 'position.keywordFilterLabel' }),
           mapFilterValue,
           tableProps: {
+            pagination: {
+              searchParams: paginationSearchParams.searchParams,
+              setSearchParams: paginationSearchParams.setSearchParams
+            },
             buttonGroup: {
               list: canCreate
                 ? [
