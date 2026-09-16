@@ -21,7 +21,11 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
   const { apis: presetApis } = usePreset();
   const [parsing, setParsing] = useState(false);
   const parsedIdRef = useRef(null);
+  const linkedinRef = useRef(value?.linkedin || '');
+  linkedinRef.current = value?.linkedin ?? linkedinRef.current;
   const resumes = Array.isArray(value?.resumes) ? value.resumes : [];
+
+  const latestLinkedin = () => linkedinRef.current || '';
 
   const applyList = useCallback(
     async nextList => {
@@ -29,36 +33,36 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
       const done = list.filter(item => item && item.type !== 'uploading' && (item.id || item.ossId));
       if (done.length === 0) {
         parsedIdRef.current = null;
-        onChange?.({ resumes: list, parsed: null, linkedin: value?.linkedin || '' });
+        onChange?.({ resumes: list, parsed: null, linkedin: latestLinkedin() });
         return;
       }
       const file = done[0];
       const fileId = file.id || file.ossId;
       if (parsedIdRef.current === fileId && value?.parsed) {
-        onChange?.({ resumes: list, parsed: value.parsed, linkedin: value?.linkedin || '' });
+        onChange?.({ resumes: list, parsed: value.parsed, linkedin: latestLinkedin() });
         return;
       }
-      onChange?.({ resumes: list, parsed: value?.parsed || null, linkedin: value?.linkedin || '' });
+      onChange?.({ resumes: list, parsed: value?.parsed || null, linkedin: latestLinkedin() });
       setParsing(true);
       try {
         const { data } = await ajax(
           Object.assign({}, apis.parseResume, {
-            data: { id: fileId }
+            data: Object.assign({}, apis.parseResume?.data || {}, { id: fileId })
           })
         );
         if (data.code !== 0) {
           parsedIdRef.current = null;
           message.warning(data.msg || formatMessage({ id: 'tenantAdmin.completeUploadRequired' }));
-          onChange?.({ resumes: list, parsed: null, linkedin: value?.linkedin || '' });
+          onChange?.({ resumes: list, parsed: null, linkedin: latestLinkedin() });
           return;
         }
         parsedIdRef.current = fileId;
-        onChange?.({ resumes: list, parsed: data.data || null, linkedin: value?.linkedin || '' });
+        onChange?.({ resumes: list, parsed: data.data || null, linkedin: latestLinkedin() });
       } finally {
         setParsing(false);
       }
     },
-    [ajax, apis.parseResume, formatMessage, onChange, value?.linkedin, value?.parsed]
+    [ajax, apis.parseResume, formatMessage, onChange, value?.parsed]
   );
 
   const setList = useCallback(
@@ -200,14 +204,16 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
             }
             value={value?.linkedin || ''}
             placeholder={formatMessage({ id: 'tenantAdmin.completeLinkedinPlaceholder' })}
-            onChange={e =>
+            onChange={e => {
+              const linkedin = e.target.value;
+              linkedinRef.current = linkedin;
               onChange?.({
                 ...value,
                 resumes: value?.resumes || [],
                 parsed: value?.parsed ?? null,
-                linkedin: e.target.value
-              })
-            }
+                linkedin
+              });
+            }}
             allowClear
           />
         </div>
