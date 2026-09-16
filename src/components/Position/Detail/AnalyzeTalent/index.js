@@ -1,5 +1,4 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { message } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useNavigate } from 'react-router-dom';
@@ -7,9 +6,10 @@ import { registerTablePageMessages } from '@root/locale/registerRemoteMessages';
 import withLocale from '../../withLocale';
 import AssessmentTag from './AssessmentTag';
 import ReadinessBar from './ReadinessBar';
+import InviteAssessment from './InviteAssessment';
 import style from './style.module.scss';
 
-const EMPTY_METRICS = { total: 0, assessed: 0, outdated: 0, never: 0 };
+const EMPTY_METRICS = { total: 0, assessed: 0, outdated: 0, never: 0, inProgress: 0 };
 
 const formatInRole = (years, formatMessage) => {
   if (years == null || years === '') {
@@ -30,7 +30,7 @@ const AnalyzeTalent = createWithRemoteLoader({
     const tableRef = useRef(null);
     const [pageList, setPageList] = useState([]);
     const [metrics, setMetrics] = useState(EMPTY_METRICS);
-    const { selectedRows, getRowSelection, clearSelectedRows } = Table.useSelectedRow({ rowKey: 'id' });
+    const { selectedRows, getRowSelection } = Table.useSelectedRow({ rowKey: 'id' });
 
     const goTalentAnalysis = item => {
       if (!item?.id || !positionId) {
@@ -118,6 +118,10 @@ const AnalyzeTalent = createWithRemoteLoader({
             <div className={style['metric-label']}>{formatMessage({ id: 'position.talentMetricOutdated' })}</div>
           </div>
           <div className={style.metric}>
+            <div className={`${style['metric-value']} ${style['metric-value-in-progress']}`}>{metrics.inProgress || 0}</div>
+            <div className={style['metric-label']}>{formatMessage({ id: 'position.talentMetricInProgress' })}</div>
+          </div>
+          <div className={style.metric}>
             <div className={`${style['metric-value']} ${style['metric-value-never']}`}>{metrics.never}</div>
             <div className={style['metric-label']}>{formatMessage({ id: 'position.talentMetricNever' })}</div>
           </div>
@@ -148,16 +152,15 @@ const AnalyzeTalent = createWithRemoteLoader({
               })
             })
           }}
-          batchActions={[
-            {
-              key: 'invite',
-              label: formatMessage({ id: 'position.talentInvite' }),
-              onClick: ({ selectedRowKeys }) => {
-                message.success(formatMessage({ id: 'position.talentInviteQueued' }, { count: selectedRowKeys.length }));
-                clearSelectedRows();
+          buttonGroup={{
+            list: [
+              {
+                buttonComponent: InviteAssessment,
+                positionId,
+                baseUrl
               }
-            }
-          ]}
+            ]
+          }}
           rowSelection={getRowSelection(pageList)}
           selectedRows={selectedRows}
           dataFormat={data => {

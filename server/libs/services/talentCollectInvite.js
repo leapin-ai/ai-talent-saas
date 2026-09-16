@@ -1,0 +1,763 @@
+const fp = require('fastify-plugin');
+const dayjs = require('dayjs');
+const get = require('lodash/get');
+const ensureSlash = require('@kne/ensure-slash');
+
+const MESSAGE_CODE = 'INVITETALENTCOLLECT';
+const SHORTEN_TTL_HOURS = 24;
+const COLLECT_INVITE_SHORTEN_TYPE = 'talentCollectInvite';
+const COLLECT_INVITE_LINK_TTL_DAYS = 90;
+
+const pickContact = value => {
+  if (value == null || value === '') {
+    return '';
+  }
+  if (typeof value === 'object') {
+    const number = value.number ?? value.phone ?? value.value;
+    return number != null ? String(number).trim() : '';
+  }
+  return String(value).trim();
+};
+
+const formatPhone = value => {
+  const raw = pickContact(value);
+  if (!raw) {
+    return '';
+  }
+  return raw.replace(/\s+/g, '');
+};
+
+const resolvePositionId = value => {
+  if (value == null || value === '') {
+    return null;
+  }
+  const id = typeof value === 'object' ? (value.id ?? value.value) : value;
+  if (id == null || id === '') {
+    return null;
+  }
+  return String(id);
+};
+
+const resolveProject = assessmentProject => {
+  if (assessmentProject == null || assessmentProject === '') {
+    return null;
+  }
+  if (typeof assessmentProject === 'object') {
+    const id = assessmentProject.id ?? assessmentProject.value;
+    if (!id) {
+      return null;
+    }
+    return {
+      projectId: String(id),
+      projectName: String(assessmentProject.name || assessmentProject.label || '').trim()
+    };
+  }
+  return { projectId: String(assessmentProject), projectName: '' };
+};
+
+module.exports = fp(async (fastify, options) => {
+  const { models, services } = fastify[options.name];
+  const { Op } = fastify.sequelize.Sequelize;
+
+  const requireShortenServices = () => {
+    const shortenServices = fastify.shorten?.services;
+    if (!shortenServices?.sign || !shortenServices?.decode) {
+      throw new Error('短链服务未就绪');
+    }
+    return shortenServices;
+  };
+
+  const resolveInviteLinkExpires = deadline => {
+    if (deadline) {
+      return dayjs(deadline).valueOf();
+    }
+    return dayjs().add(COLLECT_INVITE_LINK_TTL_DAYS, 'day').valueOf();
+  };
+
+  const signCollectInviteCode = async row => {
+    const shortenServices = requireShortenServices();
+    return shortenServices.sign(
+      JSON.stringify({
+        type: COLLECT_INVITE_SHORTEN_TYPE,
+        inviteId: String(row.id)
+      }),
+      resolveInviteLinkExpires(row.deadline)
+    );
+  };
+
+  const buildInviteUrl = row => `${ensureSlash(fastify.config.ORIGIN || '')}/collect-profile?code=${encodeURIComponent(row.code)}`;
+
+  const ensureInviteCode = async row => {
+    if (row.code) {
+      return row;
+    }
+    row.code = await signCollectInviteCode(row);
+    await row.save();
+    return row;
+  };
+
+  const toPublic = row => {
+    if (!row) {
+      return null;
+    }
+    const plain = typeof row.get === 'function' ? row.get({ plain: true }) : row;
+    return {
+      id: plain.id,
+      inviteType: plain.inviteType,
+      positionId: plain.positionId,
+      employeeId: plain.employeeId || null,
+      name: plain.name || '',
+      email: plain.email || '',
+      phone: plain.phone || '',
+      projectId: plain.projectId || '',
+      projectName: plain.projectName || '',
+      deadline: plain.deadline || null,
+      status: plain.status,
+      profileData: plain.profileData || {},
+      inviteId: plain.inviteId || '',
+      inviteCode: plain.inviteCode || '',
+      code: plain.code || '',
+      shorten: plain.shorten || '',
+      shortenExpiresAt: plain.shortenExpiresAt || null,
+      clientUserId: plain.clientUserId || '',
+      interviewId: plain.interviewId || '',
+      interviewData: plain.interviewData || {},
+      createdAt: plain.createdAt,
+      updatedAt: plain.updatedAt
+    };
+  };
+
+  const findByCode = async code => {
+    if (!code) {
+      throw new Error('邀请链接无效');
+    }
+    const shortenServices = requireShortenServices();
+    let payload;
+    try {
+      payload = JSON.parse(await shortenServices.decode(String(code)));
+    } catch (e) {
+      throw new Error('邀请链接无效或已失效');
+    }
+    if (payload?.type !== COLLECT_INVITE_SHORTEN_TYPE || !payload.inviteId) {
+      throw new Error('邀请链接无效或已失效');
+    }
+    const row = await models.talentCollectInvite.findByPk(payload.inviteId);
+    if (!row) {
+      throw new Error('邀请链接无效或已失效');
+    }
+    if (row.deadline && dayjs(row.deadline).isBefore(dayjs())) {
+      throw new Error('邀请已过期');
+    }
+    return row;
+  };
+
+  const sendNotify = async ({ row, position, tenant }) => {
+    const companyName = tenant?.company?.name || '';
+    const tenantName = tenant?.name || '';
+    const themeColor = tenant?.themeColor || '#4183F0';
+    const inviteUrl = buildInviteUrl(row);
+    const inviteTypeLabel = row.inviteType === 'manager' ? '经理' : '员工';
+    const props = {
+      name: row.name,
+      companyName,
+      tenantName,
+      positionName: position?.name || '',
+      inviteUrl,
+      inviteTypeLabel,
+      themeColor
+    };
+    const email = pickContact(row.email);
+    const phone = formatPhone(row.phone);
+    if (!email && !phone) {
+      throw new Error('手机号或邮箱不能同时为空');
+    }
+    if (email) {
+      await fastify.message.services.sendMessage({
+        name: email,
+        type: 0,
+        code: MESSAGE_CODE,
+        props,
+        options: { title: '完善档案邀请' }
+      });
+    }
+    if (phone) {
+      await fastify.message.services.sendMessage({
+        name: phone,
+        type: 1,
+        code: MESSAGE_CODE,
+        props,
+        options: { title: '完善档案邀请' }
+      });
+    }
+    return inviteUrl;
+  };
+
+  const findEmployeeByContact = async ({ tenantId, email, phone }) => {
+    const where = { tenantId, [Op.or]: [] };
+    if (email) {
+      where[Op.or].push({ email });
+    }
+    if (phone) {
+      where[Op.or].push({ phone });
+    }
+    if (!where[Op.or].length) {
+      return null;
+    }
+    return models.employee.findOne({ where });
+  };
+
+  const ensureEmployeeForInvite = async (authenticatePayload, { position, name, email, phone }) => {
+    const { tenantId } = authenticatePayload;
+    const existing = await findEmployeeByContact({ tenantId, email, phone });
+    const positionId = String(position.id);
+    if (existing) {
+      const currentPos = resolvePositionId(get(existing, 'options.position'));
+      if (currentPos && currentPos !== positionId) {
+        throw new Error('该员工不属于当前岗位');
+      }
+      if (!currentPos) {
+        const options = Object.assign({}, existing.options || {}, { position: positionId });
+        existing.set('options', options);
+        existing.changed('options', true);
+        if (position.tenantOrgId) {
+          const orgIds = Array.isArray(existing.tenantOrgIds) ? existing.tenantOrgIds.map(String) : [];
+          if (!orgIds.includes(String(position.tenantOrgId))) {
+            existing.tenantOrgIds = [...orgIds, String(position.tenantOrgId)];
+          }
+        }
+        await existing.save();
+      }
+      return existing;
+    }
+    return services.employee.create(authenticatePayload, {
+      name,
+      email: email || undefined,
+      phone: phone || undefined,
+      tenantOrgIds: position.tenantOrgId ? [position.tenantOrgId] : [],
+      options: { position: positionId },
+      status: 'ACTIVE'
+    });
+  };
+
+  const send = async (authenticatePayload, body = {}) => {
+    const { tenantId } = authenticatePayload;
+    const inviteType = body.inviteType === 'manager' ? 'manager' : 'employee';
+    const positionId = resolvePositionId(body.positionId);
+    if (!positionId) {
+      throw new Error('岗位不能为空');
+    }
+    const project = resolveProject(body.assessmentProject);
+    if (!project?.projectId) {
+      throw new Error('评估项目不能为空');
+    }
+    const position = await models.position.findByPk(positionId);
+    if (!position || String(position.tenantId) !== String(tenantId)) {
+      throw new Error('未找到岗位');
+    }
+
+    const participants = Array.isArray(body.participants) ? body.participants : [];
+    const success = [];
+    const failed = [];
+
+    let tenant = null;
+    try {
+      tenant = await fastify.tenant.services.tenant.detail({ id: tenantId });
+    } catch (e) {
+      tenant = { id: tenantId, name: '' };
+    }
+
+    for (let index = 0; index < participants.length; index++) {
+      const item = participants[index] || {};
+      const name = String(item.name || '').trim();
+      const email = pickContact(item.email);
+      const phone = formatPhone(item.phone);
+      try {
+        if (!name) {
+          throw new Error('姓名不能为空');
+        }
+        if (!email && !phone) {
+          throw new Error('手机号或邮箱不能同时为空');
+        }
+
+        let employeeId = null;
+        if (inviteType === 'employee') {
+          const employee = await ensureEmployeeForInvite(authenticatePayload, { position, name, email, phone });
+          employeeId = employee.id;
+        }
+
+        const row = await models.talentCollectInvite.create({
+          tenantId,
+          inviteType,
+          positionId,
+          employeeId,
+          name,
+          email: email || '',
+          phone: phone || '',
+          projectId: project.projectId,
+          projectName: project.projectName,
+          deadline: body.deadline ? new Date(body.deadline) : null,
+          status: 'invited',
+          profileData: {}
+        });
+        await ensureInviteCode(row);
+
+        const inviteUrl = await sendNotify({ row, position, tenant });
+        success.push({ index, id: row.id, code: row.code, inviteUrl, employeeId });
+      } catch (e) {
+        failed.push({ index, reason: e.message || '发送失败' });
+      }
+    }
+
+    return { success, failed };
+  };
+
+  /**
+   * 将采集邀请进度同步到评估状态：
+   * - 打开面试短链 / 进入面试：assessment.status=interviewing（有 tenantUserId 时）
+   * - 完成面试：assessment.status=submitted，并刷新 updatedAt（人才列表 lastAssessment=assessed）
+   * - 始终写入 employee.options.talentCollectAssessment，供无账号员工展示进度
+   */
+  const syncEmployeeAssessmentFromInvite = async (row, { stage } = {}) => {
+    if (!row?.employeeId) {
+      return;
+    }
+    const employee = await models.employee.findByPk(row.employeeId);
+    if (!employee) {
+      return;
+    }
+
+    const nextStage = stage === 'done' ? 'done' : 'inProgress';
+    const options = Object.assign({}, employee.options || {}, {
+      talentCollectAssessment: {
+        status: nextStage,
+        inviteStatus: row.status,
+        inviteId: row.id,
+        positionId: row.positionId != null ? String(row.positionId) : null,
+        updatedAt: new Date().toISOString()
+      }
+    });
+    employee.set('options', options);
+    employee.changed('options', true);
+    await employee.save();
+
+    const tenantUserId = employee.tenantUserId;
+    if (tenantUserId == null || tenantUserId === '') {
+      return;
+    }
+
+    let assessment = await models.assessment.findOne({
+      where: {
+        tenantId: row.tenantId,
+        tenantUserId
+      }
+    });
+
+    if (!assessment) {
+      assessment = await models.assessment.create({
+        tenantId: row.tenantId,
+        tenantUserId,
+        status: nextStage === 'done' ? 'submitted' : 'interviewing',
+        projectId: row.projectId || null,
+        projectName: row.projectName || '',
+        inviteId: row.inviteId || null,
+        inviteCode: row.inviteCode || null,
+        shorten: row.shorten || null,
+        shortenExpiresAt: row.shortenExpiresAt || null,
+        clientUserId: row.clientUserId || null,
+        profileData: {},
+        interviewData: Object.assign({}, row.interviewData || {}, {
+          source: 'talentCollectInvite',
+          collectInviteId: row.id,
+          interviewId: row.interviewId || null
+        })
+      });
+      return assessment;
+    }
+
+    if (nextStage === 'done') {
+      if (!['submitted', 'approved', 'generating'].includes(assessment.status)) {
+        assessment.status = 'submitted';
+      }
+    } else if (['pending'].includes(assessment.status) || !assessment.status) {
+      assessment.status = 'interviewing';
+    }
+    assessment.projectId = assessment.projectId || row.projectId || null;
+    assessment.projectName = assessment.projectName || row.projectName || '';
+    assessment.inviteId = row.inviteId || assessment.inviteId;
+    assessment.inviteCode = row.inviteCode || assessment.inviteCode;
+    assessment.shorten = row.shorten || assessment.shorten;
+    assessment.shortenExpiresAt = row.shortenExpiresAt || assessment.shortenExpiresAt;
+    assessment.clientUserId = row.clientUserId || assessment.clientUserId;
+    assessment.interviewData = Object.assign({}, assessment.interviewData || {}, row.interviewData || {}, {
+      source: 'talentCollectInvite',
+      collectInviteId: row.id,
+      interviewId: row.interviewId || assessment.interviewData?.interviewId || null,
+      interviewStatus: nextStage === 'done' ? 'completed' : assessment.interviewData?.interviewStatus
+    });
+    assessment.changed('interviewData', true);
+    // 触发 updatedAt，完成面试后 lastAssessment 计为 assessed
+    assessment.changed('status', true);
+    await assessment.save();
+    return assessment;
+  };
+
+  const detailByCode = async ({ code }) => {
+    const row = await findByCode(code);
+    // 打开采集短链：invited → opened，并回写员工评估进度
+    if (row.status === 'invited') {
+      row.status = 'opened';
+      await row.save();
+      await syncEmployeeAssessmentFromInvite(row, { stage: 'opened' });
+    }
+    const position = await models.position.findByPk(row.positionId);
+    let employee = null;
+    if (row.employeeId) {
+      employee = await models.employee.findByPk(row.employeeId);
+    }
+    let tenant = null;
+    try {
+      tenant = await fastify.tenant.services.tenant.detail({ id: row.tenantId });
+    } catch (e) {
+      tenant = null;
+    }
+    const setting = await services.aiInterview.detail({ tenantId: row.tenantId });
+    return {
+      ...toPublic(row),
+      position: position
+        ? {
+            id: position.id,
+            name: position.name,
+            tenantOrgId: position.tenantOrgId || null
+          }
+        : null,
+      employee: employee
+        ? {
+            id: employee.id,
+            name: employee.name,
+            email: employee.email,
+            phone: employee.phone
+          }
+        : null,
+      tenant: tenant
+        ? {
+            id: tenant.id,
+            name: tenant.name,
+            companyName: tenant.company?.name || '',
+            logo: tenant.logo || tenant.company?.logo || null,
+            themeColor: tenant.themeColor || null
+          }
+        : null,
+      aiInterview: {
+        cdnUrl: setting?.cdnUrl || '',
+        version: setting?.version || '',
+        apiUrl: setting?.apiUrl || '',
+        ajaxBaseUrl: setting?.apiUrl ? services.aiInterview.getAjaxBaseUrl(setting.apiUrl) : ''
+      }
+    };
+  };
+
+  const saveProfile = async ({ code, profileData }) => {
+    const row = await findByCode(code);
+    const next = profileData && typeof profileData === 'object' ? { ...profileData } : {};
+    // 邀请三字段只读：不入库到 profileData，也不更新 name/email/phone 列
+    delete next.name;
+    delete next.email;
+    delete next.phone;
+    row.profileData = next;
+    row.changed('profileData', true);
+    if (row.status === 'invited' || row.status === 'opened') {
+      row.status = 'filling';
+    }
+    await row.save();
+    return toPublic(row);
+  };
+
+  const parseResume = async ({ code, id, force = false }) => {
+    await findByCode(code);
+    if (!id) {
+      throw new Error('文件ID不能为空');
+    }
+    return services.resume.parseFileId({ id, force: !!force });
+  };
+
+  const isShortenValid = row => {
+    if (!row?.shorten || !row?.shortenExpiresAt) {
+      return false;
+    }
+    return dayjs(row.shortenExpiresAt).isAfter(dayjs());
+  };
+
+  const ensureInvite = async ({ code, forceNew = false } = {}) => {
+    const row = await findByCode(code);
+    const setting = await services.aiInterview.detail({ tenantId: row.tenantId });
+
+    if (!forceNew && isShortenValid(row)) {
+      if (['invited', 'opened', 'filling'].includes(row.status)) {
+        row.status = 'interviewing';
+        await row.save();
+      }
+      await syncEmployeeAssessmentFromInvite(row, { stage: 'opened' });
+      return Object.assign({}, toPublic(row), {
+        cdnUrl: setting?.cdnUrl || '',
+        version: setting?.version || '',
+        apiUrl: setting?.apiUrl || '',
+        ajaxBaseUrl: setting?.apiUrl ? services.aiInterview.getAjaxBaseUrl(setting.apiUrl) : ''
+      });
+    }
+
+    if (!row.projectId) {
+      throw new Error('未配置评估项目');
+    }
+    const email = pickContact(row.email);
+    const phone = formatPhone(row.phone);
+    if (!email && !phone) {
+      throw new Error('邀请联系方式缺失，无法发起面试');
+    }
+
+    const expires = dayjs().add(SHORTEN_TTL_HOURS, 'hour').toISOString();
+    const invite = await services.aiInterview.inviteCandidate({
+      tenantId: row.tenantId,
+      projectId: row.projectId,
+      name: row.name,
+      email,
+      phone,
+      description: `TalentCollect / ${row.inviteType} / position:${row.positionId}`,
+      expires,
+      needLoginShorten: true,
+      // open-api 后续支持：不发送面试提醒邮件
+      needNotice: false
+    });
+
+    if (!invite?.shorten) {
+      throw new Error('AI 面试系统未返回免登录 shorten');
+    }
+
+    row.inviteId = invite.inviteId || '';
+    row.inviteCode = invite.inviteCode || '';
+    row.shorten = invite.shorten;
+    row.shortenExpiresAt = invite.expires ? new Date(invite.expires) : dayjs(expires).toDate();
+    row.clientUserId = invite.clientUserId || '';
+    row.interviewId = invite.interviewId || invite.clientUserId || row.interviewId || '';
+    row.status = 'interviewing';
+    row.interviewData = Object.assign({}, row.interviewData || {}, {
+      invitedAt: new Date().toISOString(),
+      inviteExpires: invite.expires || expires
+    });
+    row.changed('interviewData', true);
+    await row.save();
+    await syncEmployeeAssessmentFromInvite(row, { stage: 'opened' });
+
+    return Object.assign({}, toPublic(row), {
+      cdnUrl: setting?.cdnUrl || '',
+      version: setting?.version || '',
+      apiUrl: setting?.apiUrl || '',
+      ajaxBaseUrl: setting?.apiUrl ? services.aiInterview.getAjaxBaseUrl(setting.apiUrl) : ''
+    });
+  };
+
+  const markInterviewDone = async ({ code, interviewId } = {}) => {
+    const row = await findByCode(code);
+    if (interviewId) {
+      row.interviewId = String(interviewId);
+    }
+    row.status = 'done';
+    row.interviewData = Object.assign({}, row.interviewData || {}, {
+      interviewStatus: 'completed',
+      completedAt: new Date().toISOString()
+    });
+    row.changed('interviewData', true);
+    await row.save();
+    await syncEmployeeAssessmentFromInvite(row, { stage: 'done' });
+    return toPublic(row);
+  };
+
+  const list = async (authenticatePayload, { positionId, filter = {}, perPage = 20, currentPage = 1 } = {}) => {
+    const { tenantId } = authenticatePayload;
+    if (!tenantId) {
+      throw new Error('未登录租户用户');
+    }
+    const pid = resolvePositionId(positionId);
+    if (!pid) {
+      throw new Error('缺少岗位ID');
+    }
+    const whereQuery = { tenantId, positionId: pid };
+    if (filter.status) {
+      whereQuery.status = filter.status;
+    }
+    if (filter.inviteType) {
+      whereQuery.inviteType = filter.inviteType;
+    }
+    if (filter.keyword) {
+      const keyword = `%${String(filter.keyword).trim()}%`;
+      whereQuery[Op.or] = [{ name: { [Op.like]: keyword } }, { email: { [Op.like]: keyword } }, { phone: { [Op.like]: keyword } }];
+    }
+    const pageSize = Math.min(Math.max(Number(perPage) || 20, 1), 100);
+    const page = Math.max(Number(currentPage) || 1, 1);
+    const { count, rows } = await models.talentCollectInvite.findAndCountAll({
+      where: whereQuery,
+      offset: pageSize * (page - 1),
+      limit: pageSize,
+      order: [
+        ['createdAt', 'DESC'],
+        ['id', 'DESC']
+      ]
+    });
+    return {
+      pageData: rows.map(toPublic),
+      totalCount: count
+    };
+  };
+
+  const resolveClientUserId = async (tenantId, row) => {
+    if (row.clientUserId) {
+      return String(row.clientUserId);
+    }
+    if (row.interviewId) {
+      return String(row.interviewId);
+    }
+    if (!row.projectId) {
+      return null;
+    }
+    const listRes = await services.aiInterview.getInterviewList({
+      tenantId,
+      projectId: row.projectId,
+      currentPage: 1,
+      perPage: 20,
+      filter: row.inviteCode ? { code: row.inviteCode } : undefined
+    });
+    const interview =
+      (listRes?.pageData || []).find(item => {
+        if (row.inviteCode && item.code === row.inviteCode) {
+          return true;
+        }
+        if (row.email && (item.email === row.email || item.user?.email === row.email)) {
+          return true;
+        }
+        if (row.phone && (item.phone === row.phone || item.user?.phone === row.phone)) {
+          return true;
+        }
+        return false;
+      }) || listRes?.pageData?.[0];
+    return interview?.id || interview?.clientUserId || interview?.interviewId || null;
+  };
+
+  const getInterviewResult = async (authenticatePayload, { id } = {}) => {
+    const { tenantId } = authenticatePayload;
+    if (!tenantId) {
+      throw new Error('未登录租户用户');
+    }
+    if (!id) {
+      throw new Error('缺少邀请记录ID');
+    }
+    const row = await models.talentCollectInvite.findOne({
+      where: { id: String(id), tenantId }
+    });
+    if (!row) {
+      throw new Error('邀请记录不存在');
+    }
+    if (row.status !== 'done') {
+      throw new Error('面试尚未完成');
+    }
+    const clientUserId = await resolveClientUserId(tenantId, row);
+    if (!clientUserId) {
+      throw new Error('未找到对应面试记录');
+    }
+    const interview = await services.aiInterview.getInterviewDetail({
+      tenantId,
+      id: clientUserId
+    });
+    if (!row.clientUserId && clientUserId) {
+      row.clientUserId = String(clientUserId);
+      row.interviewData = Object.assign({}, row.interviewData || {}, {
+        lastResultAt: new Date().toISOString(),
+        interviewId: interview?.id || clientUserId
+      });
+      row.changed('interviewData', true);
+      await row.save();
+    }
+    return {
+      invite: toPublic(row),
+      interview
+    };
+  };
+
+  const resend = async (authenticatePayload, { id } = {}) => {
+    const { tenantId } = authenticatePayload;
+    if (!tenantId) {
+      throw new Error('未登录租户用户');
+    }
+    if (!id) {
+      throw new Error('缺少邀请记录ID');
+    }
+    const row = await models.talentCollectInvite.findOne({
+      where: { id: String(id), tenantId }
+    });
+    if (!row) {
+      throw new Error('邀请记录不存在');
+    }
+    if (row.status === 'done') {
+      throw new Error('邀请已完成，无需重新发送');
+    }
+    if (row.deadline && dayjs(row.deadline).isBefore(dayjs())) {
+      throw new Error('邀请已过期，无法重新发送');
+    }
+
+    const position = await models.position.findByPk(row.positionId);
+    if (!position || String(position.tenantId) !== String(tenantId)) {
+      throw new Error('未找到岗位');
+    }
+
+    row.code = await signCollectInviteCode(row);
+    await row.save();
+
+    let tenant = null;
+    try {
+      tenant = await fastify.tenant.services.tenant.detail({ id: tenantId });
+    } catch (e) {
+      tenant = { id: tenantId, name: '' };
+    }
+
+    const inviteUrl = await sendNotify({ row, position, tenant });
+    return {
+      invite: toPublic(row),
+      inviteUrl
+    };
+  };
+
+  const getLink = async (authenticatePayload, { id } = {}) => {
+    const { tenantId } = authenticatePayload;
+    if (!tenantId) {
+      throw new Error('未登录租户用户');
+    }
+    if (!id) {
+      throw new Error('缺少邀请记录ID');
+    }
+    const row = await models.talentCollectInvite.findOne({
+      where: { id: String(id), tenantId }
+    });
+    if (!row) {
+      throw new Error('邀请记录不存在');
+    }
+    await ensureInviteCode(row);
+    return {
+      invite: toPublic(row),
+      inviteUrl: buildInviteUrl(row)
+    };
+  };
+
+  Object.assign(fastify[options.name].services, {
+    talentCollectInvite: {
+      send,
+      resend,
+      getLink,
+      list,
+      getInterviewResult,
+      detailByCode,
+      saveProfile,
+      parseResume,
+      ensureInvite,
+      markInterviewDone,
+      toPublic
+    }
+  });
+});

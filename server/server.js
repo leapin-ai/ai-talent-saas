@@ -286,6 +286,8 @@ const createServer = () => {
     })
   );
 
+  fastify.register(require('@kne/fastify-shorten'));
+
   fastify.register(
     require('fastify-plugin')(async fastify => {
       fastify.register(require('@kne/fastify-namespace'), {

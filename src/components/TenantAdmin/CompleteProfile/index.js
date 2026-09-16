@@ -11,7 +11,6 @@ import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
 import Stepper from './Stepper';
 import UploadStep from './UploadStep';
-import ReviewStep from './ReviewStep';
 import ProjectsStep from './ProjectsStep';
 import InterviewStep from './InterviewStep';
 import {
@@ -26,16 +25,6 @@ import {
   stripLinkedinPrefix
 } from './profileDataUtils';
 import style from './style.module.scss';
-
-const hasContactValue = value => {
-  if (value == null || value === '') return false;
-  if (typeof value === 'string') return value.trim().length > 0;
-  if (typeof value === 'object') {
-    const number = value.number ?? value.phone ?? value.value;
-    return number != null && String(number).trim().length > 0;
-  }
-  return true;
-};
 
 const stripInviteContact = data => {
   if (!data || typeof data !== 'object') {
@@ -60,18 +49,19 @@ const CompleteProfile = createWithRemoteLoader({
     if (typeof usePreset !== 'function' || !FormInfo || !DragAreaOuter || !UploadTips || !UploadButton || !FileList) {
       return null;
     }
-    const { Form, SubmitButton } = FormInfo;
     const { apis, ajax } = usePreset();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const code = codeProp || searchParams.get('code') || '';
     const isCollect = mode === 'collect';
-    const [current, setCurrent] = useState(() => (searchParams.get('step') === 'interview' ? 3 : 0));
+    const [current, setCurrent] = useState(() => (searchParams.get('step') === 'interview' ? 2 : 0));
     const [uploadState, setUploadState] = useState({ resumes: [], parsed: null, linkedin: '' });
     const [reviewData, setReviewData] = useState(null);
     const [projectsData, setProjectsData] = useState(null);
     const [projectsEditing, setProjectsEditing] = useState(false);
     const [interviewFinished, setInterviewFinished] = useState(false);
+    const [interviewPhase, setInterviewPhase] = useState('loading');
+    const [interviewLocked, setInterviewLocked] = useState(false);
     const [prefillLoaded, setPrefillLoaded] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
     const [inviteMeta, setInviteMeta] = useState(null);
@@ -137,6 +127,11 @@ const CompleteProfile = createWithRemoteLoader({
 
     const handleInterviewComplete = useCallback(
       event => {
+        // feedback 完成：留在面试间展示 AI 完成页，勿 navigate / 勿卸房间
+        if (event?.stage === 'feedback') {
+          setInterviewFinished(true);
+          return;
+        }
         if (isCollect) {
           setInterviewFinished(true);
           message.success(formatMessage({ id: 'tenantAdmin.completeFinishTip' }));
@@ -204,7 +199,7 @@ const CompleteProfile = createWithRemoteLoader({
               setPrefillLoaded(true);
             }
             if (detail?.status === 'interviewing' || detail?.status === 'done' || detail?.shorten) {
-              setCurrent(3);
+              setCurrent(2);
             }
             return;
           }
@@ -295,23 +290,11 @@ const CompleteProfile = createWithRemoteLoader({
 
     const stepTitles = isManagerCollect
       ? [formatMessage({ id: 'tenantAdmin.completeStepInterview' })]
-      : [
-          formatMessage({ id: 'tenantAdmin.completeStepUpload' }),
-          formatMessage({ id: 'tenantAdmin.completeStepReview' }),
-          formatMessage({ id: 'tenantAdmin.completeStepProjects' }),
-          formatMessage({ id: 'tenantAdmin.completeStepInterview' })
-        ];
+      : [formatMessage({ id: 'tenantAdmin.completeStepUpload' }), formatMessage({ id: 'tenantAdmin.completeStepProjects' }), formatMessage({ id: 'tenantAdmin.completeStepInterview' })];
 
     const pageTitle = isManagerCollect
       ? formatMessage({ id: 'tenantAdmin.completeTitleInterview' })
-      : isCollect
-        ? formatMessage({ id: current === 0 ? 'tenantAdmin.completeTitleUpload' : 'tenantAdmin.collectPageTitle' })
-        : [
-            formatMessage({ id: 'tenantAdmin.completeTitleUpload' }),
-            formatMessage({ id: 'tenantAdmin.completeTitleReview' }),
-            formatMessage({ id: 'tenantAdmin.completeTitleProjects' }),
-            formatMessage({ id: 'tenantAdmin.completeTitleInterview' })
-          ][current];
+      : [formatMessage({ id: 'tenantAdmin.completeTitleUpload' }), formatMessage({ id: 'tenantAdmin.completeTitleProjects' }), formatMessage({ id: 'tenantAdmin.completeTitleInterview' })][current];
 
     const goHome = () => {
       if (isCollect) {
@@ -348,12 +331,39 @@ const CompleteProfile = createWithRemoteLoader({
       setCurrent(c => c + 1);
     };
 
-    const Footer = ({ primary, showSkip = true }) => (
-      <ButtonFooter className={style.footer} placement="bottomEnd">
-        <Flex className={style['footer-actions']} gap={16} justify="flex-end" wrap="wrap">
+    const goPreviousStep = () => {
+      if (current <= 0) {
+        return;
+      }
+      if (current === 1 && projectsEditing) {
+        message.warning(formatMessage({ id: 'tenantAdmin.completeFinishEditFirst' }));
+        return;
+      }
+      if (current === 2) {
+        setInterviewPhase('loading');
+        setInterviewLocked(false);
+      }
+      // 回到职业信息步时，用 reviewData 回填 LinkedIn 后缀，避免未写入 uploadState 时空白
+      if (current === 1) {
+        setUploadState(prev => ({
+          ...prev,
+          linkedin: stripLinkedinPrefix(prev.linkedin || reviewData?.linkedin || '')
+        }));
+      }
+      setCurrent(c => Math.max(0, c - 1));
+    };
+
+    const Footer = ({ primary, showSkip = true, showPrevious = false, variant }) => (
+      <ButtonFooter className={`${style.footer}${variant === 'interview-prestart' ? ` ${style['footer-interview-prestart']}` : ''}`} placement="bottomEnd">
+        <Flex className={style['footer-actions']} gap={16} justify="flex-end" wrap="wrap" style={{ width: '100%' }}>
           {showSkip ? (
             <Button size="middle" className={style['skip-btn']} onClick={skip}>
               {formatMessage({ id: 'tenantAdmin.completeSkip' })}
+            </Button>
+          ) : null}
+          {showPrevious ? (
+            <Button size="middle" className={style['skip-btn']} onClick={goPreviousStep}>
+              {formatMessage({ id: 'tenantAdmin.completePrevious' })}
             </Button>
           ) : null}
           {primary}
@@ -376,6 +386,21 @@ const CompleteProfile = createWithRemoteLoader({
     );
     const activeProjectsData = projectsData || splitAssessmentProfileData(uploadState.parsed || {}).projects;
     const canContinueUpload = (Array.isArray(uploadState.resumes) && uploadState.resumes.length > 0) || hasPrefilledReviewData(uploadState.parsed) || hasPrefilledReviewData(reviewData);
+    // 设备检测(deviceTesting)期间仍可返回；设备检测完成进入面试间后再锁定
+    const canLeaveInterviewStep = !interviewFinished && !interviewLocked;
+    const interviewProfilePayload = isCollect
+      ? stripInviteContact({
+          ...activeReviewData,
+          projects: activeProjectsData?.projects || [],
+          resumes: Array.isArray(uploadState.resumes) ? uploadState.resumes : [],
+          resumeParsed: uploadState.parsed && typeof uploadState.parsed === 'object' && (uploadState.parsed.fileId || Array.isArray(uploadState.parsed.educationList) || Array.isArray(uploadState.parsed.workList)) ? uploadState.parsed : null
+        })
+      : {
+          ...activeReviewData,
+          projects: activeProjectsData?.projects || [],
+          resumes: Array.isArray(uploadState.resumes) ? uploadState.resumes : [],
+          resumeParsed: uploadState.parsed && typeof uploadState.parsed === 'object' && (uploadState.parsed.fileId || Array.isArray(uploadState.parsed.educationList) || Array.isArray(uploadState.parsed.workList)) ? uploadState.parsed : null
+        };
 
     if (initialLoading) {
       return (
@@ -462,120 +487,46 @@ const CompleteProfile = createWithRemoteLoader({
 
               {current === 1 && (
                 <div className={style['step-panel']}>
-                  <Form
-                    className={style['step-form']}
-                    data={activeReviewData}
-                    bordered
-                    onSubmit={data => {
-                      if (isCollect) {
-                        // 联系方式只读，强制用邀请写入值
-                        const locked = Object.assign({}, data, {
-                          name: inviteMeta?.name || data?.name,
-                          email: inviteMeta?.email || data?.email,
-                          phone: inviteMeta?.phone || data?.phone
-                        });
-                        if (!hasContactValue(locked?.phone) && !hasContactValue(locked?.email)) {
-                          message.error(formatMessage({ id: 'tenantAdmin.completePhoneOrEmailRequired' }));
-                          return;
-                        }
-                        setReviewData(normalizeReviewProfileData(locked));
-                        setCurrent(2);
-                        return;
-                      }
-                      if (!hasContactValue(data?.phone) && !hasContactValue(data?.email)) {
-                        message.error(formatMessage({ id: 'tenantAdmin.completePhoneOrEmailRequired' }));
-                        return;
-                      }
-                      setReviewData(normalizeReviewProfileData(data));
-                      setCurrent(2);
-                    }}
-                  >
-                    <div className={style['step-body']}>
-                      <ReviewStep FormInfo={FormInfo} positionListApi={isCollect ? null : apis.talentSaas.tenant.position.list} contactReadonly={isCollect} />
-                    </div>
-                    <Footer
-                      showSkip={false}
-                      primary={
-                        <SubmitButton type="primary" size="middle" className={style['primary-btn']}>
-                          {formatMessage({ id: 'tenantAdmin.completeConfirmContinue' })}
-                        </SubmitButton>
-                      }
-                    />
-                  </Form>
+                  <div className={style['step-body']}>
+                    <ProjectsStep FormInfo={FormInfo} value={activeProjectsData?.projects || []} onChange={projects => setProjectsData({ projects })} onEditingChange={setProjectsEditing} />
+                  </div>
+                  <Footer
+                    showSkip={false}
+                    showPrevious
+                    primary={
+                      <Button
+                        type="primary"
+                        size="middle"
+                        className={style['primary-btn']}
+                        onClick={() => {
+                          if (projectsEditing) {
+                            message.warning(formatMessage({ id: 'tenantAdmin.completeFinishEditFirst' }));
+                            return;
+                          }
+                          if (!projectsData && !hasSavedProjectsData(activeProjectsData?.projects)) {
+                            setProjectsData({ projects: [] });
+                          }
+                          setInterviewPhase('loading');
+                          setInterviewLocked(false);
+                          setCurrent(2);
+                        }}
+                      >
+                        {formatMessage({ id: 'tenantAdmin.completeSaveContinue' })}
+                      </Button>
+                    }
+                  />
                 </div>
               )}
 
               {current === 2 && (
                 <div className={style['step-panel']}>
                   <div className={style['step-body']}>
-                    <ProjectsStep FormInfo={FormInfo} value={activeProjectsData?.projects || []} onChange={projects => setProjectsData({ projects })} onEditingChange={setProjectsEditing} />
-                  </div>
-                  <Footer
-                    showSkip={false}
-                    primary={
-                      <Flex gap={16} wrap="wrap" justify="flex-end">
-                        <Button
-                          size="middle"
-                          className={style['skip-btn']}
-                          onClick={() => {
-                            if (projectsEditing) {
-                              message.warning(formatMessage({ id: 'tenantAdmin.completeFinishEditFirst' }));
-                              return;
-                            }
-                            setCurrent(1);
-                          }}
-                        >
-                          {formatMessage({ id: 'tenantAdmin.completeBack' })}
-                        </Button>
-                        <Button
-                          type="primary"
-                          size="middle"
-                          className={style['primary-btn']}
-                          onClick={() => {
-                            if (projectsEditing) {
-                              message.warning(formatMessage({ id: 'tenantAdmin.completeFinishEditFirst' }));
-                              return;
-                            }
-                            if (!projectsData && !hasSavedProjectsData(activeProjectsData?.projects)) {
-                              setProjectsData({ projects: [] });
-                            }
-                            setCurrent(3);
-                          }}
-                        >
-                          {formatMessage({ id: 'tenantAdmin.completeSaveContinue' })}
-                        </Button>
-                      </Flex>
-                    }
-                  />
-                </div>
-              )}
-
-              {current === 3 && (
-                <div className={style['step-panel']}>
-                  <div className={style['step-body']}>
                     <InterviewStep
-                      profilePayload={
-                        isCollect
-                          ? stripInviteContact({
-                              ...(reviewData || uploadState.parsed || {}),
-                              projects: activeProjectsData?.projects || [],
-                              resumes: Array.isArray(uploadState.resumes) ? uploadState.resumes : [],
-                              resumeParsed:
-                                uploadState.parsed && typeof uploadState.parsed === 'object' && (uploadState.parsed.fileId || Array.isArray(uploadState.parsed.educationList) || Array.isArray(uploadState.parsed.workList))
-                                  ? uploadState.parsed
-                                  : null
-                            })
-                          : {
-                              ...(reviewData || uploadState.parsed || {}),
-                              projects: activeProjectsData?.projects || [],
-                              resumes: Array.isArray(uploadState.resumes) ? uploadState.resumes : [],
-                              resumeParsed:
-                                uploadState.parsed && typeof uploadState.parsed === 'object' && (uploadState.parsed.fileId || Array.isArray(uploadState.parsed.educationList) || Array.isArray(uploadState.parsed.workList))
-                                  ? uploadState.parsed
-                                  : null
-                            }
-                      }
+                      key={`complete-profile-interview-${current}`}
+                      profilePayload={interviewProfilePayload}
                       onInterviewComplete={handleInterviewComplete}
+                      onPhaseChange={setInterviewPhase}
+                      onInterviewLockChange={setInterviewLocked}
                       apisAdapter={collectApis || undefined}
                     />
                   </div>
@@ -598,6 +549,8 @@ const CompleteProfile = createWithRemoteLoader({
                         </Button>
                       }
                     />
+                  ) : canLeaveInterviewStep ? (
+                    <Footer showSkip={false} showPrevious primary={null} variant={interviewPhase === 'room' ? 'interview-prestart' : undefined} />
                   ) : null}
                 </div>
               )}

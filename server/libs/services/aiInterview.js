@@ -338,7 +338,7 @@ module.exports = fp(async (fastify, options) => {
         }
         return { binding, setting: publicData };
       },
-      inviteCandidate: async ({ tenantId, projectId, name, email, phone, description, expires }) => {
+      inviteCandidate: async ({ tenantId, projectId, name, email, phone, description, expires, needLoginShorten = true, needNotice = true }) => {
         const credentials = await getCredentials(tenantId);
         return openApiRequest(credentials, 'project/invite-candidate', {
           method: 'POST',
@@ -349,7 +349,9 @@ module.exports = fp(async (fastify, options) => {
             phone: phone || undefined,
             description: description || undefined,
             expires,
-            needLoginShorten: true
+            needLoginShorten,
+            // open-api 后续正式支持；当前 inviteCandidateWithNoLogin 内部已默认不发提醒，仍透传
+            needNotice
           }
         });
       },
@@ -362,6 +364,12 @@ module.exports = fp(async (fastify, options) => {
             perPage,
             filter: filter || {}
           }
+        });
+      },
+      getInterviewDetail: async ({ tenantId, id }) => {
+        const credentials = await getCredentials(tenantId);
+        return openApiRequest(credentials, 'project/interview-detail', {
+          query: { id }
         });
       },
       /** ajax 根地址：去掉末尾 /api/v1，供前端直连面试接口 */

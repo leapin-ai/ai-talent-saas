@@ -22,7 +22,8 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
   const [parsing, setParsing] = useState(false);
   const parsedIdRef = useRef(null);
   const linkedinRef = useRef(value?.linkedin || '');
-  linkedinRef.current = value?.linkedin ?? linkedinRef.current;
+  // 受控回显：父级传入的 linkedin（含空串）优先，避免返回上一步后仍读旧 ref
+  linkedinRef.current = value?.linkedin != null ? String(value.linkedin) : linkedinRef.current;
   const resumes = Array.isArray(value?.resumes) ? value.resumes : [];
 
   const latestLinkedin = () => linkedinRef.current || '';

@@ -2,13 +2,19 @@ import RemoteLoader, { createWithRemoteLoader } from '@kne/remote-loader';
 import AppChildrenRouter from '@kne/app-children-router';
 import { Navigate } from 'react-router-dom';
 import TenantAdmin from '@components/TenantAdmin';
+import CompleteProfile from '@components/TenantAdmin/CompleteProfile';
 import RootHomeRedirect from '@components/TenantAdmin/RootHomeRedirect';
 import TenantPortal from '@components/TenantPortal';
 import Admin from '@components/Admin';
+import UserSystemLayout from '@components/UserSystemLayout';
+import PublicSystemLayout from '@components/PublicSystemLayout';
 import { getManualTaskAction } from '@components/AssessmentGenerateTask';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
 import './index.scss';
+
+/** JoinInvitation / LoginTenant 默认套 components-core Page；在 SystemLayout 下改为只渲染内容 */
+const renderWithoutCorePage = pageProps => pageProps?.children ?? null;
 
 const AppContent = withLocale(({ baseUrl, AfterUserLoginLayout, AfterAdminUserLoginLayout }) => {
   const { formatMessage } = useIntl();
@@ -129,6 +135,15 @@ const AppContent = withLocale(({ baseUrl, AfterUserLoginLayout, AfterAdminUserLo
           )
         },
         {
+          path: 'collect-profile',
+          title: 'Collect Profile',
+          element: (
+            <PublicSystemLayout>
+              <CompleteProfile mode="collect" />
+            </PublicSystemLayout>
+          )
+        },
+        {
           path: 'tenant/*',
           element: <TenantAdmin baseUrl={`${baseUrl}/tenant`} />
         },
@@ -142,18 +157,20 @@ const AppContent = withLocale(({ baseUrl, AfterUserLoginLayout, AfterAdminUserLo
                   path: 'join-tenant',
                   title: 'Join Tenant',
                   element: (
-                    <AfterUserLoginLayout>
-                      <RemoteLoader module="components-admin:Tenant@JoinInvitation" />
-                    </AfterUserLoginLayout>
+                    <UserSystemLayout>
+                      <RemoteLoader module="components-admin:Tenant@JoinInvitation">{renderWithoutCorePage}</RemoteLoader>
+                    </UserSystemLayout>
                   )
                 },
                 {
                   path: 'login-tenant',
                   title: 'Login Tenant',
                   element: (
-                    <AfterUserLoginLayout>
-                      <RemoteLoader module="components-admin:Tenant@LoginTenant" tenantPath={`${baseUrl}/tenant`} />
-                    </AfterUserLoginLayout>
+                    <UserSystemLayout>
+                      <RemoteLoader module="components-admin:Tenant@LoginTenant" tenantPath={`${baseUrl}/tenant`}>
+                        {renderWithoutCorePage}
+                      </RemoteLoader>
+                    </UserSystemLayout>
                   )
                 },
                 {

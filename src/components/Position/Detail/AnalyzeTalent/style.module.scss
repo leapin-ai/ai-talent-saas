@@ -8,7 +8,7 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -38,6 +38,10 @@
 
 .metric-value-outdated {
   color: #edb80c;
+}
+
+.metric-value-in-progress {
+  color: #2563eb;
 }
 
 .metric-value-never {
@@ -118,6 +122,11 @@
   background: #fef3c7;
 }
 
+.assessment-in-progress {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
 .assessment-never {
   color: #475569;
   background: #f1f5f9;
@@ -177,6 +186,121 @@
   line-height: 16px;
   color: #94a3b8;
   text-align: right;
+}
+
+.invite-btn {
+  color: var(--primary-color, #4183f0);
+  border-color: color-mix(in srgb, var(--primary-color, #4183f0) 45%, #fff);
+  background: color-mix(in srgb, var(--primary-color, #4183f0) 8%, #fff);
+
+  &:hover,
+  &:focus {
+    color: var(--primary-color, #4183f0) !important;
+    border-color: var(--primary-color, #4183f0) !important;
+    background: color-mix(in srgb, var(--primary-color, #4183f0) 14%, #fff) !important;
+  }
+}
+
+.invite-dropdown {
+  :global(.ant-dropdown-menu) {
+    min-width: 160px;
+    padding: 4px;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  }
+
+  :global(.ant-dropdown-menu-item) {
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: #334155;
+  }
+
+  :global(.ant-dropdown-menu-item:hover),
+  :global(.ant-dropdown-menu-item-active) {
+    color: var(--primary-color, #4183f0);
+    background: color-mix(in srgb, var(--primary-color, #4183f0) 8%, #fff);
+  }
+}
+
+.invite-form {
+  width: 100%;
+
+  :global {
+    .ant-card + .ant-card,
+    .ant-card + .part,
+    .part + .ant-card,
+    .part + .part {
+      margin-top: 0;
+    }
+
+    .ant-form-item {
+      margin-bottom: 16px;
+    }
+
+    .ant-upload-drag {
+      padding: 20px 16px;
+    }
+
+    .ant-upload-drag-icon {
+      margin-bottom: 12px;
+    }
+
+    .ant-upload-text {
+      margin-bottom: 8px !important;
+    }
+  }
+}
+
+.invite-batch {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.invite-upload {
+  :global(.ant-upload-drag) {
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--primary-color, #4183f0) 4%, #fff);
+  }
+}
+
+.invite-import-table {
+  margin-top: 4px;
+
+  :global {
+    // 操作列：默认隐藏，悬停当前行再显示删除
+    .ant-table-tbody > tr > td:last-child .ant-btn {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+
+    .ant-table-tbody > tr:hover > td:last-child .ant-btn,
+    .ant-table-tbody > tr > td:last-child .ant-btn:focus-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+.invite-existing {
+  max-height: 360px;
+  overflow: auto;
+  overflow-x: hidden;
+  margin-top: 4px;
+
+  :global {
+    .ant-table-content,
+    .ant-table-body {
+      overflow-x: hidden !important;
+    }
+  }
+}
+
+.invite-existing-extra {
+  color: #64748b;
+  font-size: 12px;
 }
 
 @include resp.mobile-container {

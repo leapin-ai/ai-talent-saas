@@ -78,7 +78,7 @@ $surface: #fafafe;
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 24px;
+  padding: 24px 24px 0;
   min-height: 0;
 }
 
@@ -96,9 +96,18 @@ $surface: #fafafe;
   min-height: 240px;
 }
 
+.invite-invalid-panel {
+  flex: 1;
+  min-height: 60vh;
+  width: 100%;
+  padding: 48px 24px;
+  box-sizing: border-box;
+}
+
 .step-body {
   flex: 1;
   min-height: 0;
+  padding-bottom: 16px;
 }
 
 .step-panel {
@@ -122,14 +131,50 @@ $surface: #fafafe;
   bottom: 0;
   z-index: 10;
   margin-top: auto;
+  margin-left: -24px;
+  margin-right: -24px;
   flex-shrink: 0;
-  width: 100%;
-  padding: 16px 0;
-  background: transparent;
+  align-self: stretch;
+  width: calc(100% + 48px);
+  box-sizing: border-box;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.04);
 }
 
 .footer-actions {
   width: 100%;
+}
+
+// 设备检测阶段：贴底半透明条，上一步靠右（不遮挡中间面试组件按钮时可点）
+.footer-interview-prestart {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  margin: 0 !important;
+  width: 100% !important;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.04);
+  pointer-events: none;
+
+  .footer-actions {
+    max-width: 100%;
+    pointer-events: none;
+    justify-content: flex-end !important;
+  }
+
+  .skip-btn {
+    pointer-events: auto;
+  }
 }
 
 .skip-btn {

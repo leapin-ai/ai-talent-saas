@@ -21,7 +21,7 @@ const InterviewStep = createWithRemoteLoader({
       <Spin size="large" />
     </Flex>
   )
-})(({ remoteModules, profilePayload, onInterviewComplete }) => {
+})(({ remoteModules, profilePayload, onInterviewComplete, onPhaseChange, onInterviewLockChange, apisAdapter }) => {
   const [usePreset] = remoteModules;
   const { apis, ajax } = usePreset();
   const { formatMessage } = useIntl();
@@ -34,19 +34,37 @@ const InterviewStep = createWithRemoteLoader({
   const bootOnceRef = useRef(false);
   const profilePayloadRef = useRef(profilePayload);
   const onInterviewCompleteRef = useRef(onInterviewComplete);
+  const onPhaseChangeRef = useRef(onPhaseChange);
+  const onInterviewLockChangeRef = useRef(onInterviewLockChange);
+  const apisAdapterRef = useRef(apisAdapter);
 
   profilePayloadRef.current = profilePayload;
   onInterviewCompleteRef.current = onInterviewComplete;
+  onPhaseChangeRef.current = onPhaseChange;
+  onInterviewLockChangeRef.current = onInterviewLockChange;
+  apisAdapterRef.current = apisAdapter;
 
-  const finishDirectly = useCallback(() => {
+  useEffect(() => {
+    onPhaseChangeRef.current?.(phase);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 'room') {
+      onInterviewLockChangeRef.current?.(false);
+    }
+  }, [phase]);
+
+  const finishDirectly = useCallback((extra = {}) => {
     choiceResolvedRef.current = true;
     bootOnceRef.current = true;
-    onInterviewCompleteRef.current && onInterviewCompleteRef.current({ stage: 'interview', status: 'complete', directFinish: true });
+    onInterviewCompleteRef.current && onInterviewCompleteRef.current({ stage: 'interview', status: 'complete', directFinish: true, ...extra });
   }, []);
 
   const openInterviewRoom = useCallback(
     data => {
       if (data?.status === 'generating') {
+        // 已在生成报告：结束本步，勿停留在 loading
+        setPhase('done');
         finishDirectly();
         return;
       }
@@ -64,8 +82,42 @@ const InterviewStep = createWithRemoteLoader({
     [formatMessage, finishDirectly]
   );
 
+  const saveProfile = useCallback(
+    async payload => {
+      if (apisAdapterRef.current?.saveProfile) {
+        return apisAdapterRef.current.saveProfile(payload);
+      }
+      const { data: saveRes } = await ajax(
+        Object.assign({}, apis.talentSaas.tenant.assessment.saveProfile, {
+          data: { profileData: payload }
+        })
+      );
+      if (saveRes.code !== 0) {
+        throw new Error(saveRes.msg || formatMessage({ id: 'tenantAdmin.completeInterviewSaveFailed' }));
+      }
+      return saveRes.data;
+    },
+    [ajax, apis, formatMessage]
+  );
+
+  const loadDetail = useCallback(async () => {
+    if (apisAdapterRef.current?.detail) {
+      return apisAdapterRef.current.detail();
+    }
+    const { data: detailRes } = await ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail));
+    if (detailRes.code !== 0) {
+      throw new Error(detailRes.msg || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
+    }
+    return detailRes.data;
+  }, [ajax, apis, formatMessage]);
+
   const loadEnsureInvite = useCallback(
     async (options = {}) => {
+      if (apisAdapterRef.current?.ensureInvite) {
+        const data = await apisAdapterRef.current.ensureInvite(options);
+        openInterviewRoom(data);
+        return data;
+      }
       const { data: inviteRes } = await ajax(
         Object.assign({}, apis.talentSaas.tenant.assessment.ensureInvite, {
           data: options
@@ -80,7 +132,7 @@ const InterviewStep = createWithRemoteLoader({
     [ajax, apis, formatMessage, openInterviewRoom]
   );
 
-  // 只 boot 一次，避免 deps 变化导致死循环
+  // 只 boot 一次；卸载时若未进入 room/choice/done，重置以便 StrictMode / 返回重进可再 boot
   useEffect(() => {
     if (bootOnceRef.current || choiceResolvedRef.current) {
       return undefined;
@@ -88,6 +140,7 @@ const InterviewStep = createWithRemoteLoader({
     bootOnceRef.current = true;
 
     let cancelled = false;
+    let settled = false;
     (async () => {
       setPhase('loading');
       setError('');
@@ -96,58 +149,70 @@ const InterviewStep = createWithRemoteLoader({
       try {
         const payload = profilePayloadRef.current;
         if (payload) {
-          const { data: saveRes } = await ajax(
-            Object.assign({}, apis.talentSaas.tenant.assessment.saveProfile, {
-              data: { profileData: payload }
-            })
-          );
-          if (saveRes.code !== 0) {
-            throw new Error(saveRes.msg || formatMessage({ id: 'tenantAdmin.completeInterviewSaveFailed' }));
-          }
+          await saveProfile(payload);
         }
-
-        const { data: detailRes } = await ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail));
-        if (detailRes.code !== 0) {
-          throw new Error(detailRes.msg || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
-        }
-        const detail = detailRes.data;
-        if (cancelled || choiceResolvedRef.current) {
+        if (cancelled) {
           return;
         }
 
-        if (detail?.previousInterview) {
+        const detail = await loadDetail();
+        if (cancelled) {
+          return;
+        }
+        if (choiceResolvedRef.current) {
+          return;
+        }
+
+        if (detail?.previousInterview && !apisAdapterRef.current?.skipPreviousInterview) {
           setPreviousInterview(detail.previousInterview);
           setPhase('choice');
+          settled = true;
           return;
         }
 
         await loadEnsureInvite();
+        settled = true;
       } catch (e) {
         if (!cancelled && !choiceResolvedRef.current) {
           bootOnceRef.current = false;
           setError(e.message || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
           setPhase('error');
+          settled = true;
         }
       }
     })();
     return () => {
       cancelled = true;
+      if (!settled && !choiceResolvedRef.current) {
+        bootOnceRef.current = false;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot once on mount
   }, []);
 
-  // 面试间内提交/完成后直接结束流程，不再跳回「检测到上次面试记录」
-  const handleInterviewSessionComplete = useCallback(async () => {
-    setPhase('loading');
-    setError('');
+  // 面试作答完成：只同步后端，勿卸房间——InterviewSession 会先 emit interview/complete 再切到 feedback
+  const syncInterviewComplete = useCallback(async () => {
     try {
-      // 拉取 detail 以同步面试完成态（generating），失败也不阻断结束
-      await ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail));
+      if (apisAdapterRef.current?.markDone) {
+        await apisAdapterRef.current.markDone({ interviewId: invite?.interviewId || invite?.clientUserId });
+      } else {
+        await ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail));
+      }
     } catch (e) {
       // ignore sync error
     }
-    finishDirectly();
-  }, [ajax, apis, finishDirectly]);
+  }, [ajax, apis, invite]);
+
+  // 评价提交完成：通知宿主，但保持 room，让 InterviewSession 渲染内置 Completed 完成页
+  const handleFeedbackComplete = useCallback(() => {
+    choiceResolvedRef.current = true;
+    bootOnceRef.current = true;
+    onInterviewCompleteRef.current?.({
+      stage: 'feedback',
+      status: 'complete',
+      interviewId: invite?.interviewId || invite?.clientUserId
+    });
+  }, [invite]);
 
   const handleUsePrevious = async () => {
     setActionLoading('previous');
@@ -211,6 +276,10 @@ const InterviewStep = createWithRemoteLoader({
     );
   }
 
+  if (phase === 'done') {
+    return null;
+  }
+
   if (phase === 'error') {
     return <Alert type="error" showIcon message={error} />;
   }
@@ -232,8 +301,19 @@ const InterviewStep = createWithRemoteLoader({
           ajaxBaseUrl={invite.ajaxBaseUrl || invite.apiUrl}
           shorten={invite.shorten}
           onStageChange={event => {
+            if (event?.stage === 'deviceTesting' && event?.status === 'complete') {
+              onInterviewLockChangeRef.current?.(true);
+            }
             if (event?.stage === 'interview' && event?.status === 'complete') {
-              handleInterviewSessionComplete();
+              onInterviewLockChangeRef.current?.(true);
+              // 保持 room，让 Session 继续渲染 Feedback；后台 markDone 即可
+              syncInterviewComplete();
+            }
+            if (event?.stage === 'feedback') {
+              onInterviewLockChangeRef.current?.(true);
+              if (event?.status === 'complete') {
+                handleFeedbackComplete();
+              }
             }
           }}
         />
