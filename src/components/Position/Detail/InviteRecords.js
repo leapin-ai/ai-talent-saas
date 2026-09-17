@@ -4,6 +4,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useParams } from 'react-router-dom';
 import withLocale from '../withLocale';
+import InviteAssessmentResultModal from './InviteAssessmentResultModal';
 
 const STATUS_LABEL_IDS = {
   invited: 'position.talentInviteStatusInvited',
@@ -16,23 +17,6 @@ const STATUS_LABEL_IDS = {
 const TYPE_LABEL_IDS = {
   employee: 'position.talentInviteEmployee',
   manager: 'position.talentInviteManager'
-};
-
-const pickResultPayload = interview => {
-  if (!interview || typeof interview !== 'object') {
-    return interview;
-  }
-  if (interview.report != null) {
-    return {
-      id: interview.id,
-      name: interview.name || interview.user?.name,
-      status: interview.status || interview.interviewStatus,
-      report: interview.report,
-      score: interview.score ?? interview.totalScore,
-      updatedAt: interview.updatedAt || interview.updated_at
-    };
-  }
-  return interview;
 };
 
 const copyText = async text => {
@@ -64,6 +48,9 @@ const InviteRecords = createWithRemoteLoader({
     const [reloadKey, setReloadKey] = useState(0);
     const [loadingId, setLoadingId] = useState(null);
     const [actionType, setActionType] = useState('');
+    const [resultOpen, setResultOpen] = useState(false);
+    const [resultInvite, setResultInvite] = useState(null);
+    const [resultInterview, setResultInterview] = useState(null);
 
     const fetchInterviewResult = useCallback(
       async item => {
@@ -81,27 +68,14 @@ const InviteRecords = createWithRemoteLoader({
           if (resData.code !== 0) {
             throw new Error(resData.msg || formatMessage({ id: 'position.talentInviteResultFailed' }));
           }
-          const payload = pickResultPayload(resData.data?.interview);
-          modal.info({
-            title: formatMessage({ id: 'position.talentInviteResultTitle' }, { name: item.name || '' }),
-            width: 720,
-            content: (
-              <pre
-                style={{
-                  margin: 0,
-                  maxHeight: 480,
-                  overflow: 'auto',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  fontSize: 12,
-                  lineHeight: 1.5
-                }}
-              >
-                {JSON.stringify(payload, null, 2)}
-              </pre>
-            )
-          });
-          setReloadKey(key => key + 1);
+          const invite = resData.data?.invite || item;
+          const interview = resData.data?.interview;
+          if (!interview) {
+            throw new Error(formatMessage({ id: 'position.talentInviteResultFailed' }));
+          }
+          setResultInvite(invite);
+          setResultInterview(interview);
+          setResultOpen(true);
         } catch (e) {
           message.error(e.message || formatMessage({ id: 'position.talentInviteResultFailed' }));
         } finally {
@@ -109,7 +83,7 @@ const InviteRecords = createWithRemoteLoader({
           setActionType('');
         }
       },
-      [ajax, apis, formatMessage, message, modal]
+      [ajax, apis, formatMessage, message]
     );
 
     const fetchInviteLink = useCallback(
@@ -290,61 +264,70 @@ const InviteRecords = createWithRemoteLoader({
       });
     }, [apis, positionId]);
 
+    const closeResultModal = useCallback(() => {
+      setResultOpen(false);
+      setResultInvite(null);
+      setResultInterview(null);
+    }, []);
+
     const title = formatMessage({ id: 'position.talentInviteRecordsTitle' });
     const content = !listApi ? null : (
-      <TablePage
-        key={`${positionId}-${reloadKey}`}
-        {...listApi}
-        name="position-invite-records"
-        rowKey="id"
-        columns={columns}
-        pagination={{
-          paramsType: 'params',
-          pageSize: 20
-        }}
-        filter={{
-          list: [
-            {
-              type: InputFilterItem,
-              props: {
-                name: 'keyword',
-                label: formatMessage({ id: 'position.talentInviteKeyword' })
+      <>
+        <TablePage
+          key={`${positionId}-${reloadKey}`}
+          {...listApi}
+          name="position-invite-records"
+          rowKey="id"
+          columns={columns}
+          pagination={{
+            paramsType: 'params',
+            pageSize: 20
+          }}
+          filter={{
+            list: [
+              {
+                type: InputFilterItem,
+                props: {
+                  name: 'keyword',
+                  label: formatMessage({ id: 'position.talentInviteKeyword' })
+                }
+              },
+              {
+                type: SuperSelectFilterItem,
+                props: {
+                  name: 'status',
+                  label: formatMessage({ id: 'position.talentInviteStatus' }),
+                  single: true,
+                  options: [
+                    { label: formatMessage({ id: 'position.talentInviteStatusInvited' }), value: 'invited' },
+                    { label: formatMessage({ id: 'position.talentInviteStatusOpened' }), value: 'opened' },
+                    { label: formatMessage({ id: 'position.talentInviteStatusFilling' }), value: 'filling' },
+                    { label: formatMessage({ id: 'position.talentInviteStatusInterviewing' }), value: 'interviewing' },
+                    { label: formatMessage({ id: 'position.talentInviteStatusDone' }), value: 'done' }
+                  ]
+                }
+              },
+              {
+                type: SuperSelectFilterItem,
+                props: {
+                  name: 'inviteType',
+                  label: formatMessage({ id: 'position.talentInviteType' }),
+                  single: true,
+                  options: [
+                    { label: formatMessage({ id: 'position.talentInviteEmployee' }), value: 'employee' },
+                    { label: formatMessage({ id: 'position.talentInviteManager' }), value: 'manager' }
+                  ]
+                }
               }
-            },
-            {
-              type: SuperSelectFilterItem,
-              props: {
-                name: 'status',
-                label: formatMessage({ id: 'position.talentInviteStatus' }),
-                single: true,
-                options: [
-                  { label: formatMessage({ id: 'position.talentInviteStatusInvited' }), value: 'invited' },
-                  { label: formatMessage({ id: 'position.talentInviteStatusOpened' }), value: 'opened' },
-                  { label: formatMessage({ id: 'position.talentInviteStatusFilling' }), value: 'filling' },
-                  { label: formatMessage({ id: 'position.talentInviteStatusInterviewing' }), value: 'interviewing' },
-                  { label: formatMessage({ id: 'position.talentInviteStatusDone' }), value: 'done' }
-                ]
-              }
-            },
-            {
-              type: SuperSelectFilterItem,
-              props: {
-                name: 'inviteType',
-                label: formatMessage({ id: 'position.talentInviteType' }),
-                single: true,
-                options: [
-                  { label: formatMessage({ id: 'position.talentInviteEmployee' }), value: 'employee' },
-                  { label: formatMessage({ id: 'position.talentInviteManager' }), value: 'manager' }
-                ]
-              }
-            }
-          ],
-          mapFilterValue: value => ({
-            positionId: String(positionId),
-            filter: Object.assign({}, Filter.getFilterValue(value))
-          })
-        }}
-      />
+            ],
+            mapFilterValue: value => ({
+              positionId: String(positionId),
+              filter: Object.assign({}, Filter.getFilterValue(value))
+            })
+          }}
+        />
+        <InviteAssessmentResultModal open={resultOpen} onClose={closeResultModal} invite={resultInvite} interview={resultInterview} />
+      </>
     );
 
     if (typeof children === 'function') {
