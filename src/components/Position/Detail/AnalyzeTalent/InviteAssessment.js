@@ -59,6 +59,7 @@ const InviteAssessment = createWithRemoteLoader({
       const api = formModal({
         title,
         size: 'large',
+        saveText: formatMessage({ id: 'position.talentInviteSend' }),
         footer: (
           <Button
             type="default"
@@ -77,7 +78,6 @@ const InviteAssessment = createWithRemoteLoader({
             existingEmployees: [],
             inviteType
           },
-          saveText: formatMessage({ id: 'position.talentInviteSend' }),
           onSubmit: async data => {
             if (!positionId) {
               message.error(formatMessage({ id: 'position.talentInviteMissingPosition' }));

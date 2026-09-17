@@ -37,8 +37,7 @@ const ExistingNeverEmployeesTable = ({ value, onChange, positionId, TablePage, T
       params: Object.assign({}, employeeListApi.params || {}, {
         positionId: String(positionId),
         filter: Object.assign({}, employeeListApi.params?.filter || {}, {
-          withTalentAnalysis: true,
-          lastAssessment: 'never'
+          withTalentAnalysis: true
         }),
         perPage: 10
       })
@@ -114,8 +113,7 @@ const ExistingNeverEmployeesTable = ({ value, onChange, positionId, TablePage, T
           mapFilterValue: nextValue => ({
             positionId: String(positionId),
             filter: Object.assign({}, Filter.getFilterValue(nextValue), {
-              withTalentAnalysis: true,
-              lastAssessment: 'never'
+              withTalentAnalysis: true
             })
           })
         }}

@@ -252,14 +252,7 @@ const InviteAssessmentForm = createWithRemoteLoader({
             ) : null}
           </div>
         </InfoPage.Part>
-        {showExisting ? (
-          <FormInfo
-            title={formatMessage({ id: 'position.talentInviteExistingEmployees' })}
-            extra={<span className={style['invite-existing-extra']}>{formatMessage({ id: 'position.talentInviteExistingNeverHint' })}</span>}
-            column={1}
-            list={[<ExistingNeverEmployeesField name="existingEmployees" positionId={positionId} block />]}
-          />
-        ) : null}
+        {showExisting ? <FormInfo title={formatMessage({ id: 'position.talentInviteExistingEmployees' })} column={1} list={[<ExistingNeverEmployeesField name="existingEmployees" positionId={positionId} block />]} /> : null}
         <TableList
           title={formatMessage({ id: 'position.talentInviteManualEntry' })}
           name="participants"
