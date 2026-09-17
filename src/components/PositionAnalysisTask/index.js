@@ -392,6 +392,13 @@ const validatePositionStep = (data, message) => {
   }
 };
 
+/** FormSteps 上下文：优先 getStepCache / stepCache，兼容旧 stepCacheRef；字段为 formData */
+const readStepFormData = (stepCtx, index) => {
+  const cache = typeof stepCtx?.getStepCache === 'function' ? stepCtx.getStepCache() : stepCtx?.stepCache || stepCtx?.stepCacheRef?.current;
+  const entry = cache?.[index];
+  return entry?.formData || entry?.data || {};
+};
+
 /**
  * 嵌套 List/TableList 首次靠 formProps.data 灌入常丢子项。
  * 仅在每个步骤「首次进入」时用 seed 回填；返回上一步时不再回填，以免覆盖 stepCache 里的编辑结果。
@@ -848,8 +855,8 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
           data: initial.position,
           onSubmit: hasEmployees
             ? data => validatePositionStep(data, message)
-            : async (positionData, { stepCacheRef }) => {
-                const org = stepCacheRef.current[0]?.data || {};
+            : async (positionData, stepCtx) => {
+                const org = readStepFormData(stepCtx, 0);
                 return submitCompleteAnalysis({
                   taskId: data.id,
                   org,
@@ -871,9 +878,9 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
             title: '个人',
             formProps: {
               data: { employees: initial.employees },
-              onSubmit: async (personData, { stepCacheRef }) => {
-                const org = stepCacheRef.current[0]?.data || {};
-                const positionRaw = stepCacheRef.current[1]?.data || {};
+              onSubmit: async (personData, stepCtx) => {
+                const org = readStepFormData(stepCtx, 0);
+                const positionRaw = readStepFormData(stepCtx, 1);
                 return submitCompleteAnalysis({
                   taskId: data.id,
                   org,
