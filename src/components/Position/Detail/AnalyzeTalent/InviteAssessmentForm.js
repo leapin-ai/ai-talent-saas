@@ -86,7 +86,8 @@ const InviteAssessmentForm = createWithRemoteLoader({
       () =>
         Object.assign({}, apis.talentSaas.tenant.aiInterview.projects, {
           params: Object.assign({}, apis.talentSaas.tenant.aiInterview.projects.params || {}, {
-            perPage: 20
+            perPage: 20,
+            filter: { scene: 'dataCollection' }
           })
         }),
       [apis]
@@ -181,11 +182,11 @@ const InviteAssessmentForm = createWithRemoteLoader({
               single
               labelKey="name"
               valueKey="id"
-              interceptor="object-output-value"
               api={projectApi}
               placeholder={formatMessage({ id: 'position.talentInviteSelect' })}
               getSearchProps={({ searchText }) => ({
                 filter: {
+                  scene: 'dataCollection',
                   name: searchText
                 }
               })}

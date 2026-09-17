@@ -123,7 +123,7 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
       schema: {
-        summary: '租户-通过 open-api 获取 AI 面试项目列表（支持分页下拉）',
+        summary: '租户-获取数据采集场景 AI 面试项目列表（强制 scene=dataCollection）',
         query: {
           type: 'object',
           properties: {
@@ -139,7 +139,9 @@ module.exports = fp(async (fastify, options) => {
         tenantId: request.tenantUserInfo.tenantId,
         currentPage: request.query.currentPage,
         perPage: request.query.perPage,
-        filter: request.query.filter || {}
+        filter: Object.assign({}, request.query.filter || {}, {
+          scene: 'dataCollection'
+        })
       });
     }
   );

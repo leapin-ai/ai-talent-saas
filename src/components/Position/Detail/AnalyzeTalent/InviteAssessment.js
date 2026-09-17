@@ -47,6 +47,7 @@ const InviteAssessment = createWithRemoteLoader({
     const { formatMessage } = useIntl();
     const navigate = useNavigate();
     const importedRef = useRef([]);
+    const modalSeqRef = useRef(0);
 
     const openInviteModal = inviteType => {
       const typeLabel = formatMessage({
@@ -56,6 +57,8 @@ const InviteAssessment = createWithRemoteLoader({
         id: inviteType === 'manager' ? 'position.talentInviteManagersTitle' : 'position.talentInviteEmployeesTitle'
       });
       importedRef.current = [];
+      modalSeqRef.current += 1;
+      const modalSeq = modalSeqRef.current;
       const api = formModal({
         title,
         size: 'large',
@@ -76,11 +79,25 @@ const InviteAssessment = createWithRemoteLoader({
           data: {
             participants: [{}],
             existingEmployees: [],
-            inviteType
+            inviteType,
+            // 每次打开清空，避免二次邀请沿用上次项目选择
+            assessmentProject: undefined
           },
           onSubmit: async data => {
             if (!positionId) {
               message.error(formatMessage({ id: 'position.talentInviteMissingPosition' }));
+              return false;
+            }
+            const project = data.assessmentProject || {};
+            const assessmentProject =
+              project && typeof project === 'object'
+                ? {
+                    id: project.id || project.value,
+                    name: project.name || project.label || ''
+                  }
+                : data.assessmentProject;
+            if (!assessmentProject || (typeof assessmentProject === 'object' && !assessmentProject.id)) {
+              message.warning(formatMessage({ id: 'position.talentInviteSelect' }));
               return false;
             }
             const manual = (Array.isArray(data.participants) ? data.participants : []).map(normalizeParticipant).filter(Boolean);
@@ -96,7 +113,7 @@ const InviteAssessment = createWithRemoteLoader({
                 data: {
                   positionId: String(positionId),
                   inviteType,
-                  assessmentProject: data.assessmentProject,
+                  assessmentProject,
                   deadline: data.deadline,
                   participants
                 }
@@ -134,6 +151,7 @@ const InviteAssessment = createWithRemoteLoader({
         },
         children: (
           <InviteAssessmentForm
+            key={`invite-assessment-${inviteType}-${modalSeq}`}
             inviteType={inviteType}
             positionId={positionId}
             onImportedChange={list => {

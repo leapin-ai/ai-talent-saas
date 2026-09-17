@@ -3,6 +3,7 @@ import { App, Button, Flex, Input, Space, Typography } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useParams } from 'react-router-dom';
+import { applyAiInterviewRemote } from '../../../preset';
 import withLocale from '../withLocale';
 import InviteAssessmentResultModal from './InviteAssessmentResultModal';
 
@@ -51,6 +52,8 @@ const InviteRecords = createWithRemoteLoader({
     const [resultOpen, setResultOpen] = useState(false);
     const [resultInvite, setResultInvite] = useState(null);
     const [resultInterview, setResultInterview] = useState(null);
+    const [resultRemoteKey, setResultRemoteKey] = useState('');
+    const [resultApiHost, setResultApiHost] = useState('');
 
     const fetchInterviewResult = useCallback(
       async item => {
@@ -66,17 +69,34 @@ const InviteRecords = createWithRemoteLoader({
             })
           );
           if (resData.code !== 0) {
-            throw new Error(resData.msg || formatMessage({ id: 'position.talentInviteResultFailed' }));
+            // ajax errorHandler 已提示（如「面试记录不存在」），勿再 toast
+            return;
           }
           const invite = resData.data?.invite || item;
           const interview = resData.data?.interview;
           if (!interview) {
             throw new Error(formatMessage({ id: 'position.talentInviteResultFailed' }));
           }
+          // 与面试房间一致：先写入租户 CDN/version，再挂载 InterviewResultSession
+          const cdnUrl = resData.data?.cdnUrl;
+          const version = resData.data?.version;
+          const apiHost = resData.data?.apiUrl || resData.data?.ajaxBaseUrl || '';
+          if (!applyAiInterviewRemote({ cdnUrl, version })) {
+            throw new Error(formatMessage({ id: 'position.talentInviteResultRemoteFailed' }));
+          }
+          if (!apiHost) {
+            throw new Error(formatMessage({ id: 'position.talentInviteResultRemoteFailed' }));
+          }
           setResultInvite(invite);
           setResultInterview(interview);
+          setResultApiHost(apiHost);
+          setResultRemoteKey(`${cdnUrl}|${version}|${apiHost}|${interview?.id || item.id}`);
           setResultOpen(true);
         } catch (e) {
+          // 网络/业务码错误已由 ajax errorHandler 弹出
+          if (e?.isAxiosError || e?.config || e?.response) {
+            return;
+          }
           message.error(e.message || formatMessage({ id: 'position.talentInviteResultFailed' }));
         } finally {
           setLoadingId(null);
@@ -200,7 +220,8 @@ const InviteRecords = createWithRemoteLoader({
         },
         {
           name: 'projectName',
-          title: formatMessage({ id: 'position.talentInviteProject' })
+          title: formatMessage({ id: 'position.talentInviteProjectName' }),
+          getValueOf: item => item.projectName || item.projectId || '—'
         },
         {
           name: 'status',
@@ -326,7 +347,7 @@ const InviteRecords = createWithRemoteLoader({
             })
           }}
         />
-        <InviteAssessmentResultModal open={resultOpen} onClose={closeResultModal} invite={resultInvite} interview={resultInterview} />
+        <InviteAssessmentResultModal open={resultOpen} onClose={closeResultModal} invite={resultInvite} interview={resultInterview} remoteKey={resultRemoteKey} apiHost={resultApiHost} />
       </>
     );
 
