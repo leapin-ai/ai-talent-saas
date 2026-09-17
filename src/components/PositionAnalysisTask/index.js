@@ -178,10 +178,13 @@ const buildInitialValues = context => {
   };
 };
 
+// 表单里没有该字段时不能伪造空串，否则 completeAnalysis 会把库里的内容清掉；主动清空拿到的是 ''，照常提交
+const pickSubmittedText = (data, name) => (typeof data?.[name] === 'string' ? { [name]: data[name] } : {});
+
 const reshapePositionData = data => ({
-  description: data?.description || '',
-  requirement: data?.requirement || '',
-  developmentGoal: data?.developmentGoal || '',
+  ...pickSubmittedText(data, 'description'),
+  ...pickSubmittedText(data, 'requirement'),
+  ...pickSubmittedText(data, 'developmentGoal'),
   skill: normalizeSkills(data?.skill),
   verdict: normalizeVerdict(data?.verdict)
 });
@@ -387,6 +390,13 @@ const validatePositionStep = (data, message) => {
     message.error('请至少填写一项有效岗位技能');
     return false;
   }
+};
+
+/** FormSteps 上下文：优先 getStepCache / stepCache，兼容旧 stepCacheRef；字段为 formData */
+const readStepFormData = (stepCtx, index) => {
+  const cache = typeof stepCtx?.getStepCache === 'function' ? stepCtx.getStepCache() : stepCtx?.stepCache || stepCtx?.stepCacheRef?.current;
+  const entry = cache?.[index];
+  return entry?.formData || entry?.data || {};
 };
 
 /**
@@ -845,8 +855,8 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
           data: initial.position,
           onSubmit: hasEmployees
             ? data => validatePositionStep(data, message)
-            : async (positionData, { stepCacheRef }) => {
-                const org = stepCacheRef.current[0]?.data || {};
+            : async (positionData, stepCtx) => {
+                const org = readStepFormData(stepCtx, 0);
                 return submitCompleteAnalysis({
                   taskId: data.id,
                   org,
@@ -868,9 +878,9 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
             title: '个人',
             formProps: {
               data: { employees: initial.employees },
-              onSubmit: async (personData, { stepCacheRef }) => {
-                const org = stepCacheRef.current[0]?.data || {};
-                const positionRaw = stepCacheRef.current[1]?.data || {};
+              onSubmit: async (personData, stepCtx) => {
+                const org = readStepFormData(stepCtx, 0);
+                const positionRaw = readStepFormData(stepCtx, 1);
                 return submitCompleteAnalysis({
                   taskId: data.id,
                   org,

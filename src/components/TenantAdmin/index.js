@@ -253,6 +253,21 @@ const TenantAdmin = createWithRemoteLoader({
             loader: () => import('@components/Position/Detail/TalentSkillAnalysis')
           },
           {
+            path: 'position/:id/invite-records',
+            title: 'Position/InviteRecords',
+            elementProps: {
+              baseUrl,
+              children: ({ title, children }) => (
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                  <Page back title={title}>
+                    {children}
+                  </Page>
+                </Permissions>
+              )
+            },
+            loader: () => import('@components/Position/Detail/InviteRecords')
+          },
+          {
             path: 'position/:id',
             title: 'Position/Detail',
             element: (

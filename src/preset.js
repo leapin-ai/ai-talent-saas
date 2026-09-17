@@ -185,7 +185,7 @@ export const globalInit = async () => {
     //url: 'http://localhost:3001',
     //tpl: '{{url}}',
     remote: 'components-core',
-    defaultVersion: '0.5.47'
+    defaultVersion: '0.6.8'
   };
   remoteLoaderPreset({
     fallback: (
@@ -225,7 +225,7 @@ export const globalInit = async () => {
         //url: 'http://localhost:3010',
         //tpl: '{{url}}',
         remote: 'components-thirdparty',
-        defaultVersion: '0.1.35'
+        defaultVersion: '0.1.43'
       },
       // AI 面试远程组件：url/version 由租户设置在运行时 applyAiInterviewRemote 写入
       'ai-interview-flowup': {
@@ -277,7 +277,7 @@ export const globalInit = async () => {
   const getAccountApis = await safeLoadApis('components-admin:Apis@getApis');
   const talentApis = getApis();
 
-  const enums = Object.assign({}, await safeLoadApis('components-admin:Task@enums'), talentEnums);
+  const enums = Object.assign({}, await safeLoadApis('components-admin:Task@enums'), await safeLoadApis('components-admin:MessageManger@enums'), talentEnums);
 
   return {
     ajax,

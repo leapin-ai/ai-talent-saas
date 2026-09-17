@@ -4,6 +4,7 @@ import style from './style.module.scss';
 const STATUS_CLASS = {
   assessed: 'assessment-assessed',
   outdated: 'assessment-outdated',
+  inProgress: 'assessment-in-progress',
   never: 'assessment-never'
 };
 

@@ -301,6 +301,7 @@ module.exports = fp(async (fastify, options) => {
       onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
       schema: {
         summary: '修改职位信息',
+        // 同 skill/verdict：这里任何字段都不能带 default，否则未传时 AJV 注入空值会把库里的内容盖掉
         body: {
           type: 'object',
           properties: {
@@ -311,16 +312,13 @@ module.exports = fp(async (fastify, options) => {
               type: 'string'
             },
             description: {
-              type: 'string',
-              default: ''
+              type: 'string'
             },
             requirement: {
-              type: 'string',
-              default: ''
+              type: 'string'
             },
             developmentGoal: {
-              type: 'string',
-              default: ''
+              type: 'string'
             },
             language: {
               type: 'string',
@@ -331,16 +329,13 @@ module.exports = fp(async (fastify, options) => {
               enum: ['on-site', 'remote']
             },
             location: {
-              type: 'array',
-              default: []
+              type: 'array'
             },
             capacity: {
-              type: 'string',
-              default: ''
+              type: 'string'
             },
             salary: {
-              type: 'object',
-              default: {}
+              type: 'object'
             },
             skill: positionSkillSchemaNoDefault,
             verdict: positionVerdictSchemaNoDefault,

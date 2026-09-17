@@ -5,6 +5,7 @@ import getColumns from './getColumns';
 import BaseFormInner from './EmployeeForm/BaseFormInner';
 import { LinkUserAction, UnlinkUserAction, ViewUserAction } from './Actions';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
+import useTablePaginationSearchParams from '../../commons/useTablePaginationSearchParams';
 
 const mapFilterValue = (value, getFilterValue) => ({
   filter: getFilterValue(value)
@@ -17,6 +18,7 @@ const Employee = createWithRemoteLoader({
     const [BizUnit, Filter, AddressEnum, usePermissionsPass] = remoteModules;
     const { InputFilterItem, SuperSelectFilterItem } = Filter.fields;
     const { formatMessage } = useIntl();
+    const paginationSearchParams = useTablePaginationSearchParams();
     const canCreate = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeCreate });
     const canEdit = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeEdit });
     const canRemove = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeRemove });
@@ -115,6 +117,12 @@ const Employee = createWithRemoteLoader({
           keywordFilterName: 'keyword',
           keywordFilterLabel: '员工关键字',
           mapFilterValue,
+          tableProps: {
+            pagination: {
+              searchParams: paginationSearchParams.searchParams,
+              setSearchParams: paginationSearchParams.setSearchParams
+            }
+          },
           saveData: (data, { fetchOptions }) => {
             const position = (fetchOptions.data.positionEnums || []).find(item => item.value === data.options?.position);
             // 有岗位时部门展示/回填岗位所属部门

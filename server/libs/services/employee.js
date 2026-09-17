@@ -297,11 +297,28 @@ module.exports = fp(async (fastify, options) => {
     if (!assessment) {
       return 'never';
     }
+    const status = assessment.status || '';
+    const interviewStatus = assessment.interviewData?.interviewStatus;
+    const interviewDone = ['completed', 'ended', 'done', 'submitted'].includes(String(interviewStatus || '').toLowerCase());
+    const assessmentDone = ['submitted', 'approved', 'generating', 'closed'].includes(status);
+    if (!assessmentDone && !interviewDone && ['pending', 'interviewing'].includes(status)) {
+      return 'inProgress';
+    }
     const updatedAt = assessment.updatedAt ? new Date(assessment.updatedAt).getTime() : NaN;
     if (Number.isFinite(updatedAt) && now - updatedAt > OUTDATED_ASSESSMENT_MS) {
       return 'outdated';
     }
     return 'assessed';
+  };
+
+  const resolveCollectInviteAssessmentStatus = (inviteStatus, optionsStatus) => {
+    if (inviteStatus === 'done' || optionsStatus === 'done') {
+      return 'assessed';
+    }
+    if (['opened', 'filling', 'interviewing'].includes(inviteStatus) || optionsStatus === 'inProgress') {
+      return 'inProgress';
+    }
+    return null;
   };
 
   const enrichTalentRows = async (authenticatePayload, rows, { positionId } = {}) => {
@@ -318,6 +335,32 @@ module.exports = fp(async (fastify, options) => {
       assessments.forEach(row => {
         assessmentMap.set(row.tenantUserId, row);
       });
+    }
+
+    const collectInviteStatusMap = new Map();
+    if (positionId && models.talentCollectInvite) {
+      const employeeIds = [...new Set(rows.map(item => item.id).filter(Boolean))];
+      if (employeeIds.length) {
+        const invites = await models.talentCollectInvite.findAll({
+          where: {
+            tenantId,
+            positionId,
+            employeeId: { [Op.in]: employeeIds },
+            inviteType: 'employee'
+          },
+          attributes: ['employeeId', 'status', 'updatedAt'],
+          order: [
+            ['updatedAt', 'DESC'],
+            ['id', 'DESC']
+          ]
+        });
+        invites.forEach(invite => {
+          const key = String(invite.employeeId);
+          if (!collectInviteStatusMap.has(key)) {
+            collectInviteStatusMap.set(key, invite.status);
+          }
+        });
+      }
     }
 
     const analysisReadinessMap = new Map();
@@ -432,9 +475,17 @@ module.exports = fp(async (fastify, options) => {
       const plain = row.toJSON ? row.toJSON() : row;
       const options = plain.options && typeof plain.options === 'object' ? plain.options : {};
       const assessment = plain.tenantUserId ? assessmentMap.get(plain.tenantUserId) : null;
-      const lastAssessment = resolveAssessmentStatus(assessment, now);
+      let lastAssessment = resolveAssessmentStatus(assessment, now);
+      if (lastAssessment === 'never') {
+        const inviteStatus = collectInviteStatusMap.get(String(plain.id));
+        const optionsStatus = options.talentCollectAssessment?.status;
+        const fromInvite = resolveCollectInviteAssessmentStatus(inviteStatus, optionsStatus);
+        if (fromInvite) {
+          lastAssessment = fromInvite;
+        }
+      }
       const fromAnalysis = analysisReadinessMap.has(String(plain.id)) ? normalizeReadiness(analysisReadinessMap.get(String(plain.id))) : null;
-      const fromOptions = lastAssessment === 'never' ? null : normalizeReadiness(options.readiness);
+      const fromOptions = lastAssessment === 'never' || lastAssessment === 'inProgress' ? null : normalizeReadiness(options.readiness);
       const readiness = fromAnalysis != null ? fromAnalysis : fromOptions;
       const departmentOrgId = resolveDepartmentOrgId(plain);
       const leaderUserId = departmentOrgId ? orgLeaderUserIdMap.get(String(departmentOrgId)) : null;
@@ -450,12 +501,14 @@ module.exports = fp(async (fastify, options) => {
   };
 
   const summarizeTalentMetrics = list => {
-    const metrics = { total: list.length, assessed: 0, outdated: 0, never: 0 };
+    const metrics = { total: list.length, assessed: 0, outdated: 0, never: 0, inProgress: 0 };
     list.forEach(item => {
       if (item.lastAssessment === 'assessed') {
         metrics.assessed += 1;
       } else if (item.lastAssessment === 'outdated') {
         metrics.outdated += 1;
+      } else if (item.lastAssessment === 'inProgress') {
+        metrics.inProgress += 1;
       } else {
         metrics.never += 1;
       }
@@ -517,6 +570,47 @@ module.exports = fp(async (fastify, options) => {
             { college: { [Op.like]: `%${keyword}%` } }
           ]
         });
+      }
+    }
+
+    const lastAssessmentFilter = filter.lastAssessment || filter.assessmentStatus;
+    if (lastAssessmentFilter === 'never') {
+      // 从未评估：无 assessment 记录（含未绑定 tenantUserId）
+      const assessedRows = await models.assessment.findAll({
+        where: { tenantId },
+        attributes: ['tenantUserId']
+      });
+      const assessedUserIds = [
+        ...new Set(
+          assessedRows
+            .map(row => row.tenantUserId)
+            .filter(id => id != null && id !== '')
+            .map(String)
+        )
+      ];
+      if (assessedUserIds.length) {
+        andConditions.push({
+          [Op.or]: [{ tenantUserId: null }, { tenantUserId: { [Op.notIn]: assessedUserIds } }]
+        });
+      }
+      // 排除本岗位已打开短链/面试中/已完成的采集邀请员工
+      if (positionId && models.talentCollectInvite) {
+        const activeInvites = await models.talentCollectInvite.findAll({
+          where: {
+            tenantId,
+            positionId,
+            inviteType: 'employee',
+            status: { [Op.in]: ['opened', 'filling', 'interviewing', 'done'] },
+            employeeId: { [Op.ne]: null }
+          },
+          attributes: ['employeeId']
+        });
+        const excludeEmployeeIds = [...new Set(activeInvites.map(item => item.employeeId).filter(Boolean))];
+        if (excludeEmployeeIds.length) {
+          andConditions.push({
+            id: { [Op.notIn]: excludeEmployeeIds }
+          });
+        }
       }
     }
 

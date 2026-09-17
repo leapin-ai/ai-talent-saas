@@ -1,3 +1,35 @@
+export const LINKEDIN_PROFILE_PREFIX = 'https://www.linkedin.com/in/';
+
+/** 去掉固定前缀，得到输入框后缀；已是后缀则原样 trim */
+export const stripLinkedinPrefix = value => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const lower = raw.toLowerCase();
+  const prefix = LINKEDIN_PROFILE_PREFIX.toLowerCase();
+  if (lower.startsWith(prefix)) {
+    return raw.slice(LINKEDIN_PROFILE_PREFIX.length).replace(/^\/+/, '').trim();
+  }
+  // 兼容无协议的 linkedin.com/in/xxx
+  const alt = 'linkedin.com/in/';
+  const idx = lower.indexOf(alt);
+  if (idx >= 0) {
+    return raw
+      .slice(idx + alt.length)
+      .replace(/^\/+/, '')
+      .trim();
+  }
+  return raw.replace(/^\/+/, '').trim();
+};
+
+/** 后缀 → 完整 URL；空后缀 → '' */
+export const joinLinkedinUrl = slug => {
+  const s = String(slug || '')
+    .trim()
+    .replace(/^\/+/, '');
+  if (!s) return '';
+  return `${LINKEDIN_PROFILE_PREFIX}${s}`;
+};
+
 const emptySkills = () => ({
   cert_mapped: [],
   interest_strength: [],
