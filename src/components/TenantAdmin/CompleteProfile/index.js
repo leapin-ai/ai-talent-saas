@@ -127,13 +127,15 @@ const CompleteProfile = createWithRemoteLoader({
 
     const handleInterviewComplete = useCallback(
       event => {
-        // feedback 完成：留在面试间展示 AI 完成页，勿 navigate / 勿卸房间
-        if (event?.stage === 'feedback') {
+        // 作答/评价完成：隐藏「上一步」，留在面试间展示完成页（勿 navigate）
+        if (event?.stage === 'feedback' || (event?.stage === 'interview' && !event?.directFinish)) {
           setInterviewFinished(true);
+          setInterviewLocked(true);
           return;
         }
         if (isCollect) {
           setInterviewFinished(true);
+          setInterviewLocked(true);
           message.success(formatMessage({ id: 'tenantAdmin.completeFinishTip' }));
           return;
         }
@@ -143,6 +145,7 @@ const CompleteProfile = createWithRemoteLoader({
           return;
         }
         setInterviewFinished(true);
+        setInterviewLocked(true);
       },
       [baseUrl, formatMessage, isCollect, navigate]
     );
@@ -353,8 +356,8 @@ const CompleteProfile = createWithRemoteLoader({
       setCurrent(c => Math.max(0, c - 1));
     };
 
-    const Footer = ({ primary, showSkip = true, showPrevious = false, variant }) => (
-      <ButtonFooter className={`${style.footer}${variant === 'interview-prestart' ? ` ${style['footer-interview-prestart']}` : ''}`} placement="bottomEnd">
+    const Footer = ({ primary, showSkip = true, showPrevious = false, variant }) => {
+      const actions = (
         <Flex className={style['footer-actions']} gap={16} justify="flex-end" wrap="wrap" style={{ width: '100%' }}>
           {showSkip ? (
             <Button size="middle" className={style['skip-btn']} onClick={skip}>
@@ -368,8 +371,23 @@ const CompleteProfile = createWithRemoteLoader({
           ) : null}
           {primary}
         </Flex>
-      </ButtonFooter>
-    );
+      );
+      // 面试嵌入阶段不用 ButtonFooter（移动端会 fixed 全页底栏，与会话内提交条冲突）
+      if (variant === 'interview-prestart') {
+        return (
+          <>
+            {/* fixed 脱流，占位避免内容被底栏挡住且无法继续滚动 */}
+            <div className={style['footer-spacer']} aria-hidden="true" />
+            <div className={`${style.footer} ${style['footer-interview-prestart']}`}>{actions}</div>
+          </>
+        );
+      }
+      return (
+        <ButtonFooter className={style.footer} placement="bottomEnd">
+          {actions}
+        </ButtonFooter>
+      );
+    };
 
     const activeReviewData = normalizeReviewProfileData(
       Object.assign(
@@ -385,7 +403,8 @@ const CompleteProfile = createWithRemoteLoader({
       )
     );
     const activeProjectsData = projectsData || splitAssessmentProfileData(uploadState.parsed || {}).projects;
-    const canContinueUpload = (Array.isArray(uploadState.resumes) && uploadState.resumes.length > 0) || hasPrefilledReviewData(uploadState.parsed) || hasPrefilledReviewData(reviewData);
+    // CV 必填：仅有预填档案不够，必须实际上传简历文件
+    const canContinueUpload = Array.isArray(uploadState.resumes) && uploadState.resumes.length > 0;
     // 设备检测(deviceTesting)期间仍可返回；设备检测完成进入面试间后再锁定
     const canLeaveInterviewStep = !interviewFinished && !interviewLocked;
     const interviewProfilePayload = isCollect
@@ -432,16 +451,6 @@ const CompleteProfile = createWithRemoteLoader({
                   <div className={style['step-body']}>
                     <InterviewStep profilePayload={null} onInterviewComplete={handleInterviewComplete} apisAdapter={collectApis || undefined} />
                   </div>
-                  {interviewFinished ? (
-                    <Footer
-                      showSkip={false}
-                      primary={
-                        <Button type="primary" size="middle" className={style['primary-btn']} onClick={() => message.success(formatMessage({ id: 'tenantAdmin.collectInviteDone' }))}>
-                          {formatMessage({ id: 'tenantAdmin.completeFinish' })}
-                        </Button>
-                      }
-                    />
-                  ) : null}
                 </div>
               </div>
             </div>
@@ -464,6 +473,7 @@ const CompleteProfile = createWithRemoteLoader({
                     <UploadStep usePreset={usePreset} DragAreaOuter={DragAreaOuter} UploadTips={UploadTips} UploadButton={UploadButton} FileList={FileList} ajax={ajax} apis={employeeApis} value={uploadState} onChange={setUploadState} />
                   </div>
                   <Footer
+                    showSkip={false}
                     primary={
                       <Button
                         type="primary"
@@ -519,7 +529,7 @@ const CompleteProfile = createWithRemoteLoader({
               )}
 
               {current === 2 && (
-                <div className={style['step-panel']}>
+                <div className={`${style['step-panel']}${!interviewFinished && canLeaveInterviewStep && interviewPhase === 'room' ? ` ${style['step-panel-interview-prestart']}` : ''}`}>
                   <div className={style['step-body']}>
                     <InterviewStep
                       key={`complete-profile-interview-${current}`}
@@ -530,28 +540,7 @@ const CompleteProfile = createWithRemoteLoader({
                       apisAdapter={collectApis || undefined}
                     />
                   </div>
-                  {interviewFinished ? (
-                    <Footer
-                      showSkip={false}
-                      primary={
-                        <Button
-                          type="primary"
-                          size="middle"
-                          className={style['primary-btn']}
-                          onClick={() => {
-                            message.success(formatMessage({ id: isCollect ? 'tenantAdmin.collectInviteDone' : 'tenantAdmin.completeFinishTip' }));
-                            if (!isCollect) {
-                              goHome();
-                            }
-                          }}
-                        >
-                          {formatMessage({ id: 'tenantAdmin.completeFinish' })}
-                        </Button>
-                      }
-                    />
-                  ) : canLeaveInterviewStep ? (
-                    <Footer showSkip={false} showPrevious primary={null} variant={interviewPhase === 'room' ? 'interview-prestart' : undefined} />
-                  ) : null}
+                  {!interviewFinished && canLeaveInterviewStep ? <Footer showSkip={false} showPrevious primary={null} variant={interviewPhase === 'room' ? 'interview-prestart' : undefined} /> : null}
                 </div>
               )}
             </div>

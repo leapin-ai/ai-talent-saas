@@ -301,6 +301,10 @@ const InterviewStep = createWithRemoteLoader({
           ajaxBaseUrl={invite.ajaxBaseUrl || invite.apiUrl}
           shorten={invite.shorten}
           onStageChange={event => {
+            // 问卷 / 设备检测完成 / 作答结束 / 评价：隐藏宿主「上一步」，避免与会话内提交条重叠
+            if (event?.stage === 'questionnaire') {
+              onInterviewLockChangeRef.current?.(true);
+            }
             if (event?.stage === 'deviceTesting' && event?.status === 'complete') {
               onInterviewLockChangeRef.current?.(true);
             }
@@ -308,6 +312,11 @@ const InterviewStep = createWithRemoteLoader({
               onInterviewLockChangeRef.current?.(true);
               // 保持 room，让 Session 继续渲染 Feedback；后台 markDone 即可
               syncInterviewComplete();
+              // 作答完成即结束本步，完成后不再显示「上一步」
+              onInterviewCompleteRef.current?.({
+                stage: 'interview',
+                status: 'complete'
+              });
             }
             if (event?.stage === 'feedback') {
               onInterviewLockChangeRef.current?.(true);

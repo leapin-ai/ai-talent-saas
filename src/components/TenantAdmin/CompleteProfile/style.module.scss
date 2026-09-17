@@ -1,3 +1,5 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
 $text: #334155;
 $muted: #94a3b8;
 $border: #e2e8f0;
@@ -149,7 +151,14 @@ $surface: #fafafe;
   width: 100%;
 }
 
-// 设备检测阶段：贴底半透明条，上一步靠右（不遮挡中间面试组件按钮时可点）
+// 与 fixed footer 同高，留在文档流里作滚动余量
+.footer-spacer {
+  flex-shrink: 0;
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+}
+
+// 设备检测阶段：fixed 贴页面底；穿透点击，仅「上一步」可点，避免挡住会话内提交
 .footer-interview-prestart {
   position: fixed;
   left: 0;
@@ -159,6 +168,7 @@ $surface: #fafafe;
   margin: 0 !important;
   width: 100% !important;
   padding: 12px 24px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -553,29 +563,128 @@ $surface: #fafafe;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
   flex: 1;
   min-height: 0;
 }
 
 .interview-room {
-  --interview-height: min(70vh, 720px);
+  --interview-footer-gap: 0px;
+  --interview-height: min(calc(70vh - var(--interview-footer-gap)), calc(720px - var(--interview-footer-gap)));
   width: 100%;
   max-width: min(100%, calc(var(--interview-height) * 16 / 9));
   height: var(--interview-height);
-  min-height: var(--interview-height);
+  min-height: 0;
   margin-inline: auto;
   align-self: center;
   flex: 0 1 auto;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  // InterviewSession 默认 min-height:640 会把提交条顶出可视区
+  > div {
+    min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  // session 自己 overflow:auto 会把整页顶出裁切；滚动只留给 Layout.main
+  :global([class*='session']),
+  :global([class*='fill']) {
+    overflow: hidden !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+  }
 
   :global(.core-container-body),
-  :global([data-testid='components-core-pure-global']) {
+  :global([data-testid='components-core-pure-global']),
+  :global(.ant-app),
+  :global(.ant-app) > div {
     width: 100% !important;
     max-width: none !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  // 只约束 Layout 根 main（.layout-container > main），勿波及内部 step-content
+  :global([class*='layout-container']) > main {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: 100% !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+    box-sizing: border-box !important;
+
+    // 打断 Layout embed `> * { height:100% }`，子树可撑高，main 内部才能滚
+    > * {
+      height: auto !important;
+      min-height: 0 !important;
+      flex: 0 0 auto !important;
+      max-height: none !important;
+    }
+  }
+}
+
+// 有宿主「上一步」时：房间吃满 step-body（footer-spacer 已占位），禁止再用 vh 撑破
+.step-panel-interview-prestart {
+  .step-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding-bottom: 0;
+  }
+
+  .interview-panel {
     flex: 1;
     min-height: 0;
+  }
+
+  .interview-room {
+    --interview-height: 100%;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    align-self: stretch;
+    flex: 1 1 auto;
+    margin: 0;
+  }
+}
+
+@include resp.mobile-container {
+  .interview-room {
+    --interview-height: 100%;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    align-self: stretch;
+    flex: 1 1 auto;
+    margin-inline: 0;
+
+    :global([class*='layout-container']) > main {
+      padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+  }
+
+  .step-panel-interview-prestart {
+    .interview-room {
+      :global([class*='layout-container']) > main {
+        padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)) !important;
+      }
+    }
   }
 }
 
