@@ -1,4 +1,4 @@
 <!-- signature -->
 LeapIn
 <!-- text -->
-<%= name %>您好！【<%= companyName || tenantName %>】邀请您完善「<%= positionName %>」档案（<%= inviteTypeLabel %>）：<%= inviteUrl %>
+<% if (isManager) { %>[<%= companyName || tenantName %>] Please complete the role assessment<% if (deadlineText) { %> by <%= deadlineText %><% } %>: <%= inviteUrl %><% } else { %>[<%= companyName || tenantName %>] Please complete the role interview<% if (deadlineText) { %> by <%= deadlineText %><% } %>: <%= inviteUrl %><% } %>

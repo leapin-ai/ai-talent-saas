@@ -152,19 +152,30 @@ module.exports = fp(async (fastify, options) => {
   };
 
   const sendNotify = async ({ row, position, tenant }) => {
-    const companyName = tenant?.company?.name || '';
+    const companyName = tenant?.company?.name || tenant?.name || '';
     const tenantName = tenant?.name || '';
     const themeColor = tenant?.themeColor || '#4183F0';
     const inviteUrl = buildInviteUrl(row);
-    const inviteTypeLabel = row.inviteType === 'manager' ? '经理' : '员工';
+    const isManager = row.inviteType === 'manager';
+    const inviteTypeLabel = isManager ? 'manager' : 'employee';
+    const deadlineText = row.deadline ? dayjs(row.deadline).format('YYYY-MM-DD HH:mm') : '';
+    const contactEmail = pickContact(tenant?.company?.email) || pickContact(tenant?.email) || pickContact(tenant?.company?.contactEmail) || '';
+    const teamName = companyName || tenantName || 'Project Team';
+    const subject = isManager ? `${companyName || tenantName} Future Workforce Readiness | Manager Role Interview` : `${companyName || tenantName} Future Workforce Readiness | Employee Role Interview`;
     const props = {
       name: row.name,
       companyName,
       tenantName,
+      teamName,
       positionName: position?.name || '',
       inviteUrl,
-      inviteTypeLabel,
-      themeColor
+      inviteType: inviteTypeLabel,
+      isManager,
+      inviteTypeLabel: isManager ? 'Line Manager' : 'Employee',
+      deadlineText,
+      contactEmail,
+      themeColor,
+      subject
     };
     const email = pickContact(row.email);
     const phone = formatPhone(row.phone);
@@ -177,7 +188,7 @@ module.exports = fp(async (fastify, options) => {
         type: 0,
         code: MESSAGE_CODE,
         props,
-        options: { title: '完善档案邀请' }
+        options: { title: subject }
       });
     }
     if (phone) {
@@ -186,7 +197,7 @@ module.exports = fp(async (fastify, options) => {
         type: 1,
         code: MESSAGE_CODE,
         props,
-        options: { title: '完善档案邀请' }
+        options: { title: subject }
       });
     }
     return inviteUrl;
@@ -239,6 +250,54 @@ module.exports = fp(async (fastify, options) => {
     });
   };
 
+  const findOpenInviteForParticipant = async ({ tenantId, positionId, inviteType, email, phone, employeeId }) => {
+    const where = {
+      tenantId,
+      positionId,
+      inviteType,
+      status: { [Op.ne]: 'done' }
+    };
+    const or = [];
+    if (employeeId) {
+      or.push({ employeeId });
+    }
+    if (email) {
+      or.push({ email });
+    }
+    if (phone) {
+      or.push({ phone });
+    }
+    if (or.length === 0) {
+      return null;
+    }
+    where[Op.or] = or;
+    return models.talentCollectInvite.findOne({
+      where,
+      order: [
+        ['createdAt', 'DESC'],
+        ['id', 'DESC']
+      ]
+    });
+  };
+
+  const clearInterviewBindingIfProjectChanged = (row, project) => {
+    if (String(row.projectId || '') === String(project.projectId)) {
+      return false;
+    }
+    row.projectId = project.projectId;
+    row.projectName = project.projectName || '';
+    // 项目变更后旧 AI 面试邀约失效，需重新 ensureInvite
+    row.inviteId = null;
+    row.inviteCode = null;
+    row.shorten = null;
+    row.shortenExpiresAt = null;
+    row.clientUserId = null;
+    row.interviewId = null;
+    row.interviewData = {};
+    row.changed('interviewData', true);
+    return true;
+  };
+
   const send = async (authenticatePayload, body = {}) => {
     const { tenantId } = authenticatePayload;
     const inviteType = body.inviteType === 'manager' ? 'manager' : 'employee';
@@ -249,6 +308,23 @@ module.exports = fp(async (fastify, options) => {
     const project = resolveProject(body.assessmentProject);
     if (!project?.projectId) {
       throw new Error('评估项目不能为空');
+    }
+    // 仅有 id 时尽量补全项目名称（兼容旧端只传 value）
+    if (!project.projectName) {
+      try {
+        const listRes = await services.aiInterview.getProjects({
+          tenantId,
+          currentPage: 1,
+          perPage: 50,
+          filter: { scene: 'dataCollection' }
+        });
+        const matched = (listRes?.pageData || []).find(item => String(item.id) === String(project.projectId));
+        if (matched?.name) {
+          project.projectName = String(matched.name).trim();
+        }
+      } catch (e) {
+        // ignore name lookup failure
+      }
     }
     const position = await models.position.findByPk(positionId);
     if (!position || String(position.tenantId) !== String(tenantId)) {
@@ -285,21 +361,48 @@ module.exports = fp(async (fastify, options) => {
           employeeId = employee.id;
         }
 
-        const row = await models.talentCollectInvite.create({
+        // 二次邀请：复用未完成记录并更新项目，避免仍走旧项目
+        let row = await findOpenInviteForParticipant({
           tenantId,
-          inviteType,
           positionId,
-          employeeId,
-          name,
-          email: email || '',
-          phone: phone || '',
-          projectId: project.projectId,
-          projectName: project.projectName,
-          deadline: body.deadline ? new Date(body.deadline) : null,
-          status: 'invited',
-          profileData: {}
+          inviteType,
+          email,
+          phone,
+          employeeId
         });
-        await ensureInviteCode(row);
+        if (row) {
+          clearInterviewBindingIfProjectChanged(row, project);
+          row.projectId = project.projectId;
+          row.projectName = project.projectName || row.projectName || '';
+          row.name = name;
+          row.email = email || row.email || '';
+          row.phone = phone || row.phone || '';
+          row.employeeId = employeeId || row.employeeId;
+          row.deadline = body.deadline ? new Date(body.deadline) : row.deadline;
+          if (row.status === 'done') {
+            row.status = 'invited';
+          } else if (!['invited', 'opened', 'filling', 'interviewing'].includes(row.status)) {
+            row.status = 'invited';
+          }
+          await row.save();
+          await ensureInviteCode(row);
+        } else {
+          row = await models.talentCollectInvite.create({
+            tenantId,
+            inviteType,
+            positionId,
+            employeeId,
+            name,
+            email: email || '',
+            phone: phone || '',
+            projectId: project.projectId,
+            projectName: project.projectName,
+            deadline: body.deadline ? new Date(body.deadline) : null,
+            status: 'invited',
+            profileData: {}
+          });
+          await ensureInviteCode(row);
+        }
 
         const inviteUrl = await sendNotify({ row, position, tenant });
         success.push({ index, id: row.id, code: row.code, inviteUrl, employeeId });
@@ -381,8 +484,11 @@ module.exports = fp(async (fastify, options) => {
     } else if (['pending'].includes(assessment.status) || !assessment.status) {
       assessment.status = 'interviewing';
     }
-    assessment.projectId = assessment.projectId || row.projectId || null;
-    assessment.projectName = assessment.projectName || row.projectName || '';
+    // 二次邀请换项目时必须覆盖，勿用 || 保留旧项目
+    if (row.projectId) {
+      assessment.projectId = row.projectId;
+      assessment.projectName = row.projectName || '';
+    }
     assessment.inviteId = row.inviteId || assessment.inviteId;
     assessment.inviteCode = row.inviteCode || assessment.inviteCode;
     assessment.shorten = row.shorten || assessment.shorten;
@@ -675,9 +781,15 @@ module.exports = fp(async (fastify, options) => {
       row.changed('interviewData', true);
       await row.save();
     }
+    // 回顾页需加载 InterviewResultSession + ComponentPreset（file 走 AI 面试域）
+    const setting = await services.aiInterview.detail({ tenantId });
     return {
       invite: toPublic(row),
-      interview
+      interview,
+      cdnUrl: setting?.cdnUrl || '',
+      version: setting?.version || '',
+      apiUrl: setting?.apiUrl || '',
+      ajaxBaseUrl: setting?.apiUrl ? services.aiInterview.getAjaxBaseUrl(setting.apiUrl) : ''
     };
   };
 

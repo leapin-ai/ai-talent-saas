@@ -104,6 +104,20 @@
   white-space: pre-wrap;
 }
 
+.resume-parsed-wrap {
+  margin-top: 2px;
+}
+
+.resume-block + .resume-block {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.resume-block .meta-label {
+  margin-bottom: 8px;
+}
+
 .nested-card {
   padding: 10px 0;
   border-bottom: 1px solid #f1f5f9;

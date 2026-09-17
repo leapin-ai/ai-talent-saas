@@ -3,6 +3,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import { Empty, Flex, Typography } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
 import { useIntl } from '@kne/react-intl';
+import ResumeParseEditor from '../../AssessmentGenerateTask/ResumeParseEditor';
 import style from './inviteAssessmentResult.module.scss';
 
 const formatValue = value => {
@@ -51,6 +52,24 @@ const normalizeResumeFile = (file, index, formatMessage) => {
   return Object.assign({}, file, { id, filename });
 };
 
+const hasResumeParsedContent = resumeParsed => {
+  if (!resumeParsed || typeof resumeParsed !== 'object') {
+    return false;
+  }
+  return !!(
+    resumeParsed.fileId ||
+    resumeParsed.name ||
+    resumeParsed.email ||
+    resumeParsed.phone ||
+    resumeParsed.expectJob ||
+    resumeParsed.cont_my_desc ||
+    (Array.isArray(resumeParsed.educationList) && resumeParsed.educationList.length) ||
+    (Array.isArray(resumeParsed.workList) && resumeParsed.workList.length) ||
+    (Array.isArray(resumeParsed.projectList) && resumeParsed.projectList.length) ||
+    (Array.isArray(resumeParsed.skillList) && resumeParsed.skillList.length)
+  );
+};
+
 const InviteProfileFilledPane = createWithRemoteLoader({
   modules: ['components-core:Modal', 'components-core:FilePreview']
 })(({ remoteModules, invite }) => {
@@ -61,9 +80,12 @@ const InviteProfileFilledPane = createWithRemoteLoader({
   const projects = Array.isArray(profileData.projects) ? profileData.projects : [];
   const skills = profileData.skills?.work_related || profileData.skills;
   const resumes = (Array.isArray(profileData.resumes) ? profileData.resumes : []).map((file, index) => normalizeResumeFile(file, index, formatMessage));
+  const resumeParsed = profileData.resumeParsed && typeof profileData.resumeParsed === 'object' ? profileData.resumeParsed : null;
+  const showResumeParsed = hasResumeParsedContent(resumeParsed);
   const hasContent =
     !!(invite?.name || invite?.email || invite?.phone || profileData.linkedin) ||
     resumes.length > 0 ||
+    showResumeParsed ||
     projects.length > 0 ||
     (Array.isArray(skills) ? skills.length > 0 : !!skills) ||
     !!(profileData.intentionPosition && (Array.isArray(profileData.intentionPosition) ? profileData.intentionPosition.length : true));
@@ -95,29 +117,42 @@ const InviteProfileFilledPane = createWithRemoteLoader({
       </InfoCard>
 
       <InfoCard title={formatMessage({ id: 'position.talentInviteFilledResume' })}>
-        {resumes.length === 0 ? (
-          <Typography.Text type="secondary">-</Typography.Text>
-        ) : (
-          <div className={style['file-list']}>
-            {resumes.map((file, index) => (
-              <button
-                key={file.id || index}
-                type="button"
-                className={style['file-link']}
-                disabled={!file.id}
-                onClick={() => {
-                  if (!file.id) {
-                    return;
-                  }
-                  setPreview({ id: file.id, filename: file.filename });
-                }}
-              >
-                <FileTextOutlined />
-                <span>{file.filename}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        <div className={style['resume-block']}>
+          <div className={style['meta-label']}>{formatMessage({ id: 'position.talentInviteFilledResumeAttachment' })}</div>
+          {resumes.length === 0 ? (
+            <Typography.Text type="secondary">-</Typography.Text>
+          ) : (
+            <div className={style['file-list']}>
+              {resumes.map((file, index) => (
+                <button
+                  key={file.id || index}
+                  type="button"
+                  className={style['file-link']}
+                  disabled={!file.id}
+                  onClick={() => {
+                    if (!file.id) {
+                      return;
+                    }
+                    setPreview({ id: file.id, filename: file.filename });
+                  }}
+                >
+                  <FileTextOutlined />
+                  <span>{file.filename}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className={style['resume-block']}>
+          <div className={style['meta-label']}>{formatMessage({ id: 'position.talentInviteFilledResumeParsed' })}</div>
+          {showResumeParsed ? (
+            <div className={style['resume-parsed-wrap']}>
+              <ResumeParseEditor mode="parsed" data={resumeParsed} />
+            </div>
+          ) : (
+            <Typography.Text type="secondary">{formatMessage({ id: 'position.talentInviteFilledResumeParsedEmpty' })}</Typography.Text>
+          )}
+        </div>
       </InfoCard>
 
       <InfoCard title={formatMessage({ id: 'position.talentInviteFilledGoal' })}>
