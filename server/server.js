@@ -132,13 +132,13 @@ const createServer = () => {
         isTest: true,
         prefix: `${options.prefix}`,
         sendMessage: async ({ name, type, messageType, props }) => {
-          const language = props.options?.language || 'zh-CN';
+          const language = props.options?.language === 'en-US' ? 'en-US' : 'zh-CN';
           // messageType: 0:短信验证码，1:邮件验证码 type: 0:注册,2:登录,4:验证租户管理员,5:忘记密码,6:候选人登录验证
           if (messageType === 1 && type === 0) {
             await fastify.message.services.sendMessage({
               name,
               type: 0,
-              code: 'REGISTERCODE',
+              code: `REGISTERCODE[${language}]`,
               props,
               options: {
                 title: language === 'zh-CN' ? '注册验证码' : 'Registration verification code'
@@ -149,7 +149,7 @@ const createServer = () => {
             await fastify.message.services.sendMessage({
               name,
               type: 0,
-              code: 'RESETPASSWORDCODE',
+              code: `RESETPASSWORDCODE[${language}]`,
               props: Object.assign({}, props, {
                 url: `${ensureSlash(fastify.config.ORIGIN)}/account/reset-password/${props.token}${props.options?.referer ? `?referer=${props.options?.referer}` : ''}`
               }),
@@ -159,6 +159,7 @@ const createServer = () => {
             });
           }
           if (type === 6) {
+            const themeColor = props.options?.themeColor || props.themeColor || '#2A5CAA';
             await fastify.message.services.sendMessage({
               name,
               type: (type => {
@@ -170,8 +171,8 @@ const createServer = () => {
                 }
                 return type;
               })(messageType),
-              code: 'CANDIDATECODE',
-              props,
+              code: `CANDIDATECODE[${language}]`,
+              props: Object.assign({}, props, { themeColor }),
               options: {
                 title: language === 'zh-CN' ? '认证验证码' : 'Verification Code'
               }
@@ -206,6 +207,24 @@ const createServer = () => {
           }
         }
       });
+
+      // 兼容 @kne/fastify-tenant 硬编码 code=INVITETENANT：映射为 INVITETENANT[locale]
+      fastify.register(
+        require('fastify-plugin')(async fastify => {
+          const originalSendMessage = fastify.message.services.sendMessage.bind(fastify.message.services);
+          fastify.message.services.sendMessage = async params => {
+            let { code, options: targetOptions } = params;
+            if (code === 'INVITETENANT') {
+              const language = params.props?.language === 'en-US' ? 'en-US' : 'zh-CN';
+              code = `INVITETENANT[${language}]`;
+              targetOptions = Object.assign({}, targetOptions, {
+                title: language === 'zh-CN' ? '加入租户邀请' : 'Tenant Invitation'
+              });
+            }
+            return originalSendMessage(Object.assign({}, params, { code, options: targetOptions }));
+          };
+        })
+      );
 
       fastify.register(require('@kne/fastify-signature'), {
         prefix: `${options.prefix}/signature`
