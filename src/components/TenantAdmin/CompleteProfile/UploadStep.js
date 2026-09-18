@@ -3,6 +3,7 @@ import { CloudUploadOutlined, InfoCircleOutlined, LinkedinFilled, LockOutlined }
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useIntl } from '@kne/react-intl';
 import { useFileUpload } from '@kne/react-file';
+import { useIsMobile } from '@kne/responsive-utils';
 import '@kne/react-file/dist/index.css';
 import get from 'lodash/get';
 import { FILE_DIRECTORY } from '@components/Apis';
@@ -18,6 +19,7 @@ const matchAccept = file => {
 
 const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileList, ajax, apis, value, onChange }) => {
   const { formatMessage } = useIntl();
+  const isMobile = useIsMobile();
   const { apis: presetApis } = usePreset();
   const [parsing, setParsing] = useState(false);
   const parsedIdRef = useRef(null);
@@ -195,12 +197,18 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
         </div>
         <div className={style['linkedin-field']}>
           <div className={style['linkedin-label']}>{formatMessage({ id: 'tenantAdmin.completeLinkedinUrlLabel' })}</div>
+          {isMobile ? (
+            <div className={style['linkedin-prefix-bubble']} role="note">
+              <LinkedinFilled />
+              <span className={style['linkedin-prefix-bubble-text']}>{formatMessage({ id: 'tenantAdmin.completeLinkedinPrefix' })}</span>
+            </div>
+          ) : null}
           <Input
             className={style['linkedin-input']}
             addonBefore={
               <span className={style['linkedin-prefix']}>
                 <LinkedinFilled />
-                {formatMessage({ id: 'tenantAdmin.completeLinkedinPrefix' })}
+                <span className={style['linkedin-prefix-text']}>{formatMessage({ id: 'tenantAdmin.completeLinkedinPrefix' })}</span>
               </span>
             }
             value={value?.linkedin || ''}
