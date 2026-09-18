@@ -44,7 +44,7 @@ const InviteAssessment = createWithRemoteLoader({
     const [useFormModal, usePreset] = remoteModules;
     const formModal = useFormModal();
     const { apis, ajax } = usePreset();
-    const { formatMessage } = useIntl();
+    const { formatMessage, locale } = useIntl();
     const navigate = useNavigate();
     const importedRef = useRef([]);
     const modalSeqRef = useRef(0);
@@ -115,6 +115,8 @@ const InviteAssessment = createWithRemoteLoader({
                   inviteType,
                   assessmentProject,
                   deadline: data.deadline,
+                  // 邀请邮件/短信跟当前系统语言：仅 zh-CN 中文，其余默认英文
+                  language: locale === 'zh-CN' ? 'zh-CN' : 'en-US',
                   participants
                 }
               })
