@@ -8,6 +8,9 @@ const SHORTEN_TTL_HOURS = 24;
 const COLLECT_INVITE_SHORTEN_TYPE = 'talentCollectInvite';
 const COLLECT_INVITE_LINK_TTL_DAYS = 90;
 
+/** 系统语言：仅 zh-CN 用中文模版，其余（含 en-US、未知）默认英文 */
+const normalizeMessageLanguage = language => (language === 'zh-CN' ? 'zh-CN' : 'en-US');
+
 const pickContact = value => {
   if (value == null || value === '') {
     return '';
@@ -151,7 +154,7 @@ module.exports = fp(async (fastify, options) => {
     return row;
   };
 
-  const sendNotify = async ({ row, position, tenant }) => {
+  const sendNotify = async ({ row, position, tenant, language: languageInput }) => {
     const companyName = tenant?.company?.name || tenant?.name || '';
     const tenantName = tenant?.name || '';
     const themeColor = tenant?.themeColor || '#4183F0';
@@ -160,7 +163,7 @@ module.exports = fp(async (fastify, options) => {
     const inviteTypeLabel = isManager ? 'manager' : 'employee';
     const deadlineText = row.deadline ? dayjs(row.deadline).format('YYYY-MM-DD HH:mm') : '';
     const contactEmail = pickContact(tenant?.company?.email) || pickContact(tenant?.email) || pickContact(tenant?.company?.contactEmail) || '';
-    const language = position?.language === 'en-US' ? 'en-US' : 'zh-CN';
+    const language = normalizeMessageLanguage(languageInput);
     const teamName = companyName || tenantName || (language === 'en-US' ? 'Project Team' : '项目组');
     const orgLabel = companyName || tenantName;
     const subject =
@@ -311,6 +314,7 @@ module.exports = fp(async (fastify, options) => {
 
   const send = async (authenticatePayload, body = {}) => {
     const { tenantId } = authenticatePayload;
+    const language = normalizeMessageLanguage(body.language);
     const inviteType = body.inviteType === 'manager' ? 'manager' : 'employee';
     const positionId = resolvePositionId(body.positionId);
     if (!positionId) {
@@ -415,7 +419,7 @@ module.exports = fp(async (fastify, options) => {
           await ensureInviteCode(row);
         }
 
-        const inviteUrl = await sendNotify({ row, position, tenant });
+        const inviteUrl = await sendNotify({ row, position, tenant, language });
         success.push({ index, id: row.id, code: row.code, inviteUrl, employeeId });
       } catch (e) {
         failed.push({ index, reason: e.message || '发送失败' });
@@ -804,7 +808,7 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
-  const resend = async (authenticatePayload, { id } = {}) => {
+  const resend = async (authenticatePayload, { id, language: languageInput } = {}) => {
     const { tenantId } = authenticatePayload;
     if (!tenantId) {
       throw new Error('未登录租户用户');
@@ -812,6 +816,7 @@ module.exports = fp(async (fastify, options) => {
     if (!id) {
       throw new Error('缺少邀请记录ID');
     }
+    const language = normalizeMessageLanguage(languageInput);
     const row = await models.talentCollectInvite.findOne({
       where: { id: String(id), tenantId }
     });
@@ -840,7 +845,7 @@ module.exports = fp(async (fastify, options) => {
       tenant = { id: tenantId, name: '' };
     }
 
-    const inviteUrl = await sendNotify({ row, position, tenant });
+    const inviteUrl = await sendNotify({ row, position, tenant, language });
     return {
       invite: toPublic(row),
       inviteUrl
