@@ -14,6 +14,12 @@ $surface: #fafafe;
   height: 100%;
 }
 
+// 面试步：勿锁死 height:100%，否则房间高于可视区时被裁切且 page-children SimpleBar 不出现
+.complete-profile-interview {
+  height: auto;
+  min-height: var(--container-height, 100%);
+}
+
 .steps {
   display: flex;
   flex-wrap: wrap;
@@ -574,21 +580,26 @@ $surface: #fafafe;
   width: 100%;
   max-width: min(100%, calc(var(--interview-height) * 16 / 9));
   height: var(--interview-height);
+  max-height: 100%;
   min-height: 0;
   margin-inline: auto;
   align-self: center;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
 
-  // InterviewSession 默认 min-height:640 会把提交条顶出可视区
-  > div {
+  // 直连子节点，以及 ComponentPreset 那层 class 为空的包裹，都要吃满高度。
+  // 中间层 height:auto 时，子级 height:100% 会算成 0，面试画面就空白。
+  > div,
+  > div > div {
     min-height: 0 !important;
     height: 100% !important;
     max-height: 100% !important;
-    flex: 1;
+    flex: 1 1 auto;
+    display: flex !important;
+    flex-direction: column !important;
     overflow: hidden;
   }
 
@@ -596,6 +607,15 @@ $surface: #fafafe;
   :global([class*='session']),
   :global([class*='fill']) {
     overflow: hidden !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+  }
+
+  // 盖掉 Interview 内联 minHeight:640 与 embed min-height:640px，房间跟着宿主高度收缩
+  :global([class*='interview-container']),
+  :global([class*='display-wrapper']),
+  :global([class*='display-container']) {
     height: 100% !important;
     min-height: 0 !important;
     max-height: 100% !important;
@@ -637,7 +657,7 @@ $surface: #fafafe;
   }
 }
 
-// 有宿主「上一步」时：房间吃满 step-body（footer-spacer 已占位），禁止再用 vh 撑破
+// 有宿主「上一步」时：尽量吃满 step-body；窄高时用 min-height 保底并交给外层滚动
 .step-panel-interview-prestart {
   .step-body {
     display: flex;
@@ -656,6 +676,7 @@ $surface: #fafafe;
     width: 100%;
     max-width: 100%;
     height: 100%;
+    min-height: 0;
     max-height: 100%;
     align-self: stretch;
     flex: 1 1 auto;
@@ -669,6 +690,7 @@ $surface: #fafafe;
     width: 100%;
     max-width: 100%;
     height: 100%;
+    min-height: 0;
     max-height: 100%;
     align-self: stretch;
     flex: 1 1 auto;
