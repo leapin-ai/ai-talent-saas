@@ -160,8 +160,18 @@ module.exports = fp(async (fastify, options) => {
     const inviteTypeLabel = isManager ? 'manager' : 'employee';
     const deadlineText = row.deadline ? dayjs(row.deadline).format('YYYY-MM-DD HH:mm') : '';
     const contactEmail = pickContact(tenant?.company?.email) || pickContact(tenant?.email) || pickContact(tenant?.company?.contactEmail) || '';
-    const teamName = companyName || tenantName || 'Project Team';
-    const subject = isManager ? `${companyName || tenantName} Future Workforce Readiness | Manager Role Interview` : `${companyName || tenantName} Future Workforce Readiness | Employee Role Interview`;
+    const language = position?.language === 'en-US' ? 'en-US' : 'zh-CN';
+    const teamName = companyName || tenantName || (language === 'en-US' ? 'Project Team' : '项目组');
+    const orgLabel = companyName || tenantName;
+    const subject =
+      language === 'en-US'
+        ? isManager
+          ? `${orgLabel} Future Workforce Readiness | Manager Role Interview`
+          : `${orgLabel} Future Workforce Readiness | Employee Role Interview`
+        : isManager
+          ? `${orgLabel} 未来劳动力就绪 | 经理角色评估`
+          : `${orgLabel} 未来劳动力就绪 | 员工角色访谈`;
+    const messageCode = `${MESSAGE_CODE}[${language}]`;
     const props = {
       name: row.name,
       companyName,
@@ -171,11 +181,12 @@ module.exports = fp(async (fastify, options) => {
       inviteUrl,
       inviteType: inviteTypeLabel,
       isManager,
-      inviteTypeLabel: isManager ? 'Line Manager' : 'Employee',
+      inviteTypeLabel: language === 'en-US' ? (isManager ? 'Line Manager' : 'Employee') : isManager ? '直线经理' : '员工',
       deadlineText,
       contactEmail,
       themeColor,
-      subject
+      subject,
+      language
     };
     const email = pickContact(row.email);
     const phone = formatPhone(row.phone);
@@ -186,7 +197,7 @@ module.exports = fp(async (fastify, options) => {
       await fastify.message.services.sendMessage({
         name: email,
         type: 0,
-        code: MESSAGE_CODE,
+        code: messageCode,
         props,
         options: { title: subject }
       });
@@ -195,7 +206,7 @@ module.exports = fp(async (fastify, options) => {
       await fastify.message.services.sendMessage({
         name: phone,
         type: 1,
-        code: MESSAGE_CODE,
+        code: messageCode,
         props,
         options: { title: subject }
       });

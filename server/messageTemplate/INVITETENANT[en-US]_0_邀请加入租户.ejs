@@ -1,0 +1,69 @@
+<!-- subject -->
+Invitation to join tenant
+<!-- html -->
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Invitation to join tenant</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            font-family: Arial, sans-serif;
+        }
+
+        .header {
+            background: <%=themeColor%>;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 25px;
+            background: #f9f9f9;
+        }
+
+        .code {
+            font-size: 28px;
+            letter-spacing: 5px;
+            background: #fff;
+            padding: 15px;
+            text-align: center;
+            margin: 20px 0;
+            border: 1px dashed<%=themeColor%>;
+            color: <%=themeColor%>;
+        }
+
+        .footer {
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Invitation to join tenant</h1>
+    </div>
+    <div class="content">
+        <p>Dear <%= username %>,</p>
+        <p>[<%= companyName || tenantName %>] invites you to join the tenant. Please click the button below or copy the link to complete joining:</p>
+        <div class="link">
+            <a href="<%= inviteUrl %>" target="_blank" style="color: <%= themeColor %>; text-decoration: underline;">Join tenant</a>
+        </div>
+        <p>If the link does not work, copy and paste the following URL into your browser:</p>
+        <div class="link" style="color: <%= themeColor %>; text-decoration: underline;"><%= inviteUrl %></div>
+
+        <p>If you already have an account, please sign in and complete tenant verification. If not, please register first and then complete tenant verification.</p>
+
+        <p>If you have any questions, please contact the administrator.</p>
+    </div>
+    <div class="footer">
+        <p>© 2025 LeapIn. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>
