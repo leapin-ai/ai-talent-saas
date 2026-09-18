@@ -1,6 +1,6 @@
 {
   "name": "@kne/ai-talent-saas",
-  "version": "0.1.55",
+  "version": "0.1.56",
   "description": "",
   "scripts": {
     "init": "npm run init-server && husky",
