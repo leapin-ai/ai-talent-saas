@@ -42,7 +42,7 @@ const InviteRecords = createWithRemoteLoader({
   withLocale(({ remoteModules, children }) => {
     const [usePreset, TablePage, Filter] = remoteModules;
     const { apis, ajax } = usePreset();
-    const { formatMessage } = useIntl();
+    const { formatMessage, locale } = useIntl();
     const { message, modal } = App.useApp();
     const { id: positionId } = useParams();
     const { InputFilterItem, SuperSelectFilterItem } = Filter.fields;
@@ -177,7 +177,10 @@ const InviteRecords = createWithRemoteLoader({
             try {
               const { data: resData } = await ajax(
                 Object.assign({}, apis.talentSaas.tenant.talentCollectInvite.resend, {
-                  data: { id: String(item.id) }
+                  data: {
+                    id: String(item.id),
+                    language: locale === 'zh-CN' ? 'zh-CN' : 'en-US'
+                  }
                 })
               );
               if (resData.code !== 0) {
@@ -195,7 +198,7 @@ const InviteRecords = createWithRemoteLoader({
           }
         });
       },
-      [ajax, apis, formatMessage, message, modal]
+      [ajax, apis, formatMessage, locale, message, modal]
     );
 
     const columns = useMemo(

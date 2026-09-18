@@ -132,7 +132,7 @@ const createServer = () => {
         isTest: true,
         prefix: `${options.prefix}`,
         sendMessage: async ({ name, type, messageType, props }) => {
-          const language = props.options?.language === 'en-US' ? 'en-US' : 'zh-CN';
+          const language = props.options?.language === 'zh-CN' ? 'zh-CN' : 'en-US';
           // messageType: 0:短信验证码，1:邮件验证码 type: 0:注册,2:登录,4:验证租户管理员,5:忘记密码,6:候选人登录验证
           if (messageType === 1 && type === 0) {
             await fastify.message.services.sendMessage({
@@ -209,13 +209,14 @@ const createServer = () => {
       });
 
       // 兼容 @kne/fastify-tenant 硬编码 code=INVITETENANT：映射为 INVITETENANT[locale]
+      // 仅 zh-CN 用中文，其余默认英文（与采集邀请一致）
       fastify.register(
         require('fastify-plugin')(async fastify => {
           const originalSendMessage = fastify.message.services.sendMessage.bind(fastify.message.services);
           fastify.message.services.sendMessage = async params => {
             let { code, options: targetOptions } = params;
             if (code === 'INVITETENANT') {
-              const language = params.props?.language === 'en-US' ? 'en-US' : 'zh-CN';
+              const language = params.props?.language === 'zh-CN' ? 'zh-CN' : 'en-US';
               code = `INVITETENANT[${language}]`;
               targetOptions = Object.assign({}, targetOptions, {
                 title: language === 'zh-CN' ? '加入租户邀请' : 'Tenant Invitation'
