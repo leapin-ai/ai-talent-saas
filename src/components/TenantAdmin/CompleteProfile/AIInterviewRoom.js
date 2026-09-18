@@ -5,20 +5,24 @@ import { useIntl } from '@kne/react-intl';
 /**
  * 依赖 preset 已 applyAiInterviewRemote；ComponentPreset 按 apiHost 合并宿主 preset 并注入本包 apis/ajax。
  * themeToken 取自宿主 Global，使嵌入面试间与当前系统主题色一致。
+ *
+ * height：宿主测得的容器最大高度（number=px，或 css 长度字符串）。原样传给 InterviewSession。
+ * 不要写死 height="100%"：父级 height:auto 时百分比会塌成 0。
  */
 const AIInterviewRoom = createWithRemoteLoader({
   modules: ['ai-interview-flowup:ComponentPreset', 'ai-interview-flowup:InterviewSession', 'components-core:Global@useGlobalValue']
-})(({ remoteModules, ajaxBaseUrl, apiUrl, shorten, style, height = '100%', onStageChange }) => {
+})(({ remoteModules, ajaxBaseUrl, apiUrl, shorten, style, height, onStageChange }) => {
   const [ComponentPreset, InterviewSession, useGlobalValue] = remoteModules;
   const { formatMessage } = useIntl();
   const hostThemeToken = useGlobalValue('themeToken');
   const apiHost = apiUrl || ajaxBaseUrl;
-  // 最大宽度按传入高度约 16:9 并居中；百分比高度由外层容器约束（% 在 max-width 中按宽度解析）
-  const heightStr = String(height).trim();
-  const maxWidth = /%$/.test(heightStr) ? '100%' : `min(100%, calc((${heightStr}) * 16 / 9))`;
+  const hasHeight = height != null && height !== '' && height !== 'auto';
+  const heightStr = hasHeight ? (typeof height === 'number' ? `${height}px` : String(height).trim()) : null;
+  // 明确 px/长度时按约 16:9 限宽居中；未测到高度前先全宽占位
+  const maxWidth = heightStr && !/%$/.test(heightStr) ? `min(100%, calc((${heightStr}) * 16 / 9))` : '100%';
   const roomStyle = {
     width: '100%',
-    height: heightStr,
+    height: heightStr || 'auto',
     maxWidth,
     marginLeft: 'auto',
     marginRight: 'auto',
@@ -44,7 +48,7 @@ const AIInterviewRoom = createWithRemoteLoader({
         <InterviewSession
           key={shorten}
           shorten={shorten}
-          height="100%"
+          {...(hasHeight ? { height: typeof height === 'number' ? height : heightStr } : {})}
           onStageChange={event => {
             onStageChange && onStageChange(event);
           }}
