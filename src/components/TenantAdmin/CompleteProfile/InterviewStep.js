@@ -14,6 +14,23 @@ const setupRemote = data => {
   return applyAiInterviewRemote({ cdnUrl: data.cdnUrl, version: data.version });
 };
 
+/** 取外层滚动视口内、自房间顶起的最大可用高度，传给 InterviewSession */
+const measureContainerMaxHeight = el => {
+  if (!el || typeof window === 'undefined') {
+    return 0;
+  }
+  const pageChildren = el.closest('.page-children');
+  const viewport = pageChildren?.querySelector('.simplebar-content-wrapper') || el.closest('.simplebar-content-wrapper') || el.closest('.kne-responsive-scroll') || pageChildren;
+  if (!viewport) {
+    const top = el.getBoundingClientRect().top;
+    return Math.max(0, Math.floor(window.innerHeight - top));
+  }
+  const portRect = viewport.getBoundingClientRect();
+  const roomRect = el.getBoundingClientRect();
+  const roomOffset = roomRect.top - portRect.top + (viewport.scrollTop || 0);
+  return Math.max(0, Math.floor(viewport.clientHeight - roomOffset));
+};
+
 const InterviewStep = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset'],
   remoteFallback: (
@@ -30,6 +47,9 @@ const InterviewStep = createWithRemoteLoader({
   const [invite, setInvite] = useState(null);
   const [previousInterview, setPreviousInterview] = useState(null);
   const [actionLoading, setActionLoading] = useState('');
+  // 测量 page-children 等外层容器可视高度，原样传给 InterviewSession（不用 vh/% 猜测）
+  const [sessionHeight, setSessionHeight] = useState(0);
+  const roomRef = useRef(null);
   const choiceResolvedRef = useRef(false);
   const bootOnceRef = useRef(false);
   const profilePayloadRef = useRef(profilePayload);
@@ -52,6 +72,33 @@ const InterviewStep = createWithRemoteLoader({
     if (phase !== 'room') {
       onInterviewLockChangeRef.current?.(false);
     }
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 'room') {
+      return undefined;
+    }
+    const el = roomRef.current;
+    if (!el) {
+      return undefined;
+    }
+    const update = () => {
+      const next = measureContainerMaxHeight(el);
+      setSessionHeight(prev => (prev === next ? prev : next));
+    };
+    update();
+    const pageChildren = el.closest('.page-children');
+    const viewport = pageChildren?.querySelector('.simplebar-content-wrapper') || el.closest('.simplebar-content-wrapper') || pageChildren || el;
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    ro?.observe(viewport);
+    if (viewport !== el) {
+      ro?.observe(el);
+    }
+    window.addEventListener('resize', update);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', update);
+    };
   }, [phase]);
 
   const finishDirectly = useCallback((extra = {}) => {
@@ -294,21 +341,23 @@ const InterviewStep = createWithRemoteLoader({
 
   return (
     <div className={style['interview-panel']}>
-      <div className={style['interview-room']}>
+      <div ref={roomRef} className={style['interview-room']}>
         <AIInterviewRoom
           key={`${invite.cdnUrl}|${invite.version}|${invite.shorten}`}
           apiUrl={invite.apiUrl}
           ajaxBaseUrl={invite.ajaxBaseUrl || invite.apiUrl}
           shorten={invite.shorten}
+          height={sessionHeight > 0 ? sessionHeight : undefined}
           onStageChange={event => {
+            const { stage, status } = event || {};
             // 问卷 / 设备检测完成 / 作答结束 / 评价：隐藏宿主「上一步」，避免与会话内提交条重叠
-            if (event?.stage === 'questionnaire') {
+            if (stage === 'questionnaire') {
               onInterviewLockChangeRef.current?.(true);
             }
-            if (event?.stage === 'deviceTesting' && event?.status === 'complete') {
+            if (stage === 'deviceTesting' && status === 'complete') {
               onInterviewLockChangeRef.current?.(true);
             }
-            if (event?.stage === 'interview' && event?.status === 'complete') {
+            if (stage === 'interview' && status === 'complete') {
               onInterviewLockChangeRef.current?.(true);
               // 保持 room，让 Session 继续渲染 Feedback；后台 markDone 即可
               syncInterviewComplete();
@@ -318,9 +367,9 @@ const InterviewStep = createWithRemoteLoader({
                 status: 'complete'
               });
             }
-            if (event?.stage === 'feedback') {
+            if (stage === 'feedback') {
               onInterviewLockChangeRef.current?.(true);
-              if (event?.status === 'complete') {
+              if (status === 'complete') {
                 handleFeedbackComplete();
               }
             }

@@ -281,20 +281,115 @@ $surface: #fafafe;
   font-weight: 600;
 }
 
-.linkedin-prefix {
+.linkedin-prefix-bubble {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  max-width: 260px;
-  overflow: hidden;
-  color: #64748b;
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  gap: 6px;
+  max-width: 100%;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #eff6ff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  color: #334155;
+  font-size: 12px;
+  line-height: 18px;
+  box-sizing: border-box;
 
   :global(.anticon) {
     flex-shrink: 0;
     color: #0a66c2;
+    font-size: 14px;
+  }
+
+  // 指向下方输入框的小三角
+  &::after {
+    content: '';
+    position: absolute;
+    left: 14px;
+    bottom: -5px;
+    width: 8px;
+    height: 8px;
+    background: #eff6ff;
+    border-right: 1px solid #dbeafe;
+    border-bottom: 1px solid #dbeafe;
+    transform: rotate(45deg);
+  }
+}
+
+.linkedin-prefix-bubble-text {
+  min-width: 0;
+  word-break: break-all;
+}
+
+.linkedin-prefix {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  width: max-content;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: default;
+
+  :global(.anticon) {
+    flex-shrink: 0;
+    color: #0a66c2;
+    font-size: 14px;
+    line-height: 1;
+  }
+}
+
+.linkedin-prefix-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  line-height: 22px;
+}
+
+// 窄容器：同一行，前缀随内容宽（可收缩省略），输入区吃剩余；完整 URL 用上方气泡
+@include resp.mobile-container {
+  .linkedin-field {
+    :global(.ant-input-wrapper.ant-input-group) {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      width: 100%;
+    }
+
+    :global(.ant-input-group-addon) {
+      display: flex;
+      align-items: center;
+      flex: 0 1 auto;
+      width: auto;
+      max-width: 58%;
+      min-width: 0;
+      padding-inline: 8px;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    :global(.ant-input-affix-wrapper),
+    :global(.ant-input-group > .ant-input) {
+      flex: 1 1 auto;
+      min-width: 96px;
+      width: auto !important;
+      box-sizing: border-box;
+    }
+  }
+
+  .linkedin-prefix {
+    width: auto;
+    max-width: 100%;
+    gap: 4px;
+    font-size: 12px;
   }
 }
 
@@ -574,90 +669,19 @@ $surface: #fafafe;
   min-height: 0;
 }
 
+// 高度交给 InterviewSession 的 height；宿主只负责全宽与不裁切，不深层改 flex
 .interview-room {
-  --interview-footer-gap: 0px;
-  --interview-height: min(calc(70vh - var(--interview-footer-gap)), calc(720px - var(--interview-footer-gap)));
   width: 100%;
-  max-width: min(100%, calc(var(--interview-height) * 16 / 9));
-  height: var(--interview-height);
-  max-height: 100%;
-  min-height: 0;
+  max-width: 100%;
+  height: auto;
   margin-inline: auto;
-  align-self: center;
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
+  align-self: stretch;
+  flex: 0 0 auto;
   box-sizing: border-box;
-  overflow: hidden;
-
-  // 直连子节点，以及 ComponentPreset 那层 class 为空的包裹，都要吃满高度。
-  // 中间层 height:auto 时，子级 height:100% 会算成 0，面试画面就空白。
-  > div,
-  > div > div {
-    min-height: 0 !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    flex: 1 1 auto;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden;
-  }
-
-  // session 自己 overflow:auto 会把整页顶出裁切；滚动只留给 Layout.main
-  :global([class*='session']),
-  :global([class*='fill']) {
-    overflow: hidden !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    max-height: 100% !important;
-  }
-
-  // 盖掉 Interview 内联 minHeight:640 与 embed min-height:640px，房间跟着宿主高度收缩
-  :global([class*='interview-container']),
-  :global([class*='display-wrapper']),
-  :global([class*='display-container']) {
-    height: 100% !important;
-    min-height: 0 !important;
-    max-height: 100% !important;
-  }
-
-  :global(.core-container-body),
-  :global([data-testid='components-core-pure-global']),
-  :global(.ant-app),
-  :global(.ant-app) > div {
-    width: 100% !important;
-    max-width: none !important;
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-  }
-
-  // 只约束 Layout 根 main（.layout-container > main），勿波及内部 step-content
-  :global([class*='layout-container']) > main {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    height: auto !important;
-    max-height: 100% !important;
-    overflow: auto !important;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
-    box-sizing: border-box !important;
-
-    // 打断 Layout embed `> * { height:100% }`，子树可撑高，main 内部才能滚
-    > * {
-      height: auto !important;
-      min-height: 0 !important;
-      flex: 0 0 auto !important;
-      max-height: none !important;
-    }
-  }
+  overflow: visible;
 }
 
-// 有宿主「上一步」时：尽量吃满 step-body；窄高时用 min-height 保底并交给外层滚动
+// 有宿主「上一步」时：底栏 fixed
 .step-panel-interview-prestart {
   .step-body {
     display: flex;
@@ -667,46 +691,18 @@ $surface: #fafafe;
   }
 
   .interview-panel {
-    flex: 1;
+    flex: 0 0 auto;
     min-height: 0;
   }
 
   .interview-room {
-    --interview-height: 100%;
-    width: 100%;
-    max-width: 100%;
-    height: 100%;
-    min-height: 0;
-    max-height: 100%;
-    align-self: stretch;
-    flex: 1 1 auto;
     margin: 0;
   }
 }
 
 @include resp.mobile-container {
   .interview-room {
-    --interview-height: 100%;
-    width: 100%;
-    max-width: 100%;
-    height: 100%;
-    min-height: 0;
-    max-height: 100%;
-    align-self: stretch;
-    flex: 1 1 auto;
     margin-inline: 0;
-
-    :global([class*='layout-container']) > main {
-      padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)) !important;
-    }
-  }
-
-  .step-panel-interview-prestart {
-    .interview-room {
-      :global([class*='layout-container']) > main {
-        padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)) !important;
-      }
-    }
   }
 }
 
