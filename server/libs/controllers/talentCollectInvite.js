@@ -18,6 +18,7 @@ module.exports = fp(async (fastify, options) => {
             inviteType: { type: 'string', enum: ['employee', 'manager'] },
             assessmentProject: {},
             deadline: { type: 'string' },
+            language: { type: 'string' },
             participants: {
               type: 'array',
               items: {
@@ -48,7 +49,8 @@ module.exports = fp(async (fastify, options) => {
         body: {
           type: 'object',
           properties: {
-            id: { type: 'string' }
+            id: { type: 'string' },
+            language: { type: 'string' }
           },
           required: ['id']
         }

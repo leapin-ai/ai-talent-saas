@@ -1,0 +1,118 @@
+<!-- subject -->
+<%= subject || ((companyName || tenantName) + ' 未来劳动力就绪 | ' + (isManager ? '经理角色评估' : '员工角色访谈')) %>
+<!-- html -->
+<html>
+<head>
+    <meta charset="utf-8">
+    <title><%= isManager ? '经理角色评估' : '员工角色访谈' %></title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            font-family: Arial, sans-serif;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: <%= themeColor %>;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 28px 24px;
+            background: #f9f9f9;
+        }
+
+        .content p {
+            margin: 0 0 14px;
+        }
+
+        .cta {
+            margin: 24px 0;
+        }
+
+        .cta a {
+            display: inline-block;
+            padding: 12px 20px;
+            background: <%= themeColor %>;
+            color: #fff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .link {
+            word-break: break-all;
+            margin-top: 12px;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .footer {
+            margin-top: 20px;
+            color: #64748b;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1 style="margin:0;font-size:20px;"><%= isManager ? '经理角色评估' : '员工角色访谈' %></h1>
+    </div>
+    <div class="content">
+        <p>尊敬的 <%= name %>：</p>
+        <% if (isManager) { %>
+        <p>作为 <%= companyName || tenantName %>「未来劳动力就绪」计划的一部分，我们邀请您完成一次简短的角色评估。</p>
+        <p>您的反馈将帮助我们了解该角色可能如何演进、影响该角色的业务与技术变化，以及未来对该角色的要求。</p>
+        <p>请<% if (deadlineText) { %>于 <strong><%= deadlineText %></strong> 前<% } %>完成评估，预计只需较短时间。</p>
+        <div class="cta">
+            <a href="<%= inviteUrl %>" target="_blank">开始评估</a>
+        </div>
+        <% } else { %>
+        <p>作为 <%= companyName || tenantName %>「未来劳动力就绪」计划的一部分，我们邀请您参与一次简短的角色访谈。</p>
+        <p>您的反馈将帮助我们了解工作如何变化、AI 可在何处支持该角色，以及哪些环节仍需人工判断。</p>
+        <p>请<% if (deadlineText) { %>于 <strong><%= deadlineText %></strong> 前<% } %>完成访谈，预计只需较短时间。</p>
+        <div class="cta">
+            <a href="<%= inviteUrl %>" target="_blank">开始访谈</a>
+        </div>
+        <% } %>
+        <div class="link">若按钮无法打开，请复制以下链接到浏览器访问：<br/><a href="<%= inviteUrl %>" target="_blank" style="color: <%= themeColor %>;"><%= inviteUrl %></a></div>
+        <% if (contactEmail) { %>
+        <p class="footer">如有疑问，请联系 <a href="mailto:<%= contactEmail %>" style="color: <%= themeColor %>;"><%= contactEmail %></a>。</p>
+        <% } %>
+        <p class="footer">感谢您<%= isManager ? '抽出时间提供宝贵见解' : '提供反馈' %>。</p>
+        <p class="footer" style="margin-bottom:0;"><%= teamName || companyName || tenantName %></p>
+    </div>
+</div>
+</body>
+</html>
+<!-- signature -->
+LeapIn
+<!-- text -->
+尊敬的 <%= name %>：
+
+<% if (isManager) { %>作为 <%= companyName || tenantName %>「未来劳动力就绪」计划的一部分，我们邀请您完成一次简短的角色评估。
+
+您的反馈将帮助我们了解该角色可能如何演进、影响该角色的业务与技术变化，以及未来对该角色的要求。
+
+请<% if (deadlineText) { %>于 <%= deadlineText %> 前<% } %>完成评估，预计只需较短时间。
+
+开始评估：<%= inviteUrl %>
+<% } else { %>作为 <%= companyName || tenantName %>「未来劳动力就绪」计划的一部分，我们邀请您参与一次简短的角色访谈。
+
+您的反馈将帮助我们了解工作如何变化、AI 可在何处支持该角色，以及哪些环节仍需人工判断。
+
+请<% if (deadlineText) { %>于 <%= deadlineText %> 前<% } %>完成访谈，预计只需较短时间。
+
+开始访谈：<%= inviteUrl %>
+<% } %>
+<% if (contactEmail) { %>
+如有疑问，请联系 <%= contactEmail %>。
+<% } %>
+感谢您<%= isManager ? '抽出时间提供宝贵见解' : '提供反馈' %>。
+
+<%= teamName || companyName || tenantName %>
