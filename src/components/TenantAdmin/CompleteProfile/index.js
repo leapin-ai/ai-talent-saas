@@ -444,7 +444,7 @@ const CompleteProfile = createWithRemoteLoader({
     if (isManagerCollect) {
       return (
         <Page title={pageTitle} back={false} toolbar={false}>
-          <div className={style['complete-profile']}>
+          <div className={`${style['complete-profile']} ${style['complete-profile-interview']}`}>
             <div className={style.content}>
               <div className={style['content-inner']}>
                 <div className={style['step-panel']}>
@@ -461,7 +461,7 @@ const CompleteProfile = createWithRemoteLoader({
 
     return (
       <Page title={pageTitle} back={!isCollect} toolbar={false}>
-        <div className={style['complete-profile']}>
+        <div className={`${style['complete-profile']}${current === 2 ? ` ${style['complete-profile-interview']}` : ''}`}>
           <Stepper items={stepTitles} current={current} />
 
           <div className={style.content}>
