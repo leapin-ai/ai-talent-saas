@@ -186,6 +186,7 @@ module.exports = fp(async (fastify, options) => {
       isManager,
       inviteTypeLabel: language === 'en-US' ? (isManager ? 'Line Manager' : 'Employee') : isManager ? '直线经理' : '员工',
       deadlineText,
+      durationMinutes: '',
       contactEmail,
       themeColor,
       subject,
