@@ -68,14 +68,14 @@
         <% if (isManager) { %>
         <p>作为 <%= companyName || tenantName %> 未来人才准备度项目的一部分，我们诚邀您参加一次简短的岗位访谈。</p>
         <p>您的反馈将帮助我们了解该岗位未来可能如何演变、影响岗位的业务与技术变化，以及未来业务对该岗位将提出哪些新的或更高要求。</p>
-        <p>请<% if (deadlineText) { %>于 <strong><%= deadlineText %></strong> 前<% } %>完成访谈，预计用时约 <% if (durationMinutes) { %><%= durationMinutes %> 分钟<% } else { %>数分钟<% } %>。</p>
+        <p>请<% if (deadlineText) { %>于 <strong><%= deadlineText %></strong> 前<% } %>完成访谈，预计用时约 <% if (typeof durationMinutes !== 'undefined' && durationMinutes) { %><%= durationMinutes %> 分钟<% } else { %>数分钟<% } %>。</p>
         <div class="cta">
             <a href="<%= inviteUrl %>" target="_blank">开始访谈</a>
         </div>
         <% } else { %>
         <p>作为 <%= companyName || tenantName %> 未来人才准备度项目的一部分，我们诚邀您参加一次简短的岗位访谈。</p>
         <p>您的反馈将帮助我们了解您的工作正在如何变化、AI 可以在哪些方面支持该岗位，以及哪些方面仍需要保留人的判断与决策。</p>
-        <p>请<% if (deadlineText) { %>于 <strong><%= deadlineText %></strong> 前<% } %>完成访谈，预计用时约 <% if (durationMinutes) { %><%= durationMinutes %> 分钟<% } else { %>数分钟<% } %>。</p>
+        <p>请<% if (deadlineText) { %>于 <strong><%= deadlineText %></strong> 前<% } %>完成访谈，预计用时约 <% if (typeof durationMinutes !== 'undefined' && durationMinutes) { %><%= durationMinutes %> 分钟<% } else { %>数分钟<% } %>。</p>
         <div class="cta">
             <a href="<%= inviteUrl %>" target="_blank">开始访谈</a>
         </div>
@@ -99,14 +99,14 @@ LeapIn
 
 您的反馈将帮助我们了解该岗位未来可能如何演变、影响岗位的业务与技术变化，以及未来业务对该岗位将提出哪些新的或更高要求。
 
-请<% if (deadlineText) { %>于 <%= deadlineText %> 前<% } %>完成访谈，预计用时约 <% if (durationMinutes) { %><%= durationMinutes %> 分钟<% } else { %>数分钟<% } %>。
+请<% if (deadlineText) { %>于 <%= deadlineText %> 前<% } %>完成访谈，预计用时约 <% if (typeof durationMinutes !== 'undefined' && durationMinutes) { %><%= durationMinutes %> 分钟<% } else { %>数分钟<% } %>。
 
 开始访谈：<%= inviteUrl %>
 <% } else { %>作为 <%= companyName || tenantName %> 未来人才准备度项目的一部分，我们诚邀您参加一次简短的岗位访谈。
 
 您的反馈将帮助我们了解您的工作正在如何变化、AI 可以在哪些方面支持该岗位，以及哪些方面仍需要保留人的判断与决策。
 
-请<% if (deadlineText) { %>于 <%= deadlineText %> 前<% } %>完成访谈，预计用时约 <% if (durationMinutes) { %><%= durationMinutes %> 分钟<% } else { %>数分钟<% } %>。
+请<% if (deadlineText) { %>于 <%= deadlineText %> 前<% } %>完成访谈，预计用时约 <% if (typeof durationMinutes !== 'undefined' && durationMinutes) { %><%= durationMinutes %> 分钟<% } else { %>数分钟<% } %>。
 
 开始访谈：<%= inviteUrl %>
 <% } %>
