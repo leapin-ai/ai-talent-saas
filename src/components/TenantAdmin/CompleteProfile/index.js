@@ -166,6 +166,11 @@ const CompleteProfile = createWithRemoteLoader({
               return;
             }
             setInviteMeta(detail);
+            // 邀请已完成：刷新后仍隐藏「上一步」，留在完成页
+            if (detail?.status === 'done') {
+              setInterviewFinished(true);
+              setInterviewLocked(true);
+            }
             if (detail?.inviteType === 'manager') {
               setCurrent(0);
               return;
