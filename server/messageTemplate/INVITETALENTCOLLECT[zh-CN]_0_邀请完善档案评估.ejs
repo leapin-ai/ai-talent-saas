@@ -1,10 +1,10 @@
 <!-- subject -->
-<%= subject || ((companyName || tenantName) + ' 未来劳动力就绪 | ' + (isManager ? '经理角色评估' : '员工角色访谈')) %>
+<%= subject || ((companyName || tenantName) + ' 未来人才准备度 | ' + (isManager ? '经理岗位访谈' : '员工岗位访谈')) %>
 <!-- html -->
 <html>
 <head>
     <meta charset="utf-8">
-    <title><%= isManager ? '经理角色评估' : '员工角色访谈' %></title>
+    <title><%= isManager ? '经理岗位访谈' : '员工岗位访谈' %></title>
     <style>
         .container {
             max-width: 600px;
@@ -61,30 +61,30 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1 style="margin:0;font-size:20px;"><%= isManager ? '经理角色评估' : '员工角色访谈' %></h1>
+        <h1 style="margin:0;font-size:20px;"><%= isManager ? '经理岗位访谈' : '员工岗位访谈' %></h1>
     </div>
     <div class="content">
-        <p>尊敬的 <%= name %>：</p>
+        <p>您好，<%= name %>：</p>
         <% if (isManager) { %>
-        <p>作为 <%= companyName || tenantName %>「未来劳动力就绪」计划的一部分，我们邀请您完成一次简短的角色评估。</p>
-        <p>您的反馈将帮助我们了解该角色可能如何演进、影响该角色的业务与技术变化，以及未来对该角色的要求。</p>
-        <p>请<% if (deadlineText) { %>于 <strong><%= deadlineText %></strong> 前<% } %>完成评估，预计只需较短时间。</p>
+        <p>作为 <%= companyName || tenantName %> 未来人才准备度项目的一部分，我们诚邀您参加一次简短的岗位访谈。</p>
+        <p>您的反馈将帮助我们了解该岗位未来可能如何演变、影响岗位的业务与技术变化，以及未来业务对该岗位将提出哪些新的或更高要求。</p>
+        <p>请<% if (deadlineText) { %>于 <strong><%= deadlineText %></strong> 前<% } %>完成访谈，预计用时约 <% if (durationMinutes) { %><%= durationMinutes %> 分钟<% } else { %>数分钟<% } %>。</p>
         <div class="cta">
-            <a href="<%= inviteUrl %>" target="_blank">开始评估</a>
+            <a href="<%= inviteUrl %>" target="_blank">开始访谈</a>
         </div>
         <% } else { %>
-        <p>作为 <%= companyName || tenantName %>「未来劳动力就绪」计划的一部分，我们邀请您参与一次简短的角色访谈。</p>
-        <p>您的反馈将帮助我们了解工作如何变化、AI 可在何处支持该角色，以及哪些环节仍需人工判断。</p>
-        <p>请<% if (deadlineText) { %>于 <strong><%= deadlineText %></strong> 前<% } %>完成访谈，预计只需较短时间。</p>
+        <p>作为 <%= companyName || tenantName %> 未来人才准备度项目的一部分，我们诚邀您参加一次简短的岗位访谈。</p>
+        <p>您的反馈将帮助我们了解您的工作正在如何变化、AI 可以在哪些方面支持该岗位，以及哪些方面仍需要保留人的判断与决策。</p>
+        <p>请<% if (deadlineText) { %>于 <strong><%= deadlineText %></strong> 前<% } %>完成访谈，预计用时约 <% if (durationMinutes) { %><%= durationMinutes %> 分钟<% } else { %>数分钟<% } %>。</p>
         <div class="cta">
             <a href="<%= inviteUrl %>" target="_blank">开始访谈</a>
         </div>
         <% } %>
         <div class="link">若按钮无法打开，请复制以下链接到浏览器访问：<br/><a href="<%= inviteUrl %>" target="_blank" style="color: <%= themeColor %>;"><%= inviteUrl %></a></div>
         <% if (contactEmail) { %>
-        <p class="footer">如有疑问，请联系 <a href="mailto:<%= contactEmail %>" style="color: <%= themeColor %>;"><%= contactEmail %></a>。</p>
+        <p class="footer">如有任何问题或需要支持，请联系 <a href="mailto:<%= contactEmail %>" style="color: <%= themeColor %>;"><%= contactEmail %></a>。</p>
         <% } %>
-        <p class="footer">感谢您<%= isManager ? '抽出时间提供宝贵见解' : '提供反馈' %>。</p>
+        <p class="footer"><%= isManager ? '感谢您的时间与宝贵意见。' : '感谢您的参与和反馈。' %></p>
         <p class="footer" style="margin-bottom:0;"><%= teamName || companyName || tenantName %></p>
     </div>
 </div>
@@ -93,26 +93,26 @@
 <!-- signature -->
 LeapIn
 <!-- text -->
-尊敬的 <%= name %>：
+您好，<%= name %>：
 
-<% if (isManager) { %>作为 <%= companyName || tenantName %>「未来劳动力就绪」计划的一部分，我们邀请您完成一次简短的角色评估。
+<% if (isManager) { %>作为 <%= companyName || tenantName %> 未来人才准备度项目的一部分，我们诚邀您参加一次简短的岗位访谈。
 
-您的反馈将帮助我们了解该角色可能如何演进、影响该角色的业务与技术变化，以及未来对该角色的要求。
+您的反馈将帮助我们了解该岗位未来可能如何演变、影响岗位的业务与技术变化，以及未来业务对该岗位将提出哪些新的或更高要求。
 
-请<% if (deadlineText) { %>于 <%= deadlineText %> 前<% } %>完成评估，预计只需较短时间。
+请<% if (deadlineText) { %>于 <%= deadlineText %> 前<% } %>完成访谈，预计用时约 <% if (durationMinutes) { %><%= durationMinutes %> 分钟<% } else { %>数分钟<% } %>。
 
-开始评估：<%= inviteUrl %>
-<% } else { %>作为 <%= companyName || tenantName %>「未来劳动力就绪」计划的一部分，我们邀请您参与一次简短的角色访谈。
+开始访谈：<%= inviteUrl %>
+<% } else { %>作为 <%= companyName || tenantName %> 未来人才准备度项目的一部分，我们诚邀您参加一次简短的岗位访谈。
 
-您的反馈将帮助我们了解工作如何变化、AI 可在何处支持该角色，以及哪些环节仍需人工判断。
+您的反馈将帮助我们了解您的工作正在如何变化、AI 可以在哪些方面支持该岗位，以及哪些方面仍需要保留人的判断与决策。
 
-请<% if (deadlineText) { %>于 <%= deadlineText %> 前<% } %>完成访谈，预计只需较短时间。
+请<% if (deadlineText) { %>于 <%= deadlineText %> 前<% } %>完成访谈，预计用时约 <% if (durationMinutes) { %><%= durationMinutes %> 分钟<% } else { %>数分钟<% } %>。
 
 开始访谈：<%= inviteUrl %>
 <% } %>
 <% if (contactEmail) { %>
-如有疑问，请联系 <%= contactEmail %>。
+如有任何问题或需要支持，请联系 <%= contactEmail %>。
 <% } %>
-感谢您<%= isManager ? '抽出时间提供宝贵见解' : '提供反馈' %>。
+<%= isManager ? '感谢您的时间与宝贵意见。' : '感谢您的参与和反馈。' %>
 
 <%= teamName || companyName || tenantName %>
