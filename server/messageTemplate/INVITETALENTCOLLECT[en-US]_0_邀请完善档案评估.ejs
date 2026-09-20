@@ -68,14 +68,14 @@
         <% if (isManager) { %>
         <p>As part of <%= companyName || tenantName %>'s Future Workforce Readiness initiative, we invite you to complete a brief role assessment.</p>
         <p>Your input will help us understand how the role may evolve, the business and technology changes affecting it, and what will be needed from the role in the future.</p>
-        <p>Please complete the assessment<% if (deadlineText) { %> by <strong><%= deadlineText %></strong><% } %>. It should take only a short time.</p>
+        <p>Please complete the assessment<% if (deadlineText) { %> by <strong><%= deadlineText %></strong><% } %>. It should take approximately <% if (durationMinutes) { %><%= durationMinutes %> minutes<% } else { %>a few minutes<% } %>.</p>
         <div class="cta">
             <a href="<%= inviteUrl %>" target="_blank">Start Assessment</a>
         </div>
         <% } else { %>
         <p>As part of <%= companyName || tenantName %>'s Future Workforce Readiness initiative, we invite you to take part in a brief role interview.</p>
         <p>Your input will help us understand how your work is changing, where AI could support the role, and where human judgment remains important.</p>
-        <p>Please complete the interview<% if (deadlineText) { %> by <strong><%= deadlineText %></strong><% } %>. It should take only a short time.</p>
+        <p>Please complete the interview<% if (deadlineText) { %> by <strong><%= deadlineText %></strong><% } %>. It should take approximately <% if (durationMinutes) { %><%= durationMinutes %> minutes<% } else { %>a few minutes<% } %>.</p>
         <div class="cta">
             <a href="<%= inviteUrl %>" target="_blank">Start Interview</a>
         </div>
@@ -99,14 +99,14 @@ Dear <%= name %>,
 
 Your input will help us understand how the role may evolve, the business and technology changes affecting it, and what will be needed from the role in the future.
 
-Please complete the assessment<% if (deadlineText) { %> by <%= deadlineText %><% } %>. It should take only a short time.
+Please complete the assessment<% if (deadlineText) { %> by <%= deadlineText %><% } %>. It should take approximately <% if (durationMinutes) { %><%= durationMinutes %> minutes<% } else { %>a few minutes<% } %>.
 
 Start Assessment: <%= inviteUrl %>
 <% } else { %>As part of <%= companyName || tenantName %>'s Future Workforce Readiness initiative, we invite you to take part in a brief role interview.
 
 Your input will help us understand how your work is changing, where AI could support the role, and where human judgment remains important.
 
-Please complete the interview<% if (deadlineText) { %> by <%= deadlineText %><% } %>. It should take only a short time.
+Please complete the interview<% if (deadlineText) { %> by <%= deadlineText %><% } %>. It should take approximately <% if (durationMinutes) { %><%= durationMinutes %> minutes<% } else { %>a few minutes<% } %>.
 
 Start Interview: <%= inviteUrl %>
 <% } %>

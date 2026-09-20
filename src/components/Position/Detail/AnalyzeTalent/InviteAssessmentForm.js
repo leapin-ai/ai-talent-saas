@@ -197,7 +197,8 @@ const InviteAssessmentForm = createWithRemoteLoader({
               pagination={{
                 paramsType: 'params'
               }}
-            />
+            />,
+            <DatePicker name="deadline" label={formatMessage({ id: 'position.talentInviteDeadline' })} rule="REQ" placeholder={formatMessage({ id: 'position.talentInviteSelect' })} />
           ]}
         />
         <InfoPage.Part
@@ -264,7 +265,6 @@ const InviteAssessmentForm = createWithRemoteLoader({
             <PhoneNumber name="phone" label={formatMessage({ id: 'position.talentInvitePhone' })} format="string" placeholder={formatMessage({ id: 'position.talentInviteEnter' })} />
           ]}
         />
-        <FormInfo column={1} list={[<DatePicker name="deadline" label={formatMessage({ id: 'position.talentInviteDeadline' })} rule="REQ" placeholder={formatMessage({ id: 'position.talentInviteSelect' })} />]} />
       </Flex>
     );
   })
