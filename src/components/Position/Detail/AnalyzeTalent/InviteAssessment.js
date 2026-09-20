@@ -149,6 +149,7 @@ const InviteAssessment = createWithRemoteLoader({
               return false;
             }
             api.close();
+            navigate(`${baseUrl}/position/${positionId}/invite-records`);
           }
         },
         children: (
