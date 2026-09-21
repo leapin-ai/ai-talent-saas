@@ -81,6 +81,25 @@ module.exports = fp(async (fastify, options) => {
   );
 
   fastify.get(
+    `${options.prefix}/tenant/employee/evidence`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '员工证据列表',
+        query: {
+          type: 'object',
+          properties: {
+            employeeId: { type: 'string' },
+            sourceType: { type: 'string' }
+          },
+          required: ['employeeId']
+        }
+      }
+    },
+    async request => services.workforce.listEvidence(request.tenantUserInfo, request.query)
+  );
+
+  fastify.get(
     `${options.prefix}/tenant/employee/detail`,
     {
       onRequest: [authenticate.user, tenantAuthenticate.tenantUser],

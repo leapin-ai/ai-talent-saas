@@ -32,6 +32,12 @@ const getColumns = ({ onDetail, formatMessage }) => {
       getValueOf: item => (item.employeeCount == null ? 0 : item.employeeCount)
     },
     {
+      name: 'assessmentStatus',
+      title: formatMessage({ id: 'position.assessmentStatus' }),
+      type: 'other',
+      getValueOf: item => formatMessage({ id: `position.assessmentStatus.${item.assessmentStatus || 'pending'}` })
+    },
+    {
       name: 'status',
       title: formatMessage({ id: 'position.status' }),
       renderType: 'enum',

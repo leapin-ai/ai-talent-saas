@@ -501,10 +501,16 @@ module.exports = fp(async (fastify, options) => {
   };
 
   const summarizeTalentMetrics = list => {
-    const metrics = { total: list.length, assessed: 0, outdated: 0, never: 0, inProgress: 0 };
+    const metrics = { total: list.length, assessed: 0, outdated: 0, never: 0, inProgress: 0, teamReadiness: null };
+    let readinessSum = 0;
+    let readinessCount = 0;
     list.forEach(item => {
       if (item.lastAssessment === 'assessed') {
         metrics.assessed += 1;
+        if (item.readiness != null && item.readiness !== '') {
+          readinessSum += Number(item.readiness);
+          readinessCount += 1;
+        }
       } else if (item.lastAssessment === 'outdated') {
         metrics.outdated += 1;
       } else if (item.lastAssessment === 'inProgress') {
@@ -513,6 +519,7 @@ module.exports = fp(async (fastify, options) => {
         metrics.never += 1;
       }
     });
+    metrics.teamReadiness = readinessCount ? Math.round(readinessSum / readinessCount) : null;
     return metrics;
   };
 

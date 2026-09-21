@@ -1,0 +1,151 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  position: relative;
+  padding: 16px 20px 16px 24px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.section-title {
+  position: relative;
+  margin: 0 0 16px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: 0.15px;
+  color: #111827;
+
+  /* Figma Emphasize：贴卡片左缘，不跟标题一起缩进 */
+  &::before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 0;
+    width: 4px;
+    height: 24px;
+    border-radius: 0 4px 4px 0;
+    background: var(--primary-color, #4183f0);
+  }
+}
+
+.impact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.impact-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.impact-value {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 26px;
+  color: #4654d9;
+  white-space: nowrap;
+}
+
+.impact-caption {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: #94a3b8;
+}
+
+.impact-divider {
+  align-self: stretch;
+  flex: 0 0 1px;
+  width: 1px;
+  background: #e2e8f0;
+}
+
+.strategies {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.strategy {
+  padding: 14px 16px;
+  border: 1px solid rgba(20, 16, 60, 0.08);
+  border-radius: 12px;
+  background: #fcfbff;
+}
+
+.strategy-action {
+  display: inline-flex;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 16px;
+}
+
+.strategy-action-build,
+.strategy-action-buy {
+  color: #2563eb;
+}
+
+.strategy-action-move,
+.strategy-action-augment {
+  color: #6668d8;
+}
+
+.strategy-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  color: #0f172a;
+}
+
+.strategy-detail {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: #475569;
+}
+
+.tasks-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  padding: 32px 16px;
+  border: 1px dashed #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+@include resp.mobile-container {
+  .strategies {
+    grid-template-columns: 1fr;
+  }
+
+  .impact {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .impact-divider {
+    flex: 0 0 1px;
+    width: 100%;
+    height: 1px;
+  }
+}

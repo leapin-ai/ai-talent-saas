@@ -84,6 +84,18 @@ module.exports = fp(async (fastify, options) => {
       position.setDataValue('tenantOrgId', null);
     }
     position.setDataValue('orgEnums', orgEnums);
+    try {
+      const strategies = await models.positionWorkforceStrategy.findAll({
+        where: { tenantId, positionId: position.id },
+        order: [['sortOrder', 'ASC']]
+      });
+      position.setDataValue(
+        'workforceStrategy',
+        strategies.map(row => (row.toJSON ? row.toJSON() : row))
+      );
+    } catch (e) {
+      position.setDataValue('workforceStrategy', []);
+    }
 
     return position;
   };
@@ -1122,6 +1134,10 @@ module.exports = fp(async (fastify, options) => {
 
     await position.update(updateFields);
 
+    if (services.workforce?.replaceTasksFromAnalysis) {
+      await services.workforce.replaceTasksFromAnalysis(auth, { position, positionPayload: posPart });
+    }
+
     const savedEmployees = [];
     for (const item of employeeList) {
       if (!item?.employeeId) {
@@ -1161,6 +1177,13 @@ module.exports = fp(async (fastify, options) => {
               }
         )
       );
+      if (services.workforce?.importSkillReadiness) {
+        await services.workforce.importSkillReadiness(auth, {
+          positionId,
+          employeeId: item.employeeId,
+          skills: item.skills
+        });
+      }
     }
 
     const submittedOrg = {

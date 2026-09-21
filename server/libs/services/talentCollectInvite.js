@@ -420,6 +420,10 @@ module.exports = fp(async (fastify, options) => {
           await ensureInviteCode(row);
         }
 
+        if (services.workforce?.markInterviewsInProgress) {
+          await services.workforce.markInterviewsInProgress({ tenantId, positionId });
+        }
+
         const inviteUrl = await sendNotify({ row, position, tenant, language });
         success.push({ index, id: row.id, code: row.code, inviteUrl, employeeId });
       } catch (e) {
@@ -475,7 +479,7 @@ module.exports = fp(async (fastify, options) => {
       assessment = await models.assessment.create({
         tenantId: row.tenantId,
         tenantUserId,
-        status: nextStage === 'done' ? 'submitted' : 'interviewing',
+        status: 'pending',
         projectId: row.projectId || null,
         projectName: row.projectName || '',
         inviteId: row.inviteId || null,
@@ -483,21 +487,44 @@ module.exports = fp(async (fastify, options) => {
         shorten: row.shorten || null,
         shortenExpiresAt: row.shortenExpiresAt || null,
         clientUserId: row.clientUserId || null,
-        profileData: {},
+        profileData: row.profileData && typeof row.profileData === 'object' ? row.profileData : {},
         interviewData: Object.assign({}, row.interviewData || {}, {
           source: 'talentCollectInvite',
           collectInviteId: row.id,
           interviewId: row.interviewId || null
         })
       });
-      return assessment;
+    }
+
+    const inviteProfile = row.profileData && typeof row.profileData === 'object' ? row.profileData : {};
+    if (Object.keys(inviteProfile).length) {
+      assessment.profileData = inviteProfile;
+      assessment.changed('profileData', true);
     }
 
     if (nextStage === 'done') {
-      if (!['submitted', 'approved', 'generating'].includes(assessment.status)) {
-        assessment.status = 'submitted';
+      assessment.projectId = row.projectId || assessment.projectId;
+      assessment.projectName = row.projectName || assessment.projectName || '';
+      assessment.inviteId = row.inviteId || assessment.inviteId;
+      assessment.inviteCode = row.inviteCode || assessment.inviteCode;
+      assessment.shorten = row.shorten || assessment.shorten;
+      assessment.shortenExpiresAt = row.shortenExpiresAt || assessment.shortenExpiresAt;
+      assessment.clientUserId = row.clientUserId || assessment.clientUserId;
+      assessment.interviewData = Object.assign({}, assessment.interviewData || {}, row.interviewData || {}, {
+        source: 'talentCollectInvite',
+        collectInviteId: row.id,
+        interviewId: row.interviewId || assessment.interviewData?.interviewId || null,
+        interviewStatus: 'completed'
+      });
+      assessment.changed('interviewData', true);
+      await assessment.save();
+      if (!['approved', 'generating'].includes(assessment.status) && services.assessment?.enterGenerating) {
+        await services.assessment.enterGenerating(assessment);
       }
-    } else if (['pending'].includes(assessment.status) || !assessment.status) {
+      return assessment;
+    }
+
+    if (['pending'].includes(assessment.status) || !assessment.status) {
       assessment.status = 'interviewing';
     }
     // 二次邀请换项目时必须覆盖，勿用 || 保留旧项目

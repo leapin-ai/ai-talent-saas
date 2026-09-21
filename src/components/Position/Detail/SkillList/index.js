@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Flex } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
@@ -7,22 +7,37 @@ import withLocale from '../../withLocale';
 import ImportanceBar from './ImportanceBar';
 import ChangeTag from './ChangeTag';
 import SkillPreview from './SkillPreview';
-import { CHANGE_META, CHANGE_VALUES, countByChange, normalizeSkills, ORIGIN_META } from './skillModel';
+import { CHANGE_META, CHANGE_VALUES, countByChange, LEVEL_META, normalizeSkills } from './skillModel';
+import iconCollapse from './assets/icon-collapse.svg';
 import style from './style.module.scss';
 
+const parseActivityGroup = raw => {
+  const text = String(raw || '').trim();
+  if (!text) {
+    return { code: '', title: '' };
+  }
+  const matched = text.match(/^([A-Za-z]?\d{1,3})\s*[·.\-–—:]?\s+(.+)$/);
+  if (matched) {
+    return { code: matched[1].toUpperCase(), title: matched[2].trim() };
+  }
+  if (/^[A-Za-z]?\d{1,3}$/.test(text)) {
+    return { code: text.toUpperCase(), title: '' };
+  }
+  return { code: '', title: text };
+};
+
 const SkillList = createWithRemoteLoader({
-  modules: ['components-core:Table']
+  modules: ['components-core:Table@TablePage']
 })(
   withLocale(({ remoteModules, skill }) => {
-    const [Table] = remoteModules;
+    const [TablePage] = remoteModules;
     const { formatMessage } = useIntl();
     const [filter, setFilter] = useState('all');
     const [selectedId, setSelectedId] = useState(null);
-    const tableWrapRef = useRef(null);
+    const [expanded, setExpanded] = useState({});
 
     const skills = useMemo(() => normalizeSkills(skill), [skill]);
     const counts = useMemo(() => countByChange(skills), [skills]);
-    const currentYear = new Date().getFullYear();
 
     const displaySkills = useMemo(() => {
       if (filter === 'all') {
@@ -31,77 +46,46 @@ const SkillList = createWithRemoteLoader({
       return skills.filter(item => item.change === filter);
     }, [skills, filter]);
 
+    const groups = useMemo(() => {
+      const map = new Map();
+      displaySkills.forEach(item => {
+        const key = item.activityGroup || '';
+        if (!map.has(key)) {
+          map.set(key, []);
+        }
+        map.get(key).push(item);
+      });
+      return [...map.entries()].map(([key, items]) => {
+        const parsed = parseActivityGroup(key);
+        return {
+          id: key || 'ungrouped',
+          code: parsed.code,
+          title: parsed.title || (parsed.code ? '' : formatMessage({ id: 'position.taskTitle' })),
+          children: items
+        };
+      });
+    }, [displaySkills, formatMessage]);
+
     useEffect(() => {
-      if (displaySkills.length === 0) {
+      const flat = groups.flatMap(group => group.children);
+      if (flat.length === 0) {
         setSelectedId(null);
         return;
       }
-      setSelectedId(prev => (prev && displaySkills.some(item => item.id === prev) ? prev : displaySkills[0].id));
-    }, [displaySkills]);
+      setSelectedId(prev => (prev && flat.some(item => item.id === prev) ? prev : flat[0].id));
+    }, [groups]);
 
     const selectedSkill = useMemo(() => {
+      const flat = groups.flatMap(group => group.children);
       if (!selectedId) {
-        return displaySkills[0] || null;
+        return flat[0] || null;
       }
-      return displaySkills.find(item => item.id === selectedId) || displaySkills[0] || null;
-    }, [selectedId, displaySkills]);
+      return flat.find(item => item.id === selectedId) || flat[0] || null;
+    }, [selectedId, groups]);
 
-    useEffect(() => {
-      const root = tableWrapRef.current;
-      if (!root) {
-        return undefined;
-      }
-
-      const syncSelectedRows = () => {
-        const rows = root.querySelectorAll('.ant-table-tbody > tr[data-row-key]');
-        rows.forEach(row => {
-          const active = !!(selectedSkill?.id && row.getAttribute('data-row-key') === selectedSkill.id);
-          row.setAttribute('data-selected', active ? 'true' : 'false');
-        });
-      };
-
-      syncSelectedRows();
-      const observer = new MutationObserver(syncSelectedRows);
-      observer.observe(root, { childList: true, subtree: true });
-      return () => observer.disconnect();
-    }, [selectedSkill?.id, displaySkills]);
-
-    const filterItems = [
-      { key: 'all', label: formatMessage({ id: 'position.skillFilterAll' }), count: skills.length },
-      ...CHANGE_VALUES.map(key => ({
-        key,
-        label: formatMessage({ id: CHANGE_META[key].labelKey }),
-        count: counts[key],
-        bg: CHANGE_META[key].bg,
-        color: CHANGE_META[key].color
-      }))
-    ];
-
-    const columns = [
-      {
-        name: 'name',
-        title: formatMessage({ id: 'position.skillName' }),
-        type: 'mainInfo'
-      },
-      {
-        name: 'origin',
-        title: formatMessage({ id: 'position.skillOrigin' }),
-        type: 'other',
-        valueOf: item => formatMessage({ id: (ORIGIN_META[item.origin] || ORIGIN_META.existing).labelKey })
-      },
-      {
-        name: 'importance',
-        title: formatMessage({ id: 'position.skillImportanceColumn' }, { year: currentYear }),
-        type: 'other',
-        valueOf: item => <ImportanceBar importanceNow={item.importanceNow} importanceYear={item.importanceYear} />
-      },
-      {
-        name: 'change',
-        title: formatMessage({ id: 'position.skillChange' }),
-        type: 'other',
-        valueOf: item => <ChangeTag change={item.change} />
-      }
-    ];
+    const toggleGroup = id => {
+      setExpanded(prev => ({ ...prev, [id]: !(prev[id] !== false) }));
+    };
 
     const selectSkillById = id => {
       if (id && id !== selectedId) {
@@ -109,13 +93,76 @@ const SkillList = createWithRemoteLoader({
       }
     };
 
-    const onTableMouseOver = e => {
-      const tr = e.target.closest?.('.ant-table-tbody > tr[data-row-key]');
-      if (!tr || !e.currentTarget.contains(tr)) {
-        return;
-      }
-      selectSkillById(tr.getAttribute('data-row-key'));
+    const columns = [
+      { name: 'name', title: formatMessage({ id: 'position.skillName' }) },
+      { name: 'change', title: formatMessage({ id: 'position.skillChangeColumn' }) },
+      { name: 'importance', title: formatMessage({ id: 'position.skillImportanceColumn' }) },
+      { name: 'confidence', title: formatMessage({ id: 'position.confidence' }) }
+    ];
+
+    const renderCard = ({ displayDataSource, dataSource = [] }) => {
+      const list = displayDataSource || dataSource;
+      return (
+        <div className={style['task-table']}>
+          <div className={classnames(style['task-row'], style['task-head'])}>
+            {columns.map(column => (
+              <div key={column.name} className={style[`task-col-${column.name}`]}>
+                {column.title}
+              </div>
+            ))}
+          </div>
+          {list.map(group => {
+            const open = expanded[group.id] !== false;
+            return (
+              <div key={group.id} className={style['task-group']}>
+                <button type="button" className={style['task-parent']} onClick={() => toggleGroup(group.id)} aria-expanded={open}>
+                  <span className={style['task-parent-main']}>
+                    {group.code ? <span className={style['activity-code']}>{group.code}</span> : null}
+                    <span className={style['activity-meta']}>
+                      <span className={style['activity-title']}>{group.title || group.code || formatMessage({ id: 'position.taskTitle' })}</span>
+                      <span className={style['activity-count']}>{formatMessage({ id: 'position.activityTaskCount' }, { count: group.children.length })}</span>
+                    </span>
+                  </span>
+                  <img className={classnames(style['collapse-icon'], !open && style['collapse-icon-collapsed'])} src={iconCollapse} alt="" />
+                </button>
+                {open
+                  ? group.children.map(item => (
+                      <div
+                        key={item.id}
+                        className={classnames(style['task-row'], style['task-child'], selectedSkill?.id === item.id && style['task-selected'])}
+                        onMouseEnter={() => selectSkillById(item.id)}
+                        onClick={() => selectSkillById(item.id)}
+                      >
+                        <div className={classnames(style['task-name'], style['task-col-name'])} title={item.name}>
+                          {item.name}
+                        </div>
+                        <div className={style['task-col-change']}>
+                          <ChangeTag change={item.change} />
+                        </div>
+                        <div className={style['task-col-importance']}>
+                          <ImportanceBar importanceNow={item.importanceNow} importanceYear={item.importanceYear} />
+                        </div>
+                        <div className={style['task-col-confidence']}>{formatMessage({ id: (LEVEL_META[item.confidence] || LEVEL_META.medium).labelKey })}</div>
+                      </div>
+                    ))
+                  : null}
+              </div>
+            );
+          })}
+        </div>
+      );
     };
+
+    const filterItems = [
+      { key: 'all', label: formatMessage({ id: 'position.skillFilterAll' }), count: skills.length },
+      ...CHANGE_VALUES.map(key => ({
+        key,
+        label: formatMessage({ id: CHANGE_META[key].filterLabelKey || CHANGE_META[key].labelKey }),
+        count: counts[key],
+        bg: CHANGE_META[key].bg,
+        color: CHANGE_META[key].color
+      }))
+    ];
 
     return (
       <div className={style.root}>
@@ -134,7 +181,7 @@ const SkillList = createWithRemoteLoader({
                       : {
                           background: item.bg,
                           color: item.color,
-                          borderColor: selected ? item.color : item.bg
+                          borderColor: selected ? item.color : 'transparent'
                         }
                   }
                   onClick={() => setFilter(item.key)}
@@ -147,18 +194,22 @@ const SkillList = createWithRemoteLoader({
           </div>
         </Flex>
         <div className={style.body}>
-          <div ref={tableWrapRef} className={style.table} onMouseOver={onTableMouseOver}>
-            <Table
-              dataSource={displaySkills}
-              columns={columns}
-              rowKey="id"
-              name="position-skill-list"
-              sticky={false}
-              pagination={false}
+          <div className={style.table}>
+            <TablePage
+              key={`${filter}:${groups.map(group => `${group.id}:${group.children.length}`).join(',')}`}
+              name="position-task-tree"
+              pagination={{ open: false }}
+              forceCard
               controllerOpen={false}
-              onRow={record => ({
-                onMouseEnter: () => selectSkillById(record.id)
-              })}
+              rowKey="id"
+              columns={columns}
+              renderCard={renderCard}
+              loader={() =>
+                Promise.resolve({
+                  pageData: groups,
+                  totalCount: groups.length
+                })
+              }
             />
           </div>
           {selectedSkill ? <SkillPreview skill={selectedSkill} /> : null}

@@ -10,7 +10,6 @@ import TalentProfile from '@components/TalentProfile';
 import PositionDetail from '@components/Position/Detail';
 import Home from './Home';
 import TenantHomeRedirect from './TenantHomeRedirect';
-import CompleteProfile from './CompleteProfile';
 import CompleteProfileApplicationEntry from './CompleteProfileApplicationEntry';
 import CompleteProfileApplications from './CompleteProfileApplications';
 import CompleteProfileApplicationDetail from './CompleteProfileApplicationDetail';
@@ -70,15 +69,6 @@ const TenantAdmin = createWithRemoteLoader({
             path: 'home',
             title: formatMessage({ id: 'tenantAdmin.home' }),
             element: <Home baseUrl={baseUrl} />
-          },
-          {
-            path: 'complete-profile',
-            title: formatMessage({ id: 'tenantAdmin.completeMyProfile' }),
-            element: (
-              <Permissions request={TENANT_ADMIN_PERMISSIONS.homeCompleteProfile} type="error">
-                <CompleteProfile baseUrl={baseUrl} />
-              </Permissions>
-            )
           },
           {
             path: 'complete-profile-applications',
@@ -183,10 +173,11 @@ const TenantAdmin = createWithRemoteLoader({
               onEdit: ({ data }) => {
                 navigate(`${baseUrl}/position/${data.id}/edit`);
               },
-              children: ({ insightBanner, listKey, ...renderProps }) => (
+              children: ({ insightBanner, workforceKpi, listKey, ...renderProps }) => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
                   <Page title={formatMessage({ id: 'tenantAdmin.positionManagement' })}>
                     <Flex vertical gap={16} style={{ width: '100%' }}>
+                      {workforceKpi}
                       {insightBanner}
                       <TablePageRender key={listKey} {...renderProps} withPage={false} />
                     </Flex>

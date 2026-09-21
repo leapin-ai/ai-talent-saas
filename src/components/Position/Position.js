@@ -6,6 +6,7 @@ import withLocale from './withLocale';
 import getColumns from './getColumns';
 import BaseFormInner from './PositionForm';
 import InsightBanner from './InsightBanner';
+import WorkforceKpi from './WorkforceKpi';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
 import useTablePaginationSearchParams from '../../commons/useTablePaginationSearchParams';
 
@@ -112,6 +113,7 @@ const Position = createWithRemoteLoader({
     });
 
     const insightBanner = withInsightBanner ? <InsightBanner apis={apis} onReview={applyHighChangeFilter} /> : null;
+    const workforceKpi = withInsightBanner ? <WorkforceKpi apis={apis} /> : null;
 
     return (
       <BizUnit
@@ -180,7 +182,7 @@ const Position = createWithRemoteLoader({
           }
         }}
       >
-        {typeof children === 'function' ? renderProps => children({ ...renderProps, insightBanner, listKey }) : children}
+        {typeof children === 'function' ? renderProps => children({ ...renderProps, insightBanner, workforceKpi, listKey }) : children}
       </BizUnit>
     );
   })

@@ -11,18 +11,42 @@ import style from './style.module.scss';
 
 const EMPTY_METRICS = { total: 0, assessed: 0, outdated: 0, never: 0, inProgress: 0 };
 
-const formatInRole = (years, formatMessage) => {
-  if (years == null || years === '') {
+const initialsOf = item => {
+  const name = String(item?.name || item?.nameEn || '').trim();
+  if (!name) {
     return '—';
   }
-  return formatMessage({ id: 'position.talentInRoleYears' }, { years });
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
+
+const CompletionRing = ({ value }) => {
+  const pct = value == null || value === '' ? null : Math.max(0, Math.min(100, Math.round(Number(value))));
+  if (pct == null || Number.isNaN(pct)) {
+    return <span className={style['readiness-empty']}>—</span>;
+  }
+  const radius = 14;
+  const circ = 2 * Math.PI * radius;
+  const dash = (pct / 100) * circ;
+  return (
+    <span className={style.completion}>
+      <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
+        <circle cx="18" cy="18" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="4" />
+        <circle cx="18" cy="18" r={radius} fill="none" stroke="var(--primary-color, #4183f0)" strokeWidth="4" strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round" transform="rotate(-90 18 18)" />
+      </svg>
+      <span>{pct}%</span>
+    </span>
+  );
 };
 
 const AnalyzeTalent = createWithRemoteLoader({
-  modules: ['components-core:Table@TablePage', 'components-core:Table', 'components-core:Filter', 'components-core:Image.Avatar']
+  modules: ['components-core:Table@TablePage', 'components-core:Table', 'components-core:Filter']
 })(
   withLocale(({ remoteModules, baseUrl = '', positionId, employeeListApi }) => {
-    const [TablePage, Table, Filter, Avatar] = remoteModules;
+    const [TablePage, Table, Filter] = remoteModules;
     // 此处远程模块已加载完成，覆盖才不会被 table-page 自带语言包盖掉
     registerTablePageMessages();
     const { formatMessage } = useIntl();
@@ -62,7 +86,7 @@ const AnalyzeTalent = createWithRemoteLoader({
         type: 'other',
         valueOf: item => (
           <div className={style.person}>
-            <Avatar size={32} id={item.avatar} gender={item.gender || 'M'} />
+            <span className={style.initials}>{initialsOf(item)}</span>
             <div className={style['person-text']}>
               <button type="button" className={style['person-name-link']} onClick={() => goTalentAnalysis(item)}>
                 {item.name || item.nameEn || '—'}
@@ -73,28 +97,22 @@ const AnalyzeTalent = createWithRemoteLoader({
         )
       },
       {
-        name: 'site',
-        title: formatMessage({ id: 'position.talentSite' }),
+        name: 'readiness',
+        title: formatMessage({ id: 'position.talentReadiness' }),
         type: 'other',
-        valueOf: item => item.site || item.city || '—'
+        valueOf: item => <ReadinessBar value={item.readiness} />
       },
       {
-        name: 'inRole',
-        title: formatMessage({ id: 'position.talentInRole' }),
+        name: 'completion',
+        title: formatMessage({ id: 'position.profileCompletion' }),
         type: 'other',
-        valueOf: item => formatInRole(item.inRoleYears, formatMessage)
+        valueOf: item => <CompletionRing value={item.profileCompletionPercent} />
       },
       {
         name: 'lastAssessment',
         title: formatMessage({ id: 'position.talentLastAssessment' }),
         type: 'other',
         valueOf: item => <AssessmentTag status={item.lastAssessment} />
-      },
-      {
-        name: 'readiness',
-        title: formatMessage({ id: 'position.talentReadiness' }),
-        type: 'other',
-        valueOf: item => <ReadinessBar value={item.readiness} />
       }
     ];
 
@@ -118,11 +136,7 @@ const AnalyzeTalent = createWithRemoteLoader({
             <div className={style['metric-label']}>{formatMessage({ id: 'position.talentMetricOutdated' })}</div>
           </div>
           <div className={style.metric}>
-            <div className={`${style['metric-value']} ${style['metric-value-in-progress']}`}>{metrics.inProgress || 0}</div>
-            <div className={style['metric-label']}>{formatMessage({ id: 'position.talentMetricInProgress' })}</div>
-          </div>
-          <div className={style.metric}>
-            <div className={`${style['metric-value']} ${style['metric-value-never']}`}>{metrics.never}</div>
+            <div className={`${style['metric-value']} ${style['metric-value-never']}`}>{metrics.never + (metrics.inProgress || 0)}</div>
             <div className={style['metric-label']}>{formatMessage({ id: 'position.talentMetricNever' })}</div>
           </div>
         </div>

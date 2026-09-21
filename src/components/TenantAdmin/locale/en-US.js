@@ -1,4 +1,9 @@
 const enUS = {
+  'tenantAdmin.myProfile': 'My Profile',
+  'tenantAdmin.workforceReadiness': 'Workforce Readiness',
+  'tenantAdmin.talents': 'Talents',
+  'tenantAdmin.aiAssistant': 'AI Assistant',
+  'tenantAdmin.aiAssistantPlaceholder': 'AI Assistant is available. Conversation will be connected later.',
   'tenantAdmin.home': 'Home',
   'tenantAdmin.homeSetting': 'Home Settings',
   'tenantAdmin.homeSettingBasic': 'Home Path',
@@ -145,7 +150,7 @@ const enUS = {
   'tenantAdmin.assessmentStatusSubmitted': 'Submitted',
   'tenantAdmin.assessmentStatusApproved': 'Approved',
   'tenantAdmin.assessmentStatusClosed': 'Closed',
-  'tenantAdmin.employeeProfile': 'Employees',
+  'tenantAdmin.employeeProfile': 'Talents',
   'tenantAdmin.export': 'Export',
   'tenantAdmin.internalTalentMarket': 'AI Talent Market',
   'tenantAdmin.positionManagement': 'Future Workforce',
