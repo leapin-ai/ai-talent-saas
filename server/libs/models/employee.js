@@ -77,6 +77,18 @@ module.exports = ({ DataTypes, options }) => {
         type: DataTypes.STRING,
         comment: '统招类型:统招、自考、在职、成教、函授等'
       },
+      profileCompletionPercent: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+        comment: '档案完成度 0-100'
+      },
+      profileCompletionChecklist: {
+        type: DataTypes.JSONB,
+        allowNull: false,
+        defaultValue: [],
+        comment: '档案完成度清单'
+      },
       status: {
         type: DataTypes.ENUM('ACTIVE', 'RESIGN', 'STOP_SALARY', 'RETIRE', 'INTERN', 'PRE_EMPLOYEE'),
         comment: 'ACTIVE:在职,RESIGN:离职,STOP_SALARY:停薪留职,RETIRE:退休,INTERN:实习,PRE_EMPLOYEE:预入职'

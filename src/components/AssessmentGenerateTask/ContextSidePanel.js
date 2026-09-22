@@ -97,7 +97,26 @@ const SubmittedInfoPane = ({ submittedInfo, assessment }) => {
   );
 };
 
-const InterviewPane = () => <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="AI 面试数据暂未接入，后续在此展示报告与结论" />;
+const InterviewPane = createWithRemoteLoader({
+  modules: ['ai-interview-flowup:ComponentPreset', 'ai-interview-flowup:InterviewResultSession', 'components-core:Global@useGlobalValue']
+})(({ remoteModules, interview, interviewError, apiHost }) => {
+  const [ComponentPreset, InterviewResultSession, useGlobalValue] = remoteModules;
+  const hostThemeToken = useGlobalValue('themeToken');
+  if (interviewError) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={interviewError} />;
+  }
+  if (!interview) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无面试数据" />;
+  }
+  if (!ComponentPreset || !InterviewResultSession || !apiHost) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="面试结果组件未就绪" />;
+  }
+  return (
+    <ComponentPreset apiHost={apiHost} themeToken={hostThemeToken}>
+      <InterviewResultSession data={interview} />
+    </ComponentPreset>
+  );
+});
 
 const ContextSidePanel = ({ context, resumeParsed, onResumeParsedChange }) => {
   const resumes = Array.isArray(context?.resumes) ? context.resumes : [];
@@ -139,7 +158,7 @@ const ContextSidePanel = ({ context, resumeParsed, onResumeParsedChange }) => {
             label: 'AI 面试',
             children: (
               <div className={style['side-tab-body']}>
-                <InterviewPane />
+                <InterviewPane interview={context?.interview} interviewError={context?.interviewError} apiHost={context?.apiHost} />
               </div>
             )
           }

@@ -2,7 +2,6 @@ const employeeArchiveCard = code => [`tenant-admin:employee-archive:${code}`, `t
 
 export const TENANT_ADMIN_PERMISSIONS = {
   home: ['tenant-admin:home', 'tenant-admin:home:view'],
-  homeCompleteProfile: ['tenant-admin:home:complete-profile'],
   talentMarketplace: ['tenant-admin:talent-marketplace', 'tenant-admin:talent-marketplace:view'],
   positionManagement: ['tenant-admin:position-management', 'tenant-admin:position-management:view'],
   positionCreate: ['tenant-admin:position-management:create'],

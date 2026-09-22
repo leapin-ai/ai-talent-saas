@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { App, Button, Empty, Flex, Spin, Tabs, Typography } from 'antd';
+import { App, Button, Empty, Spin, Tabs } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
+import iconRoleOverview from './assets/icon-role-overview.svg';
+import iconKeyResponsibilities from './assets/icon-key-responsibilities.svg';
+import iconRoleRequirements from './assets/icon-role-requirements.svg';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
@@ -8,9 +11,8 @@ import { useFetch } from '@kne/react-fetch';
 import { useLocation, useMatch, useNavigate, useParams } from 'react-router-dom';
 import { Page } from '@kne/system-layout';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
-import SkillList from './SkillList';
-import SkillOverview from './SkillList/SkillOverview';
 import AnalyzeTalent from './AnalyzeTalent';
+import RoleInsights from './RoleInsights';
 import AiAnalysis from './AiAnalysis';
 import style from './style.module.scss';
 
@@ -87,7 +89,7 @@ const Detail = createWithRemoteLoader({
     const { id: paramId } = useParams();
     const detailMatch = useMatch({ path: `${String(baseUrl).replace(/\/$/, '')}/position/:id`, end: true });
     const id = resolvePositionId({ paramId: paramId || detailMatch?.params?.id, pathname, baseUrl });
-    const [activeTab, setActiveTab] = useState('role');
+    const [activeTab, setActiveTab] = useState('insights');
     const [starting, setStarting] = useState(false);
     const pageTitleFallback = formatMessage({ id: 'position.bizName' });
 
@@ -135,7 +137,6 @@ const Detail = createWithRemoteLoader({
       });
     }
 
-    const department = (data.orgEnums || []).find(target => target.value === data.tenantOrgId)?.description || '-';
     const showAnalysisCard = isAnalysisCardStatus(data.analysisStatus);
     const isLocked = data.analysisStatus === 'locked';
     const lockAnalysis = async () => {
@@ -188,35 +189,53 @@ const Detail = createWithRemoteLoader({
       </Button>
     ) : null;
 
+    const requirementLines = String(data.requirement || '')
+      .replace(/<[^>]+>/g, '\n')
+      .split(/\n+/)
+      .map(line => line.replace(/^[-•·]\s*/, '').trim())
+      .filter(Boolean);
     const positionInfoCard = (
-      <DetailPanel className={style['position-info']} title={formatMessage({ id: 'position.positionInfo' })} extra={editExtra}>
+      <DetailPanel className={style['position-info']} extra={editExtra}>
         <div className={style.sections}>
           <section className={style.section}>
-            <h3 className={style['section-title']}>{formatMessage({ id: 'position.basicInfo' })}</h3>
+            <h3 className={`${style['section-title']} ${style['section-title-overview']}`}>
+              <img className={style['section-icon']} src={iconRoleOverview} alt="" />
+              {formatMessage({ id: 'position.roleOverview' })}
+            </h3>
             <MetaGrid
               items={[
                 { label: formatMessage({ id: 'position.name' }), value: text(data.name) },
-                { label: formatMessage({ id: 'position.department' }), value: text(department) },
+                { label: formatMessage({ id: 'position.roleFunction' }), value: text(data.capacity) },
                 { label: formatMessage({ id: 'position.status' }), value: enumLabel('positionStatus', data.status) },
                 { label: formatMessage({ id: 'position.language' }), value: enumLabel('language', data.language) }
               ]}
             />
           </section>
           <section className={style.section}>
-            <h3 className={style['section-title']}>{formatMessage({ id: 'position.workContent' })}</h3>
+            <h3 className={`${style['section-title']} ${style['section-title-duty']}`}>
+              <img className={style['section-icon']} src={iconKeyResponsibilities} alt="" />
+              {formatMessage({ id: 'position.keyResponsibilities' })}
+            </h3>
             <div className={style['rich-content']}>
               <RichContent html={data.description} />
             </div>
           </section>
           <section className={style.section}>
-            <h3 className={style['section-title']}>{formatMessage({ id: 'position.workRequirement' })}</h3>
-            <div className={style['rich-content']}>
-              <RichContent html={data.requirement} />
-            </div>
-          </section>
-          <section className={style.section}>
-            <h3 className={style['section-title']}>{formatMessage({ id: 'position.futureBusinessGoal' })}</h3>
-            <Typography.Paragraph className={style['plain-text']}>{text(data.developmentGoal)}</Typography.Paragraph>
+            <h3 className={`${style['section-title']} ${style['section-title-req']}`}>
+              <img className={style['section-icon']} src={iconRoleRequirements} alt="" />
+              {formatMessage({ id: 'position.roleRequirements' })}
+            </h3>
+            {requirementLines.length > 1 ? (
+              <ul className={style.bullets}>
+                {requirementLines.map(line => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            ) : (
+              <div className={style['rich-content']}>
+                <RichContent html={data.requirement} />
+              </div>
+            )}
           </section>
         </div>
       </DetailPanel>
@@ -225,30 +244,30 @@ const Detail = createWithRemoteLoader({
     const content = showAnalysisCard ? (
       <AiAnalysis positionName={data.name} progress={data.analysisProgress} locked={isLocked} animate={!isLocked} onAnimationComplete={lockAnalysis} />
     ) : (
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={[
-          {
-            key: 'role',
-            label: formatMessage({ id: 'position.tabRoleDetails' }),
-            children: (
-              <Flex vertical gap={24}>
-                <SkillOverview skill={data.skill} verdict={data.verdict} />
-                <DetailPanel title={formatMessage({ id: 'position.skillListTitle' })}>
-                  <SkillList positionId={data.id} skill={data.skill} apis={apis} reload={reload} />
-                </DetailPanel>
-                {positionInfoCard}
-              </Flex>
-            )
-          },
-          {
-            key: 'analyze',
-            label: formatMessage({ id: 'position.tabAnalyzeTalent' }),
-            children: <AnalyzeTalent baseUrl={baseUrl} positionId={data.id} employeeListApi={apis.employeeList} />
-          }
-        ]}
-      />
+      <div>
+        <span className={style.badge}>{formatMessage({ id: 'position.futureRoleBadge' })}</span>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'insights',
+              label: formatMessage({ id: 'position.tabRoleInsights' }),
+              children: <RoleInsights apis={apis} position={data} />
+            },
+            {
+              key: 'analyze',
+              label: formatMessage({ id: 'position.tabAnalyzeTalent' }),
+              children: <AnalyzeTalent baseUrl={baseUrl} positionId={data.id} employeeListApi={apis.employeeList} />
+            },
+            {
+              key: 'role',
+              label: formatMessage({ id: 'position.tabRoleDetails' }),
+              children: positionInfoCard
+            }
+          ]}
+        />
+      </div>
     );
 
     return renderShell({

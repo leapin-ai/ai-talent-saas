@@ -844,6 +844,22 @@ module.exports = fp(async (fastify, options) => {
     const resumeParsed = await resolveResumeParsed(row.profileData || {}, resumes);
     const { resumes: _r, resumeParsed: _rp, ...submittedProfileData } = row.profileData || {};
 
+    let interview = null;
+    let interviewError = null;
+    let apiHost = '';
+    const interviewId = row.clientUserId || row.interviewData?.interviewId || null;
+    try {
+      const setting = await services.aiInterview.detail({ tenantId });
+      apiHost = setting?.apiUrl ? services.aiInterview.getAjaxBaseUrl(setting.apiUrl) : '';
+      if (!interviewId) {
+        interviewError = '缺少面试 clientUserId';
+      } else {
+        interview = await services.aiInterview.getInterviewDetail({ tenantId, id: interviewId });
+      }
+    } catch (error) {
+      interviewError = error?.message || '拉取面试详情失败';
+    }
+
     return {
       task: {
         id: task.id,
@@ -857,7 +873,10 @@ module.exports = fp(async (fastify, options) => {
       profileDetail,
       resumes,
       resumeParsed,
-      submittedInfo: submittedProfileData
+      submittedInfo: submittedProfileData,
+      interview,
+      interviewError,
+      apiHost
     };
   };
 
@@ -907,6 +926,15 @@ module.exports = fp(async (fastify, options) => {
     row.status = 'submitted';
     row.generateTaskId = task.id;
     await row.save();
+    try {
+      const linked = await loadEmployeeByTenantUserId(tenantId, row.tenantUserId);
+      if (linked && services.workforce) {
+        await services.workforce.seedEvidenceFromEmployee({ tenantId, employee: linked, assessment: row });
+        await services.workforce.recomputeProfileCompletion({ tenantId, employeeId: linked.id, assessment: row });
+      }
+    } catch (error) {
+      fastify.log.warn({ err: error }, 'profile completion after generate failed');
+    }
 
     await fastify.task.services.complete({
       id: task.id,
@@ -1114,6 +1142,14 @@ module.exports = fp(async (fastify, options) => {
 
     row.status = 'approved';
     await row.save();
+    try {
+      if (services.workforce) {
+        await services.workforce.seedEvidenceFromEmployee({ tenantId, employee, assessment: row });
+        await services.workforce.recomputeProfileCompletion({ tenantId, employeeId: employee.id, assessment: row });
+      }
+    } catch (error) {
+      fastify.log.warn({ err: error }, 'profile completion after approve failed');
+    }
 
     const linked = await loadEmployeeByTenantUserId(tenantId, row.tenantUserId);
     return enrichAssessmentRow(row, linked ? linked.get({ plain: true }) : { id: employee.id, name, phone, email, tenantUserId: row.tenantUserId });
@@ -1173,6 +1209,7 @@ module.exports = fp(async (fastify, options) => {
       getDetail,
       markSubmitted,
       getGenerateTaskContext,
+      enterGenerating,
       completeGenerate,
       aiFillGenerate,
       saveReviewData,

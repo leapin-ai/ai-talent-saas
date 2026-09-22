@@ -2,7 +2,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Flex, Typography } from 'antd';
+import { Flex, Tabs, Typography } from 'antd';
 import classnames from 'classnames';
 import { FaLightbulb } from 'react-icons/fa';
 import dayjs from 'dayjs';
@@ -12,6 +12,7 @@ import HeaderCard from './HeaderCard';
 import LeftColumn from './LeftColumn';
 import MiddleColumn from './MiddleColumn';
 import RightColumn from './RightColumn';
+import ProfileReadiness from './ProfileReadiness';
 import CardGate from './CardGate';
 import style from './style.module.scss';
 import { resolveIntentionDisplay } from './intentionPositionUtils';
@@ -211,9 +212,15 @@ const TalentProfile = createWithRemoteLoader({
           phone: data.phone,
           email: data.email,
           description: data.description,
-          linkedin: '',
+          linkedin: data.profile?.options?.linkedin || data.options?.linkedin || '',
           location: data.city,
-          languages: '',
+          languages: (() => {
+            const raw = data.profile?.options?.languages || data.profile?.options?.language || data.options?.languages || data.options?.language || data.language || '';
+            if (Array.isArray(raw)) {
+              return raw.filter(Boolean).join(', ');
+            }
+            return raw || '';
+          })(),
           serviceYears: data.hireDate ? Math.floor((new Date() - new Date(data.hireDate)) / (365 * 24 * 60 * 60 * 1000)) : 0,
           totalWorkYears: data.options?.start_work_date ? Math.floor((new Date() - new Date(data.options.start_work_date)) / (365 * 24 * 60 * 60 * 1000)) : 0,
           isOnline: data.status === 'ACTIVE'
@@ -330,49 +337,76 @@ const TalentProfile = createWithRemoteLoader({
                 saveEmployee={saveEmployee}
                 profileData={profileData}
                 readOnly={readOnly}
-                title={
-                  <Typography.Link
-                    onClick={() => {
-                      gotoPosition(profileData.positionId);
-                    }}
-                  >
-                    {profileData.position}
-                  </Typography.Link>
+                percent={data.profileCompletionPercent}
+                checklist={data.profileCompletionChecklist}
+                employeeId={employeeId}
+                onPositionClick={
+                  profileData.positionId
+                    ? () => {
+                        gotoPosition(profileData.positionId);
+                      }
+                    : undefined
                 }
               />
             </CardGate>
-            <div className={style['main-content']}>
-              <LeftColumn
-                readOnly={readOnly}
-                saveProfile={saveProfile}
-                profileData={profileData}
-                advantages={advantages}
-                certificates={certificates}
-                promotionHistory={promotionHistory}
-                gotoPosition={gotoPosition}
-                permissions={cardPermissions}
-              />
-              <MiddleColumn
-                readOnly={readOnly}
-                employeeId={employeeId}
-                createPerformance={createPerformance}
-                removePerformance={removePerformance}
-                savePerformance={savePerformance}
-                saveProfile={saveProfile}
-                skillTags={skillTags}
-                targetPositions={targetPositions}
-                mobilityPreferences={mobilityPreferences}
-                interests={interests}
-                performanceReviews={performanceReviews}
-                originData={data}
-                positionEnums={data.positionEnums}
-                positionListApi={apis.positionList}
-                skillRadarData={{ employee: data.profile?.aiInterviewReport || [], industry: [] }}
-                gotoPosition={gotoPosition}
-                permissions={cardPermissions}
-              />
-              <RightColumn saveProfile={saveProfile} careerPath={careerPath} aiRecommendations={aiRecommendations} gotoPosition={gotoPosition} permissions={cardPermissions} />
-            </div>
+            <Tabs
+              items={[
+                {
+                  key: 'readiness',
+                  label: formatMessage({ id: 'talentProfile.tabReadiness' }),
+                  children: <ProfileReadiness employeeId={employeeId} displayName={profileData.name} positionId={data.options?.position?.id || (typeof data.options?.position === 'string' ? data.options.position : null)} />
+                },
+                {
+                  key: 'growth',
+                  label: formatMessage({ id: 'talentProfile.tabGrowth' }),
+                  children: <RightColumn section="growth" careerPath={careerPath} aiRecommendations={aiRecommendations} gotoPosition={gotoPosition} permissions={cardPermissions} />
+                },
+                {
+                  key: 'match',
+                  label: formatMessage({ id: 'talentProfile.tabMatch' }),
+                  children: <RightColumn section="match" careerPath={careerPath} aiRecommendations={aiRecommendations} gotoPosition={gotoPosition} permissions={cardPermissions} />
+                },
+                {
+                  key: 'profile',
+                  label: formatMessage({ id: 'talentProfile.tabProfile' }),
+                  children: (
+                    <div className={style['main-content']}>
+                      <LeftColumn
+                        section="strengths"
+                        readOnly={readOnly}
+                        saveProfile={saveProfile}
+                        profileData={profileData}
+                        advantages={advantages}
+                        certificates={certificates}
+                        promotionHistory={promotionHistory}
+                        gotoPosition={gotoPosition}
+                        permissions={cardPermissions}
+                      />
+                      <MiddleColumn
+                        section="preferences"
+                        readOnly={readOnly}
+                        employeeId={employeeId}
+                        createPerformance={createPerformance}
+                        removePerformance={removePerformance}
+                        savePerformance={savePerformance}
+                        saveProfile={saveProfile}
+                        skillTags={skillTags}
+                        targetPositions={targetPositions}
+                        mobilityPreferences={mobilityPreferences}
+                        interests={interests}
+                        performanceReviews={performanceReviews}
+                        originData={data}
+                        positionEnums={data.positionEnums}
+                        positionListApi={apis.positionList}
+                        skillRadarData={{ employee: data.profile?.aiInterviewReport || [], industry: [] }}
+                        gotoPosition={gotoPosition}
+                        permissions={cardPermissions}
+                      />
+                    </div>
+                  )
+                }
+              ]}
+            />
           </Flex>
         );
       };

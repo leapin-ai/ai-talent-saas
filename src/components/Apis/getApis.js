@@ -70,7 +70,23 @@ const getApis = options => {
             method: 'GET'
           },
           insight: {
-            url: `${prefix}/tenant/position/insight`,
+            url: `${prefix}/tenant/position/workforce-summary`,
+            method: 'GET'
+          },
+          workforceSummary: {
+            url: `${prefix}/tenant/position/workforce-summary`,
+            method: 'GET'
+          },
+          tasks: {
+            url: `${prefix}/tenant/position/tasks`,
+            method: 'GET'
+          },
+          replaceTasks: {
+            url: `${prefix}/tenant/position/tasks/replace`,
+            method: 'POST'
+          },
+          taskReadiness: {
+            url: `${prefix}/tenant/position/task-readiness`,
             method: 'GET'
           },
           detail: {
@@ -143,6 +159,10 @@ const getApis = options => {
           },
           myDetail: {
             url: `${prefix}/tenant/employee/my-detail`,
+            method: 'GET'
+          },
+          evidence: {
+            url: `${prefix}/tenant/employee/evidence`,
             method: 'GET'
           },
           create: {

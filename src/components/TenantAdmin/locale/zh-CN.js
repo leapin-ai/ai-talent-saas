@@ -1,4 +1,9 @@
 const zhCN = {
+  'tenantAdmin.myProfile': '我的档案',
+  'tenantAdmin.workforceReadiness': 'Workforce Readiness',
+  'tenantAdmin.talents': '人才',
+  'tenantAdmin.aiAssistant': 'AI 助手',
+  'tenantAdmin.aiAssistantPlaceholder': 'AI 助手入口已打开。具体对话能力随后接入。',
   'tenantAdmin.home': '首页',
   'tenantAdmin.homeSetting': '首页设置',
   'tenantAdmin.homeSettingBasic': '首页路径',
@@ -145,7 +150,7 @@ const zhCN = {
   'tenantAdmin.assessmentStatusSubmitted': '已提交',
   'tenantAdmin.assessmentStatusApproved': '已通过',
   'tenantAdmin.assessmentStatusClosed': '已关闭',
-  'tenantAdmin.employeeProfile': '员工',
+  'tenantAdmin.employeeProfile': '人才',
   'tenantAdmin.export': '导出',
   'tenantAdmin.internalTalentMarket': '内部人才市场',
   'tenantAdmin.positionManagement': '角色分析',

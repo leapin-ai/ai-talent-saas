@@ -66,7 +66,7 @@ const InsightBanner = createWithRemoteLoader({
           }
           const payload = resData.data || {};
           setInsight({
-            highChangeCount: Number(payload.highChangeCount) || 0,
+            highChangeCount: Number(payload.highChangeRoles ?? payload.highChangeCount) || 0,
             sampleNames: Array.isArray(payload.sampleNames) ? payload.sampleNames : []
           });
         } catch (e) {

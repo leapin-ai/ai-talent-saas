@@ -28,12 +28,12 @@ export const IMPORTANCE_MIN = 1;
 export const IMPORTANCE_MAX = 5;
 
 export const CHANGE_META = {
-  must_build: { labelKey: 'position.skillChange.must_build', bg: '#dfdeff', color: '#121163' },
-  ai_emerging: { labelKey: 'position.skillChange.ai_emerging', bg: '#ecf2ed', color: '#2a533c' },
-  new: { labelKey: 'position.skillChange.new', bg: '#a4e0fc', color: '#0d4159' },
-  enhanced: { labelKey: 'position.skillChange.enhanced', bg: '#fce0d1', color: '#5f2d11' },
-  stable: { labelKey: 'position.skillChange.stable', bg: '#d1dce7', color: '#132c5d' },
-  declining: { labelKey: 'position.skillChange.declining', bg: '#f0dcf6', color: '#5a105f' }
+  must_build: { labelKey: 'position.skillChange.must_build', filterLabelKey: 'position.skillFilter.must_build', bg: '#dfdeff', color: '#121163' },
+  ai_emerging: { labelKey: 'position.skillChange.ai_emerging', filterLabelKey: 'position.skillFilter.ai_emerging', bg: '#ecf2ed', color: '#2a533c' },
+  new: { labelKey: 'position.skillChange.new', filterLabelKey: 'position.skillFilter.new', bg: '#a4e0fc', color: '#0d4159' },
+  enhanced: { labelKey: 'position.skillChange.enhanced', filterLabelKey: 'position.skillFilter.enhanced', bg: '#fce0d1', color: '#5f2d11' },
+  stable: { labelKey: 'position.skillChange.stable', filterLabelKey: 'position.skillFilter.stable', bg: '#d1dce7', color: '#132c5d' },
+  declining: { labelKey: 'position.skillChange.declining', filterLabelKey: 'position.skillFilter.declining', bg: '#f0dcf6', color: '#5a105f' }
 };
 
 export const ORIGIN_META = {
@@ -181,7 +181,8 @@ export const normalizeSkillItem = (raw, index = 0) => {
     change,
     aiExposure,
     confidence,
-    contentItems: normalizeSkillContentItems(raw)
+    contentItems: normalizeSkillContentItems(raw),
+    activityGroup: typeof raw.activityGroup === 'string' ? raw.activityGroup.trim() : ''
   };
 };
 

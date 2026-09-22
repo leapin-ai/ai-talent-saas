@@ -11,10 +11,6 @@ module.exports = {
             {
               name: '查看',
               code: 'view'
-            },
-            {
-              name: '完善档案',
-              code: 'complete-profile'
             }
           ]
         },

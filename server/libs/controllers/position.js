@@ -197,16 +197,99 @@ module.exports = fp(async (fastify, options) => {
   );
 
   fastify.get(
-    `${options.prefix}/tenant/position/insight`,
+    `${options.prefix}/tenant/position/workforce-summary`,
     {
       onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
       schema: {
-        summary: '岗位列表洞察（高变动幅度等）'
+        summary: 'Workforce Readiness 岗位汇总 KPI'
       }
     },
     async request => {
-      return services.position.insight(request.tenantUserInfo);
+      return services.workforce.workforceSummary(request.tenantUserInfo);
     }
+  );
+
+  fastify.get(
+    `${options.prefix}/tenant/position/tasks`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '岗位任务列表',
+        query: {
+          type: 'object',
+          properties: {
+            positionId: { type: 'string' },
+            changeTag: { type: 'string' },
+            activityGroup: { type: 'string' },
+            confidence: { type: 'string' }
+          },
+          required: ['positionId']
+        }
+      }
+    },
+    async request => services.workforce.listTasks(request.tenantUserInfo, request.query)
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/position/tasks/replace`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '替换岗位任务',
+        body: {
+          type: 'object',
+          properties: {
+            positionId: { type: 'string' },
+            tasks: { type: 'array' },
+            outlook: { type: 'object' },
+            workforceStrategy: { type: 'array' }
+          },
+          required: ['positionId']
+        }
+      }
+    },
+    async request => services.workforce.replaceTasks(request.tenantUserInfo, request.body)
+  );
+
+  fastify.get(
+    `${options.prefix}/tenant/position/task-readiness`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '员工任务就绪',
+        query: {
+          type: 'object',
+          properties: {
+            positionId: { type: 'string' },
+            employeeId: { type: 'string' },
+            status: { type: 'string' },
+            activityGroup: { type: 'string' }
+          },
+          required: ['positionId', 'employeeId']
+        }
+      }
+    },
+    async request => services.workforce.getTaskReadiness(request.tenantUserInfo, request.query)
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/position/task-readiness/replace`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '写入员工任务就绪',
+        body: {
+          type: 'object',
+          properties: {
+            positionId: { type: 'string' },
+            employeeId: { type: 'string' },
+            rows: { type: 'array' }
+          },
+          required: ['positionId', 'employeeId']
+        }
+      }
+    },
+    async request => services.workforce.replaceTaskReadiness(request.tenantUserInfo, request.body)
   );
 
   fastify.get(

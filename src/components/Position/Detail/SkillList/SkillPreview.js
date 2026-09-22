@@ -15,21 +15,22 @@ const LevelTag = ({ level, prefixId }) => {
   );
 };
 
-const resolveSourceLabel = (source, formatMessage, messages) => {
-  if (!source) {
+const formatSource = (source, formatMessage) => {
+  const text = typeof source === 'string' ? source.trim() : '';
+  if (!text) {
     return '';
   }
-  if (messages && Object.prototype.hasOwnProperty.call(messages, source)) {
-    return formatMessage({ id: source });
+  if (/^source\s*[:：]/i.test(text)) {
+    return text;
   }
-  return source;
+  return `${formatMessage({ id: 'position.skillContentSource' })}: ${text}`;
 };
 
 const SkillPreview = createWithRemoteLoader({
   modules: ['components-core:Common@SimpleBar']
 })(({ remoteModules, skill }) => {
   const [SimpleBar] = remoteModules;
-  const { formatMessage, messages } = useIntl();
+  const { formatMessage } = useIntl();
 
   if (!skill) {
     return null;
@@ -44,14 +45,10 @@ const SkillPreview = createWithRemoteLoader({
       </div>
     ) : (
       items.map((item, index) => (
-        <div key={`${item.title}-${index}`} className={style['preview-card']}>
+        <div key={`${item.title}-${item.source}-${index}`} className={style['preview-card']}>
           {item.title ? <div className={style['preview-card-title']}>{item.title}</div> : null}
           {item.description ? <div className={style['preview-card-body']}>{item.description}</div> : null}
-          {item.source ? (
-            <div className={style['preview-card-source']}>
-              {formatMessage({ id: 'position.skillContentSource' })}：{resolveSourceLabel(item.source, formatMessage, messages)}
-            </div>
-          ) : null}
+          {item.source ? <div className={style['preview-card-source']}>{formatSource(item.source, formatMessage)}</div> : null}
         </div>
       ))
     );
