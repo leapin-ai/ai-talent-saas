@@ -90,13 +90,79 @@ module.exports = fp(async (fastify, options) => {
           type: 'object',
           properties: {
             employeeId: { type: 'string' },
-            sourceType: { type: 'string' }
+            sourceType: { type: 'string' },
+            taskId: { type: 'string', description: '按岗位任务过滤（所用证据）' }
           },
           required: ['employeeId']
         }
       }
     },
     async request => services.workforce.listEvidence(request.tenantUserInfo, request.query)
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/employee/evidence/save`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '保存员工证据',
+        body: {
+          type: 'object',
+          properties: {
+            employeeId: { type: 'string' },
+            id: { type: 'string' },
+            sourceType: { type: 'string' },
+            title: { type: 'string' },
+            summary: { type: 'string' },
+            fileId: { type: 'string' },
+            uri: { type: 'string' },
+            confidence: { type: 'string' },
+            taskIds: { type: 'array', items: { type: 'string' } }
+          },
+          required: ['employeeId']
+        }
+      }
+    },
+    async request => services.workforce.saveEvidence(request.tenantUserInfo, request.body)
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/employee/evidence/replace-task`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '替换某任务下的所用证据',
+        body: {
+          type: 'object',
+          properties: {
+            employeeId: { type: 'string' },
+            taskId: { type: 'string' },
+            items: { type: 'array' }
+          },
+          required: ['employeeId', 'taskId']
+        }
+      }
+    },
+    async request => services.workforce.replaceTaskEvidence(request.tenantUserInfo, request.body)
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/employee/evidence/remove`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '删除员工证据',
+        body: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            employeeId: { type: 'string' }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => services.workforce.removeEvidence(request.tenantUserInfo, request.body)
   );
 
   fastify.get(
@@ -569,6 +635,52 @@ module.exports = fp(async (fastify, options) => {
     },
     async request => {
       return services.employee.saveProfile(request.tenantUserInfo, request.body);
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/employee/save-ai-suggest`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '保存员工 AI 建议（成长计划 / 岗位匹配）',
+        body: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: '员工ID' },
+            shortTerm: { type: 'object' },
+            longTerm: { type: 'object' },
+            matchPosition: { type: 'object' }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => {
+      return services.employee.saveAiSuggest(request.tenantUserInfo, request.body);
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/employee/generate-talent-insight`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '根据 AI 面试/简历/填写信息生成就绪度、成长计划与岗位匹配',
+        body: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: '员工ID' },
+            positionId: { type: 'string' },
+            language: { type: 'string' },
+            persist: { type: 'boolean', default: true }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => {
+      return services.employee.generateTalentInsight(request.tenantUserInfo, request.body);
     }
   );
 

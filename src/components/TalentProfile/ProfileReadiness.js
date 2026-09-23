@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, Flex, Typography } from 'antd';
+import { App, Button, Empty, Flex, Typography } from 'antd';
+import { MdOutlineEdit } from 'react-icons/md';
 import { Card } from '@kne/react-box';
 import '@kne/react-box/dist/index.css';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
-import { useIsMobile } from '@kne/responsive-utils';
 import classnames from 'classnames';
+import ActivityTaskTable from '@components/ActivityTaskTable';
 import withLocale from './withLocale';
 import ProfileEvidence from './ProfileEvidence';
+import { ReadinessFormInner, TaskReadinessFormInner } from './FormInner';
+import { CapabilityStatusCard } from '@components/Position/Detail/TalentSkillAnalysis';
 import style from './style.module.scss';
-import iconSpark from './assets/icon-spark.svg';
 import iconClipboard from './assets/icon-clipboard.svg';
-import iconCollapse from './assets/icon-collapse.svg';
 
 const padRank = rank => String(rank).padStart(2, '0');
 
@@ -59,28 +60,6 @@ const CONFIDENCE_KEYS = {
   high: 'talentProfile.confidenceHigh',
   medium: 'talentProfile.confidenceMedium',
   low: 'talentProfile.confidenceLow'
-};
-
-const ReadinessRing = ({ value, formatMessage }) => {
-  const pct = Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
-  const size = 132;
-  const stroke = 10;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - pct / 100);
-
-  return (
-    <div className={style['readiness-ring']} aria-label={formatMessage({ id: 'talentProfile.readinessAria' }, { percent: pct })}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e2e8f0" strokeWidth={stroke} />
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#059669" strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
-      </svg>
-      <div className={style['readiness-ring-label']}>
-        <div className={style['readiness-ring-value']}>{pct}%</div>
-        <div className={style['readiness-ring-caption']}>{formatMessage({ id: 'talentProfile.readinessCaption' })}</div>
-      </div>
-    </div>
-  );
 };
 
 const SkillProgress = ({ current, required }) => {
@@ -146,18 +125,21 @@ const deriveFromRows = rows => {
 };
 
 const ProfileReadiness = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
+  modules: ['components-core:Global@usePreset', 'components-core:FormInfo@useFormModal', 'components-core:Global@useGlobalValue']
 })(
-  withLocale(({ remoteModules, positionId, employeeId, displayName }) => {
-    const [usePreset] = remoteModules;
+  withLocale(({ remoteModules, positionId, employeeId, displayName, readOnly, analysisOverride }) => {
+    const [usePreset, useFormModal, useGlobalValue] = remoteModules;
     const { ajax, apis } = usePreset();
+    const formModal = useFormModal();
+    const { message } = App.useApp();
     const { formatMessage } = useIntl();
-    const isMobile = useIsMobile();
+    const themeColor = useGlobalValue('themeToken')?.colorPrimary;
     const [rows, setRows] = useState(null);
     const [analysis, setAnalysis] = useState(null);
     const [error, setError] = useState('');
     const [selectedId, setSelectedId] = useState(null);
     const [expanded, setExpanded] = useState({});
+    const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
       let cancelled = false;
@@ -205,19 +187,14 @@ const ProfileReadiness = createWithRemoteLoader({
       return () => {
         cancelled = true;
       };
-    }, [ajax, apis, employeeId, formatMessage, positionId]);
+    }, [ajax, apis, employeeId, formatMessage, positionId, reloadKey]);
 
     const derived = useMemo(() => deriveFromRows(rows || []), [rows]);
-    const readiness = analysis?.readiness != null ? analysis.readiness : derived.readiness;
-    const metrics = analysis?.metrics || derived.metrics;
-    const priorityGaps = Array.isArray(analysis?.priorityGaps) && analysis.priorityGaps.length ? analysis.priorityGaps : derived.priorityGaps;
-    const summary = analysis?.summary || '';
-    const firstName =
-      String(displayName || '')
-        .split(/\s+/)
-        .filter(Boolean)[0] ||
-      displayName ||
-      '';
+    const effectiveAnalysis = analysisOverride || analysis;
+    const readiness = effectiveAnalysis?.readiness != null ? effectiveAnalysis.readiness : derived.readiness;
+    const metrics = effectiveAnalysis?.metrics || derived.metrics;
+    const priorityGaps = Array.isArray(effectiveAnalysis?.priorityGaps) && effectiveAnalysis.priorityGaps.length ? effectiveAnalysis.priorityGaps : derived.priorityGaps;
+    const summary = effectiveAnalysis?.summary || '';
 
     const groups = useMemo(() => {
       const list = rows || [];
@@ -235,6 +212,7 @@ const ProfileReadiness = createWithRemoteLoader({
           id: key || 'ungrouped',
           code: parsed.code || `A${String(index + 1).padStart(2, '0')}`,
           title: parsed.title || key || formatMessage({ id: 'talentProfile.task' }),
+          countLabel: formatMessage({ id: 'talentProfile.activityTaskCount' }, { count: children.length }),
           children
         };
       });
@@ -268,10 +246,10 @@ const ProfileReadiness = createWithRemoteLoader({
       };
     }, [groups, selectedId, formatMessage]);
 
-    if (!positionId) {
+    if (!positionId && !effectiveAnalysis) {
       return <Empty description={formatMessage({ id: 'talentProfile.readinessNoPosition' })} />;
     }
-    if (rows == null) {
+    if (rows == null && positionId) {
       return null;
     }
 
@@ -279,44 +257,163 @@ const ProfileReadiness = createWithRemoteLoader({
       setExpanded(prev => ({ ...prev, [id]: !(prev[id] !== false) }));
     };
 
+    const openEditReadiness = () => {
+      if (readOnly || !positionId || !employeeId) {
+        return;
+      }
+      const saveApi = apis?.talentSaas?.tenant?.position?.skillAnalysisSave;
+      if (!saveApi) {
+        message.error(formatMessage({ id: 'talentProfile.editReadinessFailed' }));
+        return;
+      }
+      formModal({
+        title: formatMessage({ id: 'talentProfile.editReadiness' }),
+        size: 'small',
+        formProps: {
+          data: {
+            readiness: readiness ?? 0,
+            summary: summary || '',
+            metrics: {
+              criticalGaps: metrics?.criticalGaps ?? 0,
+              atOrAbove: metrics?.atOrAbove ?? 0,
+              monthsToClose: metrics?.monthsToClose ?? null
+            },
+            priorityGaps: (priorityGaps || []).map((gap, index) => ({
+              rank: gap.rank || index + 1,
+              title: gap.title || '',
+              description: gap.description || '',
+              current: gap.current ?? null,
+              required: gap.required ?? null
+            }))
+          },
+          onSubmit: async formData => {
+            const { data: resData } = await ajax(
+              Object.assign({}, saveApi, {
+                data: {
+                  positionId: String(positionId),
+                  employeeId: String(employeeId),
+                  readiness: formData.readiness,
+                  summary: formData.summary,
+                  metrics: formData.metrics,
+                  priorityGaps: formData.priorityGaps,
+                  skills: effectiveAnalysis?.skills || analysis?.skills || [],
+                  developmentPlan: effectiveAnalysis?.developmentPlan || analysis?.developmentPlan || null
+                }
+              })
+            );
+            if (resData.code !== 0) {
+              throw new Error(resData.msg || formatMessage({ id: 'talentProfile.editReadinessFailed' }));
+            }
+            message.success(formatMessage({ id: 'talentProfile.editReadinessSuccess' }));
+            setReloadKey(key => key + 1);
+          }
+        },
+        children: <ReadinessFormInner />
+      });
+    };
+
+    const openEditFutureTasks = async () => {
+      if (readOnly || !positionId || !employeeId || String(employeeId).startsWith('draft-')) {
+        return;
+      }
+      const replaceApi = apis?.talentSaas?.tenant?.position?.taskReadinessReplace;
+      const tasksApi = apis?.talentSaas?.tenant?.position?.tasks;
+      if (!replaceApi) {
+        message.error(formatMessage({ id: 'talentProfile.editFutureTasksFailed' }));
+        return;
+      }
+
+      let taskRows = (rows || []).map(item => ({
+        id: item.id || null,
+        taskId: item.taskId,
+        title: item.title || '',
+        activityGroup: item.activityGroup || '',
+        current: item.current ?? 0,
+        required: item.required ?? 0,
+        status: item.status || 'gap',
+        confidence: item.confidence || 'medium'
+      }));
+
+      if (!taskRows.length && tasksApi) {
+        try {
+          const { data: tasksRes } = await ajax(Object.assign({}, tasksApi, { params: { positionId: String(positionId) } }));
+          if (tasksRes?.code === 0) {
+            taskRows = (tasksRes.data?.pageData || []).map(task => ({
+              id: null,
+              taskId: task.id,
+              title: task.title || '',
+              activityGroup: task.activityGroup || '',
+              current: 0,
+              required: task.importanceFuture ?? task.importanceNow ?? 0,
+              status: 'gap',
+              confidence: 'medium'
+            }));
+          }
+        } catch (e) {
+          // ignore, fall through to empty check
+        }
+      }
+
+      if (!taskRows.length) {
+        message.warning(formatMessage({ id: 'talentProfile.editFutureTasksEmpty' }));
+        return;
+      }
+
+      formModal({
+        title: formatMessage({ id: 'talentProfile.editFutureTasks' }),
+        size: 'small',
+        formProps: {
+          data: { tasks: taskRows },
+          onSubmit: async formData => {
+            const payloadRows = (formData.tasks || [])
+              .map((item, index) => ({
+                taskId: item.taskId || taskRows[index]?.taskId,
+                current: item.current,
+                required: item.required,
+                status: item.status,
+                confidence: item.confidence
+              }))
+              .filter(item => item.taskId);
+            const { data: resData } = await ajax(
+              Object.assign({}, replaceApi, {
+                data: {
+                  positionId: String(positionId),
+                  employeeId: String(employeeId),
+                  rows: payloadRows
+                }
+              })
+            );
+            if (resData.code !== 0) {
+              throw new Error(resData.msg || formatMessage({ id: 'talentProfile.editFutureTasksFailed' }));
+            }
+            message.success(formatMessage({ id: 'talentProfile.editFutureTasksSuccess' }));
+            setReloadKey(key => key + 1);
+          }
+        },
+        children: <TaskReadinessFormInner itemCount={taskRows.length} />
+      });
+    };
+
+    const canEditFutureTasks = !readOnly && positionId && employeeId && !String(employeeId).startsWith('draft-');
+
     return (
       <div className={style['readiness-root']}>
         {error ? <Typography.Text type="danger">{error}</Typography.Text> : null}
         <div className={style['readiness-top']}>
-          <Card className={style['halo-card']} theme="halo" hover={false}>
-            <div className={style['halo-body']}>
-              <ReadinessRing value={readiness} formatMessage={formatMessage} />
-              <div className={style['halo-copy']}>
-                <div className={style['halo-title']}>
-                  <span className={style['halo-title-icon']}>
-                    <img src={iconSpark} alt="" />
-                  </span>
-                  {formatMessage({ id: 'talentProfile.whereStands' }, { name: firstName || formatMessage({ id: 'talentProfile.you' }) })}
-                </div>
-                <div className={style['halo-summary']}>{summary || formatMessage({ id: 'talentProfile.readinessNoSummary' })}</div>
-                <Flex className={style['halo-metrics']} align="stretch" gap={0}>
-                  <div className={style['halo-metric']}>
-                    <div className={classnames(style['halo-metric-value'], style['halo-metric-critical'])}>{metrics?.criticalGaps ?? 0}</div>
-                    <div className={style['halo-metric-label']}>{formatMessage({ id: 'talentProfile.criticalGaps' })}</div>
-                  </div>
-                  <div className={style['halo-divider']} />
-                  <div className={style['halo-metric']}>
-                    <div className={classnames(style['halo-metric-value'], style['halo-metric-ok'])}>{metrics?.atOrAbove ?? 0}</div>
-                    <div className={style['halo-metric-label']}>{formatMessage({ id: 'talentProfile.atOrAbove' })}</div>
-                  </div>
-                  <div className={style['halo-divider']} />
-                  <div className={style['halo-metric']}>
-                    <div className={classnames(style['halo-metric-value'], style['halo-metric-close'])}>
-                      {metrics?.monthsToClose == null ? formatMessage({ id: 'talentProfile.emptyValue' }) : formatMessage({ id: 'talentProfile.monthsValue' }, { months: metrics.monthsToClose })}
-                    </div>
-                    <div className={style['halo-metric-label']}>{formatMessage({ id: 'talentProfile.toClose' })}</div>
-                  </div>
-                </Flex>
-              </div>
-            </div>
-          </Card>
+          <CapabilityStatusCard name={displayName} readiness={readiness} summary={summary} metrics={metrics} themeColor={themeColor} />
 
-          <Card className={style['gaps-card']} theme="inset" hover={false} title={formatMessage({ id: 'talentProfile.priorityGaps' })} extra={formatMessage({ id: 'talentProfile.topGaps' }, { count: Math.min(3, priorityGaps.length || 3) })}>
+          <Card
+            className={style['gaps-card']}
+            theme="inset"
+            hover={false}
+            title={formatMessage({ id: 'talentProfile.priorityGaps' })}
+            extra={
+              <Flex align="center" gap={4}>
+                <span className={style['gaps-badge']}>{formatMessage({ id: 'talentProfile.topGaps' }, { count: Math.min(3, priorityGaps.length || 3) })}</span>
+                {!readOnly && positionId && employeeId ? <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditReadiness} /> : null}
+              </Flex>
+            }
+          >
             {priorityGaps.length === 0 ? (
               <Empty description={formatMessage({ id: 'talentProfile.noGaps' })} />
             ) : (
@@ -353,61 +450,50 @@ const ProfileReadiness = createWithRemoteLoader({
               {formatMessage({ id: 'talentProfile.futureTaskReadiness' })}
             </span>
           }
+          extra={
+            canEditFutureTasks ? (
+              <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditFutureTasks}>
+                {formatMessage({ id: 'talentProfile.editFutureTasks' })}
+              </Button>
+            ) : null
+          }
         >
           {(rows || []).length === 0 ? (
             <Empty description={formatMessage({ id: 'talentProfile.readinessEmpty' })} />
           ) : (
             <div className={style['future-task-body']}>
               <div className={style['future-task-main']}>
-                <div className={style['future-task-table']}>
-                  {!isMobile ? (
-                    <div className={classnames(style['task-row'], style['task-head'])}>
-                      <div>{formatMessage({ id: 'talentProfile.colActivityTask' })}</div>
-                      <div>{formatMessage({ id: 'talentProfile.status' })}</div>
-                      <div>{formatMessage({ id: 'talentProfile.currentVsRequiredScale' })}</div>
-                      <div className={style['task-head-end']}>{formatMessage({ id: 'talentProfile.confidence' })}</div>
+                <ActivityTaskTable
+                  groups={groups}
+                  columns={[
+                    formatMessage({ id: 'talentProfile.colActivityTask' }),
+                    formatMessage({ id: 'talentProfile.status' }),
+                    formatMessage({ id: 'talentProfile.currentVsRequiredScale' }),
+                    formatMessage({ id: 'talentProfile.confidence' })
+                  ]}
+                  expanded={expanded}
+                  onToggle={toggleGroup}
+                  selectedId={selectedTask?.id}
+                  onSelect={item => setSelectedId(item.id)}
+                  onHover={item => {
+                    if (item?.id && item.id !== selectedId) {
+                      setSelectedId(item.id);
+                    }
+                  }}
+                  renderPrimary={item => item.title}
+                  renderSecondary={item => {
+                    const status = resolveStatus(item);
+                    const meta = STATUS_META[status] || STATUS_META.gap;
+                    return <span className={classnames(style['status-pill'], style[meta.tone])}>{formatMessage({ id: meta.labelKey })}</span>;
+                  }}
+                  renderMetric={item => (
+                    <div className={style['task-progress-cell']}>
+                      <SkillProgress current={item.current} required={item.required} />
+                      <span className={style['skill-score']}>{formatMessage({ id: 'talentProfile.scoreSlash' }, { current: item.current ?? 0, required: item.required ?? 0 })}</span>
                     </div>
-                  ) : null}
-                  {groups.map(group => {
-                    const open = expanded[group.id] !== false;
-                    return (
-                      <div key={group.id} className={style['task-group']}>
-                        <button type="button" className={style['task-parent']} onClick={() => toggleGroup(group.id)} aria-expanded={open}>
-                          <span className={style['task-parent-main']}>
-                            {group.code ? <span className={style['activity-code']}>{group.code}</span> : null}
-                            <span className={style['activity-meta']}>
-                              <span className={style['activity-title']}>{group.title || group.code}</span>
-                              <span className={style['activity-count']}>{formatMessage({ id: 'talentProfile.activityTaskCount' }, { count: group.children.length })}</span>
-                            </span>
-                          </span>
-                          <img className={classnames(style['collapse-icon'], !open && style['collapse-icon-collapsed'])} src={iconCollapse} alt="" />
-                        </button>
-                        {open
-                          ? group.children.map(item => {
-                              const status = resolveStatus(item);
-                              const meta = STATUS_META[status] || STATUS_META.gap;
-                              const confidence = item.confidence || 'medium';
-                              return (
-                                <div key={item.id} className={classnames(style['task-row'], style['task-child'], selectedTask?.id === item.id && style['task-selected'])} onClick={() => setSelectedId(item.id)}>
-                                  <div className={style['task-name']} title={item.title}>
-                                    {item.title}
-                                  </div>
-                                  <div>
-                                    <span className={classnames(style['status-pill'], style[meta.tone])}>{formatMessage({ id: meta.labelKey })}</span>
-                                  </div>
-                                  <div className={style['task-progress-cell']}>
-                                    <SkillProgress current={item.current} required={item.required} />
-                                    <span className={style['skill-score']}>{formatMessage({ id: 'talentProfile.scoreSlash' }, { current: item.current ?? 0, required: item.required ?? 0 })}</span>
-                                  </div>
-                                  <div className={style['task-confidence']}>{formatMessage({ id: CONFIDENCE_KEYS[confidence] || CONFIDENCE_KEYS.medium })}</div>
-                                </div>
-                              );
-                            })
-                          : null}
-                      </div>
-                    );
-                  })}
-                </div>
+                  )}
+                  renderTrailing={item => formatMessage({ id: CONFIDENCE_KEYS[item.confidence || 'medium'] || CONFIDENCE_KEYS.medium })}
+                />
                 <div className={style.legend}>
                   <span className={style['legend-item']}>
                     <span className={style['legend-fill']} />
@@ -424,7 +510,7 @@ const ProfileReadiness = createWithRemoteLoader({
                 </div>
               </div>
               <div className={style['future-task-evidence']}>
-                <ProfileEvidence employeeId={employeeId} variant="task" selectedTask={selectedTask} />
+                <ProfileEvidence employeeId={employeeId} variant="task" selectedTask={selectedTask} readOnly={readOnly} />
               </div>
             </div>
           )}

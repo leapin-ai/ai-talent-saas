@@ -4,23 +4,24 @@
   margin-top: 0;
 }
 
+/* Figma 973:5293 上半区：左 Role outlook | 竖线 | 右 2×2 指标 */
 .overview {
   display: flex;
-  gap: 16px;
+  gap: 24px;
   align-items: stretch;
-  margin-bottom: 0;
+  margin: 0;
+  min-width: 0;
 }
 
 .verdict {
-  flex: 1 1 666px;
+  flex: 1.55 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 17px;
-  border-radius: 12px;
-  border: 1px solid rgba(91, 84, 232, 0.16);
-  background: linear-gradient(163deg, #f3f1fe 0%, #fbf7fb 100%);
+  gap: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
   box-sizing: border-box;
 }
 
@@ -42,11 +43,12 @@
 .verdict-boxes {
   display: flex;
   gap: 16px;
-  margin-top: 8px;
+  margin: 0;
+  align-items: stretch;
 }
 
 .verdict-box {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -72,19 +74,28 @@
   color: #334155;
 }
 
+.overview-divider {
+  flex: 0 0 1px;
+  width: 1px;
+  align-self: stretch;
+  background: #e2e8f0;
+}
+
 .metrics {
-  flex: 1 1 286px;
+  flex: 1 1 0;
   min-width: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 16px;
+  align-self: stretch;
 }
 
 .metric {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-width: 0;
   padding: 13px 14px;
   border-radius: 11px;
   border: 1px solid rgba(20, 16, 60, 0.08);
@@ -96,14 +107,14 @@
 .metric-value-must,
 .metric-value-emerging,
 .metric-value-fading {
-  flex: 0 0 26px;
   font-size: 22px;
   line-height: 26px;
+  white-space: nowrap;
 }
 
 .metric-value {
   font-weight: 600;
-  color: #334155;
+  color: #0f172a;
 }
 
 .metric-value-must {
@@ -123,7 +134,6 @@
 
 .metric-label {
   margin-top: 4px;
-  min-height: 32px;
   font-size: 12px;
   font-weight: 400;
   line-height: 16px;
@@ -190,211 +200,9 @@
 }
 
 .table {
-  /* 四列最小合计：任务名 260 + 变化幅度 188 + 重要度 210 + 置信度 96 */
-  --task-table-min-width: 754px;
-  /* 放得下则占满剩余宽度；放不下则整表换到上一行，详情落到下一行 */
-  flex: 999 1 var(--task-table-min-width);
-  min-width: min(100%, var(--task-table-min-width));
+  flex: 999 1 520px;
+  min-width: min(100%, 360px);
   background: #fff;
-  overflow-x: auto;
-
-  :global(.info-page-table),
-  :global([class*='kne-table-view']) {
-    padding-top: 0 !important;
-    min-width: var(--task-table-min-width);
-  }
-
-  :global(.ant-table-tbody > tr) {
-    cursor: pointer;
-  }
-
-  :global(.ant-table-tbody > tr:hover:not([data-selected='true']) > td) {
-    background: #f8fafc !important;
-  }
-
-  :global(.ant-table-tbody > tr[data-selected='true'] > td) {
-    background: color-mix(in srgb, var(--primary-color) 8%, #fff) !important;
-  }
-
-  :global(.ant-table-tbody > tr[data-selected='true'] > td:first-child) {
-    box-shadow: inset 3px 0 0 var(--primary-color);
-  }
-}
-
-.task-table {
-  width: 100%;
-  min-width: var(--task-table-min-width, 754px);
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.task-row {
-  display: grid;
-  grid-template-columns: minmax(260px, 1.45fr) 188px minmax(210px, 1.2fr) 96px;
-  align-items: center;
-  gap: 0;
-  min-height: 52px;
-  padding: 0;
-  border-bottom: 1px solid #e2e8f0;
-  box-sizing: border-box;
-}
-
-.task-group:last-child .task-child:last-child,
-.task-group:last-child .task-parent:only-child {
-  border-bottom: none;
-}
-
-.task-head {
-  min-height: 40px;
-  padding: 0;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 20px;
-  color: #64748b;
-
-  > div {
-    padding: 10px 16px;
-    justify-content: flex-start;
-    text-align: left;
-    white-space: nowrap;
-  }
-}
-
-.task-parent {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  min-height: 52px;
-  margin: 0;
-  padding: 8px 16px;
-  border: none;
-  border-bottom: 1px solid #e2e8f0;
-  background: #f3f5ff;
-  color: #0f172a;
-  text-align: left;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-.task-parent-main {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.activity-code {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 39px;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 6px;
-  background: #5b6cff;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 12px;
-  flex: 0 0 auto;
-}
-
-.activity-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  min-width: 0;
-}
-
-.activity-title {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 20px;
-  color: #0f172a;
-}
-
-.activity-count {
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 18px;
-  color: #94a3b8;
-}
-
-.collapse-icon {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
-  display: block;
-  transition: transform 0.15s ease;
-}
-
-.collapse-icon-collapsed {
-  transform: rotate(-90deg);
-}
-
-.task-child {
-  cursor: pointer;
-  background: #fff;
-
-  &:hover {
-    background: #f8fafc;
-  }
-}
-
-.task-selected {
-  background: color-mix(in srgb, var(--primary-color, #4183f0) 8%, #fff);
-}
-
-.task-col-name,
-.task-col-change,
-.task-col-importance,
-.task-col-confidence {
-  padding: 16px;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.task-col-change {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-}
-
-.task-col-importance {
-  display: flex;
-  align-items: center;
-
-  > * {
-    flex: 1;
-    min-width: 0;
-    width: 100%;
-  }
-}
-
-.task-col-confidence {
-  font-size: 14px;
-  line-height: 20px;
-  color: #334155;
-  text-align: right;
-}
-
-.task-head .task-col-confidence {
-  text-align: right;
-}
-
-.task-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 20px;
-  color: #334155;
 }
 
 .importance {
@@ -606,6 +414,13 @@
   .overview {
     flex-direction: column;
     align-items: stretch;
+    gap: 16px;
+  }
+
+  .overview-divider {
+    width: 100%;
+    height: 1px;
+    flex: 0 0 1px;
   }
 
   .verdict {
@@ -633,56 +448,6 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    --task-table-min-width: 0;
-  }
-
-  .task-table {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .task-child {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas:
-      'name name confidence'
-      'change importance importance';
-    column-gap: 12px;
-    row-gap: 8px;
-    align-items: center;
-    min-height: 0;
-    padding: 12px 16px;
-  }
-
-  .task-child > div {
-    padding: 0;
-  }
-
-  .task-col-name {
-    grid-area: name;
-  }
-
-  .task-col-confidence {
-    grid-area: confidence;
-    text-align: right;
-  }
-
-  .task-col-change {
-    grid-area: change;
-    justify-content: flex-start;
-  }
-
-  .task-col-importance {
-    grid-area: importance;
-  }
-
-  .task-head {
-    display: flex;
-    grid-template-areas: none;
-    padding: 0;
-  }
-
-  .task-head > div:not(:first-child) {
-    display: none;
   }
 
   .preview {

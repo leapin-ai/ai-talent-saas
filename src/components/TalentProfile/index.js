@@ -1,8 +1,8 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
-import { Flex, Tabs, Typography } from 'antd';
+import { useEffect, useState } from 'react';
+import { App, Flex, Tabs, Typography } from 'antd';
 import classnames from 'classnames';
 import { FaLightbulb } from 'react-icons/fa';
 import dayjs from 'dayjs';
@@ -37,6 +37,7 @@ const TalentProfile = createWithRemoteLoader({
       id: idProp,
       self,
       readOnly,
+      readinessReadOnly,
       embed,
       empty,
       onData,
@@ -44,6 +45,7 @@ const TalentProfile = createWithRemoteLoader({
       data: controlledData,
       saveEmployee: controlledSaveEmployee,
       saveProfile: controlledSaveProfile,
+      saveAiSuggest: controlledSaveAiSuggest,
       createPerformance: controlledCreatePerformance,
       removePerformance: controlledRemovePerformance,
       savePerformance: controlledSavePerformance,
@@ -54,9 +56,11 @@ const TalentProfile = createWithRemoteLoader({
       const [usePreset] = remoteModules;
       const { formatMessage } = useIntl();
       const { ajax } = usePreset();
+      const { message } = App.useApp();
       const { id: paramId } = useParams();
       const navigate = useNavigate();
       const id = idProp || paramId;
+      const [generatingInsight, setGeneratingInsight] = useState(false);
       // 首页 / 本人档案：走 my-detail，不依赖路由或 query 里的员工 id
       const useMyDetail = !controlledData && (self || !id);
       const fetchProps = useMyDetail ? Object.assign({}, apis.myDetail) : Object.assign({}, apis.detail, { params: { id } });
@@ -75,6 +79,38 @@ const TalentProfile = createWithRemoteLoader({
           );
         }
         const employeeId = data.id;
+        const positionId = data.options?.position?.id || (typeof data.options?.position === 'string' ? data.options.position : null);
+
+        const onGenerateInsight =
+          !readOnly && apis?.generateTalentInsight && !String(employeeId || '').startsWith('draft-')
+            ? async () => {
+                setGeneratingInsight(true);
+                try {
+                  const { data: resData } = await ajax(
+                    Object.assign({}, apis.generateTalentInsight, {
+                      data: {
+                        id: employeeId,
+                        positionId: positionId || undefined,
+                        persist: true
+                      }
+                    })
+                  );
+                  if (resData.code !== 0) {
+                    throw new Error(resData.msg || formatMessage({ id: 'talentProfile.generateInsightFailed' }));
+                  }
+                  message.success(formatMessage({ id: 'talentProfile.generateInsightSuccess' }));
+                  if (typeof reload === 'function') {
+                    reload();
+                  } else if (typeof controlledReload === 'function') {
+                    controlledReload();
+                  }
+                } catch (e) {
+                  message.error(e.message || formatMessage({ id: 'talentProfile.generateInsightFailed' }));
+                } finally {
+                  setGeneratingInsight(false);
+                }
+              }
+            : undefined;
         const saveProfile = async profileData => {
           if (readOnly) {
             return;
@@ -120,6 +156,25 @@ const TalentProfile = createWithRemoteLoader({
           }
           reload();
           return data.data;
+        };
+
+        const saveAiSuggest = async suggestData => {
+          if (readOnly) {
+            return;
+          }
+          if (controlledSaveAiSuggest) {
+            return controlledSaveAiSuggest(suggestData, { employeeId, reload });
+          }
+          const { data: resData } = await ajax(
+            Object.assign({}, apis.saveAiSuggest, {
+              data: Object.assign({}, suggestData, { id: employeeId })
+            })
+          );
+          if (resData.code !== 0) {
+            throw new Error(resData.msg || formatMessage({ id: 'talentProfile.editAiSuggestFailed' }));
+          }
+          reload();
+          return resData.data;
         };
 
         const createPerformance = async performanceData => {
@@ -328,7 +383,7 @@ const TalentProfile = createWithRemoteLoader({
           navigate(`${baseUrl}/position/${positionId}`);
         };
         return (
-          <Flex className={classnames(style['talent-profile'], embed && style['talent-profile-embed'])} vertical gap={embed ? 12 : 16}>
+          <Flex className={classnames(style['talent-profile'], embed && style['talent-profile-embed'], readOnly && style['is-readonly'])} data-profile-mode={readOnly ? 'readonly' : 'editable'} vertical gap={embed ? 12 : 16}>
             <DataNotifier data={data} onData={onData} />
             <CardGate request={cardPermissions?.header}>
               <HeaderCard
@@ -354,17 +409,55 @@ const TalentProfile = createWithRemoteLoader({
                 {
                   key: 'readiness',
                   label: formatMessage({ id: 'talentProfile.tabReadiness' }),
-                  children: <ProfileReadiness employeeId={employeeId} displayName={profileData.name} positionId={data.options?.position?.id || (typeof data.options?.position === 'string' ? data.options.position : null)} />
+                  children: (
+                    <ProfileReadiness
+                      employeeId={employeeId}
+                      displayName={profileData.name}
+                      positionId={positionId}
+                      readOnly={readOnly || readinessReadOnly}
+                      analysisOverride={data.skillAnalysisDraft || null}
+                      onGenerateInsight={onGenerateInsight}
+                      generatingInsight={generatingInsight}
+                    />
+                  )
                 },
                 {
                   key: 'growth',
                   label: formatMessage({ id: 'talentProfile.tabGrowth' }),
-                  children: <RightColumn section="growth" careerPath={careerPath} aiRecommendations={aiRecommendations} gotoPosition={gotoPosition} permissions={cardPermissions} />
+                  children: (
+                    <RightColumn
+                      section="growth"
+                      careerPath={careerPath}
+                      aiRecommendations={aiRecommendations}
+                      gotoPosition={gotoPosition}
+                      permissions={cardPermissions}
+                      readOnly={readOnly || readinessReadOnly}
+                      employeeId={employeeId}
+                      saveAiSuggest={saveAiSuggest}
+                      aiSuggest={data.aiSuggest}
+                      onGenerateInsight={onGenerateInsight}
+                      generatingInsight={generatingInsight}
+                    />
+                  )
                 },
                 {
                   key: 'match',
                   label: formatMessage({ id: 'talentProfile.tabMatch' }),
-                  children: <RightColumn section="match" careerPath={careerPath} aiRecommendations={aiRecommendations} gotoPosition={gotoPosition} permissions={cardPermissions} />
+                  children: (
+                    <RightColumn
+                      section="match"
+                      careerPath={careerPath}
+                      aiRecommendations={aiRecommendations}
+                      gotoPosition={gotoPosition}
+                      permissions={cardPermissions}
+                      readOnly={readOnly || readinessReadOnly}
+                      employeeId={employeeId}
+                      saveAiSuggest={saveAiSuggest}
+                      aiSuggest={data.aiSuggest}
+                      onGenerateInsight={onGenerateInsight}
+                      generatingInsight={generatingInsight}
+                    />
+                  )
                 },
                 {
                   key: 'profile',

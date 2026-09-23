@@ -3,9 +3,12 @@ const omit = require('lodash/omit');
 const { requestPositionAnalysisFill, repairDevelopmentPlanItems } = require('../utils/llm-runner');
 
 const ANALYSIS_TASK_TYPE = 'position-ai-analysis';
+/** 经理邀请触发：完善岗位分析（不改职位 assessmentStatus / analysisStatus） */
+const REFINE_TASK_TYPE = 'position-analysis-review';
 const ANALYSIS_PROGRESS_START = 18;
 const AI_FILL_STEPS = ['org', 'position', 'person'];
 const isAnalysisRunning = status => status === 'generating' || status === 'locked';
+const isPositionAnalysisTaskType = type => type === ANALYSIS_TASK_TYPE || type === REFINE_TASK_TYPE;
 
 module.exports = fp(async (fastify, options) => {
   const { models, services } = fastify[options.name];
@@ -611,9 +614,32 @@ module.exports = fp(async (fastify, options) => {
         change = 'stable';
       }
     }
+    const readActivityText = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
+    const activity = raw.activity && typeof raw.activity === 'object' && !Array.isArray(raw.activity) ? raw.activity : null;
+    const groupedText = readActivityText(raw.activityGroup || activity?.activityGroup, 200);
+    const groupedMatch = groupedText.match(/^([A-Za-z]?\d{1,3})\s*[·.\-–—:]?\s*(.*)$/);
+    const groupedCode = groupedMatch && groupedMatch[1] ? groupedMatch[1].toUpperCase().slice(0, 32) : '';
+    const groupedTitle = groupedMatch && groupedMatch[1] ? readActivityText(groupedMatch[2], 160) : groupedText.slice(0, 160);
+    const activityCode = readActivityText(raw.activityCode, 32) || readActivityText(activity?.activityCode, 32) || readActivityText(activity?.code, 32) || groupedCode;
+    const activityTitle = readActivityText(raw.activityTitle, 160) || readActivityText(activity?.activityTitle, 160) || readActivityText(activity?.title, 160) || readActivityText(activity?.content, 160) || groupedTitle;
+    const formatActivityGroup = (code, title) => {
+      const c = String(code || '')
+        .trim()
+        .slice(0, 32);
+      const t = String(title || '')
+        .trim()
+        .slice(0, 160);
+      if (c && t) {
+        return `${c} · ${t}`.slice(0, 200);
+      }
+      return (c || t).slice(0, 200);
+    };
     return {
       id: typeof raw.id === 'string' && raw.id ? raw.id : `skill-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
       name: name.slice(0, 200),
+      activityCode,
+      activityTitle,
+      activityGroup: formatActivityGroup(activityCode, activityTitle),
       origin,
       importanceNow,
       importanceYear,
@@ -629,6 +655,37 @@ module.exports = fp(async (fastify, options) => {
       return [];
     }
     return skill.map(normalizePositionSkillItem).filter(Boolean);
+  };
+
+  const WORKFORCE_STRATEGY_ACTIONS = ['BUILD', 'MOVE', 'BUY', 'AUGMENT'];
+
+  const normalizeWorkforceStrategyCards = list => {
+    if (!Array.isArray(list)) {
+      return [];
+    }
+    return list
+      .map(item => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        const action = String(item.action || item.type || '')
+          .trim()
+          .toUpperCase();
+        if (!WORKFORCE_STRATEGY_ACTIONS.includes(action)) {
+          return null;
+        }
+        const title = typeof item.title === 'string' ? item.title.trim() : '';
+        const detail = typeof item.detail === 'string' ? item.detail.trim() : typeof item.description === 'string' ? item.description.trim() : '';
+        if (!title && !detail) {
+          return null;
+        }
+        return {
+          action,
+          title: title || action,
+          detail
+        };
+      })
+      .filter(Boolean);
   };
 
   const CHANGE_MAGNITUDE_VALUES = ['low', 'medium', 'high'];
@@ -662,15 +719,27 @@ module.exports = fp(async (fastify, options) => {
     return 'low';
   };
 
+  const normalizeAiEfficiencyGain = value => {
+    if (value == null || value === '') {
+      return null;
+    }
+    const num = Number(String(value).trim().replace(/%$/, ''));
+    if (!Number.isFinite(num)) {
+      return null;
+    }
+    return Math.max(0, Math.min(100, Math.round(num)));
+  };
+
   const normalizePositionVerdict = raw => {
     if (!raw || typeof raw !== 'object') {
-      return { summary: '', today: '', future: '', futureLabel: '' };
+      return { summary: '', today: '', future: '', futureLabel: '', aiEfficiencyGain: null };
     }
     return {
       summary: typeof raw.summary === 'string' ? raw.summary : '',
       today: typeof raw.today === 'string' ? raw.today : '',
       future: typeof raw.future === 'string' ? raw.future : '',
-      futureLabel: typeof raw.futureLabel === 'string' ? raw.futureLabel : ''
+      futureLabel: typeof raw.futureLabel === 'string' ? raw.futureLabel : '',
+      aiEfficiencyGain: normalizeAiEfficiencyGain(raw.aiEfficiencyGain)
     };
   };
 
@@ -780,12 +849,23 @@ module.exports = fp(async (fastify, options) => {
     return result?.pageData || [];
   };
 
-  const ensureAnalysisTask = async (authenticatePayload, position) => {
+  const ensureAnalysisTask = async (authenticatePayload, position, options = {}) => {
+    const { skipAssessmentStatusUpdate = false, collectInviteId = null, triggeredBy = null, forceNew = false } = options;
+
     if (position.analysisTaskId) {
       try {
         const existing = await fastify.task.services.detail({ id: position.analysisTaskId });
         if (existing && ['pending', 'running', 'waiting'].includes(existing.status)) {
-          return existing;
+          if (!forceNew) {
+            return existing;
+          }
+          if (['pending', 'running'].includes(existing.status) && fastify.task?.services?.cancel) {
+            try {
+              await fastify.task.services.cancel({ id: position.analysisTaskId });
+            } catch (e) {
+              fastify.log.warn({ err: e, taskId: position.analysisTaskId }, 'cancel position analysis task failed');
+            }
+          }
         }
       } catch (e) {
         // 任务不存在则重建
@@ -816,6 +896,7 @@ module.exports = fp(async (fastify, options) => {
         developmentGoal: position.developmentGoal || '',
         skill: Array.isArray(position.skill) ? position.skill : [],
         verdict: position.verdict && typeof position.verdict === 'object' ? position.verdict : {},
+        workforceStrategy: Array.isArray(position.getDataValue?.('workforceStrategy') || position.workforceStrategy) ? position.getDataValue?.('workforceStrategy') || position.workforceStrategy : [],
         changeMagnitude: position.changeMagnitude || null,
         language: position.language || null
       },
@@ -859,6 +940,10 @@ module.exports = fp(async (fastify, options) => {
           avatar: item.avatar || null
         })),
         skillAnalysis,
+        // 经理邀请触发：完成分析时不改职位 assessmentStatus
+        skipAssessmentStatusUpdate: !!skipAssessmentStatusUpdate,
+        collectInviteId: collectInviteId ? String(collectInviteId) : null,
+        triggeredBy: triggeredBy || null,
         // 取消任务时用于恢复开跑前的分析状态
         analysisStateBefore: {
           analysisStatus: position.analysisStatus || 'idle',
@@ -876,9 +961,9 @@ module.exports = fp(async (fastify, options) => {
     return task;
   };
 
-  const startAnalysis = async (authenticatePayload, { id }) => {
+  const startAnalysis = async (authenticatePayload, { id, forceNew = false, skipAssessmentStatusUpdate = false, collectInviteId = null, triggeredBy = null } = {}) => {
     const position = await detail(authenticatePayload, { id });
-    if (isAnalysisRunning(position.analysisStatus) && position.analysisTaskId) {
+    if (!forceNew && isAnalysisRunning(position.analysisStatus) && position.analysisTaskId) {
       try {
         const existing = await fastify.task.services.detail({ id: position.analysisTaskId });
         if (existing && ['pending', 'running', 'waiting'].includes(existing.status)) {
@@ -892,8 +977,119 @@ module.exports = fp(async (fastify, options) => {
       }
     }
 
-    const task = await ensureAnalysisTask(authenticatePayload, position);
+    const task = await ensureAnalysisTask(authenticatePayload, position, {
+      forceNew: !!forceNew,
+      skipAssessmentStatusUpdate: !!skipAssessmentStatusUpdate,
+      collectInviteId,
+      triggeredBy
+    });
     await position.reload();
+    return { position, task };
+  };
+
+  /**
+   * 经理邀请：创建「完善岗位分析」手动任务。
+   * 不改职位 analysisStatus / assessmentStatus，仅落任务中心。
+   */
+  const startRefineAnalysis = async (authenticatePayload, { id, forceNew = true, collectInviteId = null } = {}) => {
+    const position = await detail(authenticatePayload, { id });
+    const { tenantId } = position;
+
+    if (forceNew && fastify.task?.models?.task) {
+      const pending = await fastify.task.models.task.findAll({
+        where: {
+          type: REFINE_TASK_TYPE,
+          targetId: String(position.id),
+          targetType: 'position',
+          status: { [Op.in]: ['pending', 'running', 'waiting'] }
+        }
+      });
+      for (const existing of pending) {
+        if (collectInviteId && existing.input?.collectInviteId && String(existing.input.collectInviteId) !== String(collectInviteId)) {
+          continue;
+        }
+        try {
+          await fastify.task.services.cancel({ id: existing.id });
+        } catch (e) {
+          fastify.log.warn({ err: e, taskId: existing.id }, 'cancel refine position analysis task failed');
+        }
+      }
+    }
+
+    const orgEnums = position.getDataValue?.('orgEnums') || [];
+    const department = orgEnums.find(item => String(item.value) === String(position.tenantOrgId))?.description || '';
+    const employees = await listRelatedEmployees(authenticatePayload, position.id);
+    const analyses = await models.positionEmployeeSkillAnalysis.findAll({
+      where: {
+        tenantId,
+        positionId: String(position.id)
+      }
+    });
+    const analysisMap = new Map(analyses.map(item => [String(item.employeeId), item]));
+    const skillAnalysis = {
+      org: {
+        tenantOrgId: position.tenantOrgId || null,
+        department
+      },
+      position: {
+        id: position.id,
+        name: position.name || '',
+        description: position.description || '',
+        requirement: position.requirement || '',
+        developmentGoal: position.developmentGoal || '',
+        skill: Array.isArray(position.skill) ? position.skill : [],
+        verdict: position.verdict && typeof position.verdict === 'object' ? position.verdict : {},
+        workforceStrategy: Array.isArray(position.getDataValue?.('workforceStrategy') || position.workforceStrategy) ? position.getDataValue?.('workforceStrategy') || position.workforceStrategy : [],
+        changeMagnitude: position.changeMagnitude || null,
+        language: position.language || null
+      },
+      employees: employees.map(item => {
+        const analysis = analysisMap.get(String(item.id));
+        return {
+          id: item.id,
+          name: item.name || item.nameEn || '',
+          nameEn: item.nameEn || '',
+          avatar: item.avatar || null,
+          analysis: analysis
+            ? {
+                readiness: analysis.readiness,
+                summary: analysis.summary || '',
+                metrics: analysis.metrics || {},
+                skills: analysis.skills || [],
+                priorityGaps: analysis.priorityGaps || [],
+                developmentPlan: analysis.developmentPlan || null
+              }
+            : null
+        };
+      })
+    };
+
+    const task = await fastify.task.services.create({
+      type: REFINE_TASK_TYPE,
+      targetId: String(position.id),
+      targetType: 'position',
+      runnerType: 'manual',
+      input: {
+        name: position.name ? `完善岗位分析：${position.name}` : `完善岗位分析：${position.id}`,
+        positionId: position.id,
+        tenantId,
+        tenantOrgId: position.tenantOrgId || null,
+        department,
+        employeeIds: employees.map(item => String(item.id)),
+        employees: employees.map(item => ({
+          id: item.id,
+          name: item.name || item.nameEn || '',
+          nameEn: item.nameEn || '',
+          avatar: item.avatar || null
+        })),
+        skillAnalysis,
+        skipAssessmentStatusUpdate: true,
+        skipAnalysisStatusUpdate: true,
+        collectInviteId: collectInviteId ? String(collectInviteId) : null,
+        triggeredBy: 'manager-invite'
+      }
+    });
+
     return { position, task };
   };
 
@@ -920,7 +1116,7 @@ module.exports = fp(async (fastify, options) => {
     if (!task) {
       throw new Error('任务不存在');
     }
-    if (task.type !== ANALYSIS_TASK_TYPE) {
+    if (!isPositionAnalysisTaskType(task.type)) {
       throw new Error('任务类型不正确');
     }
 
@@ -973,7 +1169,7 @@ module.exports = fp(async (fastify, options) => {
       try {
         previousOutput = await fastify.task.models.task.findOne({
           where: {
-            type: ANALYSIS_TASK_TYPE,
+            type: { [Op.in]: [ANALYSIS_TASK_TYPE, REFINE_TASK_TYPE] },
             targetId: String(positionId),
             targetType: 'position',
             status: 'success',
@@ -1000,6 +1196,50 @@ module.exports = fp(async (fastify, options) => {
     const positionDevelopmentGoal = position.developmentGoal || snapshotPos?.developmentGoal || '';
     const positionTenantOrgId = position.tenantOrgId != null ? position.tenantOrgId : (snapshotOrg?.tenantOrgId ?? null);
 
+    let workforceStrategy = Array.isArray(snapshotPos?.workforceStrategy) ? snapshotPos.workforceStrategy : [];
+    try {
+      const strategyRows = await models.positionWorkforceStrategy.findAll({
+        where: { tenantId, positionId: position.id },
+        order: [['sortOrder', 'ASC']]
+      });
+      if (strategyRows.length) {
+        workforceStrategy = strategyRows.map(row => (row.toJSON ? row.toJSON() : row));
+      }
+    } catch (e) {
+      // table may not exist in older envs
+    }
+
+    // 完善岗位分析：侧栏展示经理邀请的 AI 面试采集结果（不依赖员工档案）
+    let interview = null;
+    let interviewError = null;
+    let apiHost = '';
+    let cdnUrl = '';
+    let version = '';
+    let collectInvite = null;
+    let videoTranscripts = null;
+    let videoAsrStatus = null;
+    const collectInviteId = task.input?.collectInviteId || null;
+    const isRefineTask = task.type === REFINE_TASK_TYPE;
+    if (isRefineTask && collectInviteId && services.talentCollectInvite?.getInterviewResult) {
+      try {
+        const result = await services.talentCollectInvite.getInterviewResult(auth, { id: String(collectInviteId) });
+        interview = result?.interview || null;
+        collectInvite = result?.invite || null;
+        videoTranscripts = result?.videoTranscripts || null;
+        videoAsrStatus = result?.videoAsrStatus || null;
+        cdnUrl = result?.cdnUrl || '';
+        version = result?.version || '';
+        apiHost = result?.ajaxBaseUrl || result?.apiUrl || '';
+        if (!interview) {
+          interviewError = '暂无面试数据';
+        }
+      } catch (error) {
+        interviewError = error?.message || '拉取面试详情失败';
+      }
+    } else if (isRefineTask && !collectInviteId) {
+      interviewError = '任务缺少采集邀请记录';
+    }
+
     return {
       task: {
         id: task.id,
@@ -1017,6 +1257,14 @@ module.exports = fp(async (fastify, options) => {
             }
           : null,
       company,
+      collectInvite,
+      interview,
+      interviewError,
+      videoTranscripts,
+      videoAsrStatus,
+      apiHost,
+      cdnUrl,
+      version,
       position: {
         id: position.id,
         name: position.name,
@@ -1030,9 +1278,10 @@ module.exports = fp(async (fastify, options) => {
         capacity: position.capacity || '',
         salary: position.salary || {},
         status: position.status || null,
-        changeMagnitude: position.changeMagnitude || prevPos?.changeMagnitude || null,
+        changeMagnitude: position.changeMagnitude || snapshotPos?.changeMagnitude || null,
         skill: positionSkill,
         verdict: positionVerdict,
+        workforceStrategy,
         analysisStatus: position.analysisStatus,
         analysisProgress: position.analysisProgress,
         orgEnums: position.getDataValue('orgEnums') || []
@@ -1087,7 +1336,7 @@ module.exports = fp(async (fastify, options) => {
     if (!task) {
       throw new Error('任务不存在');
     }
-    if (task.type !== ANALYSIS_TASK_TYPE) {
+    if (!isPositionAnalysisTaskType(task.type)) {
       throw new Error('任务类型不正确');
     }
     if (task.status !== 'pending') {
@@ -1128,14 +1377,22 @@ module.exports = fp(async (fastify, options) => {
       updateFields.verdict = normalizePositionVerdict(posPart.verdict);
     }
 
-    updateFields.analysisStatus = 'completed';
-    updateFields.analysisProgress = 100;
-    updateFields.analysisTaskId = task.id;
+    if (!task.input?.skipAnalysisStatusUpdate) {
+      updateFields.analysisStatus = 'completed';
+      updateFields.analysisProgress = 100;
+      updateFields.analysisTaskId = task.id;
+    }
 
-    await position.update(updateFields);
+    if (Object.keys(updateFields).length > 0) {
+      await position.update(updateFields);
+    }
 
     if (services.workforce?.replaceTasksFromAnalysis) {
-      await services.workforce.replaceTasksFromAnalysis(auth, { position, positionPayload: posPart });
+      await services.workforce.replaceTasksFromAnalysis(auth, {
+        position,
+        positionPayload: posPart,
+        skipAssessmentStatusUpdate: !!task.input?.skipAssessmentStatusUpdate
+      });
     }
 
     const savedEmployees = [];
@@ -1212,40 +1469,69 @@ module.exports = fp(async (fastify, options) => {
       }
     });
 
+    try {
+      const collectInviteId = task.input?.collectInviteId;
+      if (collectInviteId && models.talentCollectInvite) {
+        const invite = await models.talentCollectInvite.findOne({
+          where: { id: String(collectInviteId), tenantId }
+        });
+        if (invite && invite.status === 'done') {
+          invite.status = 'ended';
+          invite.interviewData = Object.assign({}, invite.interviewData || {}, {
+            analysisCompletedAt: new Date().toISOString()
+          });
+          invite.changed('interviewData', true);
+          await invite.save();
+        }
+      }
+    } catch (error) {
+      fastify.log.warn({ err: error }, 'mark talent collect invite ended after position analysis failed');
+    }
+
     return detail(auth, { id: positionId });
   };
 
   const buildPositionOverviewSchemaHint = () => ({
-    verdict: { summary: 'string', today: 'string', future: 'string', futureLabel: 'string' },
+    verdict: { summary: 'string', today: 'string', future: 'string', futureLabel: 'string', aiEfficiencyGain: 'number 0-100 (AI Efficiency Gain percent, e.g. 12 means 12%)' },
     description: 'string(html ok)',
     requirement: 'string(html ok)',
     developmentGoal: 'string(optional, future business goals for this role)',
     skill: [
       {
         id: 'string',
-        name: 'string',
-        origin: 'existing|new'
+        name: 'string (Task title)',
+        origin: 'existing|new',
+        activityCode: 'string (Activity code, e.g. A01)',
+        activityTitle: 'string (Activity title, e.g. Customer Focus)'
       }
-    ] // REQUIRED: skill list only (at least 3 items); no detail fields here
+    ], // REQUIRED: Task list only (at least 3 items); no detail fields here
+    workforceStrategy: [
+      { action: 'BUILD', title: 'string', detail: 'string' },
+      { action: 'MOVE', title: 'string', detail: 'string' },
+      { action: 'BUY', title: 'string', detail: 'string' },
+      { action: 'AUGMENT', title: 'string', detail: 'string' }
+    ] // REQUIRED: Gap Recommendations, preferably one card per action BUILD|MOVE|BUY|AUGMENT
   });
 
   const buildPositionSkillDetailSchemaHint = () => ({
     skill: [
       {
         id: 'string(keep input)',
-        name: 'string(keep input)',
+        name: 'string(keep input, Task title)',
         origin: 'existing|new',
+        activityCode: 'string(keep or fill Activity code)',
+        activityTitle: 'string(keep or fill Activity title)',
         importanceNow: '1-5',
         importanceYear: '1-5',
         change: 'must_build|ai_emerging|new|enhanced|stable|declining',
         aiExposure: 'high|medium|low',
         confidence: 'high|medium|low',
         contentItems: [
-          { title: 'string(custom basis title for THIS skill)', description: 'string', source: 'string' },
+          { title: 'string(custom basis title for THIS task)', description: 'string', source: 'string' },
           { title: 'string(another basis title)', description: 'string', source: 'string' }
-        ] // REQUIRED: >=2 依据 for THIS skill only; free-form title/description/source; no jd/shockReport
+        ] // REQUIRED: >=2 依据 for THIS task only; free-form title/description/source; no jd/shockReport
       }
-    ] // REQUIRED: exactly 1 skill; never return other skills
+    ] // REQUIRED: exactly 1 task; never return other tasks
   });
 
   /** 从单次 position-skill 响应中抽出目标技能（兼容 skill 为对象 / 根对象 / 误返回多条） */
@@ -1304,7 +1590,9 @@ module.exports = fp(async (fastify, options) => {
     const singleSkillDraft = Object.assign({}, draftItem, skillStub, {
       id: skillStub.id || draftItem.id,
       name: skillStub.name || draftItem.name,
-      origin: skillStub.origin || draftItem.origin || 'existing'
+      origin: skillStub.origin || draftItem.origin || 'existing',
+      activityCode: skillStub.activityCode || draftItem.activityCode || '',
+      activityTitle: skillStub.activityTitle || draftItem.activityTitle || ''
     });
     delete singleSkillDraft.contentItems;
     delete singleSkillDraft.jd;
@@ -1319,6 +1607,8 @@ module.exports = fp(async (fastify, options) => {
         id: skillStub.id,
         name: skillStub.name,
         origin: skillStub.origin || 'existing',
+        activityCode: skillStub.activityCode || draftItem.activityCode || '',
+        activityTitle: skillStub.activityTitle || draftItem.activityTitle || '',
         index: index + 1,
         total
       }
@@ -1351,7 +1641,9 @@ module.exports = fp(async (fastify, options) => {
     return Object.assign({}, filled, {
       id: skillStub.id || filled.id,
       name: skillStub.name || filled.name,
-      origin: skillStub.origin || filled.origin
+      origin: skillStub.origin || filled.origin,
+      activityCode: skillStub.activityCode || filled.activityCode || draftItem.activityCode || '',
+      activityTitle: skillStub.activityTitle || filled.activityTitle || draftItem.activityTitle || ''
     });
   };
 
@@ -1492,11 +1784,14 @@ module.exports = fp(async (fastify, options) => {
     const description = typeof listRaw?.description === 'string' ? listRaw.description : draft?.description || context.position?.description || '';
     const requirement = typeof listRaw?.requirement === 'string' ? listRaw.requirement : draft?.requirement || context.position?.requirement || '';
     const developmentGoal = typeof listRaw?.developmentGoal === 'string' ? listRaw.developmentGoal : draft?.developmentGoal || context.position?.developmentGoal || '';
+    const workforceStrategy = normalizeWorkforceStrategyCards(listRaw?.workforceStrategy || draft?.workforceStrategy || context.position?.workforceStrategy || []);
 
     const skillList = normalizePositionSkills(listRaw?.skill || draft?.skill || context.position?.skill || []).map(item => ({
       id: item.id,
       name: item.name,
-      origin: item.origin
+      origin: item.origin,
+      activityCode: item.activityCode,
+      activityTitle: item.activityTitle
     }));
 
     if (skillList.length === 0) {
@@ -1505,7 +1800,8 @@ module.exports = fp(async (fastify, options) => {
         description,
         requirement,
         developmentGoal,
-        skill: normalizePositionSkills(context.position?.skill || [])
+        skill: normalizePositionSkills(context.position?.skill || []),
+        workforceStrategy
       };
     }
 
@@ -1521,7 +1817,8 @@ module.exports = fp(async (fastify, options) => {
       description,
       requirement,
       developmentGoal,
-      skill: skill.length ? skill : normalizePositionSkills(context.position?.skill || [])
+      skill: skill.length ? skill : normalizePositionSkills(context.position?.skill || []),
+      workforceStrategy
     };
   };
 
@@ -1540,7 +1837,8 @@ module.exports = fp(async (fastify, options) => {
         description: typeof data.description === 'string' ? data.description : draft?.description || context.position?.description || '',
         requirement: typeof data.requirement === 'string' ? data.requirement : draft?.requirement || context.position?.requirement || '',
         developmentGoal: typeof data.developmentGoal === 'string' ? data.developmentGoal : draft?.developmentGoal || context.position?.developmentGoal || '',
-        skill: skill.length ? skill : normalizePositionSkills(context.position?.skill || [])
+        skill: skill.length ? skill : normalizePositionSkills(context.position?.skill || []),
+        workforceStrategy: normalizeWorkforceStrategyCards(data.workforceStrategy || draft?.workforceStrategy || context.position?.workforceStrategy || [])
       };
     }
 
@@ -1592,7 +1890,8 @@ module.exports = fp(async (fastify, options) => {
         tenantOrgId: context.position?.tenantOrgId,
         orgEnums: context.position?.orgEnums,
         skill: context.position?.skill,
-        verdict: context.position?.verdict
+        verdict: context.position?.verdict,
+        workforceStrategy: context.position?.workforceStrategy
       },
       employees: (context.employees || []).map(item => ({
         id: item.id,
@@ -1755,6 +2054,7 @@ module.exports = fp(async (fastify, options) => {
       skillAnalysisDetail,
       skillAnalysisSave,
       startAnalysis,
+      startRefineAnalysis,
       lockAnalysis,
       getAnalysisTaskContext,
       completeAnalysis,

@@ -5,8 +5,23 @@
   flex-direction: column;
   gap: 16px;
 
-  :global(.ant-table-tbody > tr > td) {
-    vertical-align: middle;
+  :global(.ant-table-tbody > tr > td):has(.readiness) {
+    vertical-align: middle !important;
+
+    :global([class*='col-item']) {
+      width: 100%;
+      max-width: none;
+    }
+
+    > *,
+    > * > *,
+    :global(.ant-typography) {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
   }
 }
 
@@ -163,7 +178,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 120px;
+  width: 100%;
+  min-width: 0;
 }
 
 .readiness-track {

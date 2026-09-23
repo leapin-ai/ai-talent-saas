@@ -2,8 +2,8 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
   return {
     model: {
       tenantUserId: definePrimaryType('tenantUserId', {
-        comment: '租户用户ID',
-        allowNull: false
+        comment: '租户用户ID（采集邀请无账号时可空）',
+        allowNull: true
       }),
       profileData: {
         type: DataTypes.JSONB,
@@ -63,7 +63,7 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
       assessment.belongsTo(options.getTenantModels().tenant);
       assessment.belongsTo(options.getTenantModels().tenantUser, {
         foreignKey: 'tenantUserId',
-        allowNull: false
+        allowNull: true
       });
     },
     options: {

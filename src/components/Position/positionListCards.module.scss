@@ -1,0 +1,201 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+.root {
+  width: 100%;
+  min-width: 0;
+}
+
+.toolbar {
+  margin-bottom: 12px;
+}
+
+.grid {
+  width: 100%;
+
+  :global {
+    .ant-list-item {
+      height: 100%;
+      margin-block-end: 12px !important;
+    }
+
+    // 与 AI 面试 TableListCard 一致：用 grid 行轨等高
+    .ant-row {
+      display: grid !important;
+      align-items: stretch;
+      grid-template-columns: repeat(var(--card-cols, 2), minmax(0, 1fr));
+    }
+
+    .ant-row:has(> .ant-col-24) {
+      --card-cols: 1;
+    }
+
+    .ant-row:has(> .ant-col-12) {
+      --card-cols: 2;
+    }
+
+    .ant-row:has(> .ant-col-8) {
+      --card-cols: 3;
+    }
+
+    .ant-row:has(> .ant-col-6) {
+      --card-cols: 4;
+    }
+
+    .ant-col {
+      display: grid;
+      min-width: 0;
+      min-height: 0;
+      max-width: none !important;
+      width: auto !important;
+    }
+  }
+}
+
+.grid-item {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+
+  .card {
+    height: 100%;
+  }
+}
+
+.card {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: none;
+  border-radius: 12px;
+  background: #fff;
+  box-sizing: border-box;
+  transition: box-shadow 0.15s ease;
+}
+
+.card-clickable {
+  cursor: pointer;
+
+  &:hover {
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  }
+}
+
+.card-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 16px 14px;
+  box-sizing: border-box;
+}
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.card-identity {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.card-title {
+  margin: 0;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-tag {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 20px;
+  color: #64748b;
+}
+
+.dot {
+  color: #cbd5e1;
+}
+
+.card-change {
+  flex: 0 0 auto;
+  padding-top: 2px;
+}
+
+.card-desc {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+  color: #475569;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+  padding-top: 12px;
+}
+
+@include resp.mobile-container {
+  .card-top {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .card-change {
+    padding-top: 0;
+  }
+
+  .card-title {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+}

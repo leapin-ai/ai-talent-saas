@@ -73,7 +73,8 @@ const positionVerdictSchema = {
     summary: { type: 'string' },
     today: { type: 'string' },
     future: { type: 'string' },
-    futureLabel: { type: 'string' }
+    futureLabel: { type: 'string' },
+    aiEfficiencyGain: { type: ['number', 'string', 'null'] }
   }
 };
 
@@ -83,7 +84,8 @@ const positionVerdictSchemaNoDefault = {
     summary: { type: 'string' },
     today: { type: 'string' },
     future: { type: 'string' },
-    futureLabel: { type: 'string' }
+    futureLabel: { type: 'string' },
+    aiEfficiencyGain: { type: ['number', 'string', 'null'] }
   }
 };
 

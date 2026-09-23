@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Empty } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import withLocale from '../withLocale';
-import SkillList from './SkillList';
-import SkillOverview from './SkillList/SkillOverview';
+import RoleInsightsContent from './RoleInsightsContent';
 import style from './RoleInsights.module.scss';
 
 const TAG_TO_CHANGE = {
@@ -14,13 +12,6 @@ const TAG_TO_CHANGE = {
   increasing: 'enhanced',
   stable: 'stable',
   decreasing: 'declining'
-};
-
-const ACTION_CLASS = {
-  BUILD: 'strategy-action-build',
-  MOVE: 'strategy-action-move',
-  BUY: 'strategy-action-buy',
-  AUGMENT: 'strategy-action-augment'
 };
 
 const taskToSkill = task => {
@@ -45,10 +36,14 @@ const taskToSkill = task => {
       .filter(Boolean);
   }
 
+  const activityGroup = task.activityGroup || '';
+  const activityMatch = String(activityGroup).match(/^([A-Za-z]?\d{1,3})\s*[·.\-–—:]?\s*(.*)$/);
   return {
     id: String(task.id),
     name: task.title || '',
-    activityGroup: task.activityGroup || '',
+    activityGroup,
+    activityCode: activityMatch?.[1] ? activityMatch[1].toUpperCase() : '',
+    activityTitle: activityMatch?.[2] ? activityMatch[2].trim() : activityGroup,
     origin: task.changeTag === 'new' || task.changeTag === 'ai_emerging' ? 'new' : 'existing',
     importanceNow: task.importanceNow,
     importanceYear: task.importanceFuture,
@@ -147,61 +142,38 @@ const RoleInsights = createWithRemoteLoader({
     const magnitude = position?.changeMagnitude || 'low';
     const assessed = talentMetrics?.assessed || 0;
     const total = talentMetrics?.total || 0;
+    const efficiencyGain = position?.outlook?.aiEfficiencyGain ?? position?.verdict?.aiEfficiencyGain;
+    const efficiencyText = efficiencyGain == null || efficiencyGain === '' || !Number.isFinite(Number(efficiencyGain)) ? '—' : `${Math.round(Number(efficiencyGain))}%`;
 
     if (tasks == null) {
       return null;
     }
 
-    return (
-      <div className={style.stack}>
-        <section className={style.card}>
-          <SkillOverview skill={skills} verdict={outlookToVerdict(position?.outlook)} />
-          <div className={style.impact}>
-            <div className={style['impact-item']}>
-              <div className={style['impact-value']}>{formatMessage({ id: `position.changeMagnitude.${magnitude}` })}</div>
-              <div className={style['impact-caption']}>{formatMessage({ id: 'position.aiImpactCaption' })}</div>
-            </div>
-            <div className={style['impact-divider']} />
-            <div className={style['impact-item']}>
-              <div className={style['impact-value']}>{talentMetrics?.teamReadiness == null ? '—' : `${talentMetrics.teamReadiness}%`}</div>
-              <div className={style['impact-caption']}>{formatMessage({ id: 'position.teamReadinessCaption' })}</div>
-            </div>
-            <div className={style['impact-divider']} />
-            <div className={style['impact-item']}>
-              <div className={style['impact-value']}>{formatMessage({ id: 'position.assessedValue' }, { assessed, total })}</div>
-              <div className={style['impact-caption']}>{formatMessage({ id: 'position.assessedCaption' })}</div>
-            </div>
-          </div>
-        </section>
-        <section className={style.card}>
-          <h2 className={style['section-title']}>{formatMessage({ id: 'position.skillListTitle' })}</h2>
-          {skills.length ? (
-            <SkillList skill={skills} />
-          ) : (
-            <div className={style['tasks-empty']}>
-              <Empty description={formatMessage({ id: 'position.roleTasksEmpty' })} />
-            </div>
-          )}
-        </section>
-        {strategies.length ? (
-          <section className={style.card}>
-            <h2 className={style['section-title']}>{formatMessage({ id: 'position.gapRecommendations' })}</h2>
-            <div className={style.strategies}>
-              {strategies.map(card => {
-                const action = String(card.action || '').toUpperCase();
-                return (
-                  <article key={card.id || action} className={style.strategy}>
-                    <div className={`${style['strategy-action']} ${style[ACTION_CLASS[action]] || ''}`}>{action}</div>
-                    <div className={style['strategy-title']}>{card.title}</div>
-                    {card.detail ? <p className={style['strategy-detail']}>{card.detail}</p> : null}
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-        ) : null}
+    const impact = (
+      <div className={style.impact}>
+        <div className={style['impact-item']}>
+          <div className={style['impact-value']}>{formatMessage({ id: `position.changeMagnitude.${magnitude}` })}</div>
+          <div className={style['impact-caption']}>{formatMessage({ id: 'position.aiImpactCaption' })}</div>
+        </div>
+        <div className={style['impact-divider']} />
+        <div className={style['impact-item']}>
+          <div className={style['impact-value']}>{talentMetrics?.teamReadiness == null ? '—' : `${talentMetrics.teamReadiness}%`}</div>
+          <div className={style['impact-caption']}>{formatMessage({ id: 'position.teamReadinessCaption' })}</div>
+        </div>
+        <div className={style['impact-divider']} />
+        <div className={style['impact-item']}>
+          <div className={style['impact-value']}>{efficiencyText}</div>
+          <div className={style['impact-caption']}>{formatMessage({ id: 'position.aiEfficiencyGainCaption' })}</div>
+        </div>
+        <div className={style['impact-divider']} />
+        <div className={style['impact-item']}>
+          <div className={style['impact-value']}>{formatMessage({ id: 'position.assessedValue' }, { assessed, total })}</div>
+          <div className={style['impact-caption']}>{formatMessage({ id: 'position.assessedCaption' })}</div>
+        </div>
       </div>
     );
+
+    return <RoleInsightsContent skill={skills} verdict={outlookToVerdict(position?.outlook)} impact={impact} strategies={strategies} />;
   })
 );
 

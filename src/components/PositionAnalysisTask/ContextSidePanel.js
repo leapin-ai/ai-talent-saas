@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, Flex, Tabs, Tag, Typography } from 'antd';
+import { App, Button, Empty, Flex, Tabs, Tag, Typography } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import classnames from 'classnames';
 import TalentProfile from '@components/TalentProfile';
+import { CapacityLabel } from '@components/Position/Detail/PositionInfoPanel';
+import InterviewVideoTranscript from '@components/InterviewVideoTranscript';
+import { applyAiInterviewRemote } from '../../preset';
+import { downloadInterviewExport } from './exportInterviewData';
 import style from './style.module.scss';
 
 const text = value => {
@@ -81,7 +85,7 @@ const PositionInfo = ({ position }) => {
         <MetaGrid
           items={[
             { label: '部门', value: text(department) },
-            { label: '职能', value: text(position.capacity) },
+            { label: '职能', value: position.capacity ? <CapacityLabel value={position.capacity} /> : '-' },
             { label: '语言', value: text(position.language) },
             { label: '地点类型', value: text(LOCATION_TYPE_LABEL[position.locationType] || position.locationType) },
             { label: '工作地点', value: formatLocation(position.location) },
@@ -116,7 +120,11 @@ const TenantCompanyPane = createWithRemoteLoader({
   const { global } = useGlobalContext('userInfo');
   const tenantId = global?.tenant?.id;
   // 分析弹窗只读展示，不走 Setting.Company 的权限门禁
-  return <Fetch {...Object.assign({}, apis?.tenant?.companyDetail)} render={({ data }) => <CompanyInfo data={data} tenantId={tenantId} hasEdit={false} />} />;
+  return (
+    <div className={style['tenant-company-embed']}>
+      <Fetch {...Object.assign({}, apis?.tenant?.companyDetail)} render={({ data }) => <CompanyInfo data={data} tenantId={tenantId} hasEdit={false} />} />
+    </div>
+  );
 });
 
 const EmployeeSwitcher = createWithRemoteLoader({
@@ -190,41 +198,152 @@ const EmployeeProfilePane = createWithRemoteLoader({
   );
 });
 
+const InterviewPane = createWithRemoteLoader({
+  modules: ['ai-interview-flowup:ComponentPreset', 'ai-interview-flowup:InterviewResultSession', 'components-core:Global@useGlobalValue']
+})(({ remoteModules, interview, interviewError, apiHost }) => {
+  const [ComponentPreset, InterviewResultSession, useGlobalValue] = remoteModules;
+  const hostThemeToken = useGlobalValue('themeToken');
+  if (interviewError) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={interviewError} />;
+  }
+  if (!interview) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无面试数据" />;
+  }
+  if (!ComponentPreset || !InterviewResultSession || !apiHost) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="面试结果组件未就绪" />;
+  }
+  return (
+    <div className={style['interview-embed']}>
+      <ComponentPreset apiHost={apiHost} themeToken={hostThemeToken}>
+        <InterviewResultSession data={interview} />
+      </ComponentPreset>
+    </div>
+  );
+});
+
+const InterviewPaneGate = ({ interview, interviewError, apiHost, cdnUrl, version }) => {
+  const remoteKey = useMemo(() => `${cdnUrl || ''}|${version || ''}|${apiHost || ''}`, [apiHost, cdnUrl, version]);
+  const remoteApplied = useMemo(() => {
+    if (!cdnUrl || !version) {
+      return false;
+    }
+    return applyAiInterviewRemote({ cdnUrl, version });
+  }, [cdnUrl, version]);
+
+  if (interviewError) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={interviewError} />;
+  }
+  if (!interview) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无面试数据" />;
+  }
+  if (!remoteApplied || !apiHost) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="AI 面试组件未配置，请先在设置中填写 CDN 与版本" />;
+  }
+  return <InterviewPane key={remoteKey} interview={interview} interviewError={interviewError} apiHost={apiHost} />;
+};
+
+const CollectInviteMeta = ({ invite }) => {
+  if (!invite) {
+    return null;
+  }
+  return (
+    <InfoCard title="采集邀请">
+      <MetaGrid
+        items={[
+          { label: '姓名', value: text(invite.name) },
+          { label: '邮箱', value: text(invite.email) },
+          { label: '手机', value: text(invite.phone) },
+          { label: '邀请类型', value: text(invite.inviteType) }
+        ]}
+      />
+    </InfoCard>
+  );
+};
+
 const ContextSidePanel = ({ context }) => {
+  const { message } = App.useApp();
+  const isRefineTask = context?.task?.type === 'position-analysis-review';
+
+  const exportInterview = () => {
+    if (!context?.interview && !context?.position && !context?.company) {
+      message.warning('暂无可导出数据');
+      return;
+    }
+    const name = context.position?.name || context.collectInvite?.name || context.interview?.id || 'export';
+    downloadInterviewExport({
+      interview: context.interview,
+      videoTranscripts: context.videoTranscripts,
+      position: context.position,
+      company: context.company,
+      filename: `analysis-data-${name}`
+    });
+    message.success('已导出数据');
+  };
+
+  const tabItems = useMemo(() => {
+    const items = [
+      {
+        key: 'position',
+        label: '岗位信息',
+        children: (
+          <div className={style['side-tab-body']}>
+            <PositionInfo position={context?.position} />
+          </div>
+        )
+      }
+    ];
+
+    if (isRefineTask) {
+      items.push({
+        key: 'interview',
+        label: 'AI 面试',
+        children: (
+          <div className={style['side-tab-body']}>
+            <Flex vertical gap={12}>
+              <CollectInviteMeta invite={context?.collectInvite} />
+              <InterviewPaneGate interview={context?.interview} interviewError={context?.interviewError} apiHost={context?.apiHost} cdnUrl={context?.cdnUrl} version={context?.version} />
+              <InterviewVideoTranscript interview={context?.interview} videoTranscripts={context?.videoTranscripts} />
+            </Flex>
+          </div>
+        )
+      });
+    } else {
+      items.push({
+        key: 'employee',
+        label: '员工档案',
+        children: (
+          <div className={classnames(style['side-tab-body'], style['side-tab-body-employee'])}>
+            <EmployeeProfilePane employees={context?.employees} />
+          </div>
+        )
+      });
+    }
+
+    items.push({
+      key: 'company',
+      label: '公司信息',
+      children: (
+        <div className={style['side-tab-body']}>
+          <TenantCompanyPane />
+        </div>
+      )
+    });
+
+    return items;
+  }, [context, isRefineTask]);
+
   return (
     <div className={style['side-panel']}>
       <Tabs
         size="small"
         className={style['side-tabs']}
-        items={[
-          {
-            key: 'position',
-            label: '岗位信息',
-            children: (
-              <div className={style['side-tab-body']}>
-                <PositionInfo position={context?.position} />
-              </div>
-            )
-          },
-          {
-            key: 'employee',
-            label: '员工档案',
-            children: (
-              <div className={classnames(style['side-tab-body'], style['side-tab-body-employee'])}>
-                <EmployeeProfilePane employees={context?.employees} />
-              </div>
-            )
-          },
-          {
-            key: 'company',
-            label: '公司信息',
-            children: (
-              <div className={style['side-tab-body']}>
-                <TenantCompanyPane />
-              </div>
-            )
-          }
-        ]}
+        defaultActiveKey={isRefineTask ? 'interview' : 'position'}
+        items={tabItems}
+        tabBarExtraContent={
+          <Button size="small" type="link" className={style['export-btn']} onClick={exportInterview}>
+            导出数据
+          </Button>
+        }
       />
     </div>
   );

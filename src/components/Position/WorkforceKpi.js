@@ -3,6 +3,7 @@ import { Card, Col, Row, Statistic } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
+import style from './workforceKpi.module.scss';
 
 const WorkforceKpi = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']
@@ -46,10 +47,10 @@ const WorkforceKpi = createWithRemoteLoader({
     ];
 
     return (
-      <Row gutter={12}>
+      <Row gutter={12} className={style.row} align="stretch">
         {items.map(([key, labelId]) => (
-          <Col span={6} key={key}>
-            <Card size="small">
+          <Col span={6} key={key} className={style.col}>
+            <Card size="small" className={style.card}>
               <Statistic title={formatMessage({ id: labelId })} value={Number(summary[key]) || 0} />
             </Card>
           </Col>

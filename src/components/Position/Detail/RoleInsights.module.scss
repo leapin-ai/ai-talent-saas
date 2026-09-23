@@ -6,6 +6,19 @@
   gap: 16px;
 }
 
+/* Figma 973:5293 — Role Insights Overview 整卡（渐变底，含研判 / 指标 / 底栏） */
+.overview-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  border: 1px solid rgba(91, 84, 232, 0.16);
+  border-radius: 12px;
+  background: linear-gradient(163.16deg, #f3f1fe 0%, #fbf7fb 100%);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
 .card {
   position: relative;
   padding: 16px 20px 16px 24px;
@@ -32,16 +45,16 @@
     width: 4px;
     height: 24px;
     border-radius: 0 4px 4px 0;
-    background: var(--primary-color, #4183f0);
+    background: #4654d9;
   }
 }
 
 .impact {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
   gap: 24px;
-  margin-top: 16px;
+  margin: 0;
   padding-top: 16px;
   border-top: 1px solid #e2e8f0;
 }
@@ -51,6 +64,7 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1 1 0;
 }
 
 .impact-value {
@@ -78,47 +92,42 @@
 .strategies {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 
 .strategy {
-  padding: 14px 16px;
-  border: 1px solid rgba(20, 16, 60, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #dde3ee;
   border-radius: 12px;
-  background: #fcfbff;
+  background: #fff;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .strategy-action {
-  display: inline-flex;
-  margin-bottom: 6px;
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 16px;
-}
-
-.strategy-action-build,
-.strategy-action-buy {
-  color: #2563eb;
-}
-
-.strategy-action-move,
-.strategy-action-augment {
-  color: #6668d8;
+  color: #4654d9;
 }
 
 .strategy-title {
   font-size: 14px;
   font-weight: 600;
-  line-height: 22px;
+  line-height: 20px;
   color: #0f172a;
 }
 
 .strategy-detail {
-  margin: 4px 0 0;
-  font-size: 13px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
   line-height: 20px;
-  color: #475569;
+  color: #334155;
 }
 
 .tasks-empty {
@@ -133,6 +142,11 @@
 }
 
 @include resp.mobile-container {
+  .overview-shell {
+    padding: 16px;
+    gap: 16px;
+  }
+
   .strategies {
     grid-template-columns: 1fr;
   }

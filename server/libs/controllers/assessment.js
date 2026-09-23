@@ -278,4 +278,29 @@ module.exports = fp(async (fastify, options) => {
       return services.assessment.aiFillGenerate(request.userInfo, request.body);
     }
   );
+
+  fastify.post(
+    `${options.prefix}/tenant/assessment/generate-talent-insight`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: '完善档案生成任务：根据面试/简历/填写信息生成就绪度与成长匹配',
+        body: {
+          type: 'object',
+          properties: {
+            taskId: { type: 'string' },
+            language: { type: 'string' },
+            draft: { type: 'object' },
+            resumeParsed: { type: 'object' },
+            submittedInfo: { type: 'object' },
+            persist: { type: 'boolean' }
+          },
+          required: ['taskId']
+        }
+      }
+    },
+    async request => {
+      return services.assessment.generateTalentInsight(request.userInfo, request.body);
+    }
+  );
 });

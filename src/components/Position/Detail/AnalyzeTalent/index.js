@@ -56,11 +56,11 @@ const AnalyzeTalent = createWithRemoteLoader({
     const [metrics, setMetrics] = useState(EMPTY_METRICS);
     const { selectedRows, getRowSelection } = Table.useSelectedRow({ rowKey: 'id' });
 
-    const goTalentAnalysis = item => {
-      if (!item?.id || !positionId) {
+    const goEmployeeProfile = item => {
+      if (!item?.id) {
         return;
       }
-      navigate(`${baseUrl}/position/${positionId}/talent/${item.id}`);
+      navigate(`${baseUrl}/profile/${item.id}`);
     };
 
     const listApi = useMemo(() => {
@@ -88,10 +88,10 @@ const AnalyzeTalent = createWithRemoteLoader({
           <div className={style.person}>
             <span className={style.initials}>{initialsOf(item)}</span>
             <div className={style['person-text']}>
-              <button type="button" className={style['person-name-link']} onClick={() => goTalentAnalysis(item)}>
+              <button type="button" className={style['person-name-link']} onClick={() => goEmployeeProfile(item)}>
                 {item.name || item.nameEn || '—'}
               </button>
-              <div className={style['person-manager']}>{formatMessage({ id: 'position.talentManager' }, { name: item.managerName || '—' })}</div>
+              {item.managerName ? <div className={style['person-manager']}>{formatMessage({ id: 'position.talentManager' }, { name: item.managerName })}</div> : null}
             </div>
           </div>
         )

@@ -20,7 +20,7 @@ export const toReviewData = profileDetail => {
   if (!profileDetail) {
     return { employee: {}, profile: {} };
   }
-  const { profile, performances, orgEnums, positionEnums, aiSuggest, createdAt, updatedAt, deletedAt, ...employee } = profileDetail;
+  const { profile, performances, orgEnums, positionEnums, aiSuggest, skillAnalysisDraft, skillAnalysis, createdAt, updatedAt, deletedAt, ...employee } = profileDetail;
   if (employee.id != null && String(employee.id).startsWith('draft-')) {
     delete employee.id;
   }
@@ -33,7 +33,9 @@ export const toReviewData = profileDetail => {
   delete cleanProfile.deletedAt;
   return {
     employee,
-    profile: cleanProfile
+    profile: cleanProfile,
+    aiSuggest: aiSuggest || null,
+    skillAnalysis: skillAnalysisDraft || skillAnalysis || null
   };
 };
 
