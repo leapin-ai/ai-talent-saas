@@ -190,6 +190,17 @@ const ProfileEditorPanel = ({ employeeApis, profileDetail, setProfileDetail }) =
     [setProfileDetail]
   );
 
+  const saveSkillAnalysis = useCallback(
+    async analysisData => {
+      setProfileDetail(prev =>
+        Object.assign({}, prev, {
+          skillAnalysisDraft: Object.assign({}, prev.skillAnalysisDraft || prev.skillAnalysis || {}, analysisData || {})
+        })
+      );
+    },
+    [setProfileDetail]
+  );
+
   const createPerformance = useCallback(
     async performanceData => {
       setProfileDetail(prev =>
@@ -236,6 +247,7 @@ const ProfileEditorPanel = ({ employeeApis, profileDetail, setProfileDetail }) =
         saveEmployee={saveEmployee}
         saveProfile={saveProfile}
         saveAiSuggest={saveAiSuggest}
+        saveSkillAnalysis={saveSkillAnalysis}
         createPerformance={createPerformance}
         removePerformance={removePerformance}
         savePerformance={savePerformance}
@@ -407,7 +419,7 @@ const TaskContextBody = ({ taskId, context, profileDetail, setProfileDetail, emp
   return (
     <Splitter className={style['split-layout']}>
       <Splitter.Panel defaultSize="48%" min="320" max="70%" className={style['split-left']}>
-        <ContextSidePanel context={context} resumeParsed={resumeParsed} onResumeParsedChange={setResumeParsed} />
+        <ContextSidePanel context={context} resumeParsed={resumeParsed} onResumeParsedChange={setResumeParsed} profileDetail={currentDetail} />
       </Splitter.Panel>
       <Splitter.Panel className={style['split-right']}>
         <div className={style['form-scroll']}>

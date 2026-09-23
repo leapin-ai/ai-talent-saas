@@ -253,8 +253,6 @@ module.exports = fp(async (fastify, options) => {
     return employee;
   };
 
-  const OUTDATED_ASSESSMENT_MS = 365 * 24 * 60 * 60 * 1000;
-
   const resolvePositionId = value => {
     if (value == null || value === '') {
       return null;
@@ -304,11 +302,16 @@ module.exports = fp(async (fastify, options) => {
     if (!assessmentDone && !interviewDone && ['pending', 'interviewing'].includes(status)) {
       return 'inProgress';
     }
-    const updatedAt = assessment.updatedAt ? new Date(assessment.updatedAt).getTime() : NaN;
-    if (Number.isFinite(updatedAt) && now - updatedAt > OUTDATED_ASSESSMENT_MS) {
-      return 'outdated';
+    // 完成过一次评估后永久视为已评估（不再按时间降级为需复评/未评估）
+    if (assessmentDone || interviewDone) {
+      return 'assessed';
     }
-    return 'assessed';
+    // 有 assessment 记录但状态不明时，仍按已评估展示（兼容历史数据）
+    const updatedAt = assessment.updatedAt ? new Date(assessment.updatedAt).getTime() : NaN;
+    if (Number.isFinite(updatedAt) || assessment.id) {
+      return 'assessed';
+    }
+    return 'never';
   };
 
   const resolveCollectInviteAssessmentStatus = (inviteStatus, optionsStatus) => {
@@ -484,7 +487,11 @@ module.exports = fp(async (fastify, options) => {
           lastAssessment = fromInvite;
         }
       }
+      // 该岗位已有就绪度分析记录 → 视为完成过评估
       const fromAnalysis = analysisReadinessMap.has(String(plain.id)) ? normalizeReadiness(analysisReadinessMap.get(String(plain.id))) : null;
+      if ((lastAssessment === 'never' || lastAssessment === 'inProgress') && analysisReadinessMap.has(String(plain.id))) {
+        lastAssessment = 'assessed';
+      }
       const fromOptions = lastAssessment === 'never' || lastAssessment === 'inProgress' ? null : normalizeReadiness(options.readiness);
       const readiness = fromAnalysis != null ? fromAnalysis : fromOptions;
       const departmentOrgId = resolveDepartmentOrgId(plain);

@@ -46,6 +46,7 @@ const TalentProfile = createWithRemoteLoader({
       saveEmployee: controlledSaveEmployee,
       saveProfile: controlledSaveProfile,
       saveAiSuggest: controlledSaveAiSuggest,
+      saveSkillAnalysis: controlledSaveSkillAnalysis,
       createPerformance: controlledCreatePerformance,
       removePerformance: controlledRemovePerformance,
       savePerformance: controlledSavePerformance,
@@ -176,6 +177,15 @@ const TalentProfile = createWithRemoteLoader({
           reload();
           return resData.data;
         };
+
+        const saveSkillAnalysis = controlledSaveSkillAnalysis
+          ? async analysisData => {
+              if (readOnly) {
+                return;
+              }
+              return controlledSaveSkillAnalysis(analysisData, { employeeId, reload });
+            }
+          : undefined;
 
         const createPerformance = async performanceData => {
           if (readOnly) {
@@ -415,7 +425,9 @@ const TalentProfile = createWithRemoteLoader({
                       displayName={profileData.name}
                       positionId={positionId}
                       readOnly={readOnly || readinessReadOnly}
+                      showLooksWrong={!!readOnly}
                       analysisOverride={data.skillAnalysisDraft || null}
+                      onSaveAnalysis={saveSkillAnalysis}
                       onGenerateInsight={onGenerateInsight}
                       generatingInsight={generatingInsight}
                     />
