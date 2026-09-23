@@ -244,6 +244,7 @@ const ProfileEditorPanel = ({ employeeApis, profileDetail, setProfileDetail }) =
         baseUrl="/tenant"
         apis={employeeApis}
         data={profileDetail}
+        showLooksWrong={false}
         saveEmployee={saveEmployee}
         saveProfile={saveProfile}
         saveAiSuggest={saveAiSuggest}

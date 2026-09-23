@@ -7,6 +7,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import classnames from 'classnames';
 import ActivityTaskTable from '@components/ActivityTaskTable';
+import { PINNED_SCROLL_MAX_HEIGHT } from '@components/PinnedScrollPanel';
 import withLocale from './withLocale';
 import ProfileEvidence from './ProfileEvidence';
 import { ReadinessFormInner, PriorityGapsFormInner, TaskReadinessFormInner } from './FormInner';
@@ -341,24 +342,39 @@ const ProfileReadiness = createWithRemoteLoader({
       setSelectedId(prev => (prev && flat.some(item => item.id === prev) ? prev : flat[0].id));
     }, [groups]);
 
-    const selectedTask = useMemo(() => {
-      const flat = groups.flatMap(group => group.children);
-      const found = flat.find(item => item.id === selectedId) || flat[0] || null;
-      if (!found) {
+    const enrichTask = task => {
+      if (!task) {
         return null;
       }
-      const status = resolveStatus(found);
+      const status = resolveStatus(task);
       const meta = STATUS_META[status] || STATUS_META.gap;
-      const confidence = normalizeConfidence(found.confidence);
+      const confidence = normalizeConfidence(task.confidence);
       return {
-        ...found,
+        ...task,
         status,
         statusTone: meta.tone,
         statusLabel: formatMessage({ id: meta.labelKey }),
         confidence,
         confidenceLabel: confidence ? formatMessage({ id: CONFIDENCE_KEYS[confidence] || CONFIDENCE_KEYS.medium }) : null
       };
+    };
+
+    const selectedTask = useMemo(() => {
+      const flat = groups.flatMap(group => group.children);
+      const found = flat.find(item => item.id === selectedId) || flat[0] || null;
+      return enrichTask(found);
+      // enrichTask 依赖 formatMessage / resolveStatus，与 groups、selectedId 同步即可
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [groups, selectedId, formatMessage]);
+
+    // 打印：左侧全部任务一对多展开证据，不只当前选中项
+    const printTasks = useMemo(() => {
+      return groups
+        .flatMap(group => group.children)
+        .map(enrichTask)
+        .filter(Boolean);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [groups, formatMessage]);
 
     if (!positionId && !effectiveAnalysis) {
       return <Empty description={formatMessage({ id: 'talentProfile.readinessNoPosition' })} />;
@@ -728,7 +744,7 @@ const ProfileReadiness = createWithRemoteLoader({
         </div>
 
         <Card
-          className={style['future-task-card']}
+          className={classnames(style['future-task-card'], !(displayRows || []).length && style['print-section-empty'])}
           hover={false}
           padding={0}
           title={
@@ -753,6 +769,7 @@ const ProfileReadiness = createWithRemoteLoader({
             <div className={style['future-task-body']}>
               <div className={style['future-task-main']}>
                 <ActivityTaskTable
+                  maxBodyHeight={PINNED_SCROLL_MAX_HEIGHT}
                   groups={groups}
                   columns={[
                     formatMessage({ id: 'talentProfile.colActivityTask' }),
@@ -788,32 +805,48 @@ const ProfileReadiness = createWithRemoteLoader({
                     }
                     return formatMessage({ id: CONFIDENCE_KEYS[confidence] || CONFIDENCE_KEYS.medium });
                   }}
+                  footer={
+                    <div className={style.legend}>
+                      <span className={style['legend-item']}>
+                        <span className={style['legend-fill']} />
+                        {formatMessage({ id: 'talentProfile.legendCurrent' })}
+                      </span>
+                      <span className={style['legend-item']}>
+                        <span className={style['legend-mark']} />
+                        {formatMessage({ id: 'talentProfile.legendRequired' })}
+                      </span>
+                      <span className={style['legend-item']}>
+                        <span className={style['legend-gap']} />
+                        {formatMessage({ id: 'talentProfile.legendGap' })}
+                      </span>
+                    </div>
+                  }
                 />
-                <div className={style.legend}>
-                  <span className={style['legend-item']}>
-                    <span className={style['legend-fill']} />
-                    {formatMessage({ id: 'talentProfile.legendCurrent' })}
-                  </span>
-                  <span className={style['legend-item']}>
-                    <span className={style['legend-mark']} />
-                    {formatMessage({ id: 'talentProfile.legendRequired' })}
-                  </span>
-                  <span className={style['legend-item']}>
-                    <span className={style['legend-gap']} />
-                    {formatMessage({ id: 'talentProfile.legendGap' })}
-                  </span>
-                </div>
               </div>
               <div className={style['future-task-evidence']}>
-                <ProfileEvidence
-                  employeeId={employeeId}
-                  positionId={positionId}
-                  variant="task"
-                  selectedTask={selectedTask}
-                  readOnly={readOnly}
-                  showLooksWrong={showLooksWrong}
-                  onSaveTaskEvidence={!readOnly ? handleSaveTaskEvidence : undefined}
-                />
+                <div className={style['future-task-evidence-screen']}>
+                  <ProfileEvidence
+                    employeeId={employeeId}
+                    positionId={positionId}
+                    variant="task"
+                    selectedTask={selectedTask}
+                    readOnly={readOnly}
+                    showLooksWrong={showLooksWrong}
+                    onSaveTaskEvidence={!readOnly ? handleSaveTaskEvidence : undefined}
+                  />
+                </div>
+                {printTasks.length ? (
+                  <div className={style['future-task-evidence-print']}>
+                    <div className={style['print-subsection-title']}>{formatMessage({ id: 'talentProfile.evidenceUsed' })}</div>
+                    <Flex vertical gap={16}>
+                      {printTasks.map(task => (
+                        <div key={task.id} className={style['print-evidence-block']}>
+                          <ProfileEvidence employeeId={employeeId} positionId={positionId} variant="task" selectedTask={task} readOnly showLooksWrong={false} />
+                        </div>
+                      ))}
+                    </Flex>
+                  </div>
+                ) : null}
               </div>
             </div>
           )}
