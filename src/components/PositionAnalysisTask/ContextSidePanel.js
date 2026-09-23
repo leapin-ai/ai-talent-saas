@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { App, Button, Empty, Flex, Tabs, Tag, Typography } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
-import classnames from 'classnames';
-import TalentProfile from '@components/TalentProfile';
 import { CapacityLabel } from '@components/Position/Detail/PositionInfoPanel';
 import InterviewVideoTranscript from '@components/InterviewVideoTranscript';
 import { applyAiInterviewRemote } from '../../preset';
@@ -127,77 +125,6 @@ const TenantCompanyPane = createWithRemoteLoader({
   );
 });
 
-const EmployeeSwitcher = createWithRemoteLoader({
-  modules: ['components-core:Image.Avatar']
-})(({ remoteModules, employees, selectedId, onSelect }) => {
-  const [Avatar] = remoteModules;
-  return (
-    <div className={style['employee-switcher']}>
-      <div className={style['employee-switcher-title']}>关联人员</div>
-      <div className={style['employee-switcher-list']}>
-        {employees.map(item => {
-          const active = String(item.id) === String(selectedId);
-          return (
-            <button key={item.id} type="button" className={classnames(style['employee-switch-item'], active && style['employee-switch-item-active'])} onClick={() => onSelect(item.id)}>
-              <Avatar id={item.avatar} gender={item.gender || 'M'} size={36} />
-              <div className={style['employee-switch-text']}>
-                <Typography.Text ellipsis className={style['employee-switch-name']}>
-                  {item.name || item.nameEn || item.id}
-                </Typography.Text>
-                {item.nameEn ? (
-                  <Typography.Text type="secondary" ellipsis className={style['employee-switch-sub']}>
-                    {item.nameEn}
-                  </Typography.Text>
-                ) : null}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-});
-
-const EmployeeProfilePane = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
-})(({ remoteModules, employees }) => {
-  const [usePreset] = remoteModules;
-  const { apis } = usePreset();
-  const list = Array.isArray(employees) ? employees : [];
-  const [selectedId, setSelectedId] = useState(() => list[0]?.id || null);
-
-  useEffect(() => {
-    if (!list.length) {
-      setSelectedId(null);
-      return;
-    }
-    if (!list.some(item => String(item.id) === String(selectedId))) {
-      setSelectedId(list[0].id);
-    }
-  }, [list, selectedId]);
-
-  const profileApis = useMemo(
-    () =>
-      Object.assign({}, apis?.talentSaas?.tenant?.employee, {
-        positionList: apis?.talentSaas?.tenant?.position?.list,
-        parseResume: apis?.talentSaas?.tenant?.resume?.parseFileId,
-        orgList: apis?.tenant?.orgList
-      }),
-    [apis]
-  );
-
-  if (!list.length) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无关联员工" />;
-  }
-
-  return (
-    <div className={style['employee-profile-layout']}>
-      <EmployeeSwitcher employees={list} selectedId={selectedId} onSelect={setSelectedId} />
-      <div className={style['employee-profile-main']}>{selectedId ? <TalentProfile key={selectedId} id={selectedId} apis={profileApis} readOnly embed /> : null}</div>
-    </div>
-  );
-});
-
 const InterviewPane = createWithRemoteLoader({
   modules: ['ai-interview-flowup:ComponentPreset', 'ai-interview-flowup:InterviewResultSession', 'components-core:Global@useGlobalValue']
 })(({ remoteModules, interview, interviewError, apiHost }) => {
@@ -262,7 +189,7 @@ const CollectInviteMeta = ({ invite }) => {
 
 const ContextSidePanel = ({ context }) => {
   const { message } = App.useApp();
-  const isRefineTask = context?.task?.type === 'position-analysis-review';
+  const hasInterviewContext = !!(context?.interview || context?.collectInvite || context?.interviewError);
 
   const exportInterview = () => {
     if (!context?.interview && !context?.position && !context?.company) {
@@ -280,8 +207,9 @@ const ContextSidePanel = ({ context }) => {
     message.success('已导出数据');
   };
 
-  const tabItems = useMemo(() => {
-    const items = [
+  // 与完善岗位分析一致：岗位信息 / AI 面试 / 公司信息，不再展示员工列表
+  const tabItems = useMemo(
+    () => [
       {
         key: 'position',
         label: '岗位信息',
@@ -290,11 +218,8 @@ const ContextSidePanel = ({ context }) => {
             <PositionInfo position={context?.position} />
           </div>
         )
-      }
-    ];
-
-    if (isRefineTask) {
-      items.push({
+      },
+      {
         key: 'interview',
         label: 'AI 面试',
         children: (
@@ -306,38 +231,26 @@ const ContextSidePanel = ({ context }) => {
             </Flex>
           </div>
         )
-      });
-    } else {
-      items.push({
-        key: 'employee',
-        label: '员工档案',
+      },
+      {
+        key: 'company',
+        label: '公司信息',
         children: (
-          <div className={classnames(style['side-tab-body'], style['side-tab-body-employee'])}>
-            <EmployeeProfilePane employees={context?.employees} />
+          <div className={style['side-tab-body']}>
+            <TenantCompanyPane />
           </div>
         )
-      });
-    }
-
-    items.push({
-      key: 'company',
-      label: '公司信息',
-      children: (
-        <div className={style['side-tab-body']}>
-          <TenantCompanyPane />
-        </div>
-      )
-    });
-
-    return items;
-  }, [context, isRefineTask]);
+      }
+    ],
+    [context]
+  );
 
   return (
     <div className={style['side-panel']}>
       <Tabs
         size="small"
         className={style['side-tabs']}
-        defaultActiveKey={isRefineTask ? 'interview' : 'position'}
+        defaultActiveKey={hasInterviewContext ? 'interview' : 'position'}
         items={tabItems}
         tabBarExtraContent={
           <Button size="small" type="link" className={style['export-btn']} onClick={exportInterview}>

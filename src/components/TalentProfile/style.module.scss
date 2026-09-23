@@ -1511,18 +1511,35 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 0;
   font-size: 12px;
   font-weight: 600;
   color: #0f172a;
 }
 
+.task-evidence-used {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.task-evidence-footer {
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+  flex: none;
+}
+
 .task-evidence-confidence {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  margin-top: auto;
-  padding-top: 12px;
+  height: 54px;
+  margin-top: 0;
+  padding: 12px 0;
   border-top: 1px solid #e2e8f0;
   font-size: 12px;
   color: #1e293b;
@@ -1534,6 +1551,195 @@
   height: 26px;
   border-radius: 99px;
   background: #fef3c7;
+}
+
+.task-evidence-confidence-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.task-evidence-confidence-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: normal;
+}
+
+.evidence-actions {
+  margin-top: 0;
+  padding-top: 16px;
+}
+
+/* 盖过 antd default/hover/active，锁定设计稿描边按钮：字 #343FAE、边 #B8C3FF */
+.look-right-btn:global(.ant-btn),
+.look-right-btn:global(.ant-btn-default) {
+  height: 28px !important;
+  padding: 2px 12px !important;
+  border-radius: 8px !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: #b8c3ff !important;
+  color: #343fae !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+  background: #fff !important;
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.03),
+    0 1px 1.5px rgba(0, 0, 0, 0.05) !important;
+
+  &:hover,
+  &:focus,
+  &:active,
+  &:focus-visible,
+  &:global(.ant-btn-default):not(:disabled):not(:global(.ant-btn-disabled)):hover,
+  &:global(.ant-btn-default):not(:disabled):not(:global(.ant-btn-disabled)):focus,
+  &:global(.ant-btn-default):not(:disabled):not(:global(.ant-btn-disabled)):active {
+    color: #343fae !important;
+    border-color: #b8c3ff !important;
+    background: #fff !important;
+  }
+}
+
+.report-issue-drawer-body {
+  padding: 16px !important;
+}
+
+.report-issue-drawer-footer {
+  padding: 13px 24px 12px !important;
+  border-top: 1px solid #e2e8f0;
+}
+
+.report-issue-footer {
+  width: 100%;
+}
+
+.report-issue-submit:global(.ant-btn-primary) {
+  height: 32px !important;
+  min-width: 102px;
+  border-radius: 8px !important;
+  background: #5b6cff !important;
+  border-color: #5b6cff !important;
+  font-weight: 600 !important;
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.03),
+    0 1px 1.5px rgba(0, 0, 0, 0.05) !important;
+
+  &:hover,
+  &:focus {
+    background: #4a5bf0 !important;
+    border-color: #4a5bf0 !important;
+  }
+}
+
+.report-issue-footer .look-right-btn:global(.ant-btn),
+.report-issue-footer .look-right-btn:global(.ant-btn-default) {
+  height: 32px !important;
+  min-width: 102px;
+}
+
+.report-issue-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-issue-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.report-issue-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  text-transform: capitalize;
+}
+
+.report-issue-options {
+  width: 100%;
+}
+
+.report-issue-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.report-issue-option-selected {
+  border-color: #5b6cff;
+  background: rgba(91, 108, 255, 0.02);
+}
+
+.report-issue-radio {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border: 2px solid #64748b;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.report-issue-radio-checked {
+  border-color: #5b6cff;
+  background: radial-gradient(circle at center, #5b6cff 0 5px, transparent 6px);
+}
+
+.report-issue-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.report-issue-option-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.report-issue-option-selected .report-issue-option-label {
+  color: #5b6cff;
+}
+
+.report-issue-option-desc {
+  font-size: 12px;
+  line-height: 16px;
+  color: #475569;
+}
+
+.report-issue-textarea-wrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 85px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.report-issue-count {
+  margin-top: 8px;
+  text-align: right;
+  font-size: 11px;
+  color: #64748b;
 }
 
 .sources-checklist {

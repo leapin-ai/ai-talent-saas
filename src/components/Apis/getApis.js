@@ -53,6 +53,20 @@ const getApis = options => {
             url: `${prefix}/tenant/admin/position-create`,
             method: 'POST'
           }
+        },
+        readinessIssue: {
+          list: {
+            url: `${prefix}/tenant/admin/readiness-issue/list`,
+            method: 'GET'
+          },
+          detail: {
+            url: `${prefix}/tenant/admin/readiness-issue/detail`,
+            method: 'GET'
+          },
+          resolve: {
+            url: `${prefix}/tenant/admin/readiness-issue/resolve`,
+            method: 'POST'
+          }
         }
       },
       tenant: {
@@ -179,6 +193,10 @@ const getApis = options => {
           },
           removeEvidence: {
             url: `${prefix}/tenant/employee/evidence/remove`,
+            method: 'POST'
+          },
+          reportReadinessIssue: {
+            url: `${prefix}/tenant/employee/readiness-issue`,
             method: 'POST'
           },
           create: {
