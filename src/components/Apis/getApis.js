@@ -89,6 +89,10 @@ const getApis = options => {
             url: `${prefix}/tenant/position/task-readiness`,
             method: 'GET'
           },
+          taskReadinessReplace: {
+            url: `${prefix}/tenant/position/task-readiness/replace`,
+            method: 'POST'
+          },
           detail: {
             url: `${prefix}/tenant/position/detail`,
             method: 'GET'
@@ -165,6 +169,18 @@ const getApis = options => {
             url: `${prefix}/tenant/employee/evidence`,
             method: 'GET'
           },
+          saveEvidence: {
+            url: `${prefix}/tenant/employee/evidence/save`,
+            method: 'POST'
+          },
+          replaceTaskEvidence: {
+            url: `${prefix}/tenant/employee/evidence/replace-task`,
+            method: 'POST'
+          },
+          removeEvidence: {
+            url: `${prefix}/tenant/employee/evidence/remove`,
+            method: 'POST'
+          },
           create: {
             url: `${prefix}/tenant/employee/create`,
             method: 'POST'
@@ -179,6 +195,14 @@ const getApis = options => {
           },
           saveProfile: {
             url: `${prefix}/tenant/employee/save-profile`,
+            method: 'POST'
+          },
+          saveAiSuggest: {
+            url: `${prefix}/tenant/employee/save-ai-suggest`,
+            method: 'POST'
+          },
+          generateTalentInsight: {
+            url: `${prefix}/tenant/employee/generate-talent-insight`,
             method: 'POST'
           },
           createPerformance: {
@@ -248,6 +272,14 @@ const getApis = options => {
           interviewResult: {
             url: `${prefix}/tenant/position/talent-collect-invite/interview-result`,
             method: 'GET'
+          },
+          startAnalysis: {
+            url: `${prefix}/tenant/position/talent-collect-invite/start-analysis`,
+            method: 'POST'
+          },
+          cancel: {
+            url: `${prefix}/tenant/position/talent-collect-invite/cancel`,
+            method: 'POST'
           }
         },
         assessment: {
@@ -305,6 +337,10 @@ const getApis = options => {
           },
           generateAiFill: {
             url: `${prefix}/tenant/assessment/generate-ai-fill`,
+            method: 'POST'
+          },
+          generateTalentInsight: {
+            url: `${prefix}/tenant/assessment/generate-talent-insight`,
             method: 'POST'
           }
         }

@@ -4,23 +4,24 @@
   margin-top: 0;
 }
 
+/* Figma 973:5293 上半区：左 Role outlook | 竖线 | 右 2×2 指标 */
 .overview {
   display: flex;
-  gap: 16px;
+  gap: 24px;
   align-items: stretch;
-  margin-bottom: 0;
+  margin: 0;
+  min-width: 0;
 }
 
 .verdict {
-  flex: 1 1 666px;
+  flex: 1.55 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 17px;
-  border-radius: 12px;
-  border: 1px solid rgba(91, 84, 232, 0.16);
-  background: linear-gradient(163deg, #f3f1fe 0%, #fbf7fb 100%);
+  gap: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
   box-sizing: border-box;
 }
 
@@ -42,11 +43,12 @@
 .verdict-boxes {
   display: flex;
   gap: 16px;
-  margin-top: 8px;
+  margin: 0;
+  align-items: stretch;
 }
 
 .verdict-box {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -72,19 +74,28 @@
   color: #334155;
 }
 
+.overview-divider {
+  flex: 0 0 1px;
+  width: 1px;
+  align-self: stretch;
+  background: #e2e8f0;
+}
+
 .metrics {
-  flex: 1 1 286px;
+  flex: 1 1 0;
   min-width: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 16px;
+  align-self: stretch;
 }
 
 .metric {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-width: 0;
   padding: 13px 14px;
   border-radius: 11px;
   border: 1px solid rgba(20, 16, 60, 0.08);
@@ -96,14 +107,14 @@
 .metric-value-must,
 .metric-value-emerging,
 .metric-value-fading {
-  flex: 0 0 26px;
   font-size: 22px;
   line-height: 26px;
+  white-space: nowrap;
 }
 
 .metric-value {
   font-weight: 600;
-  color: #334155;
+  color: #0f172a;
 }
 
 .metric-value-must {
@@ -123,7 +134,6 @@
 
 .metric-label {
   margin-top: 4px;
-  min-height: 32px;
   font-size: 12px;
   font-weight: 400;
   line-height: 16px;
@@ -387,6 +397,16 @@
   text-align: right;
 }
 
+.task-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  padding: 32px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  box-sizing: border-box;
+}
+
 .task-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -606,6 +626,13 @@
   .overview {
     flex-direction: column;
     align-items: stretch;
+    gap: 16px;
+  }
+
+  .overview-divider {
+    width: 100%;
+    height: 1px;
+    flex: 0 0 1px;
   }
 
   .verdict {

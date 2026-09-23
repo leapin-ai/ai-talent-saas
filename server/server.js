@@ -80,7 +80,16 @@ const createServer = () => {
         AZURE_OPENAI_RESOURCE_NAME: { type: 'string' },
         AZURE_OPENAI_API_VERSION: { type: 'string', default: '2024-08-01-preview' },
         AZURE_OPENAI_CHAT_DEPLOYMENT: { type: 'string' },
-        AZURE_OPENAI_USE_DEPLOYMENT_URLS: { type: 'string', default: 'true' }
+        AZURE_OPENAI_USE_DEPLOYMENT_URLS: { type: 'string', default: 'true' },
+
+        // 阿里云录音文件识别（nls-filetrans），密钥勿提交仓库
+        ALI_ASR_APP_KEY: { type: 'string' },
+        ALI_ASR_ACCESS_KEY_ID: { type: 'string' },
+        ALI_ASR_ACCESS_KEY_SECRET: { type: 'string' },
+        ALI_ASR_REGION: { type: 'string', default: 'cn-shanghai' },
+        ALI_ASR_DOMAIN: { type: 'string', default: 'filetrans.cn-shanghai.aliyuncs.com' },
+        ALI_ASR_API_VERSION: { type: 'string', default: '2018-08-17' },
+        ALI_ASR_ENDPOINT: { type: 'string' }
       }
     }
   });
@@ -251,6 +260,12 @@ const createServer = () => {
             return result;
           },
           'position-ai-analysis': ({ result }) => {
+            return result;
+          },
+          'position-analysis-review': ({ result }) => {
+            return result;
+          },
+          'invite-video-asr': ({ result }) => {
             return result;
           }
         }

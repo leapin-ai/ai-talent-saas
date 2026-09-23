@@ -28,7 +28,8 @@ const zhCN = {
   'enumLoader.taskTypeSyncOrg': '组织同步',
   'enumLoader.taskTypeParseResume': '简历解析',
   'enumLoader.taskTypeAssessmentProfileReview': '完善档案生成审核',
-  'enumLoader.taskTypePositionAiAnalysis': 'AI岗位分析'
+  'enumLoader.taskTypePositionAiAnalysis': 'AI岗位分析',
+  'enumLoader.taskTypePositionAnalysisReview': '完善岗位分析'
 };
 
 export default zhCN;

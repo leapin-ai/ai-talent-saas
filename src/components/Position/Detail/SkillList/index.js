@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Flex } from 'antd';
+import { Empty, Flex } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import classnames from 'classnames';
@@ -7,24 +7,9 @@ import withLocale from '../../withLocale';
 import ImportanceBar from './ImportanceBar';
 import ChangeTag from './ChangeTag';
 import SkillPreview from './SkillPreview';
-import { CHANGE_META, CHANGE_VALUES, countByChange, LEVEL_META, normalizeSkills } from './skillModel';
+import { CHANGE_META, CHANGE_VALUES, countByChange, LEVEL_META, formatActivityGroup, normalizeSkills } from './skillModel';
 import iconCollapse from './assets/icon-collapse.svg';
 import style from './style.module.scss';
-
-const parseActivityGroup = raw => {
-  const text = String(raw || '').trim();
-  if (!text) {
-    return { code: '', title: '' };
-  }
-  const matched = text.match(/^([A-Za-z]?\d{1,3})\s*[·.\-–—:]?\s+(.+)$/);
-  if (matched) {
-    return { code: matched[1].toUpperCase(), title: matched[2].trim() };
-  }
-  if (/^[A-Za-z]?\d{1,3}$/.test(text)) {
-    return { code: text.toUpperCase(), title: '' };
-  }
-  return { code: '', title: text };
-};
 
 const SkillList = createWithRemoteLoader({
   modules: ['components-core:Table@TablePage']
@@ -49,21 +34,21 @@ const SkillList = createWithRemoteLoader({
     const groups = useMemo(() => {
       const map = new Map();
       displaySkills.forEach(item => {
-        const key = item.activityGroup || '';
+        const key = formatActivityGroup(item.activityCode, item.activityTitle) || item.activityGroup || '';
         if (!map.has(key)) {
-          map.set(key, []);
+          map.set(key, {
+            id: key || 'ungrouped',
+            code: item.activityCode || '',
+            title: item.activityTitle || item.activityGroup || '',
+            children: []
+          });
         }
-        map.get(key).push(item);
+        map.get(key).children.push(item);
       });
-      return [...map.entries()].map(([key, items]) => {
-        const parsed = parseActivityGroup(key);
-        return {
-          id: key || 'ungrouped',
-          code: parsed.code,
-          title: parsed.title || (parsed.code ? '' : formatMessage({ id: 'position.taskTitle' })),
-          children: items
-        };
-      });
+      return [...map.values()].map(group => ({
+        ...group,
+        title: group.title || (group.code ? '' : formatMessage({ id: 'position.taskTitle' }))
+      }));
     }, [displaySkills, formatMessage]);
 
     useEffect(() => {
@@ -101,7 +86,9 @@ const SkillList = createWithRemoteLoader({
     ];
 
     const renderCard = ({ displayDataSource, dataSource = [] }) => {
-      const list = displayDataSource || dataSource;
+      const fromProps = Array.isArray(displayDataSource) ? displayDataSource : Array.isArray(dataSource) ? dataSource : null;
+      // TablePage 偶发未回传 dataSource 时回退本地 groups；筛选为空时 groups 亦为空
+      const list = fromProps?.length ? fromProps : groups;
       return (
         <div className={style['task-table']}>
           <div className={classnames(style['task-row'], style['task-head'])}>
@@ -111,44 +98,50 @@ const SkillList = createWithRemoteLoader({
               </div>
             ))}
           </div>
-          {list.map(group => {
-            const open = expanded[group.id] !== false;
-            return (
-              <div key={group.id} className={style['task-group']}>
-                <button type="button" className={style['task-parent']} onClick={() => toggleGroup(group.id)} aria-expanded={open}>
-                  <span className={style['task-parent-main']}>
-                    {group.code ? <span className={style['activity-code']}>{group.code}</span> : null}
-                    <span className={style['activity-meta']}>
-                      <span className={style['activity-title']}>{group.title || group.code || formatMessage({ id: 'position.taskTitle' })}</span>
-                      <span className={style['activity-count']}>{formatMessage({ id: 'position.activityTaskCount' }, { count: group.children.length })}</span>
+          {list.length ? (
+            list.map(group => {
+              const open = expanded[group.id] !== false;
+              return (
+                <div key={group.id} className={style['task-group']}>
+                  <button type="button" className={style['task-parent']} onClick={() => toggleGroup(group.id)} aria-expanded={open}>
+                    <span className={style['task-parent-main']}>
+                      {group.code ? <span className={style['activity-code']}>{group.code}</span> : null}
+                      <span className={style['activity-meta']}>
+                        <span className={style['activity-title']}>{group.title || group.code || formatMessage({ id: 'position.taskTitle' })}</span>
+                        <span className={style['activity-count']}>{formatMessage({ id: 'position.activityTaskCount' }, { count: group.children.length })}</span>
+                      </span>
                     </span>
-                  </span>
-                  <img className={classnames(style['collapse-icon'], !open && style['collapse-icon-collapsed'])} src={iconCollapse} alt="" />
-                </button>
-                {open
-                  ? group.children.map(item => (
-                      <div
-                        key={item.id}
-                        className={classnames(style['task-row'], style['task-child'], selectedSkill?.id === item.id && style['task-selected'])}
-                        onMouseEnter={() => selectSkillById(item.id)}
-                        onClick={() => selectSkillById(item.id)}
-                      >
-                        <div className={classnames(style['task-name'], style['task-col-name'])} title={item.name}>
-                          {item.name}
+                    <img className={classnames(style['collapse-icon'], !open && style['collapse-icon-collapsed'])} src={iconCollapse} alt="" />
+                  </button>
+                  {open
+                    ? group.children.map(item => (
+                        <div
+                          key={item.id}
+                          className={classnames(style['task-row'], style['task-child'], selectedSkill?.id === item.id && style['task-selected'])}
+                          onMouseEnter={() => selectSkillById(item.id)}
+                          onClick={() => selectSkillById(item.id)}
+                        >
+                          <div className={classnames(style['task-name'], style['task-col-name'])} title={item.name}>
+                            {item.name}
+                          </div>
+                          <div className={style['task-col-change']}>
+                            <ChangeTag change={item.change} />
+                          </div>
+                          <div className={style['task-col-importance']}>
+                            <ImportanceBar importanceNow={item.importanceNow} importanceYear={item.importanceYear} />
+                          </div>
+                          <div className={style['task-col-confidence']}>{formatMessage({ id: (LEVEL_META[item.confidence] || LEVEL_META.medium).labelKey })}</div>
                         </div>
-                        <div className={style['task-col-change']}>
-                          <ChangeTag change={item.change} />
-                        </div>
-                        <div className={style['task-col-importance']}>
-                          <ImportanceBar importanceNow={item.importanceNow} importanceYear={item.importanceYear} />
-                        </div>
-                        <div className={style['task-col-confidence']}>{formatMessage({ id: (LEVEL_META[item.confidence] || LEVEL_META.medium).labelKey })}</div>
-                      </div>
-                    ))
-                  : null}
-              </div>
-            );
-          })}
+                      ))
+                    : null}
+                </div>
+              );
+            })
+          ) : (
+            <div className={style['task-empty']}>
+              <Empty description={formatMessage({ id: 'position.roleTasksEmpty' })} />
+            </div>
+          )}
         </div>
       );
     };

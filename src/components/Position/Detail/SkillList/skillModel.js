@@ -8,7 +8,10 @@
  *
  * @typedef {Object} PositionSkillItem
  * @property {string} id
- * @property {string} name
+ * @property {string} name - Task title
+ * @property {string} [activityGroup] - derived from activityCode + activityTitle (e.g. "A01 · Customer Focus")
+ * @property {string} [activityCode] - Activity 编号 (e.g. "A01")
+ * @property {string} [activityTitle] - Activity 内容 (e.g. "Customer Focus")
  * @property {'existing'|'new'} origin
  * @property {number} importanceNow - baseline importance (1–5)
  * @property {number} importanceYear - current-year importance (1–5), not a fixed calendar year like 2030
@@ -131,10 +134,36 @@ export const createSkillId = () => {
   return `skill-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
+export const formatActivityGroup = (code, title) => {
+  const c = String(code || '')
+    .trim()
+    .slice(0, 32);
+  const t = String(title || '')
+    .trim()
+    .slice(0, 160);
+  if (c && t) {
+    return `${c} · ${t}`.slice(0, 200);
+  }
+  return (c || t).slice(0, 200);
+};
+
+const resolveActivityFields = raw => {
+  const activityCode = typeof raw?.activityCode === 'string' ? raw.activityCode.trim().slice(0, 32) : '';
+  const activityTitle = typeof raw?.activityTitle === 'string' ? raw.activityTitle.trim().slice(0, 160) : '';
+  return {
+    activityCode,
+    activityTitle,
+    activityGroup: formatActivityGroup(activityCode, activityTitle)
+  };
+};
+
 /** @returns {PositionSkillItem} */
 export const createEmptySkill = () => ({
   id: createSkillId(),
   name: '',
+  activityCode: '',
+  activityTitle: '',
+  activityGroup: '',
   origin: 'existing',
   importanceNow: 3,
   importanceYear: 3,
@@ -172,17 +201,20 @@ export const normalizeSkillItem = (raw, index = 0) => {
   }
   // Prefer persisted id; otherwise a stable fallback so hover/list lookups stay consistent across normalize passes.
   const id = typeof raw.id === 'string' && raw.id ? raw.id : `skill-${index}-${name.slice(0, 40)}`;
+  const activity = resolveActivityFields(raw);
   return {
     id,
     name: name.slice(0, 200),
+    activityCode: activity.activityCode,
+    activityTitle: activity.activityTitle,
+    activityGroup: activity.activityGroup,
     origin,
     importanceNow,
     importanceYear,
     change,
     aiExposure,
     confidence,
-    contentItems: normalizeSkillContentItems(raw),
-    activityGroup: typeof raw.activityGroup === 'string' ? raw.activityGroup.trim() : ''
+    contentItems: normalizeSkillContentItems(raw)
   };
 };
 

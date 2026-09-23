@@ -33,7 +33,9 @@ const SkillFormInner = createWithRemoteLoader({
       <FormInfo
         column={1}
         list={[
-          <Input name="name" label={formatMessage({ id: 'position.skillName' })} rule="REQ LEN-1-200" />,
+          <Input name="activityCode" label={formatMessage({ id: 'position.activityCode' })} rule="REQ LEN-1-32" />,
+          <Input name="activityTitle" label={formatMessage({ id: 'position.activityTitle' })} rule="REQ LEN-1-200" />,
+          <Input name="name" label={formatMessage({ id: 'position.taskTitle' })} rule="REQ LEN-1-200" />,
           <Select
             name="origin"
             label={formatMessage({ id: 'position.skillOrigin' })}

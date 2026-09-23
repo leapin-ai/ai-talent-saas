@@ -10,6 +10,10 @@ const MetricCard = ({ value, label, valueClassName }) => (
   </div>
 );
 
+/**
+ * Figma 973:5293 Role Insights Overview 上半区：Role outlook + 竖分割线 + 2×2 指标。
+ * 外层渐变卡与底栏 AI impact 由 RoleInsightsContent 的 overview-shell 承载。
+ */
 const SkillOverview = ({ skill, verdict }) => {
   const { formatMessage } = useIntl();
   const skills = useMemo(() => normalizeSkills(skill), [skill]);
@@ -33,6 +37,7 @@ const SkillOverview = ({ skill, verdict }) => {
           </div>
         </div>
       </div>
+      <div className={style['overview-divider']} aria-hidden />
       <div className={style.metrics}>
         <MetricCard value={metrics.inScope} label={formatMessage({ id: 'position.skillMetricInScope' })} />
         <MetricCard value={metrics.mustBuild} label={formatMessage({ id: 'position.skillMetricMustBuild' })} valueClassName={style['metric-value-must']} />

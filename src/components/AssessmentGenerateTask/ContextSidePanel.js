@@ -1,8 +1,11 @@
 import { Empty, Flex, Tabs, Typography } from 'antd';
+import { useMemo } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
+import { applyAiInterviewRemote } from '../../preset';
 import dayjs from 'dayjs';
 import ResumeParseEditor from './ResumeParseEditor';
 import { formatValue } from './assessmentReviewUtils';
+import InterviewVideoTranscript from '@components/InterviewVideoTranscript';
 import style from './style.module.scss';
 
 const InfoCard = ({ title, children }) => (
@@ -118,6 +121,27 @@ const InterviewPane = createWithRemoteLoader({
   );
 });
 
+const InterviewPaneGate = ({ interview, interviewError, apiHost, cdnUrl, version }) => {
+  const remoteKey = useMemo(() => `${cdnUrl || ''}|${version || ''}|${apiHost || ''}`, [apiHost, cdnUrl, version]);
+  const remoteApplied = useMemo(() => {
+    if (!cdnUrl || !version) {
+      return false;
+    }
+    return applyAiInterviewRemote({ cdnUrl, version });
+  }, [cdnUrl, version]);
+
+  if (interviewError) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={interviewError} />;
+  }
+  if (!interview) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无面试数据" />;
+  }
+  if (!remoteApplied || !apiHost) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="AI 面试组件未配置，请先在设置中填写 CDN 与版本" />;
+  }
+  return <InterviewPane key={remoteKey} interview={interview} interviewError={interviewError} apiHost={apiHost} />;
+};
+
 const ContextSidePanel = ({ context, resumeParsed, onResumeParsedChange }) => {
   const resumes = Array.isArray(context?.resumes) ? context.resumes : [];
   const resumeFile = resumes[0];
@@ -158,7 +182,10 @@ const ContextSidePanel = ({ context, resumeParsed, onResumeParsedChange }) => {
             label: 'AI 面试',
             children: (
               <div className={style['side-tab-body']}>
-                <InterviewPane interview={context?.interview} interviewError={context?.interviewError} apiHost={context?.apiHost} />
+                <Flex vertical gap={12}>
+                  <InterviewPaneGate interview={context?.interview} interviewError={context?.interviewError} apiHost={context?.apiHost} cdnUrl={context?.cdnUrl} version={context?.version} />
+                  <InterviewVideoTranscript interview={context?.interview} videoTranscripts={context?.videoTranscripts} />
+                </Flex>
               </div>
             )
           }

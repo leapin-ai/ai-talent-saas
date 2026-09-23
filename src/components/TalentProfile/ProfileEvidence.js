@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, Flex, Typography } from 'antd';
+import { App, Button, Empty, Flex, Typography } from 'antd';
+import { MdOutlineEdit } from 'react-icons/md';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import classnames from 'classnames';
 import withLocale from './withLocale';
+import { EvidenceFormInner } from './FormInner';
 import style from './style.module.scss';
 import iconFile from './assets/icon-file.svg';
 
@@ -85,23 +87,36 @@ const ChecklistPanel = ({ checklist, percent, formatMessage }) => (
 );
 
 const ProfileEvidence = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
+  modules: ['components-core:Global@usePreset', 'components-core:FormInfo@useFormModal']
 })(
-  withLocale(({ remoteModules, employeeId, percent, checklist, variant = 'all', selectedTask }) => {
-    const [usePreset] = remoteModules;
+  withLocale(({ remoteModules, employeeId, percent, checklist, variant = 'all', selectedTask, readOnly }) => {
+    const [usePreset, useFormModal] = remoteModules;
     const { ajax, apis } = usePreset();
+    const formModal = useFormModal();
+    const { message } = App.useApp();
     const { formatMessage } = useIntl();
     const [items, setItems] = useState([]);
+    const [reloadKey, setReloadKey] = useState(0);
+
+    const taskId = selectedTask?.taskId || null;
+    const canEditTaskEvidence = !readOnly && employeeId && taskId && !String(employeeId).startsWith('draft-') && !!apis?.talentSaas?.tenant?.employee?.replaceTaskEvidence;
 
     useEffect(() => {
       let cancelled = false;
       const load = async () => {
         const api = apis?.talentSaas?.tenant?.employee?.evidence;
-        if (!api || !employeeId) {
+        if (!api || !employeeId || String(employeeId).startsWith('draft-')) {
+          if (!cancelled) {
+            setItems([]);
+          }
           return;
         }
         try {
-          const { data: resData } = await ajax(Object.assign({}, api, { params: { employeeId } }));
+          const params = { employeeId };
+          if (variant === 'task' && taskId) {
+            params.taskId = String(taskId);
+          }
+          const { data: resData } = await ajax(Object.assign({}, api, { params }));
           if (!cancelled && resData?.code === 0) {
             setItems(resData.data?.pageData || []);
           }
@@ -115,7 +130,46 @@ const ProfileEvidence = createWithRemoteLoader({
       return () => {
         cancelled = true;
       };
-    }, [ajax, apis, employeeId]);
+    }, [ajax, apis, employeeId, taskId, variant, reloadKey]);
+
+    const openEditTaskEvidence = () => {
+      if (!canEditTaskEvidence) {
+        return;
+      }
+      const replaceApi = apis.talentSaas.tenant.employee.replaceTaskEvidence;
+      formModal({
+        title: formatMessage({ id: 'talentProfile.editTaskEvidence' }, { title: selectedTask?.title || '' }),
+        size: 'small',
+        formProps: {
+          data: {
+            items: (items || []).map(item => ({
+              id: item.id || null,
+              sourceType: item.sourceType || 'profile',
+              title: item.title || '',
+              summary: item.summary || ''
+            }))
+          },
+          onSubmit: async formData => {
+            const { data: resData } = await ajax(
+              Object.assign({}, replaceApi, {
+                data: {
+                  employeeId: String(employeeId),
+                  taskId: String(taskId),
+                  items: formData.items || []
+                }
+              })
+            );
+            if (resData.code !== 0) {
+              throw new Error(resData.msg || formatMessage({ id: 'talentProfile.editEvidenceFailed' }));
+            }
+            message.success(formatMessage({ id: 'talentProfile.editEvidenceSuccess' }));
+            setItems(resData.data?.pageData || []);
+            setReloadKey(key => key + 1);
+          }
+        },
+        children: <EvidenceFormInner />
+      });
+    };
 
     if (variant === 'sources') {
       return (
@@ -136,25 +190,40 @@ const ProfileEvidence = createWithRemoteLoader({
         <div className={style['task-evidence-panel']}>
           {selectedTask ? (
             <div className={style['task-evidence-head']}>
-              <div className={style['task-evidence-title']}>{selectedTask.title}</div>
-              <div className={style['task-evidence-meta']}>
-                <span>{formatMessage({ id: 'talentProfile.currentVsRequired' })}</span>
-                <span className={style['task-evidence-score']}>{formatMessage({ id: 'talentProfile.scoreSlash' }, { current: selectedTask.current ?? 0, required: selectedTask.required ?? 0 })}</span>
-                {selectedTask.statusLabel ? <span className={classnames(style['status-pill'], style[selectedTask.statusTone] || style['status-gap'])}>{selectedTask.statusLabel}</span> : null}
+              <Flex justify="space-between" align="flex-start" gap={8}>
+                <div>
+                  <div className={style['task-evidence-title']}>{selectedTask.title}</div>
+                  <div className={style['task-evidence-meta']}>
+                    <span>{formatMessage({ id: 'talentProfile.currentVsRequired' })}</span>
+                    <span className={style['task-evidence-score']}>{formatMessage({ id: 'talentProfile.scoreSlash' }, { current: selectedTask.current ?? 0, required: selectedTask.required ?? 0 })}</span>
+                    {selectedTask.statusLabel ? <span className={classnames(style['status-pill'], style[selectedTask.statusTone] || style['status-gap'])}>{selectedTask.statusLabel}</span> : null}
+                  </div>
+                </div>
+                {canEditTaskEvidence ? (
+                  <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditTaskEvidence}>
+                    {formatMessage({ id: 'talentProfile.editEvidence' })}
+                  </Button>
+                ) : null}
+              </Flex>
+            </div>
+          ) : (
+            <Empty description={formatMessage({ id: 'talentProfile.selectTaskForEvidence' })} />
+          )}
+          {selectedTask ? (
+            <>
+              <div className={style['task-evidence-section-title']}>
+                {formatMessage({ id: 'talentProfile.evidenceUsed' })}
+                <span className={style['evidence-dot']} />
+                <span className={style['evidence-group-count']}>{formatMessage({ id: 'talentProfile.evidenceItemCount' }, { count: items.length })}</span>
               </div>
-            </div>
-          ) : null}
-          <div className={style['task-evidence-section-title']}>
-            {formatMessage({ id: 'talentProfile.evidenceUsed' })}
-            <span className={style['evidence-dot']} />
-            <span className={style['evidence-group-count']}>{formatMessage({ id: 'talentProfile.evidenceItemCount' }, { count: items.length })}</span>
-          </div>
-          <EvidenceGroups items={items} formatMessage={formatMessage} />
-          {selectedTask?.confidence ? (
-            <div className={style['task-evidence-confidence']}>
-              <span className={style['task-evidence-confidence-icon']} aria-hidden />
-              <span>{formatMessage({ id: 'talentProfile.confidenceBasedOnSources' }, { level: selectedTask.confidenceLabel || selectedTask.confidence })}</span>
-            </div>
+              <EvidenceGroups items={items} formatMessage={formatMessage} emptyText={canEditTaskEvidence ? formatMessage({ id: 'talentProfile.evidenceEmptyHint' }) : formatMessage({ id: 'talentProfile.evidenceEmpty' })} />
+              {selectedTask?.confidence ? (
+                <div className={style['task-evidence-confidence']}>
+                  <span className={style['task-evidence-confidence-icon']} aria-hidden />
+                  <span>{formatMessage({ id: 'talentProfile.confidenceBasedOnSources' }, { level: selectedTask.confidenceLabel || selectedTask.confidence })}</span>
+                </div>
+              ) : null}
+            </>
           ) : null}
         </div>
       );

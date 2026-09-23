@@ -42,7 +42,7 @@ export const getManualTaskAction = data => {
   if (data?.type === 'assessment-profile-review') {
     return CompleteAssessmentGenerateTask;
   }
-  if (data?.type === 'position-ai-analysis') {
+  if (data?.type === 'position-ai-analysis' || data?.type === 'position-analysis-review') {
     return CompletePositionAnalysisTask;
   }
   return DefaultManualCompleteTask;

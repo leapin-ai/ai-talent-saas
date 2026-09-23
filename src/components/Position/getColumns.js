@@ -13,6 +13,9 @@ const getColumns = ({ onDetail, formatMessage }) => {
       name: 'department',
       title: formatMessage({ id: 'position.department' }),
       getValueOf: (item, { context } = {}) => {
+        if (item.departmentName) {
+          return item.departmentName;
+        }
         const data = context?.data || {};
         const org = data.orgEnums?.find(target => target.value === item.tenantOrgId);
         return org?.description || '-';

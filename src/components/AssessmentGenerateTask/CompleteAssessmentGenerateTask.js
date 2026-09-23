@@ -12,12 +12,13 @@ const AI_FILL_LANGUAGE_OPTIONS = [
   { label: 'English', value: 'en-US' }
 ];
 
-const AiFillToolbar = ({ taskId, ajax, fillApi, profileDetail, setProfileDetail, resumeParsed, submittedInfo, languageRef }) => {
+const AiFillToolbar = ({ taskId, ajax, fillApi, insightApi, profileDetail, setProfileDetail, resumeParsed, submittedInfo, languageRef }) => {
   const { message: msg } = App.useApp();
   const [loading, setLoading] = useState(false);
+  const [insightLoading, setInsightLoading] = useState(false);
   const [language, setLanguage] = useState(() => languageRef?.current || 'zh-CN');
 
-  if (!fillApi) {
+  if (!fillApi && !insightApi) {
     return null;
   }
 
@@ -28,68 +29,122 @@ const AiFillToolbar = ({ taskId, ajax, fillApi, profileDetail, setProfileDetail,
     }
   };
 
+  const applyInsight = data => {
+    if (!data || typeof data !== 'object') {
+      return;
+    }
+    setProfileDetail(prev =>
+      Object.assign({}, prev, {
+        aiSuggest: data.aiSuggest || prev?.aiSuggest || null,
+        skillAnalysisDraft: data.readiness || prev?.skillAnalysisDraft || null
+      })
+    );
+  };
+
   return (
     <div className={style['ai-fill-bar']}>
       <div className={style['ai-fill-main']}>
         <label className={style['ai-fill-field']}>
           <span className={style['ai-fill-label']}>生成语言</span>
-          <Select size="middle" className={style['ai-fill-select']} value={language || 'zh-CN'} options={AI_FILL_LANGUAGE_OPTIONS} disabled={loading} onChange={changeLanguage} />
+          <Select size="middle" className={style['ai-fill-select']} value={language || 'zh-CN'} options={AI_FILL_LANGUAGE_OPTIONS} disabled={loading || insightLoading} onChange={changeLanguage} />
         </label>
-        <Button
-          type="primary"
-          className={style['ai-fill-action']}
-          loading={loading}
-          disabled={loading || !profileDetail}
-          onClick={async () => {
-            if (!profileDetail) {
-              return;
-            }
-            setLoading(true);
-            try {
-              const outputLanguage = languageRef?.current || language || 'zh-CN';
-              const { data: resData } = await ajax(
-                Object.assign({}, fillApi, {
-                  data: {
-                    taskId,
-                    language: outputLanguage,
-                    draft: toReviewData(profileDetail),
-                    resumeParsed: resumeParsed || null,
-                    submittedInfo: submittedInfo || null
-                  }
-                })
-              );
-              if (resData.code !== 0) {
-                throw new Error(resData.msg || 'AI 填充失败');
+        {fillApi ? (
+          <Button
+            type="primary"
+            className={style['ai-fill-action']}
+            loading={loading}
+            disabled={loading || insightLoading || !profileDetail}
+            onClick={async () => {
+              if (!profileDetail) {
+                return;
               }
-              const nextData = resData.data?.data;
-              if (!nextData || typeof nextData !== 'object') {
-                throw new Error('AI 未返回可用数据');
+              setLoading(true);
+              try {
+                const outputLanguage = languageRef?.current || language || 'zh-CN';
+                const { data: resData } = await ajax(
+                  Object.assign({}, fillApi, {
+                    data: {
+                      taskId,
+                      language: outputLanguage,
+                      draft: toReviewData(profileDetail),
+                      resumeParsed: resumeParsed || null,
+                      submittedInfo: submittedInfo || null
+                    }
+                  })
+                );
+                if (resData.code !== 0) {
+                  throw new Error(resData.msg || 'AI 填充失败');
+                }
+                const nextData = resData.data?.data;
+                if (!nextData || typeof nextData !== 'object') {
+                  throw new Error('AI 未返回可用数据');
+                }
+                setProfileDetail(prev =>
+                  Object.assign({}, prev, nextData, {
+                    id: prev?.id,
+                    orgEnums: prev?.orgEnums,
+                    positionEnums: prev?.positionEnums,
+                    performances: prev?.performances || [],
+                    aiSuggest: prev?.aiSuggest || null,
+                    skillAnalysisDraft: prev?.skillAnalysisDraft || null,
+                    profile: Object.assign({}, prev?.profile || {}, nextData.profile || {}, {
+                      options: Object.assign({}, prev?.profile?.options || {}, nextData.profile?.options || {})
+                    }),
+                    options: Object.assign({}, prev?.options || {}, nextData.options || {})
+                  })
+                );
+                msg.success('已根据左侧信息生成一版，可继续编辑');
+              } catch (e) {
+                msg.error(e.message || 'AI 填充失败');
+              } finally {
+                setLoading(false);
               }
-              setProfileDetail(prev =>
-                Object.assign({}, prev, nextData, {
-                  id: prev?.id,
-                  orgEnums: prev?.orgEnums,
-                  positionEnums: prev?.positionEnums,
-                  performances: prev?.performances || [],
-                  aiSuggest: prev?.aiSuggest || null,
-                  profile: Object.assign({}, prev?.profile || {}, nextData.profile || {}, {
-                    options: Object.assign({}, prev?.profile?.options || {}, nextData.profile?.options || {})
-                  }),
-                  options: Object.assign({}, prev?.options || {}, nextData.options || {})
-                })
-              );
-              msg.success('已根据左侧信息生成一版，可继续编辑');
-            } catch (e) {
-              msg.error(e.message || 'AI 填充失败');
-            } finally {
-              setLoading(false);
-            }
-          }}
-        >
-          AI 填充
-        </Button>
+            }}
+          >
+            AI 填充档案
+          </Button>
+        ) : null}
+        {insightApi ? (
+          <Button
+            className={style['ai-fill-action']}
+            loading={insightLoading}
+            disabled={loading || insightLoading || !profileDetail}
+            onClick={async () => {
+              if (!profileDetail) {
+                return;
+              }
+              setInsightLoading(true);
+              try {
+                const outputLanguage = languageRef?.current || language || 'zh-CN';
+                const { data: resData } = await ajax(
+                  Object.assign({}, insightApi, {
+                    data: {
+                      taskId,
+                      language: outputLanguage,
+                      draft: toReviewData(profileDetail),
+                      resumeParsed: resumeParsed || null,
+                      submittedInfo: submittedInfo || null,
+                      persist: false
+                    }
+                  })
+                );
+                if (resData.code !== 0) {
+                  throw new Error(resData.msg || '生成洞察失败');
+                }
+                applyInsight(resData.data);
+                msg.success('已根据面试/简历/填写信息生成就绪度、成长计划与岗位匹配');
+              } catch (e) {
+                msg.error(e.message || '生成洞察失败');
+              } finally {
+                setInsightLoading(false);
+              }
+            }}
+          >
+            生成就绪度/成长/匹配
+          </Button>
+        ) : null}
       </div>
-      <div className={style['ai-fill-hint']}>基于简历解析、填写信息与当前草稿生成，不会自动提交</div>
+      <div className={style['ai-fill-hint']}>档案填充基于简历与填写信息；就绪度/成长/匹配另结合 AI 面试问卷与作答（视频取语音转写）。均不自动提交</div>
     </div>
   );
 };
@@ -121,6 +176,21 @@ const ProfileEditorPanel = ({ employeeApis, profileDetail, setProfileDetail }) =
         Object.assign({}, prev, {
           profile: Object.assign({}, prev.profile || {}, profilePatch, {
             options: Object.assign({}, prev.profile?.options || {}, profilePatch.options || {})
+          })
+        })
+      );
+    },
+    [setProfileDetail]
+  );
+
+  const saveAiSuggest = useCallback(
+    async suggestData => {
+      setProfileDetail(prev =>
+        Object.assign({}, prev, {
+          aiSuggest: Object.assign({}, prev.aiSuggest || {}, {
+            shortTerm: suggestData.shortTerm !== undefined ? suggestData.shortTerm : prev.aiSuggest?.shortTerm || null,
+            longTerm: suggestData.longTerm !== undefined ? suggestData.longTerm : prev.aiSuggest?.longTerm || null,
+            matchPosition: suggestData.matchPosition !== undefined ? suggestData.matchPosition : prev.aiSuggest?.matchPosition || null
           })
         })
       );
@@ -173,6 +243,7 @@ const ProfileEditorPanel = ({ employeeApis, profileDetail, setProfileDetail }) =
         data={profileDetail}
         saveEmployee={saveEmployee}
         saveProfile={saveProfile}
+        saveAiSuggest={saveAiSuggest}
         createPerformance={createPerformance}
         removePerformance={removePerformance}
         savePerformance={savePerformance}
@@ -203,6 +274,7 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
   );
 
   const fillApi = apis?.talentSaas?.tenant?.assessment?.generateAiFill;
+  const insightApi = apis?.talentSaas?.tenant?.assessment?.generateTalentInsight;
 
   const handleComplete = async currentDetail => {
     setSubmitting(true);
@@ -291,7 +363,19 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
                 </Flex>
               );
             }
-            return <TaskContextBody taskId={data.id} context={context} profileDetail={profileDetail} setProfileDetail={setProfileDetail} employeeApis={employeeApis} ajax={ajax} fillApi={fillApi} fillLanguageRef={fillLanguageRef} />;
+            return (
+              <TaskContextBody
+                taskId={data.id}
+                context={context}
+                profileDetail={profileDetail}
+                setProfileDetail={setProfileDetail}
+                employeeApis={employeeApis}
+                ajax={ajax}
+                fillApi={fillApi}
+                insightApi={insightApi}
+                fillLanguageRef={fillLanguageRef}
+              />
+            );
           }}
         />
       </Modal>
@@ -299,7 +383,7 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
   );
 });
 
-const TaskContextBody = ({ taskId, context, profileDetail, setProfileDetail, employeeApis, ajax, fillApi, fillLanguageRef }) => {
+const TaskContextBody = ({ taskId, context, profileDetail, setProfileDetail, employeeApis, ajax, fillApi, insightApi, fillLanguageRef }) => {
   const [resumeParsed, setResumeParsed] = useState(() => context?.resumeParsed || null);
 
   useEffect(() => {
@@ -325,7 +409,17 @@ const TaskContextBody = ({ taskId, context, profileDetail, setProfileDetail, emp
             <Typography.Title level={5} style={{ margin: 0 }}>
               员工档案
             </Typography.Title>
-            <AiFillToolbar taskId={taskId} ajax={ajax} fillApi={fillApi} profileDetail={currentDetail} setProfileDetail={setProfileDetail} resumeParsed={resumeParsed} submittedInfo={context?.submittedInfo} languageRef={fillLanguageRef} />
+            <AiFillToolbar
+              taskId={taskId}
+              ajax={ajax}
+              fillApi={fillApi}
+              insightApi={insightApi}
+              profileDetail={currentDetail}
+              setProfileDetail={setProfileDetail}
+              resumeParsed={resumeParsed}
+              submittedInfo={context?.submittedInfo}
+              languageRef={fillLanguageRef}
+            />
             <ProfileEditorPanel employeeApis={employeeApis} profileDetail={currentDetail} setProfileDetail={setProfileDetail} />
           </Flex>
         </div>
