@@ -769,6 +769,120 @@ module.exports = fp(async (fastify, options) => {
     return profile;
   };
 
+  const saveAiSuggest = async (authenticatePayload, { id, shortTerm, longTerm, matchPosition } = {}) => {
+    const { tenantId } = authenticatePayload;
+    if (!id) {
+      throw new Error('员工ID不能为空');
+    }
+    const employee = await models.employee.findByPk(id);
+    if (!employee || String(employee.tenantId) !== String(tenantId)) {
+      throw new Error('未找到员工');
+    }
+
+    const normalizeTerm = value => {
+      if (!value || typeof value !== 'object') {
+        return null;
+      }
+      const trainingFocus = Array.isArray(value.training_focus)
+        ? value.training_focus.map(item => (typeof item === 'string' ? item : item?.name || '')).filter(Boolean)
+        : Array.isArray(value.trainings)
+          ? value.trainings.map(item => item?.name || item).filter(Boolean)
+          : [];
+      const developmentPoints = Array.isArray(value.development_points)
+        ? value.development_points.map(item => (typeof item === 'string' ? item : item?.name || '')).filter(Boolean)
+        : Array.isArray(value.paths)
+          ? value.paths.map(item => (typeof item === 'string' ? item : '')).filter(Boolean)
+          : [];
+      const skillGap = Array.isArray(value.skill_gap)
+        ? value.skill_gap.map(item => {
+            if (typeof item === 'string') {
+              return { name: item, level: 'medium' };
+            }
+            return {
+              name: item?.name || item?.title || '',
+              level: item?.level || 'medium'
+            };
+          })
+        : [];
+      return {
+        target_position: typeof value.target_position === 'string' ? value.target_position : value.position || '',
+        development_points: developmentPoints,
+        training_focus: trainingFocus,
+        skill_gap: skillGap
+      };
+    };
+
+    const normalizeMatch = value => {
+      if (!value || typeof value !== 'object') {
+        return null;
+      }
+      const matchRateRaw = value.match_rate != null ? Number(value.match_rate) : value.matchRate != null ? Number(value.matchRate) / 100 : 0;
+      const matchRate = Number.isFinite(matchRateRaw) ? (matchRateRaw > 1 ? matchRateRaw / 100 : matchRateRaw) : 0;
+      return {
+        target_position: typeof value.target_position === 'string' ? value.target_position : value.position || '',
+        match_rate: Math.min(1, Math.max(0, matchRate)),
+        skill_match: Array.isArray(value.skill_match)
+          ? value.skill_match.map(item => (typeof item === 'string' ? item : item?.name || '')).filter(Boolean)
+          : Array.isArray(value.skills)
+            ? value.skills.map(item => (typeof item === 'string' ? item : item?.name || '')).filter(Boolean)
+            : [],
+        skill_gap: Array.isArray(value.skill_gap)
+          ? value.skill_gap.map(item => {
+              if (typeof item === 'string') {
+                return { name: item };
+              }
+              return { name: item?.name || item?.title || '' };
+            })
+          : Array.isArray(value.gaps)
+            ? value.gaps.map(item => {
+                if (typeof item === 'string') {
+                  return { name: item };
+                }
+                return { name: item?.name || item?.title || '' };
+              })
+            : []
+      };
+    };
+
+    const payload = {
+      shortTerm: shortTerm !== undefined ? normalizeTerm(shortTerm) : undefined,
+      longTerm: longTerm !== undefined ? normalizeTerm(longTerm) : undefined,
+      matchPosition: matchPosition !== undefined ? normalizeMatch(matchPosition) : undefined
+    };
+
+    let row = await models.aiSuggest.findOne({
+      where: { tenantId, employeeId: employee.id }
+    });
+    if (!row) {
+      row = await models.aiSuggest.create({
+        tenantId,
+        employeeId: employee.id,
+        shortTerm: payload.shortTerm || null,
+        longTerm: payload.longTerm || null,
+        matchPosition: payload.matchPosition || null
+      });
+    } else {
+      const next = {};
+      if (payload.shortTerm !== undefined) {
+        next.shortTerm = payload.shortTerm;
+      }
+      if (payload.longTerm !== undefined) {
+        next.longTerm = payload.longTerm;
+      }
+      if (payload.matchPosition !== undefined) {
+        next.matchPosition = payload.matchPosition;
+      }
+      await row.update(next);
+    }
+
+    return {
+      id: row.id,
+      shortTerm: row.shortTerm || null,
+      longTerm: row.longTerm || null,
+      matchPosition: row.matchPosition || null
+    };
+  };
+
   const linkTenantUser = async (authenticatePayload, { id, tenantUserId }) => {
     const { tenantId } = authenticatePayload;
     const employee = await models.employee.findByPk(id);
@@ -858,8 +972,169 @@ module.exports = fp(async (fastify, options) => {
     return enhanceUserList(userList, tenantId);
   };
 
+  /**
+   * 员工档案页：根据关联 AI 面试（问卷+作答/转写）、简历解析、填写信息生成就绪度/成长/匹配并落库。
+   */
+  const generateTalentInsight = async (authenticatePayload, { id, positionId, language, persist = true }) => {
+    const { tenantId } = authenticatePayload;
+    if (!id) {
+      throw new Error('员工ID不能为空');
+    }
+    const employeeRow = await models.employee.findByPk(id, { include: [models.profile] });
+    if (!employeeRow || String(employeeRow.tenantId) !== String(tenantId)) {
+      throw new Error('未找到员工');
+    }
+    const employee = employeeRow.get({ plain: true });
+    const { extractInterviewSignals, runTalentInsightFill } = require('../utils/talent-insight');
+
+    let assessment = null;
+    if (employee.tenantUserId && models.assessment) {
+      assessment = await models.assessment.findOne({
+        where: { tenantId, tenantUserId: employee.tenantUserId },
+        order: [['updatedAt', 'DESC']]
+      });
+    }
+    if (!assessment && models.talentCollectInvite) {
+      const invite = await models.talentCollectInvite.findOne({
+        where: { tenantId, employeeId: String(employee.id) },
+        order: [['updatedAt', 'DESC']]
+      });
+      if (invite?.assessmentId && models.assessment) {
+        assessment = await models.assessment.findByPk(invite.assessmentId);
+      }
+    }
+
+    let interview = null;
+    let interviewError = null;
+    let interviewId = assessment?.clientUserId || assessment?.interviewData?.interviewId || null;
+    if (!interviewId && models.talentCollectInvite) {
+      const invite = await models.talentCollectInvite.findOne({
+        where: { tenantId, employeeId: String(employee.id) },
+        order: [['updatedAt', 'DESC']]
+      });
+      interviewId = invite?.clientUserId || invite?.interviewId || null;
+    }
+
+    if (interviewId && services.aiInterview?.getInterviewDetail) {
+      try {
+        interview = await services.aiInterview.getInterviewDetail({ tenantId, id: String(interviewId) });
+      } catch (error) {
+        interviewError = error?.message || '拉取面试详情失败';
+      }
+    } else if (!interviewId) {
+      interviewError = '未找到关联的 AI 面试记录';
+    }
+
+    const profileData = assessment?.profileData || {};
+    let resumeParsed = profileData.resumeParsed || null;
+    if (!resumeParsed) {
+      try {
+        const resumes = Array.isArray(profileData.resumes) ? profileData.resumes : [];
+        const fileId = resumes[0]?.id || resumes[0]?.ossId || resumes[0]?.fileId;
+        if (fileId) {
+          const file = await fastify.fileManager.services.getFileInstance({ id: fileId });
+          const hash = file?.hash;
+          if (hash) {
+            const cached = await models.resume.findOne({ where: { fileMD5: hash } });
+            resumeParsed = cached ? cached.get({ plain: true }) : null;
+          }
+        }
+      } catch (e) {
+        resumeParsed = null;
+      }
+    }
+    const { resumes: _r, resumeParsed: _rp, ...submittedInfo } = profileData;
+
+    const positionRef = positionId || employee.options?.position;
+    const resolvedPositionId = typeof positionRef === 'object' && positionRef ? positionRef.id || positionRef.value : positionRef;
+    let position = null;
+    if (resolvedPositionId) {
+      try {
+        const pos = await services.position.detail(authenticatePayload, { id: String(resolvedPositionId) });
+        const plain = pos.get ? pos.get({ plain: true }) : pos;
+        position = {
+          id: plain.id,
+          name: plain.name,
+          description: plain.description,
+          requirement: plain.requirement,
+          developmentGoal: plain.developmentGoal,
+          skill: plain.skill,
+          language: plain.language
+        };
+      } catch (e) {
+        position = { id: String(resolvedPositionId) };
+      }
+    }
+
+    const interviewSignals = extractInterviewSignals(interview);
+    if (!interview && !resumeParsed && Object.keys(submittedInfo || {}).length === 0 && !employee.profile) {
+      throw new Error('缺少可用的面试、简历或填写信息，无法生成洞察');
+    }
+
+    const filled = await runTalentInsightFill(fastify, {
+      language: language || 'zh-CN',
+      context: {
+        employee: {
+          id: employee.id,
+          name: employee.name,
+          phone: employee.phone,
+          email: employee.email
+        },
+        position,
+        interviewSignals,
+        interviewError,
+        resumeParsed,
+        submittedInfo: Object.keys(submittedInfo || {}).length ? submittedInfo : { profile: employee.profile || null },
+        profile: employee.profile || null
+      },
+      draft: {
+        readiness: null,
+        aiSuggest: null
+      }
+    });
+
+    let persisted = null;
+    let aiSuggestSaved = null;
+    if (persist !== false) {
+      aiSuggestSaved = await saveAiSuggest(authenticatePayload, {
+        id: employee.id,
+        shortTerm: filled.aiSuggest.shortTerm,
+        longTerm: filled.aiSuggest.longTerm,
+        matchPosition: filled.aiSuggest.matchPosition
+      });
+      if (position?.id) {
+        persisted = await services.position.skillAnalysisSave(authenticatePayload, {
+          positionId: String(position.id),
+          employeeId: String(employee.id),
+          readiness: filled.readiness.readiness,
+          summary: filled.readiness.summary,
+          metrics: filled.readiness.metrics,
+          skills: filled.readiness.skills,
+          priorityGaps: filled.readiness.priorityGaps,
+          developmentPlan: filled.readiness.developmentPlan
+        });
+      }
+    }
+
+    return {
+      language: filled.language,
+      readiness: filled.readiness,
+      aiSuggest: filled.aiSuggest,
+      persisted,
+      aiSuggestSaved,
+      signals: {
+        hasInterview: !!interview,
+        interviewError,
+        questionnaireAnswered: !!(interviewSignals.questionnaireAnswers && Object.keys(interviewSignals.questionnaireAnswers).length),
+        answerCount: interviewSignals.answers.length,
+        hasResumeParsed: !!resumeParsed,
+        hasSubmittedInfo: Object.keys(submittedInfo || {}).length > 0
+      }
+    };
+  };
+
   Object.assign(fastify[options.name].services, {
-    employee: { create, list, detail, myDetail, save, remove, setStatus, recommend, search, saveProfile, linkTenantUser, unlinkTenantUser, userList, adminUserList },
+    employee: { create, list, detail, myDetail, save, remove, setStatus, recommend, search, saveProfile, saveAiSuggest, generateTalentInsight, linkTenantUser, unlinkTenantUser, userList, adminUserList },
     performance: {
       create: createPerformance,
       list: performanceList,

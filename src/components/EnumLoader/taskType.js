@@ -6,7 +6,8 @@ const taskType = ({ locale }) => {
     { value: 'sync-org', description: formatMessage({ id: 'enumLoader.taskTypeSyncOrg' }), type: 'warning' },
     { value: 'parse-resume', description: formatMessage({ id: 'enumLoader.taskTypeParseResume' }), type: 'info' },
     { value: 'assessment-profile-review', description: formatMessage({ id: 'enumLoader.taskTypeAssessmentProfileReview' }), type: 'progress' },
-    { value: 'position-ai-analysis', description: formatMessage({ id: 'enumLoader.taskTypePositionAiAnalysis' }), type: 'progress' }
+    { value: 'position-ai-analysis', description: formatMessage({ id: 'enumLoader.taskTypePositionAiAnalysis' }), type: 'progress' },
+    { value: 'position-analysis-review', description: formatMessage({ id: 'enumLoader.taskTypePositionAnalysisReview' }), type: 'progress' }
   ];
 };
 

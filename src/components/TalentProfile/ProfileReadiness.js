@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, Flex, Typography } from 'antd';
+import { App, Button, Empty, Flex, Typography } from 'antd';
+import { MdOutlineEdit } from 'react-icons/md';
 import { Card } from '@kne/react-box';
 import '@kne/react-box/dist/index.css';
 import { createWithRemoteLoader } from '@kne/remote-loader';
@@ -8,6 +9,7 @@ import { useIsMobile } from '@kne/responsive-utils';
 import classnames from 'classnames';
 import withLocale from './withLocale';
 import ProfileEvidence from './ProfileEvidence';
+import { ReadinessFormInner, TaskReadinessFormInner } from './FormInner';
 import style from './style.module.scss';
 import iconSpark from './assets/icon-spark.svg';
 import iconClipboard from './assets/icon-clipboard.svg';
@@ -146,11 +148,13 @@ const deriveFromRows = rows => {
 };
 
 const ProfileReadiness = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
+  modules: ['components-core:Global@usePreset', 'components-core:FormInfo@useFormModal']
 })(
-  withLocale(({ remoteModules, positionId, employeeId, displayName }) => {
-    const [usePreset] = remoteModules;
+  withLocale(({ remoteModules, positionId, employeeId, displayName, readOnly, analysisOverride, onGenerateInsight, generatingInsight }) => {
+    const [usePreset, useFormModal] = remoteModules;
     const { ajax, apis } = usePreset();
+    const formModal = useFormModal();
+    const { message } = App.useApp();
     const { formatMessage } = useIntl();
     const isMobile = useIsMobile();
     const [rows, setRows] = useState(null);
@@ -158,6 +162,7 @@ const ProfileReadiness = createWithRemoteLoader({
     const [error, setError] = useState('');
     const [selectedId, setSelectedId] = useState(null);
     const [expanded, setExpanded] = useState({});
+    const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
       let cancelled = false;
@@ -205,13 +210,14 @@ const ProfileReadiness = createWithRemoteLoader({
       return () => {
         cancelled = true;
       };
-    }, [ajax, apis, employeeId, formatMessage, positionId]);
+    }, [ajax, apis, employeeId, formatMessage, positionId, reloadKey]);
 
     const derived = useMemo(() => deriveFromRows(rows || []), [rows]);
-    const readiness = analysis?.readiness != null ? analysis.readiness : derived.readiness;
-    const metrics = analysis?.metrics || derived.metrics;
-    const priorityGaps = Array.isArray(analysis?.priorityGaps) && analysis.priorityGaps.length ? analysis.priorityGaps : derived.priorityGaps;
-    const summary = analysis?.summary || '';
+    const effectiveAnalysis = analysisOverride || analysis;
+    const readiness = effectiveAnalysis?.readiness != null ? effectiveAnalysis.readiness : derived.readiness;
+    const metrics = effectiveAnalysis?.metrics || derived.metrics;
+    const priorityGaps = Array.isArray(effectiveAnalysis?.priorityGaps) && effectiveAnalysis.priorityGaps.length ? effectiveAnalysis.priorityGaps : derived.priorityGaps;
+    const summary = effectiveAnalysis?.summary || '';
     const firstName =
       String(displayName || '')
         .split(/\s+/)
@@ -268,10 +274,10 @@ const ProfileReadiness = createWithRemoteLoader({
       };
     }, [groups, selectedId, formatMessage]);
 
-    if (!positionId) {
+    if (!positionId && !effectiveAnalysis) {
       return <Empty description={formatMessage({ id: 'talentProfile.readinessNoPosition' })} />;
     }
-    if (rows == null) {
+    if (rows == null && positionId) {
       return null;
     }
 
@@ -279,11 +285,162 @@ const ProfileReadiness = createWithRemoteLoader({
       setExpanded(prev => ({ ...prev, [id]: !(prev[id] !== false) }));
     };
 
+    const openEditReadiness = () => {
+      if (readOnly || !positionId || !employeeId) {
+        return;
+      }
+      const saveApi = apis?.talentSaas?.tenant?.position?.skillAnalysisSave;
+      if (!saveApi) {
+        message.error(formatMessage({ id: 'talentProfile.editReadinessFailed' }));
+        return;
+      }
+      formModal({
+        title: formatMessage({ id: 'talentProfile.editReadiness' }),
+        size: 'small',
+        formProps: {
+          data: {
+            readiness: readiness ?? 0,
+            summary: summary || '',
+            metrics: {
+              criticalGaps: metrics?.criticalGaps ?? 0,
+              atOrAbove: metrics?.atOrAbove ?? 0,
+              monthsToClose: metrics?.monthsToClose ?? null
+            },
+            priorityGaps: (priorityGaps || []).map((gap, index) => ({
+              rank: gap.rank || index + 1,
+              title: gap.title || '',
+              description: gap.description || '',
+              current: gap.current ?? null,
+              required: gap.required ?? null
+            }))
+          },
+          onSubmit: async formData => {
+            const { data: resData } = await ajax(
+              Object.assign({}, saveApi, {
+                data: {
+                  positionId: String(positionId),
+                  employeeId: String(employeeId),
+                  readiness: formData.readiness,
+                  summary: formData.summary,
+                  metrics: formData.metrics,
+                  priorityGaps: formData.priorityGaps,
+                  skills: effectiveAnalysis?.skills || analysis?.skills || [],
+                  developmentPlan: effectiveAnalysis?.developmentPlan || analysis?.developmentPlan || null
+                }
+              })
+            );
+            if (resData.code !== 0) {
+              throw new Error(resData.msg || formatMessage({ id: 'talentProfile.editReadinessFailed' }));
+            }
+            message.success(formatMessage({ id: 'talentProfile.editReadinessSuccess' }));
+            setReloadKey(key => key + 1);
+          }
+        },
+        children: <ReadinessFormInner />
+      });
+    };
+
+    const openEditFutureTasks = async () => {
+      if (readOnly || !positionId || !employeeId || String(employeeId).startsWith('draft-')) {
+        return;
+      }
+      const replaceApi = apis?.talentSaas?.tenant?.position?.taskReadinessReplace;
+      const tasksApi = apis?.talentSaas?.tenant?.position?.tasks;
+      if (!replaceApi) {
+        message.error(formatMessage({ id: 'talentProfile.editFutureTasksFailed' }));
+        return;
+      }
+
+      let taskRows = (rows || []).map(item => ({
+        id: item.id || null,
+        taskId: item.taskId,
+        title: item.title || '',
+        activityGroup: item.activityGroup || '',
+        current: item.current ?? 0,
+        required: item.required ?? 0,
+        status: item.status || 'gap',
+        confidence: item.confidence || 'medium'
+      }));
+
+      if (!taskRows.length && tasksApi) {
+        try {
+          const { data: tasksRes } = await ajax(Object.assign({}, tasksApi, { params: { positionId: String(positionId) } }));
+          if (tasksRes?.code === 0) {
+            taskRows = (tasksRes.data?.pageData || []).map(task => ({
+              id: null,
+              taskId: task.id,
+              title: task.title || '',
+              activityGroup: task.activityGroup || '',
+              current: 0,
+              required: task.importanceFuture ?? task.importanceNow ?? 0,
+              status: 'gap',
+              confidence: 'medium'
+            }));
+          }
+        } catch (e) {
+          // ignore, fall through to empty check
+        }
+      }
+
+      if (!taskRows.length) {
+        message.warning(formatMessage({ id: 'talentProfile.editFutureTasksEmpty' }));
+        return;
+      }
+
+      formModal({
+        title: formatMessage({ id: 'talentProfile.editFutureTasks' }),
+        size: 'small',
+        formProps: {
+          data: { tasks: taskRows },
+          onSubmit: async formData => {
+            const payloadRows = (formData.tasks || [])
+              .map((item, index) => ({
+                taskId: item.taskId || taskRows[index]?.taskId,
+                current: item.current,
+                required: item.required,
+                status: item.status,
+                confidence: item.confidence
+              }))
+              .filter(item => item.taskId);
+            const { data: resData } = await ajax(
+              Object.assign({}, replaceApi, {
+                data: {
+                  positionId: String(positionId),
+                  employeeId: String(employeeId),
+                  rows: payloadRows
+                }
+              })
+            );
+            if (resData.code !== 0) {
+              throw new Error(resData.msg || formatMessage({ id: 'talentProfile.editFutureTasksFailed' }));
+            }
+            message.success(formatMessage({ id: 'talentProfile.editFutureTasksSuccess' }));
+            setReloadKey(key => key + 1);
+          }
+        },
+        children: <TaskReadinessFormInner itemCount={taskRows.length} />
+      });
+    };
+
+    const actionButtons =
+      !readOnly && (onGenerateInsight || (positionId && employeeId)) ? (
+        <Flex gap={4} align="center">
+          {onGenerateInsight ? (
+            <Button type="text" className={style['edit-btn']} loading={!!generatingInsight} onClick={() => onGenerateInsight()}>
+              {formatMessage({ id: 'talentProfile.generateInsight' })}
+            </Button>
+          ) : null}
+          {positionId && employeeId ? <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditReadiness} /> : null}
+        </Flex>
+      ) : null;
+
+    const canEditFutureTasks = !readOnly && positionId && employeeId && !String(employeeId).startsWith('draft-');
+
     return (
       <div className={style['readiness-root']}>
         {error ? <Typography.Text type="danger">{error}</Typography.Text> : null}
         <div className={style['readiness-top']}>
-          <Card className={style['halo-card']} theme="halo" hover={false}>
+          <Card className={style['halo-card']} theme="halo" hover={false} extra={actionButtons}>
             <div className={style['halo-body']}>
               <ReadinessRing value={readiness} formatMessage={formatMessage} />
               <div className={style['halo-copy']}>
@@ -316,7 +473,18 @@ const ProfileReadiness = createWithRemoteLoader({
             </div>
           </Card>
 
-          <Card className={style['gaps-card']} theme="inset" hover={false} title={formatMessage({ id: 'talentProfile.priorityGaps' })} extra={formatMessage({ id: 'talentProfile.topGaps' }, { count: Math.min(3, priorityGaps.length || 3) })}>
+          <Card
+            className={style['gaps-card']}
+            theme="inset"
+            hover={false}
+            title={formatMessage({ id: 'talentProfile.priorityGaps' })}
+            extra={
+              <Flex align="center" gap={8}>
+                <span>{formatMessage({ id: 'talentProfile.topGaps' }, { count: Math.min(3, priorityGaps.length || 3) })}</span>
+                {!readOnly && positionId && employeeId ? <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditReadiness} /> : null}
+              </Flex>
+            }
+          >
             {priorityGaps.length === 0 ? (
               <Empty description={formatMessage({ id: 'talentProfile.noGaps' })} />
             ) : (
@@ -352,6 +520,13 @@ const ProfileReadiness = createWithRemoteLoader({
               </span>
               {formatMessage({ id: 'talentProfile.futureTaskReadiness' })}
             </span>
+          }
+          extra={
+            canEditFutureTasks ? (
+              <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditFutureTasks}>
+                {formatMessage({ id: 'talentProfile.editFutureTasks' })}
+              </Button>
+            ) : null
           }
         >
           {(rows || []).length === 0 ? (
@@ -424,7 +599,7 @@ const ProfileReadiness = createWithRemoteLoader({
                 </div>
               </div>
               <div className={style['future-task-evidence']}>
-                <ProfileEvidence employeeId={employeeId} variant="task" selectedTask={selectedTask} />
+                <ProfileEvidence employeeId={employeeId} variant="task" selectedTask={selectedTask} readOnly={readOnly} />
               </div>
             </div>
           )}

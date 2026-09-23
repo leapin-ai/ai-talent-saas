@@ -372,6 +372,82 @@ module.exports = fp(async (fastify, options) => {
           query: { id }
         });
       },
+      /**
+       * 解析 AI 面试域文件可公网访问 URL（供阿里云 filetrans file_link）
+       * 优先 static/file-url；失败则下载后转存本仓 OSS 再取链接
+       */
+      getFileUrl: async ({ tenantId, id }) => {
+        const fileId = String(id || '').trim();
+        if (!fileId) {
+          throw new Error('缺少文件 ID');
+        }
+        const credentials = await getCredentials(tenantId);
+        const apiBase = getApiBase(credentials.apiUrl);
+        const signaturePayload = generateSignature(credentials.appId, credentials.secretKey, 60);
+        const headers = {
+          'Content-Type': 'application/json',
+          'x-openapi-appid': signaturePayload.appId,
+          'x-openapi-timestamp': String(signaturePayload.timestamp),
+          'x-openapi-expire': String(signaturePayload.expire),
+          'x-openapi-signature': signaturePayload.signature
+        };
+
+        const parseUrlPayload = data => {
+          if (!data) {
+            return null;
+          }
+          if (typeof data === 'string' && /^https?:\/\//i.test(data)) {
+            return data;
+          }
+          if (typeof data === 'object') {
+            const candidate = data.url || data.fileUrl || data.link || data.data;
+            if (typeof candidate === 'string' && /^https?:\/\//i.test(candidate)) {
+              return candidate;
+            }
+            if (candidate && typeof candidate === 'object' && typeof candidate.url === 'string') {
+              return candidate.url;
+            }
+          }
+          return null;
+        };
+
+        try {
+          const urlRes = await fetch(`${apiBase}/static/file-url/${encodeURIComponent(fileId)}`, { method: 'GET', headers });
+          const text = await urlRes.text();
+          let data = text;
+          try {
+            data = text ? JSON.parse(text) : null;
+          } catch (e) {
+            // plain url string
+          }
+          if (data && typeof data === 'object' && Object.prototype.hasOwnProperty.call(data, 'code') && data.code !== 0) {
+            throw new Error(data.msg || data.message || 'file-url 失败');
+          }
+          const direct = parseUrlPayload(data && Object.prototype.hasOwnProperty.call(data, 'data') ? data.data : data);
+          if (direct) {
+            return direct;
+          }
+        } catch (e) {
+          // fallback below
+        }
+
+        const fileRes = await fetch(`${apiBase}/static/file-id/${encodeURIComponent(fileId)}`, { method: 'GET', headers });
+        if (!fileRes.ok) {
+          throw new Error(`下载面试录像失败: ${fileRes.status}`);
+        }
+        const buffer = Buffer.from(await fileRes.arrayBuffer());
+        const contentType = fileRes.headers.get('content-type') || 'video/mp4';
+        const ext = contentType.includes('webm') ? 'webm' : contentType.includes('wav') ? 'wav' : contentType.includes('mp3') ? 'mp3' : 'mp4';
+        const uploaded = await fastify.fileManager.services.uploadToFileSystem({
+          file: {
+            toBuffer: () => buffer,
+            filename: `interview-${fileId}.${ext}`,
+            mimetype: contentType
+          }
+        });
+        const localId = uploaded?.id || uploaded;
+        return fastify.fileManager.services.getFileUrl({ id: localId });
+      },
       /** ajax 根地址：去掉末尾 /api/v1，供前端直连面试接口 */
       getAjaxBaseUrl: apiUrl => {
         const apiBase = getApiBase(apiUrl);

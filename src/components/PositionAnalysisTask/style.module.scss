@@ -1,16 +1,19 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
 .split-layout {
   // antd Splitter 默认 height:100%，必须强制固定高度，否则被内容撑开无法滚动
   height: min(70vh, 720px) !important;
   max-height: min(70vh, 720px) !important;
   width: 100%;
-  min-width: min(1040px, 88vw);
+  min-width: min(960px, 92vw);
   overflow: hidden !important;
 }
 
 .split-left {
   position: relative !important;
   overflow: hidden !important;
-  min-width: 0;
+  min-width: 0 !important;
+  max-width: 100%;
   min-height: 0;
   background: #f8fafc;
   border-right: 1px solid #e2e8f0;
@@ -19,15 +22,19 @@
 .split-right {
   position: relative !important;
   overflow: hidden !important;
-  min-width: 0;
+  min-width: 0 !important;
   min-height: 0;
 }
 
 .form-scroll {
   position: absolute;
   inset: 0;
-  overflow: auto;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 0 4px 8px 12px;
+  // 窄侧栏时让 SkillList 走 mobile-container，避免 754px min-width 与 Splitter 互相 ResizeObserver
+  @include resp.responsive-container;
 }
 
 .side-panel {
@@ -37,12 +44,16 @@
   flex-direction: column;
   padding: 8px 12px 12px;
   box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
 }
 
 .side-tabs {
   flex: 1 1 0%;
   height: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 0;
   display: flex !important;
   flex-direction: column !important;
@@ -53,14 +64,23 @@
       margin-bottom: 8px;
       flex: none !important;
       flex-shrink: 0;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .ant-tabs-nav-wrap {
+      overflow: hidden !important;
     }
 
     // antd 6：内容区是 body-holder / body，不是旧版 content-holder
     .ant-tabs-body-holder,
     .ant-tabs-content-holder {
       flex: 1 1 0% !important;
+      min-width: 0 !important;
       min-height: 0 !important;
       height: 0 !important; // 配合 flex:1 强制占满剩余高度，才能出现滚动条
+      max-width: 100%;
       overflow-x: hidden !important;
       overflow-y: auto !important;
     }
@@ -68,10 +88,15 @@
     .ant-tabs-body,
     .ant-tabs-content {
       height: auto !important;
+      max-width: 100%;
+      min-width: 0;
     }
 
     .ant-tabs-tabpane {
       height: auto !important;
+      max-width: 100%;
+      min-width: 0;
+      overflow-x: hidden;
     }
 
     .ant-tabs-tabpane-active {
@@ -82,12 +107,30 @@
 }
 
 .side-tab-body {
+  min-width: 0;
+  max-width: 100%;
   min-height: 0;
   padding-right: 4px;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .side-tab-body-employee {
   padding-right: 0;
+}
+
+.interview-embed {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+  box-sizing: border-box;
+  contain: inline-size;
+
+  > * {
+    max-width: 100%;
+    min-width: 0;
+  }
 }
 
 .info-card {
@@ -95,6 +138,9 @@
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 12px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .info-card-head {
@@ -103,12 +149,18 @@
 
 .info-card-body {
   min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .meta-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 12px;
+}
+
+.meta-item {
+  min-width: 0;
 }
 
 .meta-label {
@@ -225,13 +277,50 @@
 }
 
 .tenant-company-embed {
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.view-mode-bar {
+  margin-bottom: 0;
+}
+
+.edit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.edit-panel-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  pointer-events: none;
+}
+
+.preview-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ai-fill-bar {

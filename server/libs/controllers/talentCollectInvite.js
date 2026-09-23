@@ -133,6 +133,46 @@ module.exports = fp(async (fastify, options) => {
     }
   );
 
+  fastify.post(
+    `${options.prefix}/tenant/position/talent-collect-invite/start-analysis`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '已完成邀请触发分析任务（未完成则取消并重建）',
+        body: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => {
+      return services.talentCollectInvite.startAnalysis(request.tenantUserInfo, request.body);
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/position/talent-collect-invite/cancel`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '取消未结束的人才评估收集邀请（短链失效）',
+        body: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => {
+      return services.talentCollectInvite.cancel(request.tenantUserInfo, request.body);
+    }
+  );
+
   fastify.get(
     `${options.prefix}/public/talent-collect-invite`,
     {
