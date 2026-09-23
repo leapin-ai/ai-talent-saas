@@ -298,7 +298,7 @@ const ProfileEvidence = createWithRemoteLoader({
     const canEditViaApi = !readOnly && employeeId && taskId && !String(employeeId).startsWith('draft-') && !!apis?.talentSaas?.tenant?.employee?.replaceTaskEvidence;
     const canEditViaDraft = !readOnly && typeof onSaveTaskEvidence === 'function';
     const canEditTaskEvidence = canEditViaApi || canEditViaDraft;
-    // 「看起来不对」仅客户端只读档案；管理端任务 / 员工档案不显示
+    // 「看起来不对」默认展示；仅手动 Task 通过 showLooksWrong=false 关闭
     const canShowLooksWrong = !!showLooksWrong && !!selectedTask && !!employeeId && !String(employeeId).startsWith('draft-');
     const canReportIssue = canShowLooksWrong;
 

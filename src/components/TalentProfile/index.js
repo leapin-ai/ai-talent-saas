@@ -38,6 +38,8 @@ const TalentProfile = createWithRemoteLoader({
       self,
       readOnly,
       readinessReadOnly,
+      /** 证据区「看起来不对」：默认展示；仅手动 Task（如完善档案生成审核）传 false */
+      showLooksWrong = true,
       embed,
       empty,
       onData,
@@ -425,7 +427,7 @@ const TalentProfile = createWithRemoteLoader({
                       displayName={profileData.name}
                       positionId={positionId}
                       readOnly={readOnly || readinessReadOnly}
-                      showLooksWrong={!!readOnly}
+                      showLooksWrong={showLooksWrong}
                       analysisOverride={data.skillAnalysisDraft || null}
                       onSaveAnalysis={saveSkillAnalysis}
                       onGenerateInsight={onGenerateInsight}
