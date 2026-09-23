@@ -196,8 +196,86 @@ const ProfileReadiness = createWithRemoteLoader({
     const priorityGaps = Array.isArray(effectiveAnalysis?.priorityGaps) && effectiveAnalysis.priorityGaps.length ? effectiveAnalysis.priorityGaps : derived.priorityGaps;
     const summary = effectiveAnalysis?.summary || '';
 
+    // 审核草稿 / 已落库 skillAnalysis.skills：接口 taskReadiness 为空时用 skills 预览未来任务表
+    const overrideSkillRows = useMemo(() => {
+      const skills = effectiveAnalysis?.skills;
+      if (!Array.isArray(skills) || !skills.length) {
+        return null;
+      }
+      const toNumericTaskId = value => {
+        if (value == null || value === '') {
+          return null;
+        }
+        const text = String(value).trim();
+        // positionTask.id 为 bigint；skill-* 等字符串 id 不能当作 taskId
+        return /^\d+$/.test(text) ? text : null;
+      };
+      return skills
+        .map((item, index) => {
+          if (!item || typeof item !== 'object') {
+            return null;
+          }
+          const title = typeof item.title === 'string' && item.title.trim() ? item.title.trim() : typeof item.name === 'string' ? item.name.trim() : '';
+          if (!title) {
+            return null;
+          }
+          const activityGroup = typeof item.activityGroup === 'string' && item.activityGroup.trim() ? item.activityGroup.trim() : [item.activityCode, item.activityTitle].filter(Boolean).join(' · ');
+          const taskId = toNumericTaskId(item.taskId);
+          return {
+            id: item.id || (taskId ? `task-${taskId}` : `draft-skill-${index}`),
+            taskId,
+            title,
+            activityGroup,
+            current: item.current ?? 0,
+            required: item.required ?? 0,
+            status: item.status,
+            confidence: item.confidence || 'medium',
+            evidence: item.evidence || ''
+          };
+        })
+        .filter(Boolean);
+    }, [effectiveAnalysis]);
+
+    // 有真实 taskReadiness 行优先；否则用 skillAnalysis.skills 兜底（完成/审批后常见）
+    // 接口行不含 evidence 文案，按 title/name 从 skills 合并，供右侧「所用证据」展示
+    const displayRows = useMemo(() => {
+      const apiRows = rows || [];
+      const skillRows = overrideSkillRows || [];
+      if (!apiRows.length) {
+        return skillRows;
+      }
+      const evidenceByTitle = new Map();
+      skillRows.forEach(item => {
+        const key = String(item.title || '')
+          .trim()
+          .toLowerCase();
+        if (key && item.evidence) {
+          evidenceByTitle.set(key, item.evidence);
+        }
+      });
+      (effectiveAnalysis?.skills || []).forEach(item => {
+        if (!item || typeof item !== 'object') {
+          return;
+        }
+        const key = String(item.title || item.name || '')
+          .trim()
+          .toLowerCase();
+        const evidence = typeof item.evidence === 'string' ? item.evidence.trim() : '';
+        if (key && evidence && !evidenceByTitle.has(key)) {
+          evidenceByTitle.set(key, evidence);
+        }
+      });
+      return apiRows.map(item => {
+        const key = String(item.title || '')
+          .trim()
+          .toLowerCase();
+        const evidence = item.evidence || evidenceByTitle.get(key) || '';
+        return evidence ? Object.assign({}, item, { evidence }) : item;
+      });
+    }, [rows, overrideSkillRows, effectiveAnalysis]);
+
     const groups = useMemo(() => {
-      const list = rows || [];
+      const list = displayRows;
       const map = new Map();
       list.forEach(item => {
         const key = item.activityGroup || '';
@@ -216,7 +294,7 @@ const ProfileReadiness = createWithRemoteLoader({
           children
         };
       });
-    }, [rows, formatMessage]);
+    }, [displayRows, formatMessage]);
 
     useEffect(() => {
       const flat = groups.flatMap(group => group.children);
@@ -249,7 +327,8 @@ const ProfileReadiness = createWithRemoteLoader({
     if (!positionId && !effectiveAnalysis) {
       return <Empty description={formatMessage({ id: 'talentProfile.readinessNoPosition' })} />;
     }
-    if (rows == null && positionId) {
+    // 有草稿 skills 时可直接预览，不必等 taskReadiness 接口
+    if (rows == null && positionId && !overrideSkillRows?.length) {
       return null;
     }
 
@@ -458,7 +537,7 @@ const ProfileReadiness = createWithRemoteLoader({
             ) : null
           }
         >
-          {(rows || []).length === 0 ? (
+          {(displayRows || []).length === 0 ? (
             <Empty description={formatMessage({ id: 'talentProfile.readinessEmpty' })} />
           ) : (
             <div className={style['future-task-body']}>
@@ -510,7 +589,7 @@ const ProfileReadiness = createWithRemoteLoader({
                 </div>
               </div>
               <div className={style['future-task-evidence']}>
-                <ProfileEvidence employeeId={employeeId} variant="task" selectedTask={selectedTask} readOnly={readOnly} />
+                <ProfileEvidence employeeId={employeeId} positionId={positionId} variant="task" selectedTask={selectedTask} readOnly={readOnly} />
               </div>
             </div>
           )}

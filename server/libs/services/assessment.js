@@ -1107,6 +1107,29 @@ module.exports = fp(async (fastify, options) => {
         }
         await services.workforce.recomputeProfileCompletion({ tenantId, employeeId, assessment: row });
       }
+      // 完成生成后立刻把就绪度/未来任务落到员工档案，避免「任务里填了、档案里全空」
+      const reviewSkillAnalysis = row.reviewData?.skillAnalysis;
+      const positionRef = row.reviewData?.employee?.options?.position || linked?.options?.position;
+      const positionId = typeof positionRef === 'object' && positionRef ? positionRef.id || positionRef.value : positionRef;
+      if (employeeId && reviewSkillAnalysis && typeof reviewSkillAnalysis === 'object' && positionId && services.position?.skillAnalysisSave) {
+        try {
+          await services.position.skillAnalysisSave(
+            { tenantId, id: userInfo?.id },
+            {
+              positionId: String(positionId),
+              employeeId: String(employeeId),
+              readiness: reviewSkillAnalysis.readiness,
+              summary: reviewSkillAnalysis.summary,
+              metrics: reviewSkillAnalysis.metrics,
+              skills: reviewSkillAnalysis.skills,
+              priorityGaps: reviewSkillAnalysis.priorityGaps,
+              developmentPlan: reviewSkillAnalysis.developmentPlan
+            }
+          );
+        } catch (error) {
+          fastify.log.warn({ err: error }, 'completeGenerate skillAnalysisSave failed');
+        }
+      }
     } catch (error) {
       fastify.log.warn({ err: error }, 'profile completion after generate failed');
     }
@@ -1128,7 +1151,7 @@ module.exports = fp(async (fastify, options) => {
         const invite = await models.talentCollectInvite.findOne({
           where: { id: String(collectInviteId), tenantId }
         });
-        if (invite && invite.status === 'done') {
+        if (invite && (invite.status === 'done' || invite.status === 'ended')) {
           invite.status = 'ended';
           invite.interviewData = Object.assign({}, invite.interviewData || {}, {
             analysisTaskId: String(task.id),
@@ -1380,6 +1403,42 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
+  /**
+   * 完善档案生成审核：一键填充档案草稿 + 就绪度/成长/匹配（不落库）。
+   * 档案填充与洞察并行；洞察缺上下文时不阻断档案填充结果。
+   */
+  const aiFillAndInsightGenerate = async (userInfo, { taskId, draft, language, resumeParsed, submittedInfo, persist = false }) => {
+    if (!taskId) {
+      throw new Error('任务ID不能为空');
+    }
+
+    const [fillSettled, insightSettled] = await Promise.allSettled([
+      aiFillGenerate(userInfo, { taskId, draft, language, resumeParsed, submittedInfo }),
+      generateTalentInsight(userInfo, { taskId, language, resumeParsed, submittedInfo, draft, persist: !!persist })
+    ]);
+
+    if (fillSettled.status === 'rejected' && insightSettled.status === 'rejected') {
+      throw fillSettled.reason || insightSettled.reason || new Error('AI 填充失败');
+    }
+    if (fillSettled.status === 'rejected') {
+      throw fillSettled.reason || new Error('AI 填充档案失败');
+    }
+
+    const fillResult = fillSettled.value;
+    const insightResult = insightSettled.status === 'fulfilled' ? insightSettled.value : null;
+    const insightError = insightSettled.status === 'rejected' ? insightSettled.reason?.message || String(insightSettled.reason || '生成洞察失败') : null;
+
+    return {
+      language: fillResult.language || insightResult?.language || normalizeOutputLanguage(language || 'zh-CN'),
+      data: fillResult.data,
+      readiness: insightResult?.readiness || null,
+      aiSuggest: insightResult?.aiSuggest || null,
+      persisted: insightResult?.persisted || null,
+      signals: insightResult?.signals || null,
+      insightError
+    };
+  };
+
   const approve = async (authenticatePayload, { id }) => {
     const { tenantId } = authenticatePayload;
     const row = await findById(authenticatePayload, id);
@@ -1555,6 +1614,7 @@ module.exports = fp(async (fastify, options) => {
       enterGenerating,
       completeGenerate,
       aiFillGenerate,
+      aiFillAndInsightGenerate,
       generateTalentInsight,
       saveReviewData,
       approve,

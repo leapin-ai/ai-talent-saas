@@ -165,6 +165,105 @@ module.exports = fp(async (fastify, options) => {
     async request => services.workforce.removeEvidence(request.tenantUserInfo, request.body)
   );
 
+  fastify.post(
+    `${options.prefix}/tenant/employee/readiness-issue`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '未来任务就绪纠错反馈（It does not look right）',
+        body: {
+          type: 'object',
+          properties: {
+            employeeId: { type: 'string' },
+            positionId: { type: 'string' },
+            taskId: { type: 'string' },
+            taskTitle: { type: 'string' },
+            activityGroup: { type: 'string' },
+            current: { type: 'number' },
+            required: { type: 'number' },
+            readinessStatus: { type: 'string' },
+            confidence: { type: 'string' },
+            reason: { type: 'string' },
+            comment: { type: 'string' }
+          },
+          required: ['employeeId', 'reason']
+        }
+      }
+    },
+    async request => services.workforce.reportReadinessIssue(request.tenantUserInfo, request.body)
+  );
+
+  /** 平台 Admin：按租户查看/处理纠错反馈 */
+  fastify.get(
+    `${options.prefix}/tenant/admin/readiness-issue/list`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: '平台管理-纠错反馈列表',
+        query: {
+          type: 'object',
+          properties: {
+            tenantId: { type: 'string' },
+            currentPage: { type: 'number', default: 1 },
+            perPage: { type: 'number', default: 20 },
+            filter: { type: 'object', default: {} }
+          },
+          required: ['tenantId']
+        }
+      }
+    },
+    async request => {
+      const { tenantId, currentPage, perPage, filter } = request.query;
+      return services.workforce.listReadinessIssues({ tenantId }, { currentPage, perPage, filter });
+    }
+  );
+
+  fastify.get(
+    `${options.prefix}/tenant/admin/readiness-issue/detail`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: '平台管理-纠错反馈详情',
+        query: {
+          type: 'object',
+          properties: {
+            tenantId: { type: 'string' },
+            id: { type: 'string' }
+          },
+          required: ['tenantId', 'id']
+        }
+      }
+    },
+    async request => {
+      const { tenantId, id } = request.query;
+      return services.workforce.getReadinessIssueDetail({ tenantId }, { id });
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/admin/readiness-issue/resolve`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: '平台管理-处理纠错反馈',
+        body: {
+          type: 'object',
+          properties: {
+            tenantId: { type: 'string' },
+            id: { type: 'string' },
+            status: { type: 'string' },
+            resolveNote: { type: 'string' }
+          },
+          required: ['tenantId', 'id']
+        }
+      }
+    },
+    async request => {
+      const { tenantId, ...body } = request.body;
+      return services.workforce.resolveReadinessIssue({ tenantId, id: request.userInfo?.id }, body);
+    }
+  );
+
   fastify.get(
     `${options.prefix}/tenant/employee/detail`,
     {
