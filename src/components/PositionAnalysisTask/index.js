@@ -11,13 +11,6 @@ const AI_FILL_LANGUAGE_OPTIONS = [
   { label: '中文', value: 'zh-CN' },
   { label: 'English', value: 'en-US' }
 ];
-const EMPLOYEE_SKILL_STATUS = [
-  { label: '严重缺口', value: 'critical' },
-  { label: '缺口', value: 'gap' },
-  { label: '达标', value: 'onTarget' },
-  { label: '超出', value: 'above' }
-];
-
 const PLAN_TONES = [
   { label: 'primary', value: 'primary' },
   { label: 'cyan', value: 'cyan' },
@@ -425,13 +418,6 @@ const validatePositionStep = (data, message) => {
   }
 };
 
-/** FormSteps 上下文：优先 getStepCache / stepCache，兼容旧 stepCacheRef；字段为 formData */
-const readStepFormData = (stepCtx, index) => {
-  const cache = typeof stepCtx?.getStepCache === 'function' ? stepCtx.getStepCache() : stepCtx?.stepCache || stepCtx?.stepCacheRef?.current;
-  const entry = cache?.[index];
-  return entry?.formData || entry?.data || {};
-};
-
 /**
  * 嵌套 List/TableList 首次靠 formProps.data 灌入常丢子项。
  * 仅在每个步骤「首次进入」时用 seed 回填；返回上一步时不再回填，以免覆盖 stepCache 里的编辑结果。
@@ -506,7 +492,7 @@ const ApplyClipboardImport = ({ FormInfo, step, importBundleRef }) => {
   return null;
 };
 
-const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, defaultLanguage, languageRef, importBundleRef, context, refineMode }) => {
+const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, defaultLanguage, languageRef, importBundleRef, context }) => {
   const { FormApiButton } = FormInfo;
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -661,23 +647,8 @@ const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, default
           </FormApiButton>
         ) : null}
       </div>
-      <div className={style['ai-fill-hint']}>
-        {refineMode ? '可粘贴岗位 JSON（含 verdict/skill/activityCode/activityTitle）；导入后不会自动提交' : '可粘贴岗位 JSON（含 verdict/skill）或 { org, position, employees } 整包；导入后不会自动提交'}
-      </div>
+      <div className={style['ai-fill-hint']}>可粘贴岗位 JSON（含 verdict/skill/activityCode/activityTitle）；导入后不会自动提交</div>
     </div>
-  );
-};
-
-const OrgStep = ({ FormInfo, aiFillProps, context, importBundleRef }) => {
-  const { Input } = FormInfo.fields;
-  return (
-    <AnalysisFormLayout context={context}>
-      <div className={style.body}>
-        <ApplyClipboardImport FormInfo={FormInfo} step="org" importBundleRef={importBundleRef} />
-        <AiFillToolbar FormInfo={FormInfo} step="org" {...aiFillProps} importBundleRef={importBundleRef} context={context} />
-        <FormInfo column={1} title="组织/部门" list={[<Input name="departmentName" label="部门" disabled key="departmentName" />, <Input name="tenantOrgId" label="tenantOrgId" hidden key="tenantOrgId" />]} />
-      </div>
-    </AnalysisFormLayout>
   );
 };
 
@@ -704,7 +675,7 @@ const PositionPreview = ({ FormInfo, context }) => {
   );
 };
 
-const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef, importBundleRef, refineMode = false }) => {
+const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef, importBundleRef }) => {
   const { List } = FormInfo;
   const { Input, TextArea, Select } = FormInfo.fields;
   const initialData = useMemo(() => buildInitialValues(context).position, [context]);
@@ -726,7 +697,7 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef
             ]}
           />
         </Flex>
-        {viewMode === 'edit' ? <AiFillToolbar FormInfo={FormInfo} step="position" {...aiFillProps} importBundleRef={importBundleRef} context={context} refineMode={refineMode} /> : null}
+        {viewMode === 'edit' ? <AiFillToolbar FormInfo={FormInfo} step="position" {...aiFillProps} importBundleRef={importBundleRef} context={context} /> : null}
         <div className={viewMode === 'edit' ? style['edit-panel'] : style['edit-panel-hidden']}>
           <FormInfo
             column={1}
@@ -794,95 +765,12 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef
   );
 };
 
-const PersonStep = ({ FormInfo, aiFillProps, context, rehydrateOnceRef, importBundleRef }) => {
-  const { List, TableList } = FormInfo;
-  const { Input, TextArea, Select, InputNumber } = FormInfo.fields;
-  const employeeCount = (context?.employees || []).length;
-  const initialData = useMemo(() => ({ employees: buildInitialValues(context).employees }), [context]);
-  const onceKey = `person:${aiFillProps?.taskId || 'task'}`;
-
-  return (
-    <AnalysisFormLayout context={context}>
-      <div className={style.body}>
-        <RehydrateNestedFormData FormInfo={FormInfo} data={initialData} onceKey={onceKey} onceRef={rehydrateOnceRef} />
-        <ApplyClipboardImport FormInfo={FormInfo} step="person" importBundleRef={importBundleRef} />
-        <AiFillToolbar FormInfo={FormInfo} step="person" {...aiFillProps} importBundleRef={importBundleRef} context={context} />
-        <List
-          name="employees"
-          title="个人人才分析"
-          important
-          minLength={employeeCount}
-          maxLength={employeeCount}
-          itemTitle={({ index }) => `人员 ${index + 1}`}
-          list={[
-            <Input name="employeeId" label="employeeId" hidden />,
-            <Input name="employeeName" label="姓名" disabled />,
-            <InputNumber name="readiness" label="就绪度 %" rule="REQ" min={0} max={100} />,
-            <TextArea name="summary" label="分析摘要" rule="REQ" block />,
-            <InputNumber name="metrics.criticalGaps" label="关键缺口" min={0} />,
-            <InputNumber name="metrics.atOrAbove" label="达标项" min={0} />,
-            <InputNumber name="metrics.monthsToClose" label="预计月数" min={0} />,
-            <List
-              name="skills"
-              title="Task 对比"
-              block
-              addText="添加 Task 对比"
-              itemTitle={({ index }) => `Task ${index + 1}`}
-              list={[
-                <Input name="id" label="id" hidden />,
-                <Input name="name" label="Task" rule="REQ LEN-1-400" />,
-                <InputNumber name="current" label="当前" min={0} max={5} />,
-                <InputNumber name="required" label="要求" min={0} max={5} />,
-                <Select name="status" label="状态" options={EMPLOYEE_SKILL_STATUS} />,
-                <Input name="evidence" label="证据" rule="LEN-0-200" />
-              ]}
-            />,
-            <List
-              name="priorityGaps"
-              title="优先差距"
-              block
-              addText="添加优先差距"
-              itemTitle={({ index }) => `差距 ${index + 1}`}
-              list={[
-                <InputNumber name="rank" label="排名" min={1} />,
-                <Input name="title" label="标题" rule="REQ LEN-1-400" />,
-                <TextArea name="description" label="描述" block />,
-                <InputNumber name="current" label="当前分" min={0} max={5} />,
-                <InputNumber name="required" label="要求分" min={0} max={5} />
-              ]}
-            />,
-            <Input name="developmentPlan.subtitle" label="发展计划副标题" rule="LEN-0-160" />,
-            <List
-              name="developmentPlan.horizons"
-              title="发展阶段"
-              block
-              addText="添加发展阶段"
-              itemTitle={({ index }) => `阶段 ${index + 1}`}
-              list={[
-                <Input name="key" label="key" hidden />,
-                <Input name="label" label="标签" rule="LEN-0-80" />,
-                <Input name="period" label="周期" rule="LEN-0-80" />,
-                <Select name="tone" label="色调" options={PLAN_TONES} />,
-                <Input name="title" label="阶段标题" rule="LEN-0-160" />,
-                <Input name="target" label="目标" rule="LEN-0-240" />,
-                <TableList name="items" title="阶段条目" block addText="添加条目" list={[<Input name="tag" label="Tag" rule="LEN-0-16" />, <Input name="title" label="标题" />, <Input name="meta" label="补充" rule="LEN-0-240" />]} />
-              ]}
-            />
-          ]}
-        />
-      </div>
-    </AnalysisFormLayout>
-  );
-};
-
 const CompletePositionAnalysisTask = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:FormInfo@useFormModal', 'components-admin:Editor']
 })(({ remoteModules, data, onSuccess, children, ...props }) => {
   const [usePreset, FormInfo, useFormModal, Editor] = remoteModules;
   const { apis, ajax } = usePreset();
   const { message } = App.useApp();
-  const useFormStepModal = FormInfo.useFormStepModal;
-  const formStepModal = useFormStepModal();
   const formModal = useFormModal();
   const [loading, setLoading] = useState(false);
   const fillLanguageRef = useRef('zh-CN');
@@ -914,7 +802,6 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
       }
       const context = resData.data;
       const initial = buildInitialValues(context);
-      const employeeCount = (context.employees || []).length;
       const fillApi = apis?.talentSaas?.tenant?.position?.analysisAiFill;
       const defaultLanguage = context?.position?.language === 'en-US' ? 'en-US' : 'zh-CN';
       fillLanguageRef.current = defaultLanguage;
@@ -926,114 +813,37 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
         defaultLanguage,
         languageRef: fillLanguageRef
       };
-      const contextEmployees = context.employees || [];
-      const hasEmployees = employeeCount > 0;
       const isRefineTask = data?.type === 'position-analysis-review' || context?.task?.type === 'position-analysis-review' || !!context?.task?.input?.skipAnalysisStatusUpdate;
       const modalTitle = isRefineTask ? '完善岗位分析' : '完成 AI 岗位分析';
       const successText = isRefineTask ? '完善岗位分析已完成' : 'AI岗位分析已完成';
 
-      // 完善岗位分析：单页岗位表单，无 Steps / 组织 / 个人
-      if (isRefineTask) {
-        formModal({
-          title: modalTitle,
-          size: 'large',
-          noPadding: true,
-          disabledScroller: true,
-          saveText: '完成分析',
-          formProps: {
-            data: initial.position,
-            onSubmit: async positionData => {
-              if (validatePositionStep(positionData, message) === false) {
-                return false;
-              }
-              return submitCompleteAnalysis({
-                taskId: data.id,
-                org: initial.org || { tenantOrgId: context?.position?.tenantOrgId ?? null },
-                positionRaw: positionData,
-                employeesInput: [],
-                contextEmployees: [],
-                ajax,
-                completeApi,
-                message,
-                onSuccess,
-                successText
-              });
-            }
-          },
-          children: <PositionStep FormInfo={FormInfo} Editor={Editor} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} importBundleRef={importBundleRef} refineMode />
-        });
-        return;
-      }
-
-      const orgStep = {
-        title: '组织/部门',
-        formProps: {
-          data: initial.org,
-          onSubmit: () => {}
-        },
-        children: <OrgStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} importBundleRef={importBundleRef} />
-      };
-
-      const positionStep = {
-        title: '岗位',
-        formProps: {
-          data: initial.position,
-          onSubmit: hasEmployees
-            ? positionData => validatePositionStep(positionData, message)
-            : async (positionData, stepCtx) => {
-                const org = readStepFormData(stepCtx, 0);
-                return submitCompleteAnalysis({
-                  taskId: data.id,
-                  org,
-                  positionRaw: positionData,
-                  employeesInput: [],
-                  contextEmployees,
-                  ajax,
-                  completeApi,
-                  message,
-                  onSuccess,
-                  successText
-                });
-              }
-        },
-        children: <PositionStep FormInfo={FormInfo} Editor={Editor} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} importBundleRef={importBundleRef} />
-      };
-
-      const personStep = hasEmployees
-        ? {
-            title: '个人',
-            formProps: {
-              data: { employees: initial.employees },
-              onSubmit: async (personData, stepCtx) => {
-                const org = readStepFormData(stepCtx, 0);
-                const positionRaw = readStepFormData(stepCtx, 1);
-                return submitCompleteAnalysis({
-                  taskId: data.id,
-                  org,
-                  positionRaw,
-                  employeesInput: personData?.employees,
-                  contextEmployees,
-                  ajax,
-                  completeApi,
-                  message,
-                  onSuccess,
-                  successText
-                });
-              }
-            },
-            children: <PersonStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} importBundleRef={importBundleRef} />
-          }
-        : null;
-
-      formStepModal({
+      formModal({
         title: modalTitle,
         size: 'large',
         noPadding: true,
         disabledScroller: true,
-        completeText: '完成分析',
-        nextText: '下一步',
-        cancelText: '取消',
-        items: hasEmployees ? [orgStep, positionStep, personStep] : [orgStep, positionStep]
+        saveText: '完成分析',
+        formProps: {
+          data: initial.position,
+          onSubmit: async positionData => {
+            if (validatePositionStep(positionData, message) === false) {
+              return false;
+            }
+            return submitCompleteAnalysis({
+              taskId: data.id,
+              org: initial.org || { tenantOrgId: context?.position?.tenantOrgId ?? null },
+              positionRaw: positionData,
+              employeesInput: [],
+              contextEmployees: [],
+              ajax,
+              completeApi,
+              message,
+              onSuccess,
+              successText
+            });
+          }
+        },
+        children: <PositionStep FormInfo={FormInfo} Editor={Editor} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} importBundleRef={importBundleRef} />
       });
     } catch (e) {
       message.error(e.message || '打开完成任务表单失败');

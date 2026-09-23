@@ -202,12 +202,12 @@ module.exports = fp(async (fastify, options) => {
     };
     return skills
       .map((skill, index) => {
-        const title = typeof skill?.name === 'string' ? skill.name.trim() : '';
+        const title = (typeof skill?.name === 'string' && skill.name.trim()) || (typeof skill?.title === 'string' && skill.title.trim()) || '';
         if (!title) {
           return null;
         }
         const items = Array.isArray(skill.contentItems) ? skill.contentItems : [];
-        const activityGroup = formatActivityGroup(skill.activityCode, skill.activityTitle) || 'Imported';
+        const activityGroup = (typeof skill.activityGroup === 'string' && skill.activityGroup.trim()) || formatActivityGroup(skill.activityCode, skill.activityTitle) || 'Imported';
         return {
           activityGroup,
           sortOrder: index,
@@ -216,8 +216,8 @@ module.exports = fp(async (fastify, options) => {
             .map(item => item?.description)
             .filter(Boolean)
             .join('\n'),
-          importanceNow: skill.importanceNow,
-          importanceFuture: skill.importanceYear,
+          importanceNow: skill.importanceNow ?? skill.required ?? skill.current ?? 1,
+          importanceFuture: skill.importanceYear ?? skill.importanceFuture ?? skill.required ?? 1,
           change: skill.change,
           confidence: skill.confidence,
           detail: {
@@ -338,7 +338,9 @@ module.exports = fp(async (fastify, options) => {
     const { tenantId } = authenticatePayload;
     const list = Array.isArray(rows) ? rows : [];
     for (const item of list) {
-      const taskId = item.taskId || item.positionTaskId;
+      const rawTaskId = item.taskId || item.positionTaskId;
+      // taskId 必须是 bigint；拒绝 skill-* 等字符串，避免 invalid input syntax for type bigint
+      const taskId = rawTaskId != null && /^\d+$/.test(String(rawTaskId).trim()) ? String(rawTaskId).trim() : null;
       if (!taskId) {
         continue;
       }
@@ -359,18 +361,47 @@ module.exports = fp(async (fastify, options) => {
     return getTaskReadiness(authenticatePayload, { positionId, employeeId });
   };
 
-  const importSkillReadiness = async (authenticatePayload, { positionId, employeeId, skills = [] } = {}) => {
-    const tasks = await models.positionTask.findAll({
-      where: { tenantId: authenticatePayload.tenantId, positionId }
+  const importSkillReadiness = async (authenticatePayload, { positionId, employeeId, skills = [], ensureTasks = false } = {}) => {
+    const { tenantId } = authenticatePayload;
+    const skillList = Array.isArray(skills) ? skills : [];
+    const skillTitle = skill => (typeof skill?.name === 'string' && skill.name.trim()) || (typeof skill?.title === 'string' && skill.title.trim()) || '';
+
+    let tasks = await models.positionTask.findAll({
+      where: { tenantId, positionId }
     });
-    const byTitle = new Map(tasks.map(task => [String(task.title).toLowerCase(), task]));
-    const rows = (Array.isArray(skills) ? skills : [])
+    const byTitle = new Map(tasks.map(task => [String(task.title).trim().toLowerCase(), task]));
+
+    // 岗位尚无匹配任务时，按 skills 补建（不删除已有任务），否则就绪度永远对不上
+    if (ensureTasks && skillList.length) {
+      const missing = tasksFromSkills(skillList).filter(task => task.title && !byTitle.has(String(task.title).trim().toLowerCase()));
+      for (let index = 0; index < missing.length; index += 1) {
+        const item = missing[index];
+        const created = await models.positionTask.create({
+          tenantId,
+          positionId,
+          activityGroup: item.activityGroup || 'Imported',
+          sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : tasks.length + index,
+          title: item.title,
+          description: item.description || '',
+          importanceNow: clampInt(item.importanceNow, 1, 5, 1),
+          importanceFuture: clampInt(item.importanceFuture, 1, 5, 1),
+          changeTag: CHANGE_TAGS.includes(item.changeTag) ? item.changeTag : mapSkillChange(item.change),
+          confidence: ['high', 'medium', 'low'].includes(item.confidence) ? item.confidence : 'medium',
+          workforceAction: null,
+          detail: item.detail && typeof item.detail === 'object' ? item.detail : {}
+        });
+        byTitle.set(String(created.title).trim().toLowerCase(), created);
+        tasks.push(created);
+      }
+    }
+
+    const rows = skillList
       .map(skill => {
-        const task = byTitle.get(
-          String(skill?.name || '')
-            .trim()
-            .toLowerCase()
-        );
+        const title = skillTitle(skill);
+        if (!title) {
+          return null;
+        }
+        const task = byTitle.get(title.toLowerCase());
         if (!task) {
           return null;
         }
@@ -379,7 +410,7 @@ module.exports = fp(async (fastify, options) => {
           current: skill.current,
           required: skill.required,
           status: skill.status,
-          confidence: 'medium'
+          confidence: skill.confidence || 'medium'
         };
       })
       .filter(Boolean);
@@ -400,9 +431,15 @@ module.exports = fp(async (fastify, options) => {
     }
 
     let rows;
-    if (taskId && models.evidenceTaskLink) {
+    const hasTaskFilter = taskId != null && String(taskId).trim() !== '';
+    const numericTaskId = hasTaskFilter && /^\d+$/.test(String(taskId).trim()) ? String(taskId).trim() : null;
+    if (hasTaskFilter && !numericTaskId) {
+      // 非 bigint（如 skill-*）不当作任务过滤，避免 PG invalid input syntax for type bigint
+      return { pageData: [] };
+    }
+    if (numericTaskId && models.evidenceTaskLink) {
       const links = await models.evidenceTaskLink.findAll({
-        where: { tenantId, positionTaskId: String(taskId) },
+        where: { tenantId, positionTaskId: numericTaskId },
         include: [
           {
             model: models.evidenceItem,
@@ -417,7 +454,7 @@ module.exports = fp(async (fastify, options) => {
         const item = plain.evidenceItem || {};
         return Object.assign({}, item, {
           linkId: plain.id,
-          taskId: String(taskId)
+          taskId: numericTaskId
         });
       });
     } else {
@@ -748,6 +785,269 @@ module.exports = fp(async (fastify, options) => {
     }
   };
 
+  const REPORT_REASONS = ['level_too_low', 'level_too_high', 'evidence_incorrect', 'requirement_incorrect', 'other'];
+  const ISSUE_STATUSES = ['open', 'resolved', 'closed'];
+
+  const enrichReadinessIssue = (row, { employee, position, task } = {}) => {
+    const plain = row?.toJSON ? row.toJSON() : row || {};
+    return {
+      id: plain.id,
+      employeeId: plain.employeeId,
+      employeeName: employee?.name || employee?.nameEn || '',
+      employeePhone: employee?.phone || '',
+      employeeEmail: employee?.email || '',
+      positionId: plain.positionId || position?.id || null,
+      positionName: position?.name || '',
+      taskId: plain.taskId || task?.id || null,
+      taskTitle: plain.taskTitle || task?.title || '',
+      activityGroup: plain.activityGroup || task?.activityGroup || '',
+      current: plain.current,
+      required: plain.required,
+      readinessStatus: plain.readinessStatus || null,
+      confidence: plain.confidence || null,
+      reason: plain.reason,
+      comment: plain.comment || '',
+      status: plain.status || 'open',
+      reportedBy: plain.reportedBy || null,
+      resolvedAt: plain.resolvedAt || null,
+      resolvedBy: plain.resolvedBy || null,
+      resolveNote: plain.resolveNote || '',
+      createdAt: plain.createdAt,
+      updatedAt: plain.updatedAt
+    };
+  };
+
+  /** 未来任务就绪「It doesn't look right」纠错反馈 */
+  const reportReadinessIssue = async (authenticatePayload, { employeeId, positionId, taskId, taskTitle, activityGroup, current, required, readinessStatus, confidence, reason, comment } = {}) => {
+    const { tenantId, id: tenantUserId } = authenticatePayload;
+    if (!employeeId) {
+      throw new Error('员工ID不能为空');
+    }
+    if (String(employeeId).startsWith('draft-')) {
+      throw new Error('草稿员工无法提交纠错反馈');
+    }
+    if (!REPORT_REASONS.includes(reason)) {
+      throw new Error('请选择问题类型');
+    }
+    const employee = await models.employee.findByPk(employeeId);
+    if (!employee || employee.tenantId !== tenantId) {
+      throw new Error('未找到员工');
+    }
+    const numericTaskId = taskId != null && /^\d+$/.test(String(taskId).trim()) ? String(taskId).trim() : null;
+    let resolvedPositionId = positionId != null && String(positionId).trim() !== '' ? String(positionId) : null;
+    let task = null;
+    if (numericTaskId && models.positionTask) {
+      task = await models.positionTask.findByPk(numericTaskId);
+      if (task && String(task.tenantId) === String(tenantId)) {
+        if (!resolvedPositionId) {
+          resolvedPositionId = String(task.positionId);
+        }
+      } else {
+        task = null;
+      }
+    }
+    if (resolvedPositionId && models.position) {
+      const position = await models.position.findByPk(resolvedPositionId);
+      if (!position || String(position.tenantId) !== String(tenantId)) {
+        resolvedPositionId = null;
+      }
+    }
+    const note = typeof comment === 'string' ? comment.trim().slice(0, 1000) : '';
+    if (!models.readinessIssue) {
+      throw new Error('纠错反馈模型未就绪');
+    }
+    const clampLevel = value => {
+      const num = Number(value);
+      if (!Number.isFinite(num)) {
+        return null;
+      }
+      return Math.min(5, Math.max(0, Math.round(num)));
+    };
+    const row = await models.readinessIssue.create({
+      tenantId,
+      employeeId: String(employeeId),
+      positionId: resolvedPositionId,
+      taskId: task ? String(task.id) : numericTaskId,
+      taskTitle: (typeof taskTitle === 'string' && taskTitle.trim()) || task?.title || '',
+      activityGroup: (typeof activityGroup === 'string' && activityGroup.trim()) || task?.activityGroup || '',
+      current: clampLevel(current),
+      required: clampLevel(required),
+      readinessStatus: typeof readinessStatus === 'string' ? readinessStatus.slice(0, 16) : null,
+      confidence: typeof confidence === 'string' ? confidence.slice(0, 16) : null,
+      reason,
+      comment: note,
+      reportedBy: tenantUserId || null,
+      status: 'open'
+    });
+    const position = resolvedPositionId && models.position ? await models.position.findByPk(resolvedPositionId) : null;
+    return enrichReadinessIssue(row, {
+      employee: employee.get({ plain: true }),
+      position: position ? position.get({ plain: true }) : null,
+      task: task ? task.get({ plain: true }) : task
+    });
+  };
+
+  const listReadinessIssues = async (authenticatePayload, { filter = {}, perPage = 20, currentPage = 1 } = {}) => {
+    const { tenantId } = authenticatePayload;
+    if (!tenantId) {
+      throw new Error('未登录租户用户');
+    }
+    if (!models.readinessIssue) {
+      return { pageData: [], totalCount: 0 };
+    }
+    const { Op } = fastify.sequelize.Sequelize;
+    const whereQuery = { tenantId };
+    if (filter.status && ISSUE_STATUSES.includes(filter.status)) {
+      whereQuery.status = filter.status;
+    }
+    if (filter.reason && REPORT_REASONS.includes(filter.reason)) {
+      whereQuery.reason = filter.reason;
+    }
+    if (filter.employeeId) {
+      whereQuery.employeeId = String(filter.employeeId);
+    }
+    if (filter.positionId) {
+      whereQuery.positionId = String(filter.positionId);
+    }
+    if (filter.keyword) {
+      const keyword = `%${String(filter.keyword).trim()}%`;
+      const matchedEmployees = await models.employee.findAll({
+        where: {
+          tenantId,
+          [Op.or]: [{ name: { [Op.like]: keyword } }, { email: { [Op.like]: keyword } }, { phone: { [Op.like]: keyword } }]
+        },
+        attributes: ['id']
+      });
+      const matchedIds = matchedEmployees.map(item => String(item.id));
+      const titleOr = [{ taskTitle: { [Op.like]: keyword } }, { comment: { [Op.like]: keyword } }];
+      if (matchedIds.length) {
+        whereQuery[Op.or] = [{ employeeId: { [Op.in]: matchedIds } }, ...titleOr];
+      } else {
+        whereQuery[Op.or] = titleOr;
+      }
+    }
+
+    const pageSize = Math.min(Math.max(Number(perPage) || 20, 1), 100);
+    const page = Math.max(Number(currentPage) || 1, 1);
+    const { count, rows } = await models.readinessIssue.findAndCountAll({
+      where: whereQuery,
+      offset: pageSize * (page - 1),
+      limit: pageSize,
+      order: [
+        ['createdAt', 'DESC'],
+        ['id', 'DESC']
+      ]
+    });
+
+    const employeeIds = [
+      ...new Set(
+        rows
+          .map(row => row.employeeId)
+          .filter(Boolean)
+          .map(String)
+      )
+    ];
+    const positionIds = [
+      ...new Set(
+        rows
+          .map(row => row.positionId)
+          .filter(Boolean)
+          .map(String)
+      )
+    ];
+    const taskIds = [
+      ...new Set(
+        rows
+          .map(row => row.taskId)
+          .filter(Boolean)
+          .map(String)
+      )
+    ];
+
+    const [employees, positions, tasks] = await Promise.all([
+      employeeIds.length
+        ? models.employee.findAll({
+            where: { tenantId, id: { [Op.in]: employeeIds } },
+            attributes: ['id', 'name', 'nameEn', 'phone', 'email']
+          })
+        : [],
+      positionIds.length && models.position
+        ? models.position.findAll({
+            where: { tenantId, id: { [Op.in]: positionIds } },
+            attributes: ['id', 'name']
+          })
+        : [],
+      taskIds.length && models.positionTask
+        ? models.positionTask.findAll({
+            where: { tenantId, id: { [Op.in]: taskIds } },
+            attributes: ['id', 'title', 'activityGroup', 'positionId']
+          })
+        : []
+    ]);
+    const employeeMap = new Map(employees.map(item => [String(item.id), item.get({ plain: true })]));
+    const positionMap = new Map(positions.map(item => [String(item.id), item.get({ plain: true })]));
+    const taskMap = new Map(tasks.map(item => [String(item.id), item.get({ plain: true })]));
+
+    return {
+      pageData: rows.map(row =>
+        enrichReadinessIssue(row, {
+          employee: employeeMap.get(String(row.employeeId)),
+          position: row.positionId ? positionMap.get(String(row.positionId)) : null,
+          task: row.taskId ? taskMap.get(String(row.taskId)) : null
+        })
+      ),
+      totalCount: count
+    };
+  };
+
+  const getReadinessIssueDetail = async (authenticatePayload, { id } = {}) => {
+    const { tenantId } = authenticatePayload;
+    if (!id) {
+      throw new Error('ID不能为空');
+    }
+    const row = await models.readinessIssue.findOne({ where: { id, tenantId } });
+    if (!row) {
+      throw new Error('反馈不存在');
+    }
+    const [employee, position, task] = await Promise.all([
+      models.employee.findByPk(row.employeeId),
+      row.positionId && models.position ? models.position.findByPk(row.positionId) : null,
+      row.taskId && models.positionTask ? models.positionTask.findByPk(row.taskId) : null
+    ]);
+    return enrichReadinessIssue(row, {
+      employee: employee ? employee.get({ plain: true }) : null,
+      position: position ? position.get({ plain: true }) : null,
+      task: task ? task.get({ plain: true }) : null
+    });
+  };
+
+  const resolveReadinessIssue = async (authenticatePayload, { id, status = 'resolved', resolveNote } = {}) => {
+    const { tenantId, id: tenantUserId } = authenticatePayload;
+    if (!id) {
+      throw new Error('ID不能为空');
+    }
+    if (!['resolved', 'closed', 'open'].includes(status)) {
+      throw new Error('状态不正确');
+    }
+    const row = await models.readinessIssue.findOne({ where: { id, tenantId } });
+    if (!row) {
+      throw new Error('反馈不存在');
+    }
+    const payload = {
+      status,
+      resolveNote: typeof resolveNote === 'string' ? resolveNote.trim().slice(0, 2000) : row.resolveNote || ''
+    };
+    if (status === 'open') {
+      payload.resolvedAt = null;
+      payload.resolvedBy = null;
+    } else {
+      payload.resolvedAt = new Date();
+      payload.resolvedBy = tenantUserId || null;
+    }
+    await row.update(payload);
+    return getReadinessIssueDetail(authenticatePayload, { id: row.id });
+  };
+
   Object.assign(services, {
     workforce: {
       workforceSummary,
@@ -767,7 +1067,11 @@ module.exports = fp(async (fastify, options) => {
       saveEvidence,
       removeEvidence,
       recomputeProfileCompletion,
-      seedEvidenceFromEmployee
+      seedEvidenceFromEmployee,
+      reportReadinessIssue,
+      listReadinessIssues,
+      getReadinessIssueDetail,
+      resolveReadinessIssue
     }
   });
 });

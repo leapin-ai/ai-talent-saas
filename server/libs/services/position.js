@@ -365,7 +365,7 @@ module.exports = fp(async (fastify, options) => {
         if (!item || typeof item !== 'object') {
           return null;
         }
-        const name = typeof item.name === 'string' ? item.name.trim() : '';
+        const name = (typeof item.name === 'string' && item.name.trim()) || (typeof item.title === 'string' && item.title.trim()) || '';
         if (!name) {
           return null;
         }
@@ -826,6 +826,20 @@ module.exports = fp(async (fastify, options) => {
         employeeId: String(employeeId),
         ...payload
       });
+    }
+
+    // 同步 skills → employeeTaskReadiness（未来任务就绪表），否则档案页只认 taskReadiness 会空
+    if (services.workforce?.importSkillReadiness && Array.isArray(payload.skills) && payload.skills.length) {
+      try {
+        await services.workforce.importSkillReadiness(authenticatePayload, {
+          positionId: String(positionId),
+          employeeId: String(employeeId),
+          skills: payload.skills,
+          ensureTasks: true
+        });
+      } catch (error) {
+        fastify.log.warn({ err: error, positionId, employeeId }, 'skillAnalysisSave importSkillReadiness failed');
+      }
     }
 
     return {
@@ -1475,7 +1489,7 @@ module.exports = fp(async (fastify, options) => {
         const invite = await models.talentCollectInvite.findOne({
           where: { id: String(collectInviteId), tenantId }
         });
-        if (invite && invite.status === 'done') {
+        if (invite && (invite.status === 'done' || invite.status === 'ended')) {
           invite.status = 'ended';
           invite.interviewData = Object.assign({}, invite.interviewData || {}, {
             analysisCompletedAt: new Date().toISOString()

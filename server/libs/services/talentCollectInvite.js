@@ -854,8 +854,8 @@ module.exports = fp(async (fastify, options) => {
     if (!row) {
       throw new Error('邀请记录不存在');
     }
-    if (row.status !== 'done') {
-      throw new Error('仅已完成的邀请可触发分析任务');
+    if (row.status !== 'done' && row.status !== 'ended') {
+      throw new Error('仅已完成或已结束的邀请可触发分析任务');
     }
 
     if (row.inviteType === 'manager') {
@@ -934,8 +934,8 @@ module.exports = fp(async (fastify, options) => {
     if (!row) {
       throw new Error('邀请记录不存在');
     }
-    if (row.status !== 'done') {
-      throw new Error('仅已完成的邀请可触发分析任务');
+    if (row.status !== 'done' && row.status !== 'ended') {
+      throw new Error('仅已完成或已结束的邀请可触发分析任务');
     }
 
     const interviewData = row.interviewData || {};

@@ -4,7 +4,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import TalentProfile from '@components/TalentProfile';
 import ContextSidePanel from './ContextSidePanel';
-import { toReviewData } from './assessmentReviewUtils';
+import { toReviewData, parseClipboardProfilePayload, applyClipboardToProfileDetail, withEstimatedCompletion } from './assessmentReviewUtils';
 import style from './style.module.scss';
 
 const AI_FILL_LANGUAGE_OPTIONS = [
@@ -12,15 +12,11 @@ const AI_FILL_LANGUAGE_OPTIONS = [
   { label: 'English', value: 'en-US' }
 ];
 
-const AiFillToolbar = ({ taskId, ajax, fillApi, insightApi, profileDetail, setProfileDetail, resumeParsed, submittedInfo, languageRef }) => {
+const AiFillToolbar = ({ taskId, ajax, fillApi, profileDetail, setProfileDetail, resumeParsed, submittedInfo, languageRef, completionExtras }) => {
   const { message: msg } = App.useApp();
   const [loading, setLoading] = useState(false);
-  const [insightLoading, setInsightLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [language, setLanguage] = useState(() => languageRef?.current || 'zh-CN');
-
-  if (!fillApi && !insightApi) {
-    return null;
-  }
 
   const changeLanguage = value => {
     setLanguage(value);
@@ -29,31 +25,57 @@ const AiFillToolbar = ({ taskId, ajax, fillApi, insightApi, profileDetail, setPr
     }
   };
 
-  const applyInsight = data => {
-    if (!data || typeof data !== 'object') {
-      return;
+  const onImportClipboard = async () => {
+    setImporting(true);
+    try {
+      if (!navigator?.clipboard?.readText) {
+        throw new Error('当前环境不支持读取剪贴板');
+      }
+      const text = await navigator.clipboard.readText();
+      if (!text || !String(text).trim()) {
+        throw new Error('剪贴板为空');
+      }
+      const bundle = parseClipboardProfilePayload(String(text).trim());
+      setProfileDetail(prev => applyClipboardToProfileDetail(prev || profileDetail, bundle, completionExtras));
+      const parts = [];
+      if (bundle.employee && Object.keys(bundle.employee).length) {
+        parts.push('员工信息');
+      }
+      if (bundle.profile && Object.keys(bundle.profile).length) {
+        parts.push('档案');
+      }
+      if (bundle.skillAnalysis) {
+        parts.push('就绪度');
+      }
+      if (bundle.aiSuggest) {
+        parts.push('成长/匹配');
+      }
+      msg.success(`已从剪贴板导入：${parts.join('、') || '数据'}（已重算完成度）`);
+    } catch (e) {
+      msg.error(e.message || '导入失败');
+    } finally {
+      setImporting(false);
     }
-    setProfileDetail(prev =>
-      Object.assign({}, prev, {
-        aiSuggest: data.aiSuggest || prev?.aiSuggest || null,
-        skillAnalysisDraft: data.readiness || prev?.skillAnalysisDraft || null
-      })
-    );
   };
 
   return (
     <div className={style['ai-fill-bar']}>
       <div className={style['ai-fill-main']}>
-        <label className={style['ai-fill-field']}>
-          <span className={style['ai-fill-label']}>生成语言</span>
-          <Select size="middle" className={style['ai-fill-select']} value={language || 'zh-CN'} options={AI_FILL_LANGUAGE_OPTIONS} disabled={loading || insightLoading} onChange={changeLanguage} />
-        </label>
+        {fillApi ? (
+          <label className={style['ai-fill-field']}>
+            <span className={style['ai-fill-label']}>生成语言</span>
+            <Select size="middle" className={style['ai-fill-select']} value={language || 'zh-CN'} options={AI_FILL_LANGUAGE_OPTIONS} disabled={loading || importing} onChange={changeLanguage} />
+          </label>
+        ) : null}
+        <Button className={style['ai-fill-action']} loading={importing} disabled={loading || importing} onClick={onImportClipboard}>
+          从剪贴板导入
+        </Button>
         {fillApi ? (
           <Button
             type="primary"
             className={style['ai-fill-action']}
             loading={loading}
-            disabled={loading || insightLoading || !profileDetail}
+            disabled={loading || importing || !profileDetail}
             onClick={async () => {
               if (!profileDetail) {
                 return;
@@ -68,32 +90,41 @@ const AiFillToolbar = ({ taskId, ajax, fillApi, insightApi, profileDetail, setPr
                       language: outputLanguage,
                       draft: toReviewData(profileDetail),
                       resumeParsed: resumeParsed || null,
-                      submittedInfo: submittedInfo || null
+                      submittedInfo: submittedInfo || null,
+                      persist: false
                     }
                   })
                 );
                 if (resData.code !== 0) {
                   throw new Error(resData.msg || 'AI 填充失败');
                 }
-                const nextData = resData.data?.data;
+                const payload = resData.data || {};
+                const nextData = payload.data;
                 if (!nextData || typeof nextData !== 'object') {
-                  throw new Error('AI 未返回可用数据');
+                  throw new Error('AI 未返回可用档案数据');
                 }
                 setProfileDetail(prev =>
-                  Object.assign({}, prev, nextData, {
-                    id: prev?.id,
-                    orgEnums: prev?.orgEnums,
-                    positionEnums: prev?.positionEnums,
-                    performances: prev?.performances || [],
-                    aiSuggest: prev?.aiSuggest || null,
-                    skillAnalysisDraft: prev?.skillAnalysisDraft || null,
-                    profile: Object.assign({}, prev?.profile || {}, nextData.profile || {}, {
-                      options: Object.assign({}, prev?.profile?.options || {}, nextData.profile?.options || {})
+                  withEstimatedCompletion(
+                    Object.assign({}, prev, nextData, {
+                      id: prev?.id,
+                      orgEnums: prev?.orgEnums,
+                      positionEnums: prev?.positionEnums,
+                      performances: prev?.performances || [],
+                      aiSuggest: payload.aiSuggest || prev?.aiSuggest || null,
+                      skillAnalysisDraft: payload.readiness || prev?.skillAnalysisDraft || null,
+                      profile: Object.assign({}, prev?.profile || {}, nextData.profile || {}, {
+                        options: Object.assign({}, prev?.profile?.options || {}, nextData.profile?.options || {})
+                      }),
+                      options: Object.assign({}, prev?.options || {}, nextData.options || {})
                     }),
-                    options: Object.assign({}, prev?.options || {}, nextData.options || {})
-                  })
+                    completionExtras
+                  )
                 );
-                msg.success('已根据左侧信息生成一版，可继续编辑');
+                if (payload.insightError) {
+                  msg.warning(`档案已填充；就绪度/成长/匹配未生成：${payload.insightError}`);
+                } else {
+                  msg.success('已生成档案与就绪度/成长/匹配，并重算完成度');
+                }
               } catch (e) {
                 msg.error(e.message || 'AI 填充失败');
               } finally {
@@ -101,50 +132,11 @@ const AiFillToolbar = ({ taskId, ajax, fillApi, insightApi, profileDetail, setPr
               }
             }}
           >
-            AI 填充档案
-          </Button>
-        ) : null}
-        {insightApi ? (
-          <Button
-            className={style['ai-fill-action']}
-            loading={insightLoading}
-            disabled={loading || insightLoading || !profileDetail}
-            onClick={async () => {
-              if (!profileDetail) {
-                return;
-              }
-              setInsightLoading(true);
-              try {
-                const outputLanguage = languageRef?.current || language || 'zh-CN';
-                const { data: resData } = await ajax(
-                  Object.assign({}, insightApi, {
-                    data: {
-                      taskId,
-                      language: outputLanguage,
-                      draft: toReviewData(profileDetail),
-                      resumeParsed: resumeParsed || null,
-                      submittedInfo: submittedInfo || null,
-                      persist: false
-                    }
-                  })
-                );
-                if (resData.code !== 0) {
-                  throw new Error(resData.msg || '生成洞察失败');
-                }
-                applyInsight(resData.data);
-                msg.success('已根据面试/简历/填写信息生成就绪度、成长计划与岗位匹配');
-              } catch (e) {
-                msg.error(e.message || '生成洞察失败');
-              } finally {
-                setInsightLoading(false);
-              }
-            }}
-          >
-            生成就绪度/成长/匹配
+            AI 填充
           </Button>
         ) : null}
       </div>
-      <div className={style['ai-fill-hint']}>档案填充基于简历与填写信息；就绪度/成长/匹配另结合 AI 面试问卷与作答（视频取语音转写）。均不自动提交</div>
+      <div className={style['ai-fill-hint']}>可粘贴 reviewData JSON（employee/profile/skillAnalysis/aiSuggest）；或点 AI 填充一键生成；完成后会重算档案完成度，均不自动提交</div>
     </div>
   );
 };
@@ -274,7 +266,6 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
   );
 
   const fillApi = apis?.talentSaas?.tenant?.assessment?.generateAiFill;
-  const insightApi = apis?.talentSaas?.tenant?.assessment?.generateTalentInsight;
 
   const handleComplete = async currentDetail => {
     setSubmitting(true);
@@ -364,19 +355,7 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
                 </Flex>
               );
             }
-            return (
-              <TaskContextBody
-                taskId={data.id}
-                context={context}
-                profileDetail={profileDetail}
-                setProfileDetail={setProfileDetail}
-                employeeApis={employeeApis}
-                ajax={ajax}
-                fillApi={fillApi}
-                insightApi={insightApi}
-                fillLanguageRef={fillLanguageRef}
-              />
-            );
+            return <TaskContextBody taskId={data.id} context={context} profileDetail={profileDetail} setProfileDetail={setProfileDetail} employeeApis={employeeApis} ajax={ajax} fillApi={fillApi} fillLanguageRef={fillLanguageRef} />;
           }}
         />
       </Modal>
@@ -384,18 +363,44 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
   );
 });
 
-const TaskContextBody = ({ taskId, context, profileDetail, setProfileDetail, employeeApis, ajax, fillApi, insightApi, fillLanguageRef }) => {
+const TaskContextBody = ({ taskId, context, profileDetail, setProfileDetail, employeeApis, ajax, fillApi, fillLanguageRef }) => {
   const [resumeParsed, setResumeParsed] = useState(() => context?.resumeParsed || null);
+
+  const completionExtras = useMemo(
+    () => ({
+      resumeParsed: resumeParsed || context?.resumeParsed || null,
+      resumes: context?.resumes || [],
+      interview: context?.interview || null,
+      submittedInfo: context?.submittedInfo || null,
+      assessment: context?.assessment || null
+    }),
+    [resumeParsed, context?.resumeParsed, context?.resumes, context?.interview, context?.submittedInfo, context?.assessment]
+  );
+
+  const setProfileDetailWithCompletion = useCallback(
+    updater => {
+      setProfileDetail(prev => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        return withEstimatedCompletion(next, completionExtras);
+      });
+    },
+    [setProfileDetail, completionExtras]
+  );
 
   useEffect(() => {
     if (context?.profileDetail) {
-      setProfileDetail(prev => prev || context.profileDetail);
+      setProfileDetail(prev => prev || withEstimatedCompletion(context.profileDetail, completionExtras));
     }
-  }, [context?.profileDetail, setProfileDetail]);
+  }, [context?.profileDetail, setProfileDetail, completionExtras]);
 
   useEffect(() => {
     setResumeParsed(context?.resumeParsed || null);
   }, [context?.resumeParsed]);
+
+  // 简历解析变更后重算完成度
+  useEffect(() => {
+    setProfileDetail(prev => (prev ? withEstimatedCompletion(prev, completionExtras) : prev));
+  }, [completionExtras, setProfileDetail]);
 
   const currentDetail = profileDetail || context.profileDetail;
 
@@ -414,14 +419,14 @@ const TaskContextBody = ({ taskId, context, profileDetail, setProfileDetail, emp
               taskId={taskId}
               ajax={ajax}
               fillApi={fillApi}
-              insightApi={insightApi}
               profileDetail={currentDetail}
-              setProfileDetail={setProfileDetail}
+              setProfileDetail={setProfileDetailWithCompletion}
               resumeParsed={resumeParsed}
               submittedInfo={context?.submittedInfo}
               languageRef={fillLanguageRef}
+              completionExtras={completionExtras}
             />
-            <ProfileEditorPanel employeeApis={employeeApis} profileDetail={currentDetail} setProfileDetail={setProfileDetail} />
+            <ProfileEditorPanel employeeApis={employeeApis} profileDetail={currentDetail} setProfileDetail={setProfileDetailWithCompletion} />
           </Flex>
         </div>
       </Splitter.Panel>

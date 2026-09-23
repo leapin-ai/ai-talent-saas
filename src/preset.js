@@ -193,6 +193,15 @@ export const globalInit = async () => {
               label: 'AI面试设置',
               component: loadable(() => import('@components/AIInterviewSetting'))
             }
+          ],
+          appendTabDetails: [
+            {
+              key: 'readiness-issues',
+              tab: '就绪纠错反馈',
+              // 插在「用户列表」之后、「设置」之前
+              index: 4,
+              component: loadable(() => import('@components/Admin/ReadinessIssues'))
+            }
           ]
         }
       },

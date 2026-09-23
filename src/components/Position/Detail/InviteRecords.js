@@ -204,13 +204,20 @@ const InviteRecords = createWithRemoteLoader({
     );
 
     const startInviteAnalysis = useCallback(
-      item => {
+      (item, { reanalyze = false } = {}) => {
         if (!item?.id) {
           return;
         }
         const isManager = item.inviteType === 'manager';
+        const confirmId = reanalyze
+          ? isManager
+            ? 'position.talentInviteReanalyzeConfirmManager'
+            : 'position.talentInviteReanalyzeConfirm'
+          : isManager
+            ? 'position.talentInviteStartAnalysisConfirmManager'
+            : 'position.talentInviteStartAnalysisConfirm';
         modal.confirm({
-          title: formatMessage({ id: isManager ? 'position.talentInviteStartAnalysisConfirmManager' : 'position.talentInviteStartAnalysisConfirm' }, { name: item.name || '' }),
+          title: formatMessage({ id: confirmId }, { name: item.name || '' }),
           onOk: async () => {
             setLoadingId(item.id);
             setActionType('analysis');
@@ -230,7 +237,13 @@ const InviteRecords = createWithRemoteLoader({
                 const analysisKind = resData.data?.analysisKind;
                 message.success(
                   formatMessage({
-                    id: analysisKind === 'position-analysis-review' || isManager ? 'position.talentInviteStartAnalysisSuccessManager' : 'position.talentInviteStartAnalysisSuccess'
+                    id: reanalyze
+                      ? analysisKind === 'position-analysis-review' || isManager
+                        ? 'position.talentInviteReanalyzeSuccessManager'
+                        : 'position.talentInviteReanalyzeSuccess'
+                      : analysisKind === 'position-analysis-review' || isManager
+                        ? 'position.talentInviteStartAnalysisSuccessManager'
+                        : 'position.talentInviteStartAnalysisSuccess'
                   })
                 );
               }
@@ -367,6 +380,14 @@ const InviteRecords = createWithRemoteLoader({
                   }),
                   loading: loadingId === item.id && actionType === 'analysis',
                   onClick: () => startInviteAnalysis(item)
+                });
+              } else {
+                actions.push({
+                  children: formatMessage({
+                    id: item.inviteType === 'manager' ? 'position.talentInviteReanalyzeManager' : 'position.talentInviteReanalyze'
+                  }),
+                  loading: loadingId === item.id && actionType === 'analysis',
+                  onClick: () => startInviteAnalysis(item, { reanalyze: true })
                 });
               }
             } else if (item.status !== 'ended') {

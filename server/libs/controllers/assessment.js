@@ -260,7 +260,7 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.user, authenticate.admin],
       schema: {
-        summary: '完善档案生成任务 AI 填充档案草稿',
+        summary: '完善档案生成任务：一键 AI 填充档案草稿与就绪度/成长/匹配',
         body: {
           type: 'object',
           properties: {
@@ -268,14 +268,15 @@ module.exports = fp(async (fastify, options) => {
             language: { type: 'string' },
             draft: { type: 'object' },
             resumeParsed: { type: 'object' },
-            submittedInfo: { type: 'object' }
+            submittedInfo: { type: 'object' },
+            persist: { type: 'boolean' }
           },
           required: ['taskId']
         }
       }
     },
     async request => {
-      return services.assessment.aiFillGenerate(request.userInfo, request.body);
+      return services.assessment.aiFillAndInsightGenerate(request.userInfo, request.body);
     }
   );
 
@@ -284,7 +285,7 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.user, authenticate.admin],
       schema: {
-        summary: '完善档案生成任务：根据面试/简历/填写信息生成就绪度与成长匹配',
+        summary: '完善档案生成任务：根据面试/简历/填写信息生成就绪度与成长匹配（兼容旧调用；新流程请用 generate-ai-fill）',
         body: {
           type: 'object',
           properties: {
