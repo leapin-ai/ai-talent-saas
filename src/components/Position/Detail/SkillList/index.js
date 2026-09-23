@@ -4,6 +4,7 @@ import { useIntl } from '@kne/react-intl';
 import classnames from 'classnames';
 import withLocale from '../../withLocale';
 import ActivityTaskTable from '@components/ActivityTaskTable';
+import { PINNED_SCROLL_MAX_HEIGHT } from '@components/PinnedScrollPanel';
 import ImportanceBar from './ImportanceBar';
 import ChangeTag from './ChangeTag';
 import SkillPreview from './SkillPreview';
@@ -117,6 +118,7 @@ const SkillList = withLocale(({ skill }) => {
       <div className={style.body}>
         <div className={style.table}>
           <ActivityTaskTable
+            maxBodyHeight={PINNED_SCROLL_MAX_HEIGHT}
             groups={groups}
             columns={[formatMessage({ id: 'position.skillName' }), formatMessage({ id: 'position.skillChangeColumn' }), formatMessage({ id: 'position.skillImportanceColumn' }), formatMessage({ id: 'position.confidence' })]}
             expanded={expanded}

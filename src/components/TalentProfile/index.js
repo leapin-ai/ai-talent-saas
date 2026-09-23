@@ -394,6 +394,28 @@ const TalentProfile = createWithRemoteLoader({
         const gotoPosition = positionId => {
           navigate(`${baseUrl}/position/${positionId}`);
         };
+
+        const hasGrowthData = !!(data.aiSuggest?.shortTerm?.target_position || data.aiSuggest?.longTerm?.target_position || (data.aiSuggest?.shortTerm?.development_points || []).length);
+        const hasMatchData = !!(data.aiSuggest?.matchPosition?.target_position || (data.aiSuggest?.matchPosition?.skill_match || []).length);
+        const hasProfileData = !!(
+          advantages.length ||
+          certificates.length ||
+          promotionHistory.length ||
+          skillTags.length ||
+          targetPositions.length ||
+          mobilityPreferences.length ||
+          interests.length ||
+          performanceReviews.length ||
+          (data.profile?.aiInterviewReport || []).length
+        );
+
+        const wrapPrintSection = (title, children, hasData = true) => (
+          <div className={classnames(style['print-section'], !hasData && style['print-section-empty'])}>
+            <div className={style['print-section-title']}>{title}</div>
+            {children}
+          </div>
+        );
+
         return (
           <Flex className={classnames(style['talent-profile'], embed && style['talent-profile-embed'], readOnly && style['is-readonly'])} data-profile-mode={readOnly ? 'readonly' : 'editable'} vertical gap={embed ? 12 : 16}>
             <DataNotifier data={data} onData={onData} />
@@ -417,11 +439,14 @@ const TalentProfile = createWithRemoteLoader({
               />
             </CardGate>
             <Tabs
+              className={style['profile-tabs']}
               items={[
                 {
                   key: 'readiness',
                   label: formatMessage({ id: 'talentProfile.tabReadiness' }),
-                  children: (
+                  forceRender: true,
+                  children: wrapPrintSection(
+                    formatMessage({ id: 'talentProfile.tabReadiness' }),
                     <ProfileReadiness
                       employeeId={employeeId}
                       displayName={profileData.name}
@@ -438,7 +463,9 @@ const TalentProfile = createWithRemoteLoader({
                 {
                   key: 'growth',
                   label: formatMessage({ id: 'talentProfile.tabGrowth' }),
-                  children: (
+                  forceRender: true,
+                  children: wrapPrintSection(
+                    formatMessage({ id: 'talentProfile.tabGrowth' }),
                     <RightColumn
                       section="growth"
                       careerPath={careerPath}
@@ -451,13 +478,16 @@ const TalentProfile = createWithRemoteLoader({
                       aiSuggest={data.aiSuggest}
                       onGenerateInsight={onGenerateInsight}
                       generatingInsight={generatingInsight}
-                    />
+                    />,
+                    hasGrowthData
                   )
                 },
                 {
                   key: 'match',
                   label: formatMessage({ id: 'talentProfile.tabMatch' }),
-                  children: (
+                  forceRender: true,
+                  children: wrapPrintSection(
+                    formatMessage({ id: 'talentProfile.tabMatch' }),
                     <RightColumn
                       section="match"
                       careerPath={careerPath}
@@ -470,13 +500,16 @@ const TalentProfile = createWithRemoteLoader({
                       aiSuggest={data.aiSuggest}
                       onGenerateInsight={onGenerateInsight}
                       generatingInsight={generatingInsight}
-                    />
+                    />,
+                    hasMatchData
                   )
                 },
                 {
                   key: 'profile',
                   label: formatMessage({ id: 'talentProfile.tabProfile' }),
-                  children: (
+                  forceRender: true,
+                  children: wrapPrintSection(
+                    formatMessage({ id: 'talentProfile.tabProfile' }),
                     <div className={style['main-content']}>
                       <LeftColumn
                         section="strengths"
@@ -509,7 +542,8 @@ const TalentProfile = createWithRemoteLoader({
                         gotoPosition={gotoPosition}
                         permissions={cardPermissions}
                       />
-                    </div>
+                    </div>,
+                    hasProfileData
                   )
                 }
               ]}
