@@ -7,6 +7,7 @@ import { useIsMobile } from '@kne/responsive-utils';
 import classnames from 'classnames';
 import withLocale from './withLocale';
 import { EvidenceFormInner } from './FormInner';
+import PinnedScrollPanel from '@components/PinnedScrollPanel';
 import style from './style.module.scss';
 import iconFile from './assets/icon-file.svg';
 
@@ -487,67 +488,76 @@ const ProfileEvidence = createWithRemoteLoader({
     }
 
     if (variant === 'task') {
-      return (
-        <div className={style['task-evidence-panel']}>
-          {selectedTask ? (
-            <div className={style['task-evidence-head']}>
-              <Flex justify="space-between" align="flex-start" gap={8}>
-                <div>
-                  <div className={style['task-evidence-title']}>{selectedTask.title}</div>
-                  <div className={style['task-evidence-meta']}>
-                    <span>{formatMessage({ id: 'talentProfile.currentVsRequired' })}</span>
-                    <span className={style['task-evidence-score']}>{formatMessage({ id: 'talentProfile.scoreSlash' }, { current: selectedTask.current ?? 0, required: selectedTask.required ?? 0 })}</span>
-                    {selectedTask.statusLabel ? <span className={classnames(style['status-pill'], style[selectedTask.statusTone] || style['status-gap'])}>{selectedTask.statusLabel}</span> : null}
-                  </div>
-                </div>
-                {canEditTaskEvidence ? (
-                  <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditTaskEvidence}>
-                    {formatMessage({ id: 'talentProfile.editEvidence' })}
-                  </Button>
-                ) : null}
-              </Flex>
+      const confidenceFooter = selectedTask ? (
+        <>
+          {(() => {
+            const explicitConfidence = normalizeConfidence(selectedTask?.confidence);
+            const displayConfidence = explicitConfidence || deriveConfidenceFromEvidence(items);
+            const confidenceLabel = formatMessage({ id: CONFIDENCE_KEYS[displayConfidence] || CONFIDENCE_KEYS.medium });
+            return (
+              <div className={classnames(style['task-evidence-confidence'], style[`task-evidence-confidence-${displayConfidence}`])}>
+                <span className={style['task-evidence-confidence-icon']} aria-hidden />
+                <span className={style['task-evidence-confidence-text']}>
+                  <span className={style['task-evidence-confidence-title']}>
+                    {formatMessage({ id: 'talentProfile.confidenceBasedOnSources' }, { level: confidenceLabel })}
+                    {!explicitConfidence ? <span className={style['task-evidence-confidence-hint']}>{formatMessage({ id: 'talentProfile.confidenceDerivedHint' })}</span> : null}
+                  </span>
+                </span>
+              </div>
+            );
+          })()}
+          {canShowLooksWrong ? (
+            <div className={style['evidence-actions']}>
+              <Button className={style['look-right-btn']} block onClick={openReportIssue}>
+                {formatMessage({ id: 'talentProfile.looksWrong' })}
+              </Button>
             </div>
-          ) : (
-            <Empty description={formatMessage({ id: 'talentProfile.selectTaskForEvidence' })} />
-          )}
-          {selectedTask ? (
-            <>
-              <div className={style['task-evidence-used']}>
-                <div className={style['task-evidence-section-title']}>
-                  {formatMessage({ id: 'talentProfile.evidenceUsed' })}
-                  <span className={style['evidence-dot']} />
-                  <span className={style['evidence-group-count']}>{formatMessage({ id: 'talentProfile.evidenceItemCount' }, { count: items.length })}</span>
-                </div>
-                <EvidenceGroups items={items} formatMessage={formatMessage} emptyText={canEditTaskEvidence ? formatMessage({ id: 'talentProfile.evidenceEmptyHint' }) : formatMessage({ id: 'talentProfile.evidenceEmpty' })} />
-              </div>
-              <div className={style['task-evidence-footer']}>
-                {(() => {
-                  const explicitConfidence = normalizeConfidence(selectedTask?.confidence);
-                  const displayConfidence = explicitConfidence || deriveConfidenceFromEvidence(items);
-                  const confidenceLabel = formatMessage({ id: CONFIDENCE_KEYS[displayConfidence] || CONFIDENCE_KEYS.medium });
-                  return (
-                    <div className={classnames(style['task-evidence-confidence'], style[`task-evidence-confidence-${displayConfidence}`])}>
-                      <span className={style['task-evidence-confidence-icon']} aria-hidden />
-                      <span className={style['task-evidence-confidence-text']}>
-                        <span className={style['task-evidence-confidence-title']}>
-                          {formatMessage({ id: 'talentProfile.confidenceBasedOnSources' }, { level: confidenceLabel })}
-                          {!explicitConfidence ? <span className={style['task-evidence-confidence-hint']}>{formatMessage({ id: 'talentProfile.confidenceDerivedHint' })}</span> : null}
-                        </span>
-                      </span>
-                    </div>
-                  );
-                })()}
-                {canShowLooksWrong ? (
-                  <div className={style['evidence-actions']}>
-                    <Button className={style['look-right-btn']} block onClick={openReportIssue}>
-                      {formatMessage({ id: 'talentProfile.looksWrong' })}
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-            </>
           ) : null}
+        </>
+      ) : null;
 
+      return (
+        <>
+          <PinnedScrollPanel
+            className={style['task-evidence-panel']}
+            fill
+            header={
+              selectedTask ? (
+                <>
+                  <div className={style['task-evidence-head']}>
+                    <Flex justify="space-between" align="flex-start" gap={8}>
+                      <div>
+                        <div className={style['task-evidence-title']}>{selectedTask.title}</div>
+                        <div className={style['task-evidence-meta']}>
+                          <span>{formatMessage({ id: 'talentProfile.currentVsRequired' })}</span>
+                          <span className={style['task-evidence-score']}>{formatMessage({ id: 'talentProfile.scoreSlash' }, { current: selectedTask.current ?? 0, required: selectedTask.required ?? 0 })}</span>
+                          {selectedTask.statusLabel ? <span className={classnames(style['status-pill'], style[selectedTask.statusTone] || style['status-gap'])}>{selectedTask.statusLabel}</span> : null}
+                        </div>
+                      </div>
+                      {canEditTaskEvidence ? (
+                        <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditTaskEvidence}>
+                          {formatMessage({ id: 'talentProfile.editEvidence' })}
+                        </Button>
+                      ) : null}
+                    </Flex>
+                  </div>
+                  <div className={style['task-evidence-section-title']}>
+                    {formatMessage({ id: 'talentProfile.evidenceUsed' })}
+                    <span className={style['evidence-dot']} />
+                    <span className={style['evidence-group-count']}>{formatMessage({ id: 'talentProfile.evidenceItemCount' }, { count: items.length })}</span>
+                  </div>
+                </>
+              ) : (
+                <Empty description={formatMessage({ id: 'talentProfile.selectTaskForEvidence' })} />
+              )
+            }
+            footer={selectedTask ? <div className={style['task-evidence-footer']}>{confidenceFooter}</div> : null}
+            bodyInnerClassName={style['task-evidence-used-inner']}
+          >
+            {selectedTask ? (
+              <EvidenceGroups items={items} formatMessage={formatMessage} emptyText={canEditTaskEvidence ? formatMessage({ id: 'talentProfile.evidenceEmptyHint' }) : formatMessage({ id: 'talentProfile.evidenceEmpty' })} />
+            ) : null}
+          </PinnedScrollPanel>
           <Drawer
             title={formatMessage({ id: 'talentProfile.reportIssueTitle' })}
             open={reportOpen}
@@ -600,7 +610,7 @@ const ProfileEvidence = createWithRemoteLoader({
               </div>
             </div>
           </Drawer>
-        </div>
+        </>
       );
     }
 
