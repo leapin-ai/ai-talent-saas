@@ -45,6 +45,130 @@ export const toReviewData = profileDetail => {
  * 2) 扁平档案详情：顶层含 name/email 等员工字段，或含 profile / skillAnalysisDraft
  * 3) AI 填充接口返回体：{ data, readiness, aiSuggest }
  */
+const normalizeClipboardConfidence = value => {
+  const key = String(value || '')
+    .trim()
+    .toLowerCase();
+  return key === 'high' || key === 'medium' || key === 'low' ? key : null;
+};
+
+const SOURCE_INFER_RULES = [
+  { match: /简历|cv|resume/i, source: '简历' },
+  { match: /linkedin/i, source: 'LinkedIn' },
+  { match: /ai\s*面试|面试|interview/i, source: 'AI面试' },
+  { match: /项目经历|项目/i, source: '项目经历' },
+  { match: /\bjd\b|职位描述|岗位描述/i, source: 'JD' },
+  { match: /绩效|performance/i, source: '绩效' },
+  { match: /证书|认证|certification/i, source: '证书' },
+  { match: /档案|profile/i, source: '档案' }
+];
+
+const inferEvidenceSourceLabel = text => {
+  const s = String(text || '');
+  for (const rule of SOURCE_INFER_RULES) {
+    if (rule.match.test(s)) {
+      return rule.source;
+    }
+  }
+  return '';
+};
+
+/** 导入时每条证据都补齐 source + title + summary */
+const normalizeClipboardEvidence = evidence => {
+  const finalize = (summary, source, title) => {
+    const text = String(summary || '').trim();
+    if (!text) {
+      return null;
+    }
+    let src = String(source || '').trim();
+    if (!src || src === 'analysis' || src === 'skill' || src === '分析' || src === '分析依据') {
+      src = inferEvidenceSourceLabel(text);
+    }
+    let ttl = String(title || '').trim();
+    if (!ttl) {
+      ttl = src || text.slice(0, 40);
+    }
+    return {
+      source: src.slice(0, 64),
+      title: ttl.slice(0, 200),
+      summary: text.slice(0, 2000)
+    };
+  };
+  const fromOne = item => {
+    if (typeof item === 'string') {
+      return finalize(item, '', '');
+    }
+    if (!item || typeof item !== 'object') {
+      return null;
+    }
+    return finalize(item.summary || item.text || item.content || item.description || '', item.source || item.sourceType || item.sourceLabel || item.origin || '', item.title || '');
+  };
+  if (typeof evidence === 'string') {
+    const text = evidence.trim();
+    if (!text) {
+      return undefined;
+    }
+    const lines = text
+      .split(/\n+/)
+      .map(line => line.trim())
+      .filter(Boolean);
+    if (lines.length > 1) {
+      const list = lines.map(line => finalize(line, '', '')).filter(Boolean);
+      return list.length ? list : undefined;
+    }
+    const one = finalize(text, '', '');
+    return one ? [one] : undefined;
+  }
+  if (Array.isArray(evidence)) {
+    const list = evidence.map(fromOne).filter(Boolean);
+    return list.length ? list : undefined;
+  }
+  if (evidence && typeof evidence === 'object') {
+    const one = fromOne(evidence);
+    return one ? [one] : undefined;
+  }
+  return undefined;
+};
+
+/** 导入时保留 skills[].confidence / evidence，并规范化置信度与证据结构 */
+const normalizeClipboardSkillAnalysis = skillAnalysis => {
+  if (!skillAnalysis || typeof skillAnalysis !== 'object' || Array.isArray(skillAnalysis)) {
+    return null;
+  }
+  const next = Object.assign({}, skillAnalysis);
+  if (Array.isArray(skillAnalysis.skills)) {
+    next.skills = skillAnalysis.skills
+      .map(item => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        const name = (typeof item.name === 'string' && item.name.trim()) || (typeof item.title === 'string' && item.title.trim()) || '';
+        if (!name) {
+          return null;
+        }
+        const confidence = normalizeClipboardConfidence(item.confidence);
+        const evidence = item.evidence != null && item.evidence !== '' ? normalizeClipboardEvidence(item.evidence) : undefined;
+        const row = Object.assign({}, item, {
+          name,
+          title: typeof item.title === 'string' && item.title.trim() ? item.title.trim() : name
+        });
+        if (confidence) {
+          row.confidence = confidence;
+        } else {
+          delete row.confidence;
+        }
+        if (evidence) {
+          row.evidence = evidence;
+        } else if (item.evidence != null && item.evidence !== '') {
+          row.evidence = item.evidence;
+        }
+        return row;
+      })
+      .filter(Boolean);
+  }
+  return next;
+};
+
 export const parseClipboardProfilePayload = text => {
   let parsed;
   try {
@@ -108,10 +232,11 @@ export const parseClipboardProfilePayload = text => {
   delete profile.updatedAt;
   delete profile.deletedAt;
 
-  const skillAnalysis =
+  const skillAnalysis = normalizeClipboardSkillAnalysis(
     (root.skillAnalysis && typeof root.skillAnalysis === 'object' ? root.skillAnalysis : null) ||
-    (root.skillAnalysisDraft && typeof root.skillAnalysisDraft === 'object' ? root.skillAnalysisDraft : null) ||
-    (root.readiness && typeof root.readiness === 'object' && (root.readiness.readiness != null || root.readiness.skills || root.readiness.priorityGaps) ? root.readiness : null);
+      (root.skillAnalysisDraft && typeof root.skillAnalysisDraft === 'object' ? root.skillAnalysisDraft : null) ||
+      (root.readiness && typeof root.readiness === 'object' && (root.readiness.readiness != null || root.readiness.skills || root.readiness.priorityGaps) ? root.readiness : null)
+  );
 
   const aiSuggest = root.aiSuggest && typeof root.aiSuggest === 'object' ? root.aiSuggest : null;
 
@@ -170,15 +295,14 @@ const hasContent = value => {
 const checklistItem = (key, label, done) => ({ key, label, done: !!done });
 
 /**
- * 与 server workforce.recomputeProfileCompletion 同口径：六项等权。
- * 基础信息、简历、填写信息、AI 面试、就绪度、成长建议。
+ * 与 server workforce.recomputeProfileCompletion 同口径：五项等权。
+ * 基础信息、简历、填写信息、AI 面试、就绪度。（成长建议已下线，不计入）
  */
 export const estimateProfileCompletion = ({ profileDetail, resumeParsed, resumes, interview, submittedInfo, assessment } = {}) => {
   const review = toReviewData(profileDetail);
   const employee = review.employee || {};
   const profile = review.profile || {};
   const skillAnalysis = review.skillAnalysis || {};
-  const aiSuggest = review.aiSuggest || {};
   const submitted = submittedInfo && typeof submittedInfo === 'object' ? submittedInfo : {};
   const resumeList = Array.isArray(resumes) ? resumes : Array.isArray(profileDetail?.resumes) ? profileDetail.resumes : [];
   const interviewData = interview && typeof interview === 'object' ? interview : {};
@@ -195,15 +319,13 @@ export const estimateProfileCompletion = ({ profileDetail, resumeParsed, resumes
     assessment?.clientUserId
   );
   const hasReadiness = skillAnalysis.readiness != null && skillAnalysis.readiness !== '' && Number.isFinite(Number(skillAnalysis.readiness));
-  const hasSuggest = hasContent(aiSuggest.shortTerm) || hasContent(aiSuggest.longTerm) || hasContent(aiSuggest.matchPosition);
 
   const checklist = [
     checklistItem('basic', '基础信息', hasBasic),
     checklistItem('cv', '简历', hasCv),
     checklistItem('submitted', '填写信息', hasSubmittedInfo),
     checklistItem('ai_interview', 'AI 面试', hasInterview),
-    checklistItem('readiness', '就绪度', hasReadiness),
-    checklistItem('suggest', '成长建议', hasSuggest)
+    checklistItem('readiness', '就绪度', hasReadiness)
   ];
   const done = checklist.filter(item => item.done).length;
   const percent = Math.round((done / checklist.length) * 100);

@@ -704,7 +704,7 @@ module.exports = fp(async (fastify, options) => {
 
   /**
    * 完善档案生成审核结束后，按本次提交内容估算档案完成度。
-   * 六项等权：基础信息、简历、填写信息、AI 面试、就绪度、成长建议。
+   * 五项等权：基础信息、简历、填写信息、AI 面试、就绪度。（成长建议已下线，不计入）
    */
   const recomputeProfileCompletion = async ({ tenantId, employeeId, assessment } = {}) => {
     const employee = await models.employee.findOne({
@@ -721,7 +721,6 @@ module.exports = fp(async (fastify, options) => {
     const interview = assessment?.interviewData && typeof assessment.interviewData === 'object' ? assessment.interviewData : {};
     const resumes = employee.resumes || profileData.resumes || [];
     const skillAnalysis = review.skillAnalysis && typeof review.skillAnalysis === 'object' ? review.skillAnalysis : {};
-    const aiSuggest = review.aiSuggest && typeof review.aiSuggest === 'object' ? review.aiSuggest : {};
 
     const hasBasic = hasText(reviewEmployee.name || employee.name) && (hasText(reviewEmployee.phone) || hasContent(reviewEmployee.phone) || hasText(reviewEmployee.email) || hasText(employee.phone) || hasText(employee.email));
     const hasCv = (Array.isArray(resumes) && resumes.length > 0) || !!employee.currentResumeId || hasContent(profileData.resumeParsed);
@@ -729,15 +728,13 @@ module.exports = fp(async (fastify, options) => {
       hasText(reviewEmployee.description) || hasText(reviewEmployee.city) || hasText(reviewEmployee.college) || hasText(reviewEmployee.major) || hasContent(reviewProfile.skills) || hasContent(reviewProfile.intentionPosition);
     const hasInterview = !!(interview.interviewId || hasContent(interview.answers) || hasContent(interview.questionnaire) || (Array.isArray(interview.history) && interview.history.length > 0) || assessment?.clientUserId);
     const hasReadiness = skillAnalysis.readiness != null && skillAnalysis.readiness !== '' && Number.isFinite(Number(skillAnalysis.readiness));
-    const hasSuggest = hasContent(aiSuggest.shortTerm) || hasContent(aiSuggest.longTerm) || hasContent(aiSuggest.matchPosition);
 
     const checklist = [
       checklistItem('basic', '基础信息', hasBasic),
       checklistItem('cv', '简历', hasCv),
       checklistItem('submitted', '填写信息', hasSubmittedInfo),
       checklistItem('ai_interview', 'AI 面试', hasInterview),
-      checklistItem('readiness', '就绪度', hasReadiness),
-      checklistItem('suggest', '成长建议', hasSuggest)
+      checklistItem('readiness', '就绪度', hasReadiness)
     ];
     const done = checklist.filter(item => item.done).length;
     const percent = Math.round((done / checklist.length) * 100);

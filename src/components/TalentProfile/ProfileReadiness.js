@@ -9,7 +9,7 @@ import classnames from 'classnames';
 import ActivityTaskTable from '@components/ActivityTaskTable';
 import withLocale from './withLocale';
 import ProfileEvidence from './ProfileEvidence';
-import { ReadinessFormInner, TaskReadinessFormInner } from './FormInner';
+import { ReadinessFormInner, PriorityGapsFormInner, TaskReadinessFormInner } from './FormInner';
 import { CapabilityStatusCard } from '@components/Position/Detail/TalentSkillAnalysis';
 import style from './style.module.scss';
 import iconClipboard from './assets/icon-clipboard.svg';
@@ -60,6 +60,16 @@ const CONFIDENCE_KEYS = {
   high: 'talentProfile.confidenceHigh',
   medium: 'talentProfile.confidenceMedium',
   low: 'talentProfile.confidenceLow'
+};
+
+const normalizeConfidence = value => {
+  const key = String(value || '')
+    .trim()
+    .toLowerCase();
+  if (key === 'high' || key === 'medium' || key === 'low') {
+    return key;
+  }
+  return null;
 };
 
 const SkillProgress = ({ current, required }) => {
@@ -127,7 +137,7 @@ const deriveFromRows = rows => {
 const ProfileReadiness = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-core:FormInfo@useFormModal', 'components-core:Global@useGlobalValue']
 })(
-  withLocale(({ remoteModules, positionId, employeeId, displayName, readOnly, analysisOverride }) => {
+  withLocale(({ remoteModules, positionId, employeeId, displayName, readOnly, analysisOverride, onSaveAnalysis, showLooksWrong = false }) => {
     const [usePreset, useFormModal, useGlobalValue] = remoteModules;
     const { ajax, apis } = usePreset();
     const formModal = useFormModal();
@@ -229,7 +239,7 @@ const ProfileReadiness = createWithRemoteLoader({
             current: item.current ?? 0,
             required: item.required ?? 0,
             status: item.status,
-            confidence: item.confidence || 'medium',
+            confidence: normalizeConfidence(item.confidence),
             evidence: item.evidence || ''
           };
         })
@@ -245,12 +255,19 @@ const ProfileReadiness = createWithRemoteLoader({
         return skillRows;
       }
       const evidenceByTitle = new Map();
+      const confidenceByTitle = new Map();
       skillRows.forEach(item => {
         const key = String(item.title || '')
           .trim()
           .toLowerCase();
-        if (key && item.evidence) {
+        if (!key) {
+          return;
+        }
+        if (item.evidence) {
           evidenceByTitle.set(key, item.evidence);
+        }
+        if (normalizeConfidence(item.confidence)) {
+          confidenceByTitle.set(key, normalizeConfidence(item.confidence));
         }
       });
       (effectiveAnalysis?.skills || []).forEach(item => {
@@ -260,17 +277,36 @@ const ProfileReadiness = createWithRemoteLoader({
         const key = String(item.title || item.name || '')
           .trim()
           .toLowerCase();
-        const evidence = typeof item.evidence === 'string' ? item.evidence.trim() : '';
-        if (key && evidence && !evidenceByTitle.has(key)) {
-          evidenceByTitle.set(key, evidence);
+        if (!key) {
+          return;
+        }
+        if (item.evidence != null && item.evidence !== '' && !evidenceByTitle.has(key)) {
+          const evidence = typeof item.evidence === 'string' ? item.evidence.trim() : item.evidence;
+          if (evidence && !(Array.isArray(evidence) && evidence.length === 0)) {
+            evidenceByTitle.set(key, evidence);
+          }
+        }
+        const confidence = normalizeConfidence(item.confidence);
+        if (confidence && !confidenceByTitle.has(key)) {
+          confidenceByTitle.set(key, confidence);
         }
       });
       return apiRows.map(item => {
         const key = String(item.title || '')
           .trim()
           .toLowerCase();
+        const patch = {};
         const evidence = item.evidence || evidenceByTitle.get(key) || '';
-        return evidence ? Object.assign({}, item, { evidence }) : item;
+        if (evidence) {
+          patch.evidence = evidence;
+        }
+        const confidence = normalizeConfidence(item.confidence) || confidenceByTitle.get(key) || null;
+        if (confidence) {
+          patch.confidence = confidence;
+        } else if (!normalizeConfidence(item.confidence)) {
+          patch.confidence = null;
+        }
+        return Object.keys(patch).length ? Object.assign({}, item, patch) : item;
       });
     }, [rows, overrideSkillRows, effectiveAnalysis]);
 
@@ -313,14 +349,14 @@ const ProfileReadiness = createWithRemoteLoader({
       }
       const status = resolveStatus(found);
       const meta = STATUS_META[status] || STATUS_META.gap;
-      const confidence = found.confidence || 'medium';
+      const confidence = normalizeConfidence(found.confidence);
       return {
         ...found,
         status,
         statusTone: meta.tone,
         statusLabel: formatMessage({ id: meta.labelKey }),
         confidence,
-        confidenceLabel: formatMessage({ id: CONFIDENCE_KEYS[confidence] || CONFIDENCE_KEYS.medium })
+        confidenceLabel: confidence ? formatMessage({ id: CONFIDENCE_KEYS[confidence] || CONFIDENCE_KEYS.medium }) : null
       };
     }, [groups, selectedId, formatMessage]);
 
@@ -337,11 +373,16 @@ const ProfileReadiness = createWithRemoteLoader({
     };
 
     const openEditReadiness = () => {
-      if (readOnly || !positionId || !employeeId) {
+      if (readOnly) {
+        return;
+      }
+      const useLocalSave = typeof onSaveAnalysis === 'function';
+      const isDraftEmployee = employeeId && String(employeeId).startsWith('draft-');
+      if (!useLocalSave && (!positionId || !employeeId || isDraftEmployee)) {
         return;
       }
       const saveApi = apis?.talentSaas?.tenant?.position?.skillAnalysisSave;
-      if (!saveApi) {
+      if (!useLocalSave && !saveApi) {
         message.error(formatMessage({ id: 'talentProfile.editReadinessFailed' }));
         return;
       }
@@ -356,16 +397,22 @@ const ProfileReadiness = createWithRemoteLoader({
               criticalGaps: metrics?.criticalGaps ?? 0,
               atOrAbove: metrics?.atOrAbove ?? 0,
               monthsToClose: metrics?.monthsToClose ?? null
-            },
-            priorityGaps: (priorityGaps || []).map((gap, index) => ({
-              rank: gap.rank || index + 1,
-              title: gap.title || '',
-              description: gap.description || '',
-              current: gap.current ?? null,
-              required: gap.required ?? null
-            }))
+            }
           },
           onSubmit: async formData => {
+            const nextAnalysis = Object.assign({}, effectiveAnalysis || analysis || {}, {
+              readiness: formData.readiness,
+              summary: formData.summary,
+              metrics: formData.metrics,
+              priorityGaps: priorityGaps || [],
+              skills: effectiveAnalysis?.skills || analysis?.skills || [],
+              developmentPlan: effectiveAnalysis?.developmentPlan || analysis?.developmentPlan || null
+            });
+            if (useLocalSave) {
+              await onSaveAnalysis(nextAnalysis);
+              message.success(formatMessage({ id: 'talentProfile.editReadinessSuccess' }));
+              return;
+            }
             const { data: resData } = await ajax(
               Object.assign({}, saveApi, {
                 data: {
@@ -374,9 +421,9 @@ const ProfileReadiness = createWithRemoteLoader({
                   readiness: formData.readiness,
                   summary: formData.summary,
                   metrics: formData.metrics,
-                  priorityGaps: formData.priorityGaps,
-                  skills: effectiveAnalysis?.skills || analysis?.skills || [],
-                  developmentPlan: effectiveAnalysis?.developmentPlan || analysis?.developmentPlan || null
+                  priorityGaps: nextAnalysis.priorityGaps,
+                  skills: nextAnalysis.skills,
+                  developmentPlan: nextAnalysis.developmentPlan
                 }
               })
             );
@@ -388,6 +435,73 @@ const ProfileReadiness = createWithRemoteLoader({
           }
         },
         children: <ReadinessFormInner />
+      });
+    };
+
+    const openEditPriorityGaps = () => {
+      if (readOnly) {
+        return;
+      }
+      const useLocalSave = typeof onSaveAnalysis === 'function';
+      const isDraftEmployee = employeeId && String(employeeId).startsWith('draft-');
+      if (!useLocalSave && (!positionId || !employeeId || isDraftEmployee)) {
+        return;
+      }
+      const saveApi = apis?.talentSaas?.tenant?.position?.skillAnalysisSave;
+      if (!useLocalSave && !saveApi) {
+        message.error(formatMessage({ id: 'talentProfile.editPriorityGapsFailed' }));
+        return;
+      }
+      formModal({
+        title: formatMessage({ id: 'talentProfile.editPriorityGaps' }),
+        size: 'small',
+        formProps: {
+          data: {
+            priorityGaps: (priorityGaps || []).map((gap, index) => ({
+              rank: gap.rank || index + 1,
+              title: gap.title || '',
+              description: gap.description || '',
+              current: gap.current ?? null,
+              required: gap.required ?? null
+            }))
+          },
+          onSubmit: async formData => {
+            const nextGaps = formData.priorityGaps || [];
+            const nextAnalysis = Object.assign({}, effectiveAnalysis || analysis || {}, {
+              readiness,
+              summary,
+              metrics,
+              priorityGaps: nextGaps,
+              skills: effectiveAnalysis?.skills || analysis?.skills || [],
+              developmentPlan: effectiveAnalysis?.developmentPlan || analysis?.developmentPlan || null
+            });
+            if (useLocalSave) {
+              await onSaveAnalysis(nextAnalysis);
+              message.success(formatMessage({ id: 'talentProfile.editPriorityGapsSuccess' }));
+              return;
+            }
+            const { data: resData } = await ajax(
+              Object.assign({}, saveApi, {
+                data: {
+                  positionId: String(positionId),
+                  employeeId: String(employeeId),
+                  readiness: nextAnalysis.readiness,
+                  summary: nextAnalysis.summary,
+                  metrics: nextAnalysis.metrics,
+                  priorityGaps: nextGaps,
+                  skills: nextAnalysis.skills,
+                  developmentPlan: nextAnalysis.developmentPlan
+                }
+              })
+            );
+            if (resData.code !== 0) {
+              throw new Error(resData.msg || formatMessage({ id: 'talentProfile.editPriorityGapsFailed' }));
+            }
+            message.success(formatMessage({ id: 'talentProfile.editPriorityGapsSuccess' }));
+            setReloadKey(key => key + 1);
+          }
+        },
+        children: <PriorityGapsFormInner />
       });
     };
 
@@ -474,12 +588,108 @@ const ProfileReadiness = createWithRemoteLoader({
     };
 
     const canEditFutureTasks = !readOnly && positionId && employeeId && !String(employeeId).startsWith('draft-');
+    const canEditReadiness = !readOnly && (typeof onSaveAnalysis === 'function' || (positionId && employeeId && !String(employeeId).startsWith('draft-')));
+
+    const handleSaveTaskEvidence = async ({ items, confidence } = {}, task) => {
+      if (!task) {
+        return;
+      }
+      const nextConfidence = normalizeConfidence(confidence);
+      const nextEvidence = (items || [])
+        .map(item => ({
+          sourceType: item.sourceType || 'profile',
+          title: item.title || '',
+          summary: String(item.summary || '').trim()
+        }))
+        .filter(item => item.summary);
+      const useLocalSave = typeof onSaveAnalysis === 'function';
+      const matchTitle = String(task.title || '')
+        .trim()
+        .toLowerCase();
+      const nextSkills = (effectiveAnalysis?.skills || analysis?.skills || []).map(item => {
+        if (!item || typeof item !== 'object') {
+          return item;
+        }
+        const title = String(item.title || item.name || '')
+          .trim()
+          .toLowerCase();
+        if (title && title === matchTitle) {
+          return Object.assign({}, item, {
+            confidence: nextConfidence || item.confidence || null,
+            evidence: nextEvidence.length ? nextEvidence : item.evidence || ''
+          });
+        }
+        return item;
+      });
+      const hasMatch = nextSkills.some(item => {
+        const title = String(item?.title || item?.name || '')
+          .trim()
+          .toLowerCase();
+        return title && title === matchTitle;
+      });
+      if (!hasMatch && matchTitle) {
+        nextSkills.push({
+          id: task.id || null,
+          taskId: task.taskId || null,
+          name: task.title,
+          title: task.title,
+          activityGroup: task.activityGroup || '',
+          current: task.current ?? 0,
+          required: task.required ?? 0,
+          status: task.status,
+          confidence: nextConfidence,
+          evidence: nextEvidence.length ? nextEvidence : task.evidence || ''
+        });
+      }
+
+      if (useLocalSave) {
+        await onSaveAnalysis(
+          Object.assign({}, effectiveAnalysis || analysis || {}, {
+            readiness,
+            summary,
+            metrics,
+            priorityGaps,
+            skills: nextSkills,
+            developmentPlan: effectiveAnalysis?.developmentPlan || analysis?.developmentPlan || null
+          })
+        );
+        message.success(formatMessage({ id: 'talentProfile.editEvidenceSuccess' }));
+        return;
+      }
+
+      const saveApi = apis?.talentSaas?.tenant?.position?.skillAnalysisSave;
+      if (!saveApi || !positionId || !employeeId || String(employeeId).startsWith('draft-')) {
+        throw new Error(formatMessage({ id: 'talentProfile.editEvidenceFailed' }));
+      }
+      const { data: resData } = await ajax(
+        Object.assign({}, saveApi, {
+          data: {
+            positionId: String(positionId),
+            employeeId: String(employeeId),
+            readiness,
+            summary,
+            metrics,
+            priorityGaps,
+            skills: nextSkills,
+            developmentPlan: effectiveAnalysis?.developmentPlan || analysis?.developmentPlan || null
+          }
+        })
+      );
+      if (resData.code !== 0) {
+        throw new Error(resData.msg || formatMessage({ id: 'talentProfile.editEvidenceFailed' }));
+      }
+      message.success(formatMessage({ id: 'talentProfile.editEvidenceSuccess' }));
+      setReloadKey(key => key + 1);
+    };
+
+    const readinessEditButton = canEditReadiness ? <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditReadiness} aria-label={formatMessage({ id: 'talentProfile.editReadiness' })} /> : null;
+    const priorityGapsEditButton = canEditReadiness ? <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditPriorityGaps} aria-label={formatMessage({ id: 'talentProfile.editPriorityGaps' })} /> : null;
 
     return (
       <div className={style['readiness-root']}>
         {error ? <Typography.Text type="danger">{error}</Typography.Text> : null}
         <div className={style['readiness-top']}>
-          <CapabilityStatusCard name={displayName} readiness={readiness} summary={summary} metrics={metrics} themeColor={themeColor} />
+          <CapabilityStatusCard name={displayName} readiness={readiness} summary={summary} metrics={metrics} themeColor={themeColor} extra={readinessEditButton} />
 
           <Card
             className={style['gaps-card']}
@@ -489,7 +699,7 @@ const ProfileReadiness = createWithRemoteLoader({
             extra={
               <Flex align="center" gap={4}>
                 <span className={style['gaps-badge']}>{formatMessage({ id: 'talentProfile.topGaps' }, { count: Math.min(3, priorityGaps.length || 3) })}</span>
-                {!readOnly && positionId && employeeId ? <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditReadiness} /> : null}
+                {priorityGapsEditButton}
               </Flex>
             }
           >
@@ -571,7 +781,13 @@ const ProfileReadiness = createWithRemoteLoader({
                       <span className={style['skill-score']}>{formatMessage({ id: 'talentProfile.scoreSlash' }, { current: item.current ?? 0, required: item.required ?? 0 })}</span>
                     </div>
                   )}
-                  renderTrailing={item => formatMessage({ id: CONFIDENCE_KEYS[item.confidence || 'medium'] || CONFIDENCE_KEYS.medium })}
+                  renderTrailing={item => {
+                    const confidence = normalizeConfidence(item.confidence);
+                    if (!confidence) {
+                      return '—';
+                    }
+                    return formatMessage({ id: CONFIDENCE_KEYS[confidence] || CONFIDENCE_KEYS.medium });
+                  }}
                 />
                 <div className={style.legend}>
                   <span className={style['legend-item']}>
@@ -589,7 +805,15 @@ const ProfileReadiness = createWithRemoteLoader({
                 </div>
               </div>
               <div className={style['future-task-evidence']}>
-                <ProfileEvidence employeeId={employeeId} positionId={positionId} variant="task" selectedTask={selectedTask} readOnly={readOnly} />
+                <ProfileEvidence
+                  employeeId={employeeId}
+                  positionId={positionId}
+                  variant="task"
+                  selectedTask={selectedTask}
+                  readOnly={readOnly}
+                  showLooksWrong={showLooksWrong}
+                  onSaveTaskEvidence={!readOnly ? handleSaveTaskEvidence : undefined}
+                />
               </div>
             </div>
           )}

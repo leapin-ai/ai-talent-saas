@@ -355,6 +355,91 @@ module.exports = fp(async (fastify, options) => {
     return Math.min(100, Math.max(0, Math.round(num)));
   };
 
+  const normalizeSkillConfidence = value => {
+    const key = String(value || '')
+      .trim()
+      .toLowerCase();
+    return key === 'high' || key === 'medium' || key === 'low' ? key : null;
+  };
+
+  const SOURCE_INFER_RULES = [
+    { match: /简历|cv|resume/i, source: '简历' },
+    { match: /linkedin/i, source: 'LinkedIn' },
+    { match: /ai\s*面试|面试|interview/i, source: 'AI面试' },
+    { match: /项目经历|项目/i, source: '项目经历' },
+    { match: /\bjd\b|职位描述|岗位描述/i, source: 'JD' },
+    { match: /绩效|performance/i, source: '绩效' },
+    { match: /证书|认证|certification/i, source: '证书' },
+    { match: /档案|profile/i, source: '档案' }
+  ];
+
+  const inferEvidenceSourceLabel = text => {
+    const s = String(text || '');
+    for (const rule of SOURCE_INFER_RULES) {
+      if (rule.match.test(s)) {
+        return rule.source;
+      }
+    }
+    return '';
+  };
+
+  /** 统一成 [{ source, title, summary }]，每条都补齐 source/title */
+  const normalizeSkillEvidenceValue = evidence => {
+    const finalize = (summary, source, title) => {
+      const text = String(summary || '').trim();
+      if (!text) {
+        return null;
+      }
+      let src = String(source || '').trim();
+      if (!src || src === 'analysis' || src === 'skill' || src === '分析' || src === '分析依据') {
+        src = inferEvidenceSourceLabel(text);
+      }
+      let ttl = String(title || '').trim();
+      if (!ttl) {
+        ttl = src || text.slice(0, 40);
+      }
+      return {
+        source: src.slice(0, 64),
+        title: ttl.slice(0, 200),
+        summary: text.slice(0, 2000)
+      };
+    };
+    const fromOne = item => {
+      if (typeof item === 'string') {
+        return finalize(item, '', '');
+      }
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+      return finalize(item.summary || item.text || item.content || item.description || '', item.source || item.sourceType || item.sourceLabel || item.origin || '', item.title || '');
+    };
+    if (typeof evidence === 'string') {
+      const text = evidence.trim();
+      if (!text) {
+        return undefined;
+      }
+      const lines = text
+        .split(/\n+/)
+        .map(line => line.trim())
+        .filter(Boolean);
+      if (lines.length > 1) {
+        const list = lines.map(line => finalize(line, '', '')).filter(Boolean);
+        return list.length ? list : undefined;
+      }
+      const one = finalize(text, '', '');
+      return one ? [one] : undefined;
+    }
+    if (Array.isArray(evidence)) {
+      const list = evidence.map(fromOne).filter(Boolean);
+      return list.length ? list : undefined;
+    }
+    if (evidence && typeof evidence === 'object') {
+      const one = fromOne(evidence);
+      return one ? [one] : undefined;
+    }
+    return undefined;
+  };
+
   const normalizeSkillRows = skills => {
     if (!Array.isArray(skills)) {
       return [];
@@ -372,14 +457,16 @@ module.exports = fp(async (fastify, options) => {
         const current = Number(item.current);
         const required = Number(item.required);
         const status = typeof item.status === 'string' && allowedStatus.has(item.status) ? item.status : undefined;
-        const evidence = typeof item.evidence === 'string' ? item.evidence.trim().slice(0, 100) : '';
+        const confidence = normalizeSkillConfidence(item.confidence);
+        const evidence = normalizeSkillEvidenceValue(item.evidence);
         return {
           id: typeof item.id === 'string' && item.id ? item.id : undefined,
           name: name.slice(0, 200),
           current: Number.isFinite(current) ? Math.min(5, Math.max(0, Math.round(current))) : 0,
           required: Number.isFinite(required) ? Math.min(5, Math.max(0, Math.round(required))) : 0,
           ...(status ? { status } : {}),
-          ...(evidence ? { evidence } : {})
+          ...(confidence ? { confidence } : {}),
+          ...(evidence !== undefined ? { evidence } : {})
         };
       })
       .filter(Boolean);
@@ -1669,7 +1756,17 @@ module.exports = fp(async (fastify, options) => {
         readiness: '0-100',
         summary: 'string',
         metrics: { criticalGaps: 'number', atOrAbove: 'number', monthsToClose: 'number|null' },
-        skills: [{ id: 'string', name: 'string', current: '0-5', required: '0-5', status: 'critical|gap|onTarget|above', evidence: 'string' }],
+        skills: [
+          {
+            id: 'string',
+            name: 'string',
+            current: '0-5',
+            required: '0-5',
+            status: 'critical|gap|onTarget|above',
+            confidence: 'high|medium|low (REQUIRED)',
+            evidence: '[{ source: string REQUIRED, title: string REQUIRED, summary: string REQUIRED }] — every item must include all three'
+          }
+        ],
         priorityGaps: [{ rank: 'number', title: 'string', description: 'string', current: '0-5', required: '0-5' }],
         developmentPlan: {
           subtitle: 'string',

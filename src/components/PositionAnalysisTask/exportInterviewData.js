@@ -416,14 +416,68 @@ const pickDefined = source => {
   return Object.keys(output).length ? output : null;
 };
 
+const buildPositionSkillExport = skill => {
+  if (!skill || typeof skill !== 'object') {
+    return null;
+  }
+  const name = typeof skill.name === 'string' ? skill.name.trim() : '';
+  if (!name) {
+    return null;
+  }
+  const contentItems = Array.isArray(skill.contentItems)
+    ? skill.contentItems
+        .map(item => {
+          if (!item || typeof item !== 'object') {
+            return null;
+          }
+          return pickDefined({
+            title: item.title || null,
+            description: item.description || null,
+            source: item.source || null
+          });
+        })
+        .filter(Boolean)
+    : null;
+  return pickDefined({
+    id: skill.id || null,
+    name,
+    activityCode: skill.activityCode || null,
+    activityTitle: skill.activityTitle || null,
+    activityGroup: skill.activityGroup || null,
+    origin: skill.origin || null,
+    importanceNow: skill.importanceNow ?? null,
+    importanceYear: skill.importanceYear ?? null,
+    change: skill.change || null,
+    aiExposure: skill.aiExposure || null,
+    confidence: skill.confidence || null,
+    contentItems: contentItems && contentItems.length ? contentItems : null
+  });
+};
+
 const buildPositionExport = position => {
   if (!position || typeof position !== 'object') {
     return null;
   }
   const department = (position.orgEnums || []).find(item => String(item.value) === String(position.tenantOrgId));
+  const skills = Array.isArray(position.skill) ? position.skill.map(buildPositionSkillExport).filter(Boolean) : [];
+  const workforceStrategy = Array.isArray(position.workforceStrategy)
+    ? position.workforceStrategy
+        .map(item => {
+          if (!item || typeof item !== 'object') {
+            return null;
+          }
+          return pickDefined({
+            action: item.action || item.type || null,
+            title: item.title || null,
+            detail: item.detail || item.description || null
+          });
+        })
+        .filter(Boolean)
+    : [];
   return pickDefined({
     id: position.id ?? null,
     name: position.name || null,
+    roleName: position.roleName || position.name || null,
     department: department?.description || null,
     tenantOrgId: position.tenantOrgId ?? null,
     capacity: position.capacity || null,
@@ -434,7 +488,11 @@ const buildPositionExport = position => {
     status: position.status || null,
     description: position.description || null,
     requirement: position.requirement || null,
-    developmentGoal: position.developmentGoal || null
+    developmentGoal: position.developmentGoal || null,
+    verdict: position.verdict && typeof position.verdict === 'object' ? position.verdict : null,
+    skill: skills.length ? skills : null,
+    workforceStrategy: workforceStrategy.length ? workforceStrategy : null,
+    changeMagnitude: position.changeMagnitude || null
   });
 };
 
@@ -482,6 +540,45 @@ const buildResumeExport = resume => {
   return pickDefined(output);
 };
 
+const SUBMITTED_OMIT = new Set(['resumes', 'resumeParsed', 'id', 'tenantId', 'createdAt', 'updatedAt', 'deletedAt']);
+
+const buildProjectExportItem = project => {
+  if (!project || typeof project !== 'object') {
+    return null;
+  }
+  return pickDefined({
+    name: project.name || null,
+    role: project.role || null,
+    description: project.description || null,
+    skills: Array.isArray(project.skills) ? project.skills.filter(Boolean) : null,
+    period: project.period ?? null,
+    company: project.company || project.companyName || null
+  });
+};
+
+/** 调研时员工填写信息（含项目经历），不含简历附件/解析缓存 */
+const buildSubmittedInfoExport = submittedInfo => {
+  if (!submittedInfo || typeof submittedInfo !== 'object') {
+    return null;
+  }
+  const output = {};
+  Object.keys(submittedInfo).forEach(key => {
+    if (SUBMITTED_OMIT.has(key)) {
+      return;
+    }
+    if (key === 'projects') {
+      return;
+    }
+    output[key] = submittedInfo[key];
+  });
+  const rawProjects = Array.isArray(submittedInfo.projects) ? submittedInfo.projects : Array.isArray(submittedInfo.projects?.projects) ? submittedInfo.projects.projects : [];
+  const projects = rawProjects.map(buildProjectExportItem).filter(Boolean);
+  if (projects.length) {
+    output.projects = projects;
+  }
+  return pickDefined(output);
+};
+
 const buildQuestionnaireExport = interview => {
   const questionnaire = interview?.options?.questionnaire || interview?.questionnaire || {};
   const schema = interview?.project?.setting?.questionnaire?.schema;
@@ -499,7 +596,145 @@ const buildQuestionnaireExport = interview => {
   return null;
 };
 
-export const buildInterviewExport = ({ interview, videoTranscripts, position, company, employee, assessment, resumeParsed, includeEmployee = false, includeResume = false } = {}) => {
+/** 与剪贴板导入对齐：每条证据导出为 { source, title, summary } */
+const buildEvidenceExport = evidence => {
+  const finalize = (summary, source, title) => {
+    const text = String(summary || '').trim();
+    if (!text) {
+      return null;
+    }
+    const src = String(source || '').trim();
+    const ttl = String(title || '').trim() || src || text.slice(0, 40);
+    return pickDefined({
+      source: src || null,
+      title: ttl || null,
+      summary: text
+    });
+  };
+  if (typeof evidence === 'string') {
+    const text = evidence.trim();
+    if (!text) {
+      return null;
+    }
+    const lines = text
+      .split(/\n+/)
+      .map(line => line.trim())
+      .filter(Boolean);
+    if (lines.length > 1) {
+      const list = lines.map(line => finalize(line, '', '')).filter(Boolean);
+      return list.length ? list : null;
+    }
+    const one = finalize(text, '', '');
+    return one ? [one] : null;
+  }
+  if (Array.isArray(evidence)) {
+    const list = evidence
+      .map(item => {
+        if (typeof item === 'string') {
+          return finalize(item, '', '');
+        }
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        return finalize(item.summary || item.text || item.content || item.description || '', item.source || item.sourceType || item.sourceLabel || item.origin || '', item.title || '');
+      })
+      .filter(Boolean);
+    return list.length ? list : null;
+  }
+  if (evidence && typeof evidence === 'object') {
+    const one = finalize(evidence.summary || evidence.text || evidence.content || evidence.description || '', evidence.source || evidence.sourceType || evidence.sourceLabel || evidence.origin || '', evidence.title || '');
+    return one ? [one] : null;
+  }
+  return null;
+};
+
+/** 档案审核草稿 skillAnalysis，含 confidence + 结构化 evidence */
+const buildSkillAnalysisExport = skillAnalysis => {
+  if (!skillAnalysis || typeof skillAnalysis !== 'object') {
+    return null;
+  }
+  const skills = Array.isArray(skillAnalysis.skills)
+    ? skillAnalysis.skills
+        .map(item => {
+          if (!item || typeof item !== 'object') {
+            return null;
+          }
+          const name = (typeof item.name === 'string' && item.name.trim()) || (typeof item.title === 'string' && item.title.trim()) || '';
+          if (!name) {
+            return null;
+          }
+          return pickDefined({
+            id: item.id || null,
+            name,
+            title: typeof item.title === 'string' && item.title.trim() ? item.title.trim() : name,
+            current: item.current ?? null,
+            required: item.required ?? null,
+            status: item.status || null,
+            confidence: item.confidence || null,
+            evidence: buildEvidenceExport(item.evidence)
+          });
+        })
+        .filter(Boolean)
+    : [];
+  return pickDefined({
+    readiness: skillAnalysis.readiness ?? null,
+    summary: skillAnalysis.summary || null,
+    metrics: skillAnalysis.metrics && typeof skillAnalysis.metrics === 'object' ? skillAnalysis.metrics : null,
+    skills: skills.length ? skills : null,
+    priorityGaps: Array.isArray(skillAnalysis.priorityGaps) && skillAnalysis.priorityGaps.length ? skillAnalysis.priorityGaps : null,
+    developmentPlan: skillAnalysis.developmentPlan && typeof skillAnalysis.developmentPlan === 'object' ? skillAnalysis.developmentPlan : null
+  });
+};
+
+/** 与剪贴板 §2 对齐的 reviewData（employee / profile / skillAnalysis / aiSuggest） */
+const buildReviewDataExport = profileDetail => {
+  if (!profileDetail || typeof profileDetail !== 'object') {
+    return null;
+  }
+  const profile = profileDetail.profile && typeof profileDetail.profile === 'object' ? profileDetail.profile : {};
+  const aiSuggest = profileDetail.aiSuggest && typeof profileDetail.aiSuggest === 'object' ? profileDetail.aiSuggest : null;
+  const skillAnalysis = buildSkillAnalysisExport(profileDetail.skillAnalysisDraft || profileDetail.skillAnalysis);
+  const omitEmployee = new Set(['profile', 'performances', 'orgEnums', 'positionEnums', 'aiSuggest', 'skillAnalysisDraft', 'skillAnalysis', 'createdAt', 'updatedAt', 'deletedAt']);
+  const cleanEmployee = {};
+  Object.keys(profileDetail).forEach(key => {
+    if (omitEmployee.has(key)) {
+      return;
+    }
+    cleanEmployee[key] = profileDetail[key];
+  });
+  if (cleanEmployee.id != null && String(cleanEmployee.id).startsWith('draft-')) {
+    delete cleanEmployee.id;
+  }
+  const cleanProfile = Object.assign({}, profile);
+  delete cleanProfile.id;
+  delete cleanProfile.employeeId;
+  delete cleanProfile.tenantId;
+  delete cleanProfile.createdAt;
+  delete cleanProfile.updatedAt;
+  delete cleanProfile.deletedAt;
+  return pickDefined({
+    employee: pickDefined(cleanEmployee),
+    profile: pickDefined(cleanProfile),
+    skillAnalysis,
+    aiSuggest
+  });
+};
+
+export const buildInterviewExport = ({
+  interview,
+  videoTranscripts,
+  position,
+  company,
+  employee,
+  assessment,
+  resumeParsed,
+  submittedInfo,
+  profileDetail,
+  includeEmployee = false,
+  includeResume = false,
+  includeSubmittedInfo = false,
+  includeReviewData = false
+} = {}) => {
   const data = {
     position: buildPositionExport(position),
     company: buildCompanyExport(company),
@@ -511,6 +746,27 @@ export const buildInterviewExport = ({ interview, videoTranscripts, position, co
   }
   if (includeResume) {
     data.resumeParsed = buildResumeExport(resumeParsed);
+  }
+  if (includeSubmittedInfo) {
+    const source = (submittedInfo && typeof submittedInfo === 'object' ? submittedInfo : null) || (assessment?.profileData && typeof assessment.profileData === 'object' ? assessment.profileData : null) || null;
+    data.submittedInfo = buildSubmittedInfoExport(source);
+  }
+  if (includeReviewData && profileDetail) {
+    const review = buildReviewDataExport(profileDetail);
+    if (review) {
+      if (review.employee) {
+        data.employee = Object.assign({}, data.employee || {}, review.employee);
+      }
+      if (review.profile) {
+        data.profile = review.profile;
+      }
+      if (review.skillAnalysis) {
+        data.skillAnalysis = review.skillAnalysis;
+      }
+      if (review.aiSuggest) {
+        data.aiSuggest = review.aiSuggest;
+      }
+    }
   }
   return data;
 };

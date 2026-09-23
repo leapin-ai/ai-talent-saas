@@ -17,20 +17,28 @@ const EvidenceFormInner = createWithRemoteLoader({
       { label: formatMessage({ id: 'talentProfile.evidenceSourceProject' }), value: 'project' },
       { label: formatMessage({ id: 'talentProfile.evidenceSourceProfile' }), value: 'profile' }
     ];
+    const confidenceOptions = [
+      { label: formatMessage({ id: 'talentProfile.confidenceHigh' }), value: 'high' },
+      { label: formatMessage({ id: 'talentProfile.confidenceMedium' }), value: 'medium' },
+      { label: formatMessage({ id: 'talentProfile.confidenceLow' }), value: 'low' }
+    ];
 
     return (
-      <List
-        name="items"
-        title={formatMessage({ id: 'talentProfile.evidenceUsed' })}
-        block
-        addText={formatMessage({ id: 'talentProfile.editAddEvidence' })}
-        itemTitle={({ index }) => formatMessage({ id: 'talentProfile.editEvidenceItem' }, { index: index + 1 })}
-        list={[
-          <Select name="sourceType" label={formatMessage({ id: 'talentProfile.evidenceSource' })} options={sourceOptions} rule="REQ" />,
-          <Input name="title" label={formatMessage({ id: 'talentProfile.editEvidenceTitle' })} rule="LEN-0-200" />,
-          <TextArea name="summary" label={formatMessage({ id: 'talentProfile.editEvidenceSummary' })} rule="REQ LEN-1-2000" block />
-        ]}
-      />
+      <>
+        <FormInfo column={1} list={[<Select name="confidence" label={formatMessage({ id: 'talentProfile.confidence' })} options={confidenceOptions} rule="REQ" />]} />
+        <List
+          name="items"
+          title={formatMessage({ id: 'talentProfile.evidenceUsed' })}
+          block
+          addText={formatMessage({ id: 'talentProfile.editAddEvidence' })}
+          itemTitle={({ index }) => formatMessage({ id: 'talentProfile.editEvidenceItem' }, { index: index + 1 })}
+          list={[
+            <Select name="sourceType" label={formatMessage({ id: 'talentProfile.evidenceSource' })} options={sourceOptions} rule="REQ" />,
+            <Input name="title" label={formatMessage({ id: 'talentProfile.editEvidenceTitle' })} rule="LEN-0-200" />,
+            <TextArea name="summary" label={formatMessage({ id: 'talentProfile.editEvidenceSummary' })} rule="REQ LEN-1-2000" block />
+          ]}
+        />
+      </>
     );
   })
 );
