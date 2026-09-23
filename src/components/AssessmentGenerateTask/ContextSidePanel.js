@@ -1,4 +1,4 @@
-import { Empty, Flex, Tabs, Typography } from 'antd';
+import { App, Button, Empty, Flex, Tabs, Typography } from 'antd';
 import { useMemo } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { applyAiInterviewRemote } from '../../preset';
@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import ResumeParseEditor from './ResumeParseEditor';
 import { formatValue } from './assessmentReviewUtils';
 import InterviewVideoTranscript from '@components/InterviewVideoTranscript';
+import { downloadInterviewExport } from '@components/PositionAnalysisTask/exportInterviewData';
 import style from './style.module.scss';
 
 const InfoCard = ({ title, children }) => (
@@ -143,16 +144,43 @@ const InterviewPaneGate = ({ interview, interviewError, apiHost, cdnUrl, version
 };
 
 const ContextSidePanel = ({ context, resumeParsed, onResumeParsedChange }) => {
+  const { message } = App.useApp();
   const resumes = Array.isArray(context?.resumes) ? context.resumes : [];
   const resumeFile = resumes[0];
   const fileId = resumeFile?.id || resumeFile?.ossId || resumeFile?.fileId || resumeParsed?.fileId;
   const filename = resumeFile?.filename || resumeFile?.originalName || resumeFile?.name || resumeParsed?.filename;
+
+  const exportData = () => {
+    if (!context?.interview && !context?.position && !context?.company && !context?.employee && !resumeParsed) {
+      message.warning('暂无可导出数据');
+      return;
+    }
+    const name = context?.employee?.name || context?.assessment?.name || context?.position?.name || 'export';
+    downloadInterviewExport({
+      interview: context?.interview,
+      videoTranscripts: context?.videoTranscripts,
+      position: context?.position,
+      company: context?.company,
+      employee: context?.employee,
+      assessment: context?.assessment,
+      resumeParsed,
+      includeEmployee: true,
+      includeResume: true,
+      filename: `profile-data-${name}`
+    });
+    message.success('已导出数据');
+  };
 
   return (
     <div className={style['side-panel']}>
       <Tabs
         size="small"
         className={style['side-tabs']}
+        tabBarExtraContent={
+          <Button size="small" type="link" className={style['export-btn']} onClick={exportData}>
+            导出数据
+          </Button>
+        }
         items={[
           {
             key: 'resume-original',

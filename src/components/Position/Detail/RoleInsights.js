@@ -142,6 +142,8 @@ const RoleInsights = createWithRemoteLoader({
     const magnitude = position?.changeMagnitude || 'low';
     const assessed = talentMetrics?.assessed || 0;
     const total = talentMetrics?.total || 0;
+    const efficiencyGain = position?.outlook?.aiEfficiencyGain ?? position?.verdict?.aiEfficiencyGain;
+    const efficiencyText = efficiencyGain == null || efficiencyGain === '' || !Number.isFinite(Number(efficiencyGain)) ? '—' : `${Math.round(Number(efficiencyGain))}%`;
 
     if (tasks == null) {
       return null;
@@ -157,6 +159,11 @@ const RoleInsights = createWithRemoteLoader({
         <div className={style['impact-item']}>
           <div className={style['impact-value']}>{talentMetrics?.teamReadiness == null ? '—' : `${talentMetrics.teamReadiness}%`}</div>
           <div className={style['impact-caption']}>{formatMessage({ id: 'position.teamReadinessCaption' })}</div>
+        </div>
+        <div className={style['impact-divider']} />
+        <div className={style['impact-item']}>
+          <div className={style['impact-value']}>{efficiencyText}</div>
+          <div className={style['impact-caption']}>{formatMessage({ id: 'position.aiEfficiencyGainCaption' })}</div>
         </div>
         <div className={style['impact-divider']} />
         <div className={style['impact-item']}>

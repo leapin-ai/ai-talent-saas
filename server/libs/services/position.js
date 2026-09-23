@@ -614,8 +614,14 @@ module.exports = fp(async (fastify, options) => {
         change = 'stable';
       }
     }
-    const activityCode = typeof raw.activityCode === 'string' ? raw.activityCode.trim().slice(0, 32) : '';
-    const activityTitle = typeof raw.activityTitle === 'string' ? raw.activityTitle.trim().slice(0, 160) : '';
+    const readActivityText = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
+    const activity = raw.activity && typeof raw.activity === 'object' && !Array.isArray(raw.activity) ? raw.activity : null;
+    const groupedText = readActivityText(raw.activityGroup || activity?.activityGroup, 200);
+    const groupedMatch = groupedText.match(/^([A-Za-z]?\d{1,3})\s*[·.\-–—:]?\s*(.*)$/);
+    const groupedCode = groupedMatch && groupedMatch[1] ? groupedMatch[1].toUpperCase().slice(0, 32) : '';
+    const groupedTitle = groupedMatch && groupedMatch[1] ? readActivityText(groupedMatch[2], 160) : groupedText.slice(0, 160);
+    const activityCode = readActivityText(raw.activityCode, 32) || readActivityText(activity?.activityCode, 32) || readActivityText(activity?.code, 32) || groupedCode;
+    const activityTitle = readActivityText(raw.activityTitle, 160) || readActivityText(activity?.activityTitle, 160) || readActivityText(activity?.title, 160) || readActivityText(activity?.content, 160) || groupedTitle;
     const formatActivityGroup = (code, title) => {
       const c = String(code || '')
         .trim()
@@ -713,15 +719,27 @@ module.exports = fp(async (fastify, options) => {
     return 'low';
   };
 
+  const normalizeAiEfficiencyGain = value => {
+    if (value == null || value === '') {
+      return null;
+    }
+    const num = Number(String(value).trim().replace(/%$/, ''));
+    if (!Number.isFinite(num)) {
+      return null;
+    }
+    return Math.max(0, Math.min(100, Math.round(num)));
+  };
+
   const normalizePositionVerdict = raw => {
     if (!raw || typeof raw !== 'object') {
-      return { summary: '', today: '', future: '', futureLabel: '' };
+      return { summary: '', today: '', future: '', futureLabel: '', aiEfficiencyGain: null };
     }
     return {
       summary: typeof raw.summary === 'string' ? raw.summary : '',
       today: typeof raw.today === 'string' ? raw.today : '',
       future: typeof raw.future === 'string' ? raw.future : '',
-      futureLabel: typeof raw.futureLabel === 'string' ? raw.futureLabel : ''
+      futureLabel: typeof raw.futureLabel === 'string' ? raw.futureLabel : '',
+      aiEfficiencyGain: normalizeAiEfficiencyGain(raw.aiEfficiencyGain)
     };
   };
 
@@ -1474,7 +1492,7 @@ module.exports = fp(async (fastify, options) => {
   };
 
   const buildPositionOverviewSchemaHint = () => ({
-    verdict: { summary: 'string', today: 'string', future: 'string', futureLabel: 'string' },
+    verdict: { summary: 'string', today: 'string', future: 'string', futureLabel: 'string', aiEfficiencyGain: 'number 0-100 (AI Efficiency Gain percent, e.g. 12 means 12%)' },
     description: 'string(html ok)',
     requirement: 'string(html ok)',
     developmentGoal: 'string(optional, future business goals for this role)',
@@ -1589,6 +1607,8 @@ module.exports = fp(async (fastify, options) => {
         id: skillStub.id,
         name: skillStub.name,
         origin: skillStub.origin || 'existing',
+        activityCode: skillStub.activityCode || draftItem.activityCode || '',
+        activityTitle: skillStub.activityTitle || draftItem.activityTitle || '',
         index: index + 1,
         total
       }
@@ -1769,7 +1789,9 @@ module.exports = fp(async (fastify, options) => {
     const skillList = normalizePositionSkills(listRaw?.skill || draft?.skill || context.position?.skill || []).map(item => ({
       id: item.id,
       name: item.name,
-      origin: item.origin
+      origin: item.origin,
+      activityCode: item.activityCode,
+      activityTitle: item.activityTitle
     }));
 
     if (skillList.length === 0) {

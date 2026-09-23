@@ -180,10 +180,10 @@ const requestPositionAnalysisFill = async (fastify, { step, schema, context, dra
     '根据 CONTEXT 与 DRAFT 生成当前步骤可直接写入表单的 JSON。只返回 JSON 对象，不要 markdown。保留 DRAFT 中已有的 id/employeeId/employeeName。内容需与岗位详情/人才分析展示字段一致。' +
     languageInstruction(outputLanguage) +
     (step === 'position'
-      ? ' 先输出岗位研判 verdict、工作内容 description、工作要求 requirement、skill 技能列表（仅 id/name/origin，至少 3 项；禁止在此步输出 importanceNow/contentItems 等明细字段），以及 workforceStrategy（Gap Recommendations：优先各一张 BUILD/MOVE/BUY/AUGMENT，每张含 action/title/detail）。'
+      ? ' 先输出岗位研判 verdict、工作内容 description、工作要求 requirement、skill 技能列表（至少 3 项；每项必须含 id、name、origin、activityCode、activityTitle。activityCode 是编号，如 A01；activityTitle 是内容，如 Customer Focus。同一 Activity 下的多条 Task 必须共用同一 activityCode 与 activityTitle。禁止在此步输出 importanceNow/contentItems 等明细字段），以及 workforceStrategy（Gap Recommendations：优先各一张 BUILD/MOVE/BUY/AUGMENT，每张含 action/title/detail）。verdict.aiEfficiencyGain 必填：岗位级 AI 效率增益，0-100 的整数（12 表示 12%），按任务的 AI 暴露与可自动化程度估算，不要省略、不要带百分号。'
       : '') +
     (step === 'position-skill'
-      ? ' 仅为 CONTEXT.targetSkill 指定的这一条技能生成完整明细。严格返回 { skill: [ 恰好 1 条 ] }，禁止返回其它技能、禁止返回 skill 列表。保留该技能 id/name/origin。必须含 importanceNow/importanceYear/change（must_build|ai_emerging|new|enhanced|stable|declining）、aiExposure/confidence。contentItems 是该技能的「依据」列表：至少 2 条，每条含 title（自定义标题，不要固定套「职位描述 / 胜任力」「冲击报告」）、description（具体说明，结合岗位与该技能）、source（来源，如岗位JD/行业报告/AI冲击分析）。contentItems 不可为空。禁止输出 jd/shockReport，禁止把其它技能的依据抄进来。'
+      ? ' 仅为 CONTEXT.targetSkill 指定的这一条技能生成完整明细。严格返回 { skill: [ 恰好 1 条 ] }，禁止返回其它技能、禁止返回 skill 列表。保留该技能 id/name/origin。activityCode（编号）与 activityTitle（内容）必须有值：DRAFT 或 CONTEXT.targetSkill 已有则原样保留，为空则补全，且同一 Activity 的任务保持一致。必须含 importanceNow/importanceYear/change（must_build|ai_emerging|new|enhanced|stable|declining）、aiExposure/confidence。contentItems 是该技能的「依据」列表：至少 2 条，每条含 title（自定义标题，不要固定套「职位描述 / 胜任力」「冲击报告」）、description（具体说明，结合岗位与该技能）、source（来源，如岗位JD/行业报告/AI冲击分析）。contentItems 不可为空。禁止输出 jd/shockReport，禁止把其它技能的依据抄进来。'
       : '') +
     (step === 'person'
       ? ' 仅为 CONTEXT 中当前这一位员工生成完整人才分析。返回 { employees: [ 恰好 1 条 ] }，保留 employeeId/employeeName。必须含 readiness/summary/metrics/skills/priorityGaps，以及 developmentPlan（subtitle + 恰好 short/mid/long 三阶段，每阶段含 label/period/title/tone/target，且每阶段 2～3 条 items，items 不可为空）。horizons.label/period 使用 OUTPUT_LANGUAGE。'

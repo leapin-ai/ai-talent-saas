@@ -318,6 +318,7 @@ const CompleteAssessmentGenerateTask = createWithRemoteLoader({
         open={open}
         title="完善档案生成审核"
         size="large"
+        noPadding
         destroyOnHidden
         disabledScroller
         onCancel={() => {

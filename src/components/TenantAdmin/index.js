@@ -3,7 +3,7 @@ import { Flex } from 'antd';
 import AppChildrenRouter from '@kne/app-children-router';
 import Layout from './Layout';
 import { Page } from '@kne/system-layout';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import TalentMarket from '@components/TalentMarket';
 import TalentProfile from '@components/TalentProfile';
@@ -16,6 +16,11 @@ import CompleteProfileApplicationDetail from './CompleteProfileApplicationDetail
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
 import { TENANT_ADMIN_PERMISSIONS, TALENT_PROFILE_CARD_PERMISSIONS } from './constants';
+
+const PositionTalentRedirect = ({ baseUrl }) => {
+  const { employeeId } = useParams();
+  return <Navigate to={employeeId ? `${baseUrl}/profile/${employeeId}` : `${baseUrl}/position`} replace />;
+};
 
 const TenantAdmin = createWithRemoteLoader({
   modules: ['components-admin:Tenant@Setting', 'components-core:Global@usePreset', 'components-admin:BizUnit@TablePageRender', 'components-core:File@PrintButton', 'components-core:Permissions']
@@ -120,6 +125,7 @@ const TenantAdmin = createWithRemoteLoader({
                         orgList: apis.tenant.orgList
                       })}
                       permissions={TALENT_PROFILE_CARD_PERMISSIONS}
+                      readinessReadOnly
                     />
                   </div>
                 </Page>
@@ -227,21 +233,8 @@ const TenantAdmin = createWithRemoteLoader({
           },
           {
             path: 'position/:id/talent/:employeeId',
-            title: 'Position/TalentSkillAnalysis',
-            elementProps: {
-              baseUrl,
-              apis: Object.assign({}, apis.talentSaas.tenant.position, {
-                orgList: apis.tenant.orgList
-              }),
-              children: ({ title, extra, children }) => (
-                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
-                  <Page back title={title} extra={extra} noPadding>
-                    {children}
-                  </Page>
-                </Permissions>
-              )
-            },
-            loader: () => import('@components/Position/Detail/TalentSkillAnalysis')
+            title: formatMessage({ id: 'tenantAdmin.employeeProfile' }),
+            element: <PositionTalentRedirect baseUrl={baseUrl} />
           },
           {
             path: 'position/:id/invite-records',

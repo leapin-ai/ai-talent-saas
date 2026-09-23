@@ -735,7 +735,8 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef
               <TextArea name="verdict.summary" label="洞察摘要" rule="REQ" block key="verdict.summary" />,
               <TextArea name="verdict.today" label="今日结论" rule="REQ" block key="verdict.today" />,
               <TextArea name="verdict.future" label="未来结论" rule="REQ" block key="verdict.future" />,
-              <Input name="verdict.futureLabel" label="未来标签" key="verdict.futureLabel" />
+              <Input name="verdict.futureLabel" label="未来标签" key="verdict.futureLabel" />,
+              <Input name="verdict.aiEfficiencyGain" label="AI 效率增益（%）" key="verdict.aiEfficiencyGain" />
             ]}
           />
           <List

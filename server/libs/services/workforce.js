@@ -237,13 +237,25 @@ module.exports = fp(async (fastify, options) => {
       .filter(Boolean);
   };
 
+  const normalizeAiEfficiencyGain = value => {
+    if (value == null || value === '') {
+      return null;
+    }
+    const num = Number(String(value).trim().replace(/%$/, ''));
+    if (!Number.isFinite(num)) {
+      return null;
+    }
+    return Math.max(0, Math.min(100, Math.round(num)));
+  };
+
   const outlookFromVerdict = verdict => {
     const data = verdict && typeof verdict === 'object' ? verdict : {};
     return {
       summary: data.summary || '',
       drivesSuccessNow: data.today ? [data.today] : [],
       howRoleChanging: data.future ? [data.future] : [],
-      aiImpact: data.futureLabel || ''
+      aiImpact: data.futureLabel || '',
+      aiEfficiencyGain: normalizeAiEfficiencyGain(data.aiEfficiencyGain)
     };
   };
 
@@ -632,6 +644,31 @@ module.exports = fp(async (fastify, options) => {
 
   const checklistItem = (key, label, done) => ({ key, label, done: !!done });
 
+  const hasText = value => {
+    if (typeof value === 'string') {
+      return value.trim().length > 0;
+    }
+    if (value && typeof value === 'object') {
+      const number = value.number ?? value.phone ?? value.value ?? value.email;
+      return number != null && String(number).trim().length > 0;
+    }
+    return false;
+  };
+
+  const hasContent = value => {
+    if (Array.isArray(value)) {
+      return value.some(item => hasContent(item) || hasText(item));
+    }
+    if (value && typeof value === 'object') {
+      return Object.values(value).some(item => hasContent(item) || hasText(item) || (typeof item === 'number' && Number.isFinite(item)));
+    }
+    return hasText(value) || (typeof value === 'number' && Number.isFinite(value));
+  };
+
+  /**
+   * 完善档案生成审核结束后，按本次提交内容估算档案完成度。
+   * 六项等权：基础信息、简历、填写信息、AI 面试、就绪度、成长建议。
+   */
   const recomputeProfileCompletion = async ({ tenantId, employeeId, assessment } = {}) => {
     const employee = await models.employee.findOne({
       where: { id: employeeId, tenantId },
@@ -640,23 +677,30 @@ module.exports = fp(async (fastify, options) => {
     if (!employee) {
       return null;
     }
-    const profile = employee.profile || {};
-    const options = employee.options || {};
-    const profileData = assessment?.profileData || {};
-    const projects = profileData.projects || profile.options?.projects || [];
-    const linkedin = profileData.linkedin || options.linkedin || '';
-    const hasContact = !!(employee.name && (employee.phone || employee.email));
+    const review = assessment?.reviewData && typeof assessment.reviewData === 'object' ? assessment.reviewData : {};
+    const reviewEmployee = review.employee && typeof review.employee === 'object' ? review.employee : {};
+    const reviewProfile = review.profile && typeof review.profile === 'object' ? review.profile : {};
+    const profileData = assessment?.profileData && typeof assessment.profileData === 'object' ? assessment.profileData : {};
+    const interview = assessment?.interviewData && typeof assessment.interviewData === 'object' ? assessment.interviewData : {};
     const resumes = employee.resumes || profileData.resumes || [];
-    const hasCv = Array.isArray(resumes) ? resumes.length > 0 : !!employee.currentResumeId;
-    const hasInterview = !!(assessment?.clientUserId || assessment?.interviewData?.interviewId);
-    const approved = assessment?.status === 'approved' || assessment?.status === 'submitted';
+    const skillAnalysis = review.skillAnalysis && typeof review.skillAnalysis === 'object' ? review.skillAnalysis : {};
+    const aiSuggest = review.aiSuggest && typeof review.aiSuggest === 'object' ? review.aiSuggest : {};
+
+    const hasBasic = hasText(reviewEmployee.name || employee.name) && (hasText(reviewEmployee.phone) || hasContent(reviewEmployee.phone) || hasText(reviewEmployee.email) || hasText(employee.phone) || hasText(employee.email));
+    const hasCv = (Array.isArray(resumes) && resumes.length > 0) || !!employee.currentResumeId || hasContent(profileData.resumeParsed);
+    const hasSubmittedInfo =
+      hasText(reviewEmployee.description) || hasText(reviewEmployee.city) || hasText(reviewEmployee.college) || hasText(reviewEmployee.major) || hasContent(reviewProfile.skills) || hasContent(reviewProfile.intentionPosition);
+    const hasInterview = !!(interview.interviewId || hasContent(interview.answers) || hasContent(interview.questionnaire) || (Array.isArray(interview.history) && interview.history.length > 0) || assessment?.clientUserId);
+    const hasReadiness = skillAnalysis.readiness != null && skillAnalysis.readiness !== '' && Number.isFinite(Number(skillAnalysis.readiness));
+    const hasSuggest = hasContent(aiSuggest.shortTerm) || hasContent(aiSuggest.longTerm) || hasContent(aiSuggest.matchPosition);
+
     const checklist = [
-      checklistItem('basic', '基础信息', hasContact),
-      checklistItem('cv', 'CV', hasCv),
-      checklistItem('linkedin', 'LinkedIn', !!linkedin),
-      checklistItem('project', '项目经历', Array.isArray(projects) && projects.length > 0),
+      checklistItem('basic', '基础信息', hasBasic),
+      checklistItem('cv', '简历', hasCv),
+      checklistItem('submitted', '填写信息', hasSubmittedInfo),
       checklistItem('ai_interview', 'AI 面试', hasInterview),
-      checklistItem('approved', '审核通过', approved)
+      checklistItem('readiness', '就绪度', hasReadiness),
+      checklistItem('suggest', '成长建议', hasSuggest)
     ];
     const done = checklist.filter(item => item.done).length;
     const percent = Math.round((done / checklist.length) * 100);

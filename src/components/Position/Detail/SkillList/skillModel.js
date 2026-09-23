@@ -147,9 +147,28 @@ export const formatActivityGroup = (code, title) => {
   return (c || t).slice(0, 200);
 };
 
+const readActivityText = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
+
+const parseActivityGroup = value => {
+  const text = readActivityText(value, 200);
+  if (!text) {
+    return { activityCode: '', activityTitle: '' };
+  }
+  const matched = text.match(/^([A-Za-z]?\d{1,3})\s*[·.\-–—:]?\s*(.*)$/);
+  if (matched && matched[1]) {
+    return {
+      activityCode: matched[1].toUpperCase().slice(0, 32),
+      activityTitle: readActivityText(matched[2], 160)
+    };
+  }
+  return { activityCode: '', activityTitle: text.slice(0, 160) };
+};
+
 const resolveActivityFields = raw => {
-  const activityCode = typeof raw?.activityCode === 'string' ? raw.activityCode.trim().slice(0, 32) : '';
-  const activityTitle = typeof raw?.activityTitle === 'string' ? raw.activityTitle.trim().slice(0, 160) : '';
+  const activity = raw?.activity && typeof raw.activity === 'object' && !Array.isArray(raw.activity) ? raw.activity : null;
+  const grouped = parseActivityGroup(raw?.activityGroup || activity?.activityGroup);
+  const activityCode = readActivityText(raw?.activityCode, 32) || readActivityText(activity?.activityCode, 32) || readActivityText(activity?.code, 32) || grouped.activityCode;
+  const activityTitle = readActivityText(raw?.activityTitle, 160) || readActivityText(activity?.activityTitle, 160) || readActivityText(activity?.title, 160) || readActivityText(activity?.content, 160) || grouped.activityTitle;
   return {
     activityCode,
     activityTitle,
@@ -245,18 +264,31 @@ export const countByChange = skills => {
  * @property {string} today
  * @property {string} future
  * @property {string} [futureLabel] - optional display label, e.g. "2026–2030"
+ * @property {number|null} [aiEfficiencyGain] - role-level AI efficiency gain, 0-100
  */
+
+const normalizeAiEfficiencyGain = value => {
+  if (value == null || value === '') {
+    return null;
+  }
+  const num = Number(String(value).trim().replace(/%$/, ''));
+  if (!Number.isFinite(num)) {
+    return null;
+  }
+  return Math.max(0, Math.min(100, Math.round(num)));
+};
 
 /** @returns {PositionVerdict} */
 export const normalizeVerdict = raw => {
   if (!raw || typeof raw !== 'object') {
-    return { summary: '', today: '', future: '', futureLabel: '' };
+    return { summary: '', today: '', future: '', futureLabel: '', aiEfficiencyGain: null };
   }
   return {
     summary: typeof raw.summary === 'string' ? raw.summary : '',
     today: typeof raw.today === 'string' ? raw.today : '',
     future: typeof raw.future === 'string' ? raw.future : '',
-    futureLabel: typeof raw.futureLabel === 'string' ? raw.futureLabel : ''
+    futureLabel: typeof raw.futureLabel === 'string' ? raw.futureLabel : '',
+    aiEfficiencyGain: normalizeAiEfficiencyGain(raw.aiEfficiencyGain)
   };
 };
 

@@ -5,15 +5,14 @@ import { Card } from '@kne/react-box';
 import '@kne/react-box/dist/index.css';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
-import { useIsMobile } from '@kne/responsive-utils';
 import classnames from 'classnames';
+import ActivityTaskTable from '@components/ActivityTaskTable';
 import withLocale from './withLocale';
 import ProfileEvidence from './ProfileEvidence';
 import { ReadinessFormInner, TaskReadinessFormInner } from './FormInner';
+import { CapabilityStatusCard } from '@components/Position/Detail/TalentSkillAnalysis';
 import style from './style.module.scss';
-import iconSpark from './assets/icon-spark.svg';
 import iconClipboard from './assets/icon-clipboard.svg';
-import iconCollapse from './assets/icon-collapse.svg';
 
 const padRank = rank => String(rank).padStart(2, '0');
 
@@ -61,28 +60,6 @@ const CONFIDENCE_KEYS = {
   high: 'talentProfile.confidenceHigh',
   medium: 'talentProfile.confidenceMedium',
   low: 'talentProfile.confidenceLow'
-};
-
-const ReadinessRing = ({ value, formatMessage }) => {
-  const pct = Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
-  const size = 132;
-  const stroke = 10;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - pct / 100);
-
-  return (
-    <div className={style['readiness-ring']} aria-label={formatMessage({ id: 'talentProfile.readinessAria' }, { percent: pct })}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e2e8f0" strokeWidth={stroke} />
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#059669" strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
-      </svg>
-      <div className={style['readiness-ring-label']}>
-        <div className={style['readiness-ring-value']}>{pct}%</div>
-        <div className={style['readiness-ring-caption']}>{formatMessage({ id: 'talentProfile.readinessCaption' })}</div>
-      </div>
-    </div>
-  );
 };
 
 const SkillProgress = ({ current, required }) => {
@@ -148,15 +125,15 @@ const deriveFromRows = rows => {
 };
 
 const ProfileReadiness = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:FormInfo@useFormModal']
+  modules: ['components-core:Global@usePreset', 'components-core:FormInfo@useFormModal', 'components-core:Global@useGlobalValue']
 })(
-  withLocale(({ remoteModules, positionId, employeeId, displayName, readOnly, analysisOverride, onGenerateInsight, generatingInsight }) => {
-    const [usePreset, useFormModal] = remoteModules;
+  withLocale(({ remoteModules, positionId, employeeId, displayName, readOnly, analysisOverride }) => {
+    const [usePreset, useFormModal, useGlobalValue] = remoteModules;
     const { ajax, apis } = usePreset();
     const formModal = useFormModal();
     const { message } = App.useApp();
     const { formatMessage } = useIntl();
-    const isMobile = useIsMobile();
+    const themeColor = useGlobalValue('themeToken')?.colorPrimary;
     const [rows, setRows] = useState(null);
     const [analysis, setAnalysis] = useState(null);
     const [error, setError] = useState('');
@@ -218,12 +195,6 @@ const ProfileReadiness = createWithRemoteLoader({
     const metrics = effectiveAnalysis?.metrics || derived.metrics;
     const priorityGaps = Array.isArray(effectiveAnalysis?.priorityGaps) && effectiveAnalysis.priorityGaps.length ? effectiveAnalysis.priorityGaps : derived.priorityGaps;
     const summary = effectiveAnalysis?.summary || '';
-    const firstName =
-      String(displayName || '')
-        .split(/\s+/)
-        .filter(Boolean)[0] ||
-      displayName ||
-      '';
 
     const groups = useMemo(() => {
       const list = rows || [];
@@ -241,6 +212,7 @@ const ProfileReadiness = createWithRemoteLoader({
           id: key || 'ungrouped',
           code: parsed.code || `A${String(index + 1).padStart(2, '0')}`,
           title: parsed.title || key || formatMessage({ id: 'talentProfile.task' }),
+          countLabel: formatMessage({ id: 'talentProfile.activityTaskCount' }, { count: children.length }),
           children
         };
       });
@@ -422,56 +394,13 @@ const ProfileReadiness = createWithRemoteLoader({
       });
     };
 
-    const actionButtons =
-      !readOnly && (onGenerateInsight || (positionId && employeeId)) ? (
-        <Flex gap={4} align="center">
-          {onGenerateInsight ? (
-            <Button type="text" className={style['edit-btn']} loading={!!generatingInsight} onClick={() => onGenerateInsight()}>
-              {formatMessage({ id: 'talentProfile.generateInsight' })}
-            </Button>
-          ) : null}
-          {positionId && employeeId ? <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditReadiness} /> : null}
-        </Flex>
-      ) : null;
-
     const canEditFutureTasks = !readOnly && positionId && employeeId && !String(employeeId).startsWith('draft-');
 
     return (
       <div className={style['readiness-root']}>
         {error ? <Typography.Text type="danger">{error}</Typography.Text> : null}
         <div className={style['readiness-top']}>
-          <Card className={style['halo-card']} theme="halo" hover={false} extra={actionButtons}>
-            <div className={style['halo-body']}>
-              <ReadinessRing value={readiness} formatMessage={formatMessage} />
-              <div className={style['halo-copy']}>
-                <div className={style['halo-title']}>
-                  <span className={style['halo-title-icon']}>
-                    <img src={iconSpark} alt="" />
-                  </span>
-                  {formatMessage({ id: 'talentProfile.whereStands' }, { name: firstName || formatMessage({ id: 'talentProfile.you' }) })}
-                </div>
-                <div className={style['halo-summary']}>{summary || formatMessage({ id: 'talentProfile.readinessNoSummary' })}</div>
-                <Flex className={style['halo-metrics']} align="stretch" gap={0}>
-                  <div className={style['halo-metric']}>
-                    <div className={classnames(style['halo-metric-value'], style['halo-metric-critical'])}>{metrics?.criticalGaps ?? 0}</div>
-                    <div className={style['halo-metric-label']}>{formatMessage({ id: 'talentProfile.criticalGaps' })}</div>
-                  </div>
-                  <div className={style['halo-divider']} />
-                  <div className={style['halo-metric']}>
-                    <div className={classnames(style['halo-metric-value'], style['halo-metric-ok'])}>{metrics?.atOrAbove ?? 0}</div>
-                    <div className={style['halo-metric-label']}>{formatMessage({ id: 'talentProfile.atOrAbove' })}</div>
-                  </div>
-                  <div className={style['halo-divider']} />
-                  <div className={style['halo-metric']}>
-                    <div className={classnames(style['halo-metric-value'], style['halo-metric-close'])}>
-                      {metrics?.monthsToClose == null ? formatMessage({ id: 'talentProfile.emptyValue' }) : formatMessage({ id: 'talentProfile.monthsValue' }, { months: metrics.monthsToClose })}
-                    </div>
-                    <div className={style['halo-metric-label']}>{formatMessage({ id: 'talentProfile.toClose' })}</div>
-                  </div>
-                </Flex>
-              </div>
-            </div>
-          </Card>
+          <CapabilityStatusCard name={displayName} readiness={readiness} summary={summary} metrics={metrics} themeColor={themeColor} />
 
           <Card
             className={style['gaps-card']}
@@ -479,8 +408,8 @@ const ProfileReadiness = createWithRemoteLoader({
             hover={false}
             title={formatMessage({ id: 'talentProfile.priorityGaps' })}
             extra={
-              <Flex align="center" gap={8}>
-                <span>{formatMessage({ id: 'talentProfile.topGaps' }, { count: Math.min(3, priorityGaps.length || 3) })}</span>
+              <Flex align="center" gap={4}>
+                <span className={style['gaps-badge']}>{formatMessage({ id: 'talentProfile.topGaps' }, { count: Math.min(3, priorityGaps.length || 3) })}</span>
                 {!readOnly && positionId && employeeId ? <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditReadiness} /> : null}
               </Flex>
             }
@@ -534,55 +463,37 @@ const ProfileReadiness = createWithRemoteLoader({
           ) : (
             <div className={style['future-task-body']}>
               <div className={style['future-task-main']}>
-                <div className={style['future-task-table']}>
-                  {!isMobile ? (
-                    <div className={classnames(style['task-row'], style['task-head'])}>
-                      <div>{formatMessage({ id: 'talentProfile.colActivityTask' })}</div>
-                      <div>{formatMessage({ id: 'talentProfile.status' })}</div>
-                      <div>{formatMessage({ id: 'talentProfile.currentVsRequiredScale' })}</div>
-                      <div className={style['task-head-end']}>{formatMessage({ id: 'talentProfile.confidence' })}</div>
+                <ActivityTaskTable
+                  groups={groups}
+                  columns={[
+                    formatMessage({ id: 'talentProfile.colActivityTask' }),
+                    formatMessage({ id: 'talentProfile.status' }),
+                    formatMessage({ id: 'talentProfile.currentVsRequiredScale' }),
+                    formatMessage({ id: 'talentProfile.confidence' })
+                  ]}
+                  expanded={expanded}
+                  onToggle={toggleGroup}
+                  selectedId={selectedTask?.id}
+                  onSelect={item => setSelectedId(item.id)}
+                  onHover={item => {
+                    if (item?.id && item.id !== selectedId) {
+                      setSelectedId(item.id);
+                    }
+                  }}
+                  renderPrimary={item => item.title}
+                  renderSecondary={item => {
+                    const status = resolveStatus(item);
+                    const meta = STATUS_META[status] || STATUS_META.gap;
+                    return <span className={classnames(style['status-pill'], style[meta.tone])}>{formatMessage({ id: meta.labelKey })}</span>;
+                  }}
+                  renderMetric={item => (
+                    <div className={style['task-progress-cell']}>
+                      <SkillProgress current={item.current} required={item.required} />
+                      <span className={style['skill-score']}>{formatMessage({ id: 'talentProfile.scoreSlash' }, { current: item.current ?? 0, required: item.required ?? 0 })}</span>
                     </div>
-                  ) : null}
-                  {groups.map(group => {
-                    const open = expanded[group.id] !== false;
-                    return (
-                      <div key={group.id} className={style['task-group']}>
-                        <button type="button" className={style['task-parent']} onClick={() => toggleGroup(group.id)} aria-expanded={open}>
-                          <span className={style['task-parent-main']}>
-                            {group.code ? <span className={style['activity-code']}>{group.code}</span> : null}
-                            <span className={style['activity-meta']}>
-                              <span className={style['activity-title']}>{group.title || group.code}</span>
-                              <span className={style['activity-count']}>{formatMessage({ id: 'talentProfile.activityTaskCount' }, { count: group.children.length })}</span>
-                            </span>
-                          </span>
-                          <img className={classnames(style['collapse-icon'], !open && style['collapse-icon-collapsed'])} src={iconCollapse} alt="" />
-                        </button>
-                        {open
-                          ? group.children.map(item => {
-                              const status = resolveStatus(item);
-                              const meta = STATUS_META[status] || STATUS_META.gap;
-                              const confidence = item.confidence || 'medium';
-                              return (
-                                <div key={item.id} className={classnames(style['task-row'], style['task-child'], selectedTask?.id === item.id && style['task-selected'])} onClick={() => setSelectedId(item.id)}>
-                                  <div className={style['task-name']} title={item.title}>
-                                    {item.title}
-                                  </div>
-                                  <div>
-                                    <span className={classnames(style['status-pill'], style[meta.tone])}>{formatMessage({ id: meta.labelKey })}</span>
-                                  </div>
-                                  <div className={style['task-progress-cell']}>
-                                    <SkillProgress current={item.current} required={item.required} />
-                                    <span className={style['skill-score']}>{formatMessage({ id: 'talentProfile.scoreSlash' }, { current: item.current ?? 0, required: item.required ?? 0 })}</span>
-                                  </div>
-                                  <div className={style['task-confidence']}>{formatMessage({ id: CONFIDENCE_KEYS[confidence] || CONFIDENCE_KEYS.medium })}</div>
-                                </div>
-                              );
-                            })
-                          : null}
-                      </div>
-                    );
-                  })}
-                </div>
+                  )}
+                  renderTrailing={item => formatMessage({ id: CONFIDENCE_KEYS[item.confidence || 'medium'] || CONFIDENCE_KEYS.medium })}
+                />
                 <div className={style.legend}>
                   <span className={style['legend-item']}>
                     <span className={style['legend-fill']} />

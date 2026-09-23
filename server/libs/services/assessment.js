@@ -899,7 +899,31 @@ module.exports = fp(async (fastify, options) => {
     let version = '';
     let videoTranscripts = null;
     let videoAsrStatus = null;
+    let exportPosition = null;
+    let exportCompany = null;
     let interviewId = row.clientUserId || row.interviewData?.interviewId || null;
+    try {
+      const companyRow = await fastify.tenant.services.company.detail({ tenantId });
+      if (companyRow) {
+        exportCompany = {
+          id: companyRow.id,
+          name: companyRow.name || '',
+          fullName: companyRow.fullName || '',
+          logo: companyRow.logo || null,
+          industry: companyRow.industry || '',
+          scale: companyRow.scale || '',
+          address: companyRow.address || '',
+          phone: companyRow.phone || '',
+          email: companyRow.email || '',
+          website: companyRow.website || '',
+          foundedDate: companyRow.foundedDate || null,
+          description: companyRow.description || '',
+          companyTags: companyRow.companyTags || []
+        };
+      }
+    } catch (e) {
+      exportCompany = null;
+    }
     try {
       const setting = await services.aiInterview.detail({ tenantId });
       cdnUrl = setting?.cdnUrl || '';
@@ -958,6 +982,29 @@ module.exports = fp(async (fastify, options) => {
         videoAsrStatus = collectInviteRow.interviewData.videoAsrStatus || null;
       }
 
+      const positionId = collectInviteRow?.positionId || task.input?.positionId || null;
+      if (positionId && services.position?.detail) {
+        const positionRow = await services.position.detail({ tenantId }, { id: String(positionId) });
+        const plain = positionRow?.get ? positionRow.get({ plain: true }) : positionRow;
+        if (plain) {
+          exportPosition = {
+            id: plain.id,
+            name: plain.name,
+            description: plain.description || '',
+            requirement: plain.requirement || '',
+            developmentGoal: plain.developmentGoal || '',
+            tenantOrgId: plain.tenantOrgId ?? null,
+            language: plain.language || null,
+            locationType: plain.locationType || null,
+            location: plain.location || {},
+            capacity: plain.capacity || '',
+            salary: plain.salary || {},
+            status: plain.status || null,
+            orgEnums: positionRow.getDataValue?.('orgEnums') || plain.orgEnums || []
+          };
+        }
+      }
+
       if (!interviewId) {
         interviewError = '缺少面试 clientUserId';
       } else {
@@ -982,6 +1029,8 @@ module.exports = fp(async (fastify, options) => {
       resumes,
       resumeParsed,
       submittedInfo: submittedProfileData,
+      position: exportPosition,
+      company: exportCompany,
       interview,
       interviewError,
       videoTranscripts,
@@ -1041,10 +1090,22 @@ module.exports = fp(async (fastify, options) => {
     row.generateTaskId = task.id;
     await row.save();
     try {
+      let employeeId = null;
       const linked = await loadEmployeeByTenantUserId(tenantId, row.tenantUserId);
-      if (linked && services.workforce) {
-        await services.workforce.seedEvidenceFromEmployee({ tenantId, employee: linked, assessment: row });
-        await services.workforce.recomputeProfileCompletion({ tenantId, employeeId: linked.id, assessment: row });
+      if (linked?.id) {
+        employeeId = linked.id;
+      } else if (row.interviewData?.collectInviteId && models.talentCollectInvite) {
+        const invite = await models.talentCollectInvite.findByPk(String(row.interviewData.collectInviteId));
+        if (invite?.employeeId) {
+          employeeId = invite.employeeId;
+        }
+      }
+      if (employeeId && services.workforce) {
+        const employee = linked || (await models.employee.findByPk(employeeId));
+        if (employee) {
+          await services.workforce.seedEvidenceFromEmployee({ tenantId, employee, assessment: row });
+        }
+        await services.workforce.recomputeProfileCompletion({ tenantId, employeeId, assessment: row });
       }
     } catch (error) {
       fastify.log.warn({ err: error }, 'profile completion after generate failed');

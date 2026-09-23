@@ -37,6 +37,7 @@ const TalentProfile = createWithRemoteLoader({
       id: idProp,
       self,
       readOnly,
+      readinessReadOnly,
       embed,
       empty,
       onData,
@@ -382,7 +383,7 @@ const TalentProfile = createWithRemoteLoader({
           navigate(`${baseUrl}/position/${positionId}`);
         };
         return (
-          <Flex className={classnames(style['talent-profile'], embed && style['talent-profile-embed'])} vertical gap={embed ? 12 : 16}>
+          <Flex className={classnames(style['talent-profile'], embed && style['talent-profile-embed'], readOnly && style['is-readonly'])} data-profile-mode={readOnly ? 'readonly' : 'editable'} vertical gap={embed ? 12 : 16}>
             <DataNotifier data={data} onData={onData} />
             <CardGate request={cardPermissions?.header}>
               <HeaderCard
@@ -413,7 +414,7 @@ const TalentProfile = createWithRemoteLoader({
                       employeeId={employeeId}
                       displayName={profileData.name}
                       positionId={positionId}
-                      readOnly={readOnly}
+                      readOnly={readOnly || readinessReadOnly}
                       analysisOverride={data.skillAnalysisDraft || null}
                       onGenerateInsight={onGenerateInsight}
                       generatingInsight={generatingInsight}
@@ -430,7 +431,7 @@ const TalentProfile = createWithRemoteLoader({
                       aiRecommendations={aiRecommendations}
                       gotoPosition={gotoPosition}
                       permissions={cardPermissions}
-                      readOnly={readOnly}
+                      readOnly={readOnly || readinessReadOnly}
                       employeeId={employeeId}
                       saveAiSuggest={saveAiSuggest}
                       aiSuggest={data.aiSuggest}
@@ -449,7 +450,7 @@ const TalentProfile = createWithRemoteLoader({
                       aiRecommendations={aiRecommendations}
                       gotoPosition={gotoPosition}
                       permissions={cardPermissions}
-                      readOnly={readOnly}
+                      readOnly={readOnly || readinessReadOnly}
                       employeeId={employeeId}
                       saveAiSuggest={saveAiSuggest}
                       aiSuggest={data.aiSuggest}

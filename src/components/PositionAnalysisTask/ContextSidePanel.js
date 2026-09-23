@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Empty, Flex, Tabs, Tag, Typography } from 'antd';
+import { App, Button, Empty, Flex, Tabs, Tag, Typography } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import classnames from 'classnames';
@@ -7,6 +7,7 @@ import TalentProfile from '@components/TalentProfile';
 import { CapacityLabel } from '@components/Position/Detail/PositionInfoPanel';
 import InterviewVideoTranscript from '@components/InterviewVideoTranscript';
 import { applyAiInterviewRemote } from '../../preset';
+import { downloadInterviewExport } from './exportInterviewData';
 import style from './style.module.scss';
 
 const text = value => {
@@ -260,7 +261,24 @@ const CollectInviteMeta = ({ invite }) => {
 };
 
 const ContextSidePanel = ({ context }) => {
+  const { message } = App.useApp();
   const isRefineTask = context?.task?.type === 'position-analysis-review';
+
+  const exportInterview = () => {
+    if (!context?.interview && !context?.position && !context?.company) {
+      message.warning('暂无可导出数据');
+      return;
+    }
+    const name = context.position?.name || context.collectInvite?.name || context.interview?.id || 'export';
+    downloadInterviewExport({
+      interview: context.interview,
+      videoTranscripts: context.videoTranscripts,
+      position: context.position,
+      company: context.company,
+      filename: `analysis-data-${name}`
+    });
+    message.success('已导出数据');
+  };
 
   const tabItems = useMemo(() => {
     const items = [
@@ -316,7 +334,17 @@ const ContextSidePanel = ({ context }) => {
 
   return (
     <div className={style['side-panel']}>
-      <Tabs size="small" className={style['side-tabs']} defaultActiveKey={isRefineTask ? 'interview' : 'position'} items={tabItems} />
+      <Tabs
+        size="small"
+        className={style['side-tabs']}
+        defaultActiveKey={isRefineTask ? 'interview' : 'position'}
+        items={tabItems}
+        tabBarExtraContent={
+          <Button size="small" type="link" className={style['export-btn']} onClick={exportInterview}>
+            导出数据
+          </Button>
+        }
+      />
     </div>
   );
 };

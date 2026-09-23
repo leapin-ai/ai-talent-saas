@@ -303,6 +303,31 @@ const DevelopmentPlan = ({ plan, formatMessage, cardColor }) => {
   );
 };
 
+const CapabilityStatusCard = withLocale(({ name, readiness, summary, metrics, themeColor }) => {
+  const { formatMessage } = useIntl();
+  const displayName = name || formatMessage({ id: 'position.talentSkillEmptyValue' });
+  const firstName = String(displayName).split(/\s+/).filter(Boolean)[0] || displayName;
+  const cardColor = themeColor || DEFAULT_PRIMARY;
+
+  return (
+    <Card className={style['halo-card']} theme="halo" color={cardColor} hover={false}>
+      <div className={style['halo-body']}>
+        <ReadinessRing value={readiness} formatMessage={formatMessage} />
+        <div className={style['halo-copy']}>
+          <div className={style['halo-title']}>
+            <span className={style['halo-title-icon']}>
+              <img src={iconSpark} alt="" />
+            </span>
+            {formatMessage({ id: 'position.talentSkillWhereStands' }, { name: firstName })}
+          </div>
+          <div className={style['halo-summary']}>{summary || formatMessage({ id: 'position.talentSkillNoSummary' })}</div>
+          <HaloMetrics metrics={metrics} formatMessage={formatMessage} />
+        </div>
+      </div>
+    </Card>
+  );
+});
+
 const TalentSkillAnalysisContent = ({ data, formatMessage, isMobile, themeColor }) => {
   const employee = data?.employee || {};
   const analysis = data?.analysis;
@@ -326,21 +351,7 @@ const TalentSkillAnalysisContent = ({ data, formatMessage, isMobile, themeColor 
   return (
     <div className={style.root}>
       <div className={style.top}>
-        <Card className={style['halo-card']} theme="halo" color={cardColor} hover={false}>
-          <div className={style['halo-body']}>
-            <ReadinessRing value={analysis.readiness} formatMessage={formatMessage} />
-            <div className={style['halo-copy']}>
-              <div className={style['halo-title']}>
-                <span className={style['halo-title-icon']}>
-                  <img src={iconSpark} alt="" />
-                </span>
-                {formatMessage({ id: 'position.talentSkillWhereStands' }, { name: firstName })}
-              </div>
-              <div className={style['halo-summary']}>{analysis.summary || formatMessage({ id: 'position.talentSkillNoSummary' })}</div>
-              <HaloMetrics metrics={analysis.metrics} formatMessage={formatMessage} />
-            </div>
-          </div>
-        </Card>
+        <CapabilityStatusCard name={displayName} readiness={analysis.readiness} summary={analysis.summary} metrics={analysis.metrics} themeColor={cardColor} />
 
         <div className={style['gaps-wrap']}>
           <PriorityGapsPanel gaps={priorityGaps} formatMessage={formatMessage} cardColor={cardColor} />
@@ -420,3 +431,5 @@ const TalentSkillAnalysis = createWithRemoteLoader({
 );
 
 export default TalentSkillAnalysis;
+
+export { CapabilityStatusCard };
