@@ -82,7 +82,6 @@ const createServer = () => {
         AZURE_OPENAI_CHAT_DEPLOYMENT: { type: 'string' },
         AZURE_OPENAI_USE_DEPLOYMENT_URLS: { type: 'string', default: 'true' },
 
-        // 阿里云录音文件识别（nls-filetrans），密钥勿提交仓库
         ALI_ASR_APP_KEY: { type: 'string' },
         ALI_ASR_ACCESS_KEY_ID: { type: 'string' },
         ALI_ASR_ACCESS_KEY_SECRET: { type: 'string' },
