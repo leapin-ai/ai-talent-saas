@@ -186,7 +186,7 @@ const requestPositionAnalysisFill = async (fastify, { step, schema, context, dra
       ? ' 仅为 CONTEXT.targetSkill 指定的这一条技能生成完整明细。严格返回 { skill: [ 恰好 1 条 ] }，禁止返回其它技能、禁止返回 skill 列表。保留该技能 id/name/origin。activityCode（编号）与 activityTitle（内容）必须有值：DRAFT 或 CONTEXT.targetSkill 已有则原样保留，为空则补全，且同一 Activity 的任务保持一致。必须含 importanceNow/importanceYear/change（must_build|ai_emerging|new|enhanced|stable|declining）、aiExposure/confidence。contentItems 是该技能的「依据」列表：至少 2 条，每条含 title（自定义标题，不要固定套「职位描述 / 胜任力」「冲击报告」）、description（具体说明，结合岗位与该技能）、source（来源，如岗位JD/行业报告/AI冲击分析）。contentItems 不可为空。禁止输出 jd/shockReport，禁止把其它技能的依据抄进来。'
       : '') +
     (step === 'person'
-      ? ' 仅为 CONTEXT 中当前这一位员工生成完整人才分析。返回 { employees: [ 恰好 1 条 ] }，保留 employeeId/employeeName。必须含 readiness/summary/metrics/skills/priorityGaps，以及 developmentPlan（subtitle + 恰好 short/mid/long 三阶段，每阶段含 label/period/title/tone/target，且每阶段 2～3 条 items，items 不可为空）。horizons.label/period 使用 OUTPUT_LANGUAGE。'
+      ? ' 仅为 CONTEXT 中当前这一位员工生成完整人才分析。返回 { employees: [ 恰好 1 条 ] }，保留 employeeId/employeeName。必须含 readiness/summary/metrics/skills/priorityGaps，以及 developmentPlan（subtitle + 恰好 short/mid/long 三阶段，每阶段含 label/period/title/tone/target，且每阶段 2～3 条 items，items 不可为空）。skills 每项必须含 confidence 与 evidence 数组；evidence 每一条都必须有 source+title+summary（禁止只填第一条），source 为真实来源如 简历/AI面试/项目经历，禁止「分析依据」。horizons.label/period 使用 OUTPUT_LANGUAGE。'
       : '');
 
   const promptContext = Object.assign({}, context, { outputLanguage });
@@ -233,6 +233,10 @@ const requestTalentInsightFill = async (fastify, { schema, context, draft, maxTo
     'CONTEXT 含：interviewSignals（问卷答案 questionnaireAnswers、题目作答 answers；视频题 answerText/transcript 来自语音转写 aiResult）、resumeParsed（简历解析）、submittedInfo（员工填写信息）、position（目标岗位，可空）、employee（基础信息）。' +
     '只返回 JSON，不要 markdown。结构必须为 { readiness: {...}, aiSuggest: {...} }。' +
     'readiness 含 readiness(0-100)、summary、metrics、priorityGaps、skills、developmentPlan(含 short/mid/long 三个 horizons，每阶段 2-3 条 items)。' +
+    'skills 每项必须含 confidence(high|medium|low：基于所用来源的置信度) 与 evidence。' +
+    'evidence 必须返回数组，且每一条都要自带 source、title、summary（禁止只给第一条填 title/source，其余条目同样必填）。' +
+    'source 必须是真实来源文案（如 简历、AI面试、项目经历、JD、绩效、LinkedIn），禁止用「分析依据」「分析」这类空泛标签；title 为该条证据短标题；summary 为具体摘要。' +
+    '证据充分/多来源用 high，部分依据用 medium，依据不足用 low。' +
     'aiSuggest 含 shortTerm、longTerm、matchPosition；match_rate 为 0-1 小数。' +
     '结论必须能从 CONTEXT 推断；没有证据时用保守估计并在 summary 说明依据不足。不要编造具体公司名或证书编号。' +
     languageInstruction(outputLanguage);

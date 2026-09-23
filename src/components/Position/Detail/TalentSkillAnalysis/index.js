@@ -303,7 +303,7 @@ const DevelopmentPlan = ({ plan, formatMessage, cardColor }) => {
   );
 };
 
-const CapabilityStatusCard = withLocale(({ name, readiness, summary, metrics, themeColor }) => {
+const CapabilityStatusCard = withLocale(({ name, readiness, summary, metrics, themeColor, extra = null }) => {
   const { formatMessage } = useIntl();
   const displayName = name || formatMessage({ id: 'position.talentSkillEmptyValue' });
   const firstName = String(displayName).split(/\s+/).filter(Boolean)[0] || displayName;
@@ -314,11 +314,14 @@ const CapabilityStatusCard = withLocale(({ name, readiness, summary, metrics, th
       <div className={style['halo-body']}>
         <ReadinessRing value={readiness} formatMessage={formatMessage} />
         <div className={style['halo-copy']}>
-          <div className={style['halo-title']}>
-            <span className={style['halo-title-icon']}>
-              <img src={iconSpark} alt="" />
-            </span>
-            {formatMessage({ id: 'position.talentSkillWhereStands' }, { name: firstName })}
+          <div className={style['halo-title-row']}>
+            <div className={style['halo-title']}>
+              <span className={style['halo-title-icon']}>
+                <img src={iconSpark} alt="" />
+              </span>
+              {formatMessage({ id: 'position.talentSkillWhereStands' }, { name: firstName })}
+            </div>
+            {extra}
           </div>
           <div className={style['halo-summary']}>{summary || formatMessage({ id: 'position.talentSkillNoSummary' })}</div>
           <HaloMetrics metrics={metrics} formatMessage={formatMessage} />

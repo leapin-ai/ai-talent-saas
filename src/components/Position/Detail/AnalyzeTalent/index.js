@@ -42,11 +42,27 @@ const CompletionRing = ({ value }) => {
   );
 };
 
+const PersonCell = ({ Avatar, item, onOpen }) => {
+  const { formatMessage } = useIntl();
+  const name = item.name || item.nameEn || '—';
+  return (
+    <div className={style.person}>
+      {item.avatar ? <Avatar className={style['person-avatar']} id={item.avatar} size={32} gender={item.gender || 'M'} /> : <span className={style.initials}>{initialsOf(item)}</span>}
+      <div className={style['person-text']}>
+        <button type="button" className={style['person-name-link']} onClick={() => onOpen(item)}>
+          {name}
+        </button>
+        {item.managerName ? <div className={style['person-manager']}>{formatMessage({ id: 'position.talentManager' }, { name: item.managerName })}</div> : null}
+      </div>
+    </div>
+  );
+};
+
 const AnalyzeTalent = createWithRemoteLoader({
-  modules: ['components-core:Table@TablePage', 'components-core:Table', 'components-core:Filter']
+  modules: ['components-core:Table@TablePage', 'components-core:Table', 'components-core:Filter', 'components-core:Image.Avatar']
 })(
   withLocale(({ remoteModules, baseUrl = '', positionId, employeeListApi }) => {
-    const [TablePage, Table, Filter] = remoteModules;
+    const [TablePage, Table, Filter, Avatar] = remoteModules;
     // 此处远程模块已加载完成，覆盖才不会被 table-page 自带语言包盖掉
     registerTablePageMessages();
     const { formatMessage } = useIntl();
@@ -84,17 +100,7 @@ const AnalyzeTalent = createWithRemoteLoader({
         name: 'person',
         title: formatMessage({ id: 'position.talentPerson' }),
         type: 'other',
-        valueOf: item => (
-          <div className={style.person}>
-            <span className={style.initials}>{initialsOf(item)}</span>
-            <div className={style['person-text']}>
-              <button type="button" className={style['person-name-link']} onClick={() => goEmployeeProfile(item)}>
-                {item.name || item.nameEn || '—'}
-              </button>
-              {item.managerName ? <div className={style['person-manager']}>{formatMessage({ id: 'position.talentManager' }, { name: item.managerName })}</div> : null}
-            </div>
-          </div>
-        )
+        valueOf: item => <PersonCell Avatar={Avatar} item={item} onOpen={goEmployeeProfile} />
       },
       {
         name: 'readiness',

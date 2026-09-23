@@ -193,7 +193,7 @@ const enUS = {
   'tenantAdmin.employeeProfile': 'Talents',
   'tenantAdmin.export': 'Export',
   'tenantAdmin.internalTalentMarket': 'AI Talent Market',
-  'tenantAdmin.positionManagement': 'Future Workforce',
+  'tenantAdmin.positionManagement': 'Workforce Readiness',
   'tenantAdmin.settings': 'Settings',
   'tenantAdmin.companyInfo': 'Company',
   'tenantAdmin.orgStructure': 'Organization',

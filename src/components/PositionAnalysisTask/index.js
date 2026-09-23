@@ -71,6 +71,7 @@ const emptyEmployeeSkill = (fromPositionSkill = null) => ({
   current: 0,
   required: Number(fromPositionSkill?.importanceNow) || 3,
   status: undefined,
+  confidence: fromPositionSkill?.confidence || 'medium',
   evidence: ''
 });
 
@@ -102,6 +103,7 @@ const seedEmployeeSkills = (analysis, positionSkills) => {
       current: item.current ?? 0,
       required: item.required ?? 0,
       status: item.status,
+      confidence: item.confidence || 'medium',
       evidence: item.evidence || ''
     }));
   }
@@ -281,11 +283,11 @@ const normalizeImportedEmployees = (rawList, context) => {
 };
 
 /**
- * 剪贴板 JSON 支持：
- * 1) 岗位导出格式：{ roleName, verdict, skill, ... }（见 converted-skills/*.json）
+ * 剪贴板 JSON 支持（仅岗位步）：
+ * 1) 岗位对象：{ roleName, verdict, skill, workforceStrategy, ... }
  * 2) 岗位数组：[{ roleName, verdict, skill }, ...]（按角色名匹配，否则取第一项）
- * 3) 三步整包：{ org?, position?, employees? }；position 也可直接是格式 1
- * 4) 完成分析提交体：{ org, position, employees }
+ * 3) 包一层：{ position: { ...岗位对象 } }
+ * 历史整包若仍含 org / employees，只回填 position；组织/个人 UI 已去掉
  */
 const parseClipboardImportPayload = (text, context) => {
   let parsed;
@@ -321,29 +323,23 @@ const parseClipboardImportPayload = (text, context) => {
       ? root
       : null;
 
-  if (!positionRaw && !root.org && !Array.isArray(root.employees)) {
-    throw new Error('未识别到 org / position(skill|verdict) / employees');
+  if (!positionRaw) {
+    throw new Error('未识别到岗位字段（需含 skill / verdict / description / requirement / workforceStrategy 等）');
   }
 
   const bundle = {
     generation: Date.now(),
     org: null,
-    position: null,
+    position: normalizeImportedPosition(positionRaw, context),
     employees: null
   };
 
-  if (root.org != null || positionRaw || hasBundleKeys) {
+  // 历史整包若仍带 org / employees：解析保留但不回填 UI（组织/个人步已去掉）
+  if (root.org != null || hasBundleKeys) {
     bundle.org = normalizeImportedOrg(root.org, context);
-  }
-  if (positionRaw) {
-    bundle.position = normalizeImportedPosition(positionRaw, context);
   }
   if (Array.isArray(root.employees)) {
     bundle.employees = normalizeImportedEmployees(root.employees, context);
-  }
-
-  if (!bundle.org && !bundle.position && !bundle.employees) {
-    throw new Error('剪贴板没有可导入的字段');
   }
 
   return bundle;
@@ -533,17 +529,7 @@ const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, default
       if (next) {
         applyFormDataWithRetry(openApi, next, step);
       }
-      const parts = [];
-      if (bundle.org) {
-        parts.push('组织/部门');
-      }
-      if (bundle.position) {
-        parts.push('岗位');
-      }
-      if (bundle.employees) {
-        parts.push('个人');
-      }
-      message.success(`已从剪贴板导入：${parts.join('、')}${next ? '' : '（本步无对应字段，进入对应步骤时自动回填）'}`);
+      message.success(next ? '已从剪贴板导入岗位内容' : '已解析岗位内容（本步无对应字段）');
     } catch (e) {
       message.error(e.message || '导入失败');
     } finally {

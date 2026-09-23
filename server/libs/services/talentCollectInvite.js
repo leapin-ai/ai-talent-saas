@@ -174,11 +174,11 @@ module.exports = fp(async (fastify, options) => {
     const subject =
       language === 'en-US'
         ? isManager
-          ? `${orgLabel} Future Workforce Readiness | Manager Role Interview`
-          : `${orgLabel} Future Workforce Readiness | Employee Role Interview`
+          ? `${orgLabel} Workforce Readiness | Manager Role Interview`
+          : `${orgLabel} Workforce Readiness | Employee Role Interview`
         : isManager
-          ? `${orgLabel} 未来人才准备度 | 经理岗位访谈`
-          : `${orgLabel} 未来人才准备度 | 员工岗位访谈`;
+          ? `${orgLabel} Workforce Readiness | 经理岗位访谈`
+          : `${orgLabel} Workforce Readiness | 员工岗位访谈`;
     const messageCode = `${MESSAGE_CODE}[${language}]`;
     const props = {
       name: row.name,

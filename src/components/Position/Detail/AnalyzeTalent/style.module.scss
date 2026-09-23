@@ -81,6 +81,10 @@
   min-width: 0;
 }
 
+.person-avatar {
+  flex: 0 0 32px;
+}
+
 .person-text {
   display: flex;
   flex-direction: column;

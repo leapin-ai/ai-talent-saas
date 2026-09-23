@@ -33,7 +33,7 @@ const MetaGrid = ({ items }) => (
 
 const SubmittedInfoPane = ({ submittedInfo, assessment }) => {
   const profileData = submittedInfo && typeof submittedInfo === 'object' ? submittedInfo : assessment?.profileData || {};
-  const projects = Array.isArray(profileData.projects) ? profileData.projects : [];
+  const projects = Array.isArray(profileData.projects) ? profileData.projects : Array.isArray(profileData.projects?.projects) ? profileData.projects.projects : [];
   const skills = profileData.skills?.work_related || profileData.skills;
 
   return (
@@ -80,15 +80,20 @@ const SubmittedInfoPane = ({ submittedInfo, assessment }) => {
         {projects.length === 0 ? (
           <Typography.Text type="secondary">-</Typography.Text>
         ) : (
-          projects.map((project, index) => (
-            <div key={index} className={style['nested-card']}>
-              <Typography.Text strong>{project.name || `项目 ${index + 1}`}</Typography.Text>
-              <div className={style['meta-label']}>角色：{formatValue(project.role)}</div>
-              <Typography.Paragraph className={style['info-paragraph']} ellipsis={{ rows: 4, expandable: true, symbol: '展开' }}>
-                {formatValue(project.description)}
-              </Typography.Paragraph>
-            </div>
-          ))
+          projects.map((project, index) => {
+            const skillTags = Array.isArray(project.skills) ? project.skills.filter(Boolean) : [];
+            return (
+              <div key={index} className={style['nested-card']}>
+                <Typography.Text strong>{project.name || `项目 ${index + 1}`}</Typography.Text>
+                <div className={style['meta-label']}>角色：{formatValue(project.role)}</div>
+                {project.period != null && project.period !== '' ? <div className={style['meta-label']}>周期：{formatValue(project.period)}</div> : null}
+                <Typography.Paragraph className={style['info-paragraph']} ellipsis={{ rows: 4, expandable: true, symbol: '展开' }}>
+                  {formatValue(project.description)}
+                </Typography.Paragraph>
+                {skillTags.length ? <div className={style['meta-label']}>技能：{skillTags.join('、')}</div> : null}
+              </div>
+            );
+          })
         )}
       </InfoCard>
 
@@ -143,7 +148,7 @@ const InterviewPaneGate = ({ interview, interviewError, apiHost, cdnUrl, version
   return <InterviewPane key={remoteKey} interview={interview} interviewError={interviewError} apiHost={apiHost} />;
 };
 
-const ContextSidePanel = ({ context, resumeParsed, onResumeParsedChange }) => {
+const ContextSidePanel = ({ context, resumeParsed, onResumeParsedChange, profileDetail }) => {
   const { message } = App.useApp();
   const resumes = Array.isArray(context?.resumes) ? context.resumes : [];
   const resumeFile = resumes[0];
@@ -151,11 +156,12 @@ const ContextSidePanel = ({ context, resumeParsed, onResumeParsedChange }) => {
   const filename = resumeFile?.filename || resumeFile?.originalName || resumeFile?.name || resumeParsed?.filename;
 
   const exportData = () => {
-    if (!context?.interview && !context?.position && !context?.company && !context?.employee && !resumeParsed) {
+    const submittedInfo = context?.submittedInfo || context?.assessment?.profileData || null;
+    if (!context?.interview && !context?.position && !context?.company && !context?.employee && !resumeParsed && !submittedInfo && !profileDetail) {
       message.warning('暂无可导出数据');
       return;
     }
-    const name = context?.employee?.name || context?.assessment?.name || context?.position?.name || 'export';
+    const name = context?.employee?.name || profileDetail?.name || context?.assessment?.name || context?.position?.name || 'export';
     downloadInterviewExport({
       interview: context?.interview,
       videoTranscripts: context?.videoTranscripts,
@@ -164,8 +170,12 @@ const ContextSidePanel = ({ context, resumeParsed, onResumeParsedChange }) => {
       employee: context?.employee,
       assessment: context?.assessment,
       resumeParsed,
+      submittedInfo,
+      profileDetail,
       includeEmployee: true,
       includeResume: true,
+      includeSubmittedInfo: true,
+      includeReviewData: true,
       filename: `profile-data-${name}`
     });
     message.success('已导出数据');
