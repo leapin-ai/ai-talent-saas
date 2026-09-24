@@ -191,6 +191,8 @@ const enUS = {
   'position.talentInviteQueued': 'Assessment invite queued for {count} people',
   'position.talentInviteEmployee': 'Employee',
   'position.talentInviteManager': 'Manager',
+  'position.talentInviteEmployeesAction': 'Invite assessment (employees)',
+  'position.talentInviteManagersAction': 'Invite assessment (managers)',
   'position.talentInviteEmployeesTitle': 'Invite Employees',
   'position.talentInviteManagersTitle': 'Invite Managers',
   'position.talentInviteProject': 'Assessment Project',
