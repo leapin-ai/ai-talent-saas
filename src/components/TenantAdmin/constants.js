@@ -9,7 +9,7 @@ export const TENANT_ADMIN_PERMISSIONS = {
   positionPublish: ['tenant-admin:position-management:publish'],
   positionRemove: ['tenant-admin:position-management:remove'],
   positionAnalysis: ['tenant-admin:position-management:analyze'],
-  /** 岗位详情：发送评估邀请（员工/经理） */
+  /** 岗位列表与详情：发送评估邀请（员工/经理共用，可同时控制） */
   positionInvite: ['tenant-admin:position-management:invite'],
   /** 岗位详情：邀请记录查看与管理（链接/重发/取消/看结果） */
   positionInviteRecords: ['tenant-admin:position-management:invite-records'],

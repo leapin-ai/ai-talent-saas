@@ -41,7 +41,7 @@ const normalizeParticipant = item => {
 const InviteAssessment = createWithRemoteLoader({
   modules: ['components-core:FormInfo@useFormModal', 'components-core:Global@usePreset', 'components-core:Permissions@usePermissionsPass']
 })(
-  withLocale(({ remoteModules, positionId, baseUrl = '', className, ...rest }) => {
+  withLocale(({ remoteModules, positionId, baseUrl = '', className, inviteType, data, children, onSuccess: _onSuccess, ...rest }) => {
     const [useFormModal, usePreset, usePermissionsPass] = remoteModules;
     const formModal = useFormModal();
     const { apis, ajax } = usePreset();
@@ -51,20 +51,24 @@ const InviteAssessment = createWithRemoteLoader({
     const modalSeqRef = useRef(0);
     const canInvite = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInvite });
     const canInviteRecords = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInviteRecords });
+    const resolvedPositionId = positionId || data?.id;
 
     const goInviteRecords = () => {
-      navigate(`${baseUrl}/position/${positionId}/invite-records`);
+      if (!resolvedPositionId) {
+        return;
+      }
+      navigate(`${baseUrl}/position/${resolvedPositionId}/invite-records`);
     };
 
-    const openInviteModal = inviteType => {
+    const openInviteModal = type => {
       if (!canInvite) {
         return;
       }
       const typeLabel = formatMessage({
-        id: inviteType === 'manager' ? 'position.talentInviteManager' : 'position.talentInviteEmployee'
+        id: type === 'manager' ? 'position.talentInviteManager' : 'position.talentInviteEmployee'
       });
       const title = formatMessage({
-        id: inviteType === 'manager' ? 'position.talentInviteManagersTitle' : 'position.talentInviteEmployeesTitle'
+        id: type === 'manager' ? 'position.talentInviteManagersTitle' : 'position.talentInviteEmployeesTitle'
       });
       importedRef.current = [];
       modalSeqRef.current += 1;
@@ -73,46 +77,34 @@ const InviteAssessment = createWithRemoteLoader({
         title,
         size: 'large',
         saveText: formatMessage({ id: 'position.talentInviteSend' }),
-        footer: canInviteRecords ? (
-          <Button
-            type="default"
-            icon={<UnorderedListOutlined />}
-            onClick={() => {
-              api.close();
-              goInviteRecords();
-            }}
-          >
-            {formatMessage({ id: 'position.talentInviteViewRecords' })}
-          </Button>
-        ) : null,
         formProps: {
           data: {
             participants: [{}],
             existingEmployees: [],
-            inviteType,
+            inviteType: type,
             // 每次打开清空，避免二次邀请沿用上次项目选择
             assessmentProject: undefined
           },
-          onSubmit: async data => {
-            if (!positionId) {
+          onSubmit: async formData => {
+            if (!resolvedPositionId) {
               message.error(formatMessage({ id: 'position.talentInviteMissingPosition' }));
               return false;
             }
-            const project = data.assessmentProject || {};
+            const project = formData.assessmentProject || {};
             const assessmentProject =
               project && typeof project === 'object'
                 ? {
                     id: project.id || project.value,
                     name: project.name || project.label || ''
                   }
-                : data.assessmentProject;
+                : formData.assessmentProject;
             if (!assessmentProject || (typeof assessmentProject === 'object' && !assessmentProject.id)) {
               message.warning(formatMessage({ id: 'position.talentInviteSelect' }));
               return false;
             }
-            const manual = (Array.isArray(data.participants) ? data.participants : []).map(normalizeParticipant).filter(Boolean);
+            const manual = (Array.isArray(formData.participants) ? formData.participants : []).map(normalizeParticipant).filter(Boolean);
             const imported = (importedRef.current || []).map(normalizeParticipant).filter(Boolean);
-            const existing = (Array.isArray(data.existingEmployees) ? data.existingEmployees : []).map(normalizeParticipant).filter(Boolean);
+            const existing = (Array.isArray(formData.existingEmployees) ? formData.existingEmployees : []).map(normalizeParticipant).filter(Boolean);
             const participants = [...existing, ...imported, ...manual].filter(item => item.name && (hasContact(item.email) || hasContact(item.phone)));
             if (participants.length === 0) {
               message.warning(formatMessage({ id: 'position.talentInviteNeedParticipants' }));
@@ -121,10 +113,10 @@ const InviteAssessment = createWithRemoteLoader({
             const { data: res } = await ajax(
               Object.assign({}, apis.talentSaas.tenant.talentCollectInvite.send, {
                 data: {
-                  positionId: String(positionId),
-                  inviteType,
+                  positionId: String(resolvedPositionId),
+                  inviteType: type,
                   assessmentProject,
-                  deadline: data.deadline,
+                  deadline: formData.deadline,
                   // 邀请邮件/短信跟当前系统语言：仅 zh-CN 中文，其余默认英文
                   language: locale === 'zh-CN' ? 'zh-CN' : 'en-US',
                   participants
@@ -166,9 +158,9 @@ const InviteAssessment = createWithRemoteLoader({
         },
         children: (
           <InviteAssessmentForm
-            key={`invite-assessment-${inviteType}-${modalSeq}`}
-            inviteType={inviteType}
-            positionId={positionId}
+            key={`invite-assessment-${type}-${modalSeq}`}
+            inviteType={type}
+            positionId={resolvedPositionId}
             onImportedChange={list => {
               importedRef.current = Array.isArray(list) ? list : [];
             }}
@@ -176,6 +168,23 @@ const InviteAssessment = createWithRemoteLoader({
         )
       });
     };
+
+    // 列表行操作：邀请评估员工 / 经理，共用 invite 权限
+    if (inviteType) {
+      if (!canInvite) {
+        return null;
+      }
+      const label =
+        children ||
+        formatMessage({
+          id: inviteType === 'manager' ? 'position.talentInviteManagersAction' : 'position.talentInviteEmployeesAction'
+        });
+      return (
+        <Button type="link" size={rest.size || 'small'} className={className} onClick={() => openInviteModal(inviteType)}>
+          {label}
+        </Button>
+      );
+    }
 
     if (!canInvite && !canInviteRecords) {
       return null;

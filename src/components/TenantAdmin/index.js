@@ -169,6 +169,7 @@ const TenantAdmin = createWithRemoteLoader({
               apis: Object.assign({}, apis.talentSaas.tenant.position, {
                 orgList: apis.tenant.orgList
               }),
+              baseUrl,
               withInsightBanner: true,
               onDetail: ({ colItem }) => {
                 navigate(`${baseUrl}/position/${colItem.id}`);

@@ -191,6 +191,8 @@ const zhCN = {
   'position.talentInviteQueued': '已为 {count} 人排队发送评估邀请',
   'position.talentInviteEmployee': '员工',
   'position.talentInviteManager': '经理',
+  'position.talentInviteEmployeesAction': '邀请评估员工',
+  'position.talentInviteManagersAction': '邀请评估经理',
   'position.talentInviteEmployeesTitle': '邀请员工',
   'position.talentInviteManagersTitle': '邀请经理',
   'position.talentInviteProject': '评估项目',
