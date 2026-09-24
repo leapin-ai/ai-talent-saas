@@ -1,9 +1,10 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { Button, Dropdown, message } from 'antd';
+import { Button, Dropdown, Flex, message } from 'antd';
 import { MailOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useIntl } from '@kne/react-intl';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
 import withLocale from '../../withLocale';
 import InviteAssessmentForm from './InviteAssessmentForm';
 import style from './style.module.scss';
@@ -38,18 +39,27 @@ const normalizeParticipant = item => {
 };
 
 const InviteAssessment = createWithRemoteLoader({
-  modules: ['components-core:FormInfo@useFormModal', 'components-core:Global@usePreset']
+  modules: ['components-core:FormInfo@useFormModal', 'components-core:Global@usePreset', 'components-core:Permissions@usePermissionsPass']
 })(
   withLocale(({ remoteModules, positionId, baseUrl = '', className, ...rest }) => {
-    const [useFormModal, usePreset] = remoteModules;
+    const [useFormModal, usePreset, usePermissionsPass] = remoteModules;
     const formModal = useFormModal();
     const { apis, ajax } = usePreset();
     const { formatMessage, locale } = useIntl();
     const navigate = useNavigate();
     const importedRef = useRef([]);
     const modalSeqRef = useRef(0);
+    const canInvite = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInvite });
+    const canInviteRecords = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInviteRecords });
+
+    const goInviteRecords = () => {
+      navigate(`${baseUrl}/position/${positionId}/invite-records`);
+    };
 
     const openInviteModal = inviteType => {
+      if (!canInvite) {
+        return;
+      }
       const typeLabel = formatMessage({
         id: inviteType === 'manager' ? 'position.talentInviteManager' : 'position.talentInviteEmployee'
       });
@@ -63,18 +73,18 @@ const InviteAssessment = createWithRemoteLoader({
         title,
         size: 'large',
         saveText: formatMessage({ id: 'position.talentInviteSend' }),
-        footer: (
+        footer: canInviteRecords ? (
           <Button
             type="default"
             icon={<UnorderedListOutlined />}
             onClick={() => {
               api.close();
-              navigate(`${baseUrl}/position/${positionId}/invite-records`);
+              goInviteRecords();
             }}
           >
             {formatMessage({ id: 'position.talentInviteViewRecords' })}
           </Button>
-        ),
+        ) : null,
         formProps: {
           data: {
             participants: [{}],
@@ -149,7 +159,9 @@ const InviteAssessment = createWithRemoteLoader({
               return false;
             }
             api.close();
-            navigate(`${baseUrl}/position/${positionId}/invite-records`);
+            if (canInviteRecords) {
+              goInviteRecords();
+            }
           }
         },
         children: (
@@ -165,30 +177,48 @@ const InviteAssessment = createWithRemoteLoader({
       });
     };
 
+    if (!canInvite && !canInviteRecords) {
+      return null;
+    }
+
+    const size = rest.size || 'small';
+    const recordsBtn = canInviteRecords ? (
+      <Button type="default" size={size} icon={<UnorderedListOutlined />} onClick={goInviteRecords} className={className}>
+        {formatMessage({ id: 'position.talentInviteViewRecords' })}
+      </Button>
+    ) : null;
+
+    if (!canInvite) {
+      return recordsBtn;
+    }
+
     return (
-      <Dropdown
-        trigger={['click']}
-        placement="bottomLeft"
-        classNames={{ root: style['invite-dropdown'] }}
-        menu={{
-          items: [
-            {
-              key: 'employee',
-              label: formatMessage({ id: 'position.talentInviteEmployee' }),
-              onClick: () => openInviteModal('employee')
-            },
-            {
-              key: 'manager',
-              label: formatMessage({ id: 'position.talentInviteManager' }),
-              onClick: () => openInviteModal('manager')
-            }
-          ]
-        }}
-      >
-        <Button type="default" size={rest.size || 'small'} icon={<MailOutlined />} className={[style['invite-btn'], className].filter(Boolean).join(' ')}>
-          {formatMessage({ id: 'position.talentInvite' })}
-        </Button>
-      </Dropdown>
+      <Flex gap={8} wrap="wrap" align="center">
+        <Dropdown
+          trigger={['click']}
+          placement="bottomLeft"
+          classNames={{ root: style['invite-dropdown'] }}
+          menu={{
+            items: [
+              {
+                key: 'employee',
+                label: formatMessage({ id: 'position.talentInviteEmployee' }),
+                onClick: () => openInviteModal('employee')
+              },
+              {
+                key: 'manager',
+                label: formatMessage({ id: 'position.talentInviteManager' }),
+                onClick: () => openInviteModal('manager')
+              }
+            ]
+          }}
+        >
+          <Button type="default" size={size} icon={<MailOutlined />} className={[style['invite-btn'], className].filter(Boolean).join(' ')}>
+            {formatMessage({ id: 'position.talentInvite' })}
+          </Button>
+        </Dropdown>
+        {recordsBtn}
+      </Flex>
     );
   })
 );
