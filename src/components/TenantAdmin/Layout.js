@@ -7,6 +7,7 @@ import { useIntl } from '@kne/react-intl';
 import { TENANT_ADMIN_PERMISSIONS } from './constants';
 import TenantThemeProvider from '../../commons/TenantThemeProvider';
 import { resolveTenantThemeColor } from '../../commons/themeColor';
+import { withPublicUrl } from '../../commons/publicUrl';
 import { WorkforceMenuIcon, TalentsMenuIcon, HomeMenuIcon, CompanyMenuIcon, OrgMenuIcon, UserMenuIcon, SwitchTenantMenuIcon, LogoutMenuIcon } from './MenuIcons';
 
 const Layout = createWithRemoteLoader({
@@ -110,7 +111,7 @@ const TenantAdminMenu = ({ baseUrl, tenant, tenantUserInfo, logout, formatMessag
       label: formatMessage({ id: 'tenantAdmin.switchTenant' }),
       icon: <SwitchTenantMenuIcon />,
       onClick: () => {
-        window.location.href = '/login-tenant';
+        window.location.href = withPublicUrl('/login-tenant');
       }
     },
     {
