@@ -397,6 +397,13 @@ const InviteRecords = createWithRemoteLoader({
                   });
                 }
               }
+              if (canManageInvite && item.status === 'done') {
+                actions.push({
+                  children: formatMessage({ id: 'position.talentInviteResend' }),
+                  loading: loadingId === item.id && actionType === 'resend',
+                  onClick: () => resendInvite(item)
+                });
+              }
             } else if (canManageInvite && item.status !== 'ended') {
               actions.push({
                 children: formatMessage({ id: 'position.talentInviteResend' }),
