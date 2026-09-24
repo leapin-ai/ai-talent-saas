@@ -14,24 +14,26 @@ const ImportanceBar = ({ importanceNow, importanceYear }) => {
   let left;
   let width;
   if (equal) {
-    // Absolute level from the left (5 → 5 fills the whole track).
     left = 0;
     width = Math.max(toTrackPercent(now), 8);
   } else {
-    // Colored segment covers the span between now and year.
     const low = Math.min(now, year);
     const high = Math.max(now, year);
     left = toTrackPercent(low);
-    width = toTrackPercent(high) - left;
+    width = Math.max(toTrackPercent(high) - left, 6);
   }
+
+  const tone = declining ? 'down' : 'up';
 
   return (
     <div className={style.importance}>
       <div className={style['importance-track']}>
-        <div className={classnames(style['importance-fill'], declining ? style['importance-fill-down'] : style['importance-fill-up'])} style={{ left: `${left}%`, width: `${width}%` }} />
+        <div className={classnames(style['importance-fill'], style[`importance-fill-${tone}`])} style={{ left: `${left}%`, width: `${width}%` }} />
+        <span className={classnames(style['importance-dot'], style[`importance-dot-${tone}`])} style={{ left: `${toTrackPercent(now)}%` }} />
+        <span className={classnames(style['importance-dot'], style[`importance-dot-${tone}`])} style={{ left: `${toTrackPercent(year)}%` }} />
       </div>
-      <span className={classnames(style['importance-label'], declining ? style['importance-label-down'] : style['importance-label-up'])}>
-        {now} → {year}
+      <span className={classnames(style['importance-label'], style[`importance-label-${tone}`])}>
+        {now}→{year}
       </span>
     </div>
   );

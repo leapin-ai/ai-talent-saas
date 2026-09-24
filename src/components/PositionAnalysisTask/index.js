@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Select } from 'antd';
+import { App, Button, Flex, Segmented, Select } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { CHANGE_VALUES, LEVEL_VALUES, ORIGIN_VALUES, createEmptySkill, createSkillId, normalizeSkills, normalizeVerdict } from '@components/Position/Detail/SkillList/skillModel';
+import RoleInsightsContent from '@components/Position/Detail/RoleInsightsContent';
+import PositionInfoPanel from '@components/Position/Detail/PositionInfoPanel';
 import AnalysisFormLayout from './AnalysisFormLayout';
 import style from './style.module.scss';
 
@@ -9,18 +11,38 @@ const AI_FILL_LANGUAGE_OPTIONS = [
   { label: '中文', value: 'zh-CN' },
   { label: 'English', value: 'en-US' }
 ];
-const EMPLOYEE_SKILL_STATUS = [
-  { label: '严重缺口', value: 'critical' },
-  { label: '缺口', value: 'gap' },
-  { label: '达标', value: 'onTarget' },
-  { label: '超出', value: 'above' }
-];
-
 const PLAN_TONES = [
   { label: 'primary', value: 'primary' },
   { label: 'cyan', value: 'cyan' },
   { label: 'rose', value: 'rose' }
 ];
+
+const STRATEGY_ACTIONS = ['BUILD', 'MOVE', 'BUY', 'AUGMENT'];
+const STRATEGY_ACTION_OPTIONS = STRATEGY_ACTIONS.map(value => ({ label: value, value }));
+const DEFAULT_WORKFORCE_STRATEGY = STRATEGY_ACTIONS.map(action => ({ action, title: '', detail: '' }));
+
+const normalizeWorkforceStrategy = list => {
+  const rows = Array.isArray(list) ? list : [];
+  const normalized = rows
+    .map(item => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+      const action = String(item.action || item.type || '')
+        .trim()
+        .toUpperCase();
+      if (!STRATEGY_ACTIONS.includes(action)) {
+        return null;
+      }
+      return {
+        action,
+        title: typeof item.title === 'string' ? item.title : '',
+        detail: typeof item.detail === 'string' ? item.detail : typeof item.description === 'string' ? item.description : ''
+      };
+    })
+    .filter(Boolean);
+  return normalized.length ? normalized : DEFAULT_WORKFORCE_STRATEGY.map(item => ({ ...item }));
+};
 
 const CHANGE_OPTIONS = CHANGE_VALUES.map(value => ({
   value,
@@ -49,6 +71,7 @@ const emptyEmployeeSkill = (fromPositionSkill = null) => ({
   current: 0,
   required: Number(fromPositionSkill?.importanceNow) || 3,
   status: undefined,
+  confidence: fromPositionSkill?.confidence || 'medium',
   evidence: ''
 });
 
@@ -80,6 +103,7 @@ const seedEmployeeSkills = (analysis, positionSkills) => {
       current: item.current ?? 0,
       required: item.required ?? 0,
       status: item.status,
+      confidence: item.confidence || 'medium',
       evidence: item.evidence || ''
     }));
   }
@@ -155,7 +179,8 @@ const buildInitialValues = context => {
       description: context?.position?.description || '',
       requirement: context?.position?.requirement || '',
       developmentGoal: context?.position?.developmentGoal || '',
-      skill: positionSkills.length > 0 ? positionSkills : [createEmptySkill()]
+      skill: positionSkills.length > 0 ? positionSkills : [createEmptySkill()],
+      workforceStrategy: normalizeWorkforceStrategy(context?.position?.workforceStrategy)
     },
     employees: (context?.employees || []).map(employee => {
       const analysis = employee.analysis || {};
@@ -186,7 +211,8 @@ const reshapePositionData = data => ({
   ...pickSubmittedText(data, 'requirement'),
   ...pickSubmittedText(data, 'developmentGoal'),
   skill: normalizeSkills(data?.skill),
-  verdict: normalizeVerdict(data?.verdict)
+  verdict: normalizeVerdict(data?.verdict),
+  workforceStrategy: normalizeWorkforceStrategy(data?.workforceStrategy).filter(item => item.title || item.detail)
 });
 
 const reshapeEmployees = list =>
@@ -204,7 +230,7 @@ const looksLikePositionPayload = raw => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return false;
   }
-  return Array.isArray(raw.skill) || (raw.verdict && typeof raw.verdict === 'object') || typeof raw.roleName === 'string';
+  return Array.isArray(raw.skill) || (raw.verdict && typeof raw.verdict === 'object') || typeof raw.roleName === 'string' || Array.isArray(raw.workforceStrategy);
 };
 
 const normalizeImportedOrg = (raw, context) => {
@@ -220,12 +246,14 @@ const normalizeImportedOrg = (raw, context) => {
 const normalizeImportedPosition = (raw, context) => {
   const src = raw && typeof raw === 'object' ? raw : {};
   const skills = normalizeSkills(src.skill);
+  const importedStrategies = Array.isArray(src.workforceStrategy) ? src.workforceStrategy : Array.isArray(src.strategies) ? src.strategies : null;
   return {
     verdict: normalizeVerdict(src.verdict || context?.position?.verdict),
     description: typeof src.description === 'string' ? src.description : context?.position?.description || '',
     requirement: typeof src.requirement === 'string' ? src.requirement : context?.position?.requirement || '',
     developmentGoal: typeof src.developmentGoal === 'string' ? src.developmentGoal : context?.position?.developmentGoal || '',
-    skill: skills.length > 0 ? skills : normalizeSkills(context?.position?.skill).length ? normalizeSkills(context?.position?.skill) : [createEmptySkill()]
+    skill: skills.length > 0 ? skills : normalizeSkills(context?.position?.skill).length ? normalizeSkills(context?.position?.skill) : [createEmptySkill()],
+    workforceStrategy: importedStrategies ? normalizeWorkforceStrategy(importedStrategies) : normalizeWorkforceStrategy(context?.position?.workforceStrategy)
   };
 };
 
@@ -255,11 +283,11 @@ const normalizeImportedEmployees = (rawList, context) => {
 };
 
 /**
- * 剪贴板 JSON 支持：
- * 1) 岗位导出格式：{ roleName, verdict, skill, ... }（见 converted-skills/*.json）
+ * 剪贴板 JSON 支持（仅岗位步）：
+ * 1) 岗位对象：{ roleName, verdict, skill, workforceStrategy, ... }
  * 2) 岗位数组：[{ roleName, verdict, skill }, ...]（按角色名匹配，否则取第一项）
- * 3) 三步整包：{ org?, position?, employees? }；position 也可直接是格式 1
- * 4) 完成分析提交体：{ org, position, employees }
+ * 3) 包一层：{ position: { ...岗位对象 } }
+ * 历史整包若仍含 org / employees，只回填 position；组织/个人 UI 已去掉
  */
 const parseClipboardImportPayload = (text, context) => {
   let parsed;
@@ -295,29 +323,23 @@ const parseClipboardImportPayload = (text, context) => {
       ? root
       : null;
 
-  if (!positionRaw && !root.org && !Array.isArray(root.employees)) {
-    throw new Error('未识别到 org / position(skill|verdict) / employees');
+  if (!positionRaw) {
+    throw new Error('未识别到岗位字段（需含 skill / verdict / description / requirement / workforceStrategy 等）');
   }
 
   const bundle = {
     generation: Date.now(),
     org: null,
-    position: null,
+    position: normalizeImportedPosition(positionRaw, context),
     employees: null
   };
 
-  if (root.org != null || positionRaw || hasBundleKeys) {
+  // 历史整包若仍带 org / employees：解析保留但不回填 UI（组织/个人步已去掉）
+  if (root.org != null || hasBundleKeys) {
     bundle.org = normalizeImportedOrg(root.org, context);
-  }
-  if (positionRaw) {
-    bundle.position = normalizeImportedPosition(positionRaw, context);
   }
   if (Array.isArray(root.employees)) {
     bundle.employees = normalizeImportedEmployees(root.employees, context);
-  }
-
-  if (!bundle.org && !bundle.position && !bundle.employees) {
-    throw new Error('剪贴板没有可导入的字段');
   }
 
   return bundle;
@@ -351,10 +373,10 @@ const formDataForStep = (step, bundle, formData) => {
   return null;
 };
 
-const submitCompleteAnalysis = async ({ taskId, org, positionRaw, employeesInput, contextEmployees, ajax, completeApi, message, onSuccess }) => {
+const submitCompleteAnalysis = async ({ taskId, org, positionRaw, employeesInput, contextEmployees, ajax, completeApi, message, onSuccess, successText }) => {
   const position = reshapePositionData(positionRaw);
   if (!position.skill.length) {
-    message.error('请至少填写一项有效岗位技能');
+    message.error('请至少填写一项有效 Task');
     return false;
   }
   const employees = reshapeEmployees(employeesInput).map((item, index) =>
@@ -380,23 +402,16 @@ const submitCompleteAnalysis = async ({ taskId, org, positionRaw, employeesInput
   if (submitRes.code !== 0) {
     throw new Error(submitRes.msg || '完成分析任务失败');
   }
-  message.success('AI岗位分析已完成');
+  message.success(successText || 'AI岗位分析已完成');
   onSuccess && onSuccess();
   return true;
 };
 
 const validatePositionStep = (data, message) => {
   if (!normalizeSkills(data?.skill).length) {
-    message.error('请至少填写一项有效岗位技能');
+    message.error('请至少填写一项有效 Task');
     return false;
   }
-};
-
-/** FormSteps 上下文：优先 getStepCache / stepCache，兼容旧 stepCacheRef；字段为 formData */
-const readStepFormData = (stepCtx, index) => {
-  const cache = typeof stepCtx?.getStepCache === 'function' ? stepCtx.getStepCache() : stepCtx?.stepCache || stepCtx?.stepCacheRef?.current;
-  const entry = cache?.[index];
-  return entry?.formData || entry?.data || {};
 };
 
 /**
@@ -514,17 +529,7 @@ const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, default
       if (next) {
         applyFormDataWithRetry(openApi, next, step);
       }
-      const parts = [];
-      if (bundle.org) {
-        parts.push('组织/部门');
-      }
-      if (bundle.position) {
-        parts.push('岗位');
-      }
-      if (bundle.employees) {
-        parts.push('个人');
-      }
-      message.success(`已从剪贴板导入：${parts.join('、')}${next ? '' : '（本步无对应字段，进入对应步骤时自动回填）'}`);
+      message.success(next ? '已从剪贴板导入岗位内容' : '已解析岗位内容（本步无对应字段）');
     } catch (e) {
       message.error(e.message || '导入失败');
     } finally {
@@ -579,7 +584,10 @@ const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, default
                     skill: normalizeSkills(
                       nextData.skill.map((item, index) => {
                         const draft = (item?.id && draftSkills.find(skill => skill.id === item.id)) || draftSkills[index] || {};
-                        return Object.assign({}, draft, item);
+                        return Object.assign({}, draft, item, {
+                          activityCode: item?.activityCode || draft.activityCode || '',
+                          activityTitle: item?.activityTitle || draft.activityTitle || ''
+                        });
                       })
                     )
                   };
@@ -625,21 +633,31 @@ const AiFillToolbar = ({ FormInfo, step, taskId, ajax, fillApi, message, default
           </FormApiButton>
         ) : null}
       </div>
-      <div className={style['ai-fill-hint']}>可粘贴岗位 JSON（含 verdict/skill）或 {'{ org, position, employees }'} 整包；导入后不会自动提交</div>
+      <div className={style['ai-fill-hint']}>可粘贴岗位 JSON（含 verdict/skill/activityCode/activityTitle）；导入后不会自动提交</div>
     </div>
   );
 };
 
-const OrgStep = ({ FormInfo, aiFillProps, context, importBundleRef }) => {
-  const { Input } = FormInfo.fields;
+const PositionPreview = ({ FormInfo, context }) => {
+  const { formData } = FormInfo.useFormContext();
+  const skills = useMemo(() => normalizeSkills(formData?.skill), [formData?.skill]);
+  const verdict = useMemo(() => normalizeVerdict(formData?.verdict), [formData?.verdict]);
+  const strategies = useMemo(() => normalizeWorkforceStrategy(formData?.workforceStrategy).filter(item => item.title || item.detail), [formData?.workforceStrategy]);
+  const positionInfo = useMemo(
+    () =>
+      Object.assign({}, context?.position || {}, {
+        description: typeof formData?.description === 'string' ? formData.description : context?.position?.description,
+        requirement: typeof formData?.requirement === 'string' ? formData.requirement : context?.position?.requirement,
+        developmentGoal: typeof formData?.developmentGoal === 'string' ? formData.developmentGoal : context?.position?.developmentGoal
+      }),
+    [context?.position, formData?.description, formData?.requirement, formData?.developmentGoal]
+  );
+
   return (
-    <AnalysisFormLayout context={context}>
-      <div className={style.body}>
-        <ApplyClipboardImport FormInfo={FormInfo} step="org" importBundleRef={importBundleRef} />
-        <AiFillToolbar FormInfo={FormInfo} step="org" {...aiFillProps} importBundleRef={importBundleRef} context={context} />
-        <FormInfo column={1} title="组织/部门" list={[<Input name="departmentName" label="部门" disabled key="departmentName" />, <Input name="tenantOrgId" label="tenantOrgId" hidden key="tenantOrgId" />]} />
-      </div>
-    </AnalysisFormLayout>
+    <div className={style['preview-stack']}>
+      <RoleInsightsContent skill={skills} verdict={verdict} strategies={strategies} />
+      <PositionInfoPanel data={positionInfo} />
+    </div>
   );
 };
 
@@ -648,153 +666,98 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef
   const { Input, TextArea, Select } = FormInfo.fields;
   const initialData = useMemo(() => buildInitialValues(context).position, [context]);
   const onceKey = `position:${aiFillProps?.taskId || 'task'}`;
+  const [viewMode, setViewMode] = useState('edit');
+
   return (
     <AnalysisFormLayout context={context}>
       <div className={style.body}>
         <RehydrateNestedFormData FormInfo={FormInfo} data={initialData} onceKey={onceKey} onceRef={rehydrateOnceRef} />
         <ApplyClipboardImport FormInfo={FormInfo} step="position" importBundleRef={importBundleRef} />
-        <AiFillToolbar FormInfo={FormInfo} step="position" {...aiFillProps} importBundleRef={importBundleRef} context={context} />
-        <FormInfo
-          column={1}
-          title="Role Outlook"
-          list={[
-            <TextArea name="verdict.summary" label="洞察摘要" rule="REQ" block key="verdict.summary" />,
-            <TextArea name="verdict.today" label="今日结论" rule="REQ" block key="verdict.today" />,
-            <TextArea name="verdict.future" label="未来结论" rule="REQ" block key="verdict.future" />,
-            <Input name="verdict.futureLabel" label="未来标签" key="verdict.futureLabel" />
-          ]}
-        />
-        <List
-          name="skill"
-          title="岗位技能列表"
-          important
-          minLength={1}
-          addText="添加岗位技能"
-          itemTitle={({ index }) => `技能 ${index + 1}`}
-          list={[
-            <Input name="id" label="id" hidden />,
-            <Input name="name" label="技能名称" rule="REQ LEN-1-400" />,
-            <Select name="origin" label="来源" rule="REQ" options={ORIGIN_OPTIONS} />,
-            <Select name="importanceNow" label="当前重要性" rule="REQ" options={IMPORTANCE_OPTIONS} />,
-            <Select name="importanceYear" label="本年重要性" rule="REQ" options={IMPORTANCE_OPTIONS} />,
-            <Select name="change" label="变化" rule="REQ" options={CHANGE_OPTIONS} />,
-            <Select name="aiExposure" label="AI 暴露" options={LEVEL_OPTIONS} />,
-            <Select name="confidence" label="置信度" options={LEVEL_OPTIONS} />,
-            <List
-              name="contentItems"
-              title="依据"
-              block
-              addText="添加依据"
-              itemTitle={({ index }) => `依据 ${index + 1}`}
-              list={[
-                <FormInfo column={1} list={[<Input name="title" label="标题" rule="LEN-0-400" block />, <TextArea name="description" label="描述" block rule="LEN-0-4000" />, <Input name="source" label="来源" rule="LEN-0-400" block />]} />
-              ]}
-            />
-          ]}
-        />
-        <FormInfo
-          column={1}
-          title="工作内容 / 要求"
-          list={[
-            <Editor name="description" label="工作内容" block rule="LEN-0-20000" key="description" />,
-            <Editor name="requirement" label="工作要求" block rule="LEN-0-20000" key="requirement" />,
-            <TextArea name="developmentGoal" label="发展目标" description="未来业务目标：2-3 年，这个岗位需要帮助业务实现什么？（选填）" block rule="LEN-0-4000" key="developmentGoal" />
-          ]}
-        />
-      </div>
-    </AnalysisFormLayout>
-  );
-};
-
-const PersonStep = ({ FormInfo, aiFillProps, context, rehydrateOnceRef, importBundleRef }) => {
-  const { List, TableList } = FormInfo;
-  const { Input, TextArea, Select, InputNumber } = FormInfo.fields;
-  const employeeCount = (context?.employees || []).length;
-  const initialData = useMemo(() => ({ employees: buildInitialValues(context).employees }), [context]);
-  const onceKey = `person:${aiFillProps?.taskId || 'task'}`;
-
-  return (
-    <AnalysisFormLayout context={context}>
-      <div className={style.body}>
-        <RehydrateNestedFormData FormInfo={FormInfo} data={initialData} onceKey={onceKey} onceRef={rehydrateOnceRef} />
-        <ApplyClipboardImport FormInfo={FormInfo} step="person" importBundleRef={importBundleRef} />
-        <AiFillToolbar FormInfo={FormInfo} step="person" {...aiFillProps} importBundleRef={importBundleRef} context={context} />
-        <List
-          name="employees"
-          title="个人人才分析"
-          important
-          minLength={employeeCount}
-          maxLength={employeeCount}
-          itemTitle={({ index }) => `人员 ${index + 1}`}
-          list={[
-            <Input name="employeeId" label="employeeId" hidden />,
-            <Input name="employeeName" label="姓名" disabled />,
-            <InputNumber name="readiness" label="就绪度 %" rule="REQ" min={0} max={100} />,
-            <TextArea name="summary" label="分析摘要" rule="REQ" block />,
-            <InputNumber name="metrics.criticalGaps" label="关键缺口" min={0} />,
-            <InputNumber name="metrics.atOrAbove" label="达标项" min={0} />,
-            <InputNumber name="metrics.monthsToClose" label="预计月数" min={0} />,
-            <List
-              name="skills"
-              title="技能对比"
-              block
-              addText="添加技能对比"
-              itemTitle={({ index }) => `技能 ${index + 1}`}
-              list={[
-                <Input name="id" label="id" hidden />,
-                <Input name="name" label="名称" rule="REQ LEN-1-400" />,
-                <InputNumber name="current" label="当前" min={0} max={5} />,
-                <InputNumber name="required" label="要求" min={0} max={5} />,
-                <Select name="status" label="状态" options={EMPLOYEE_SKILL_STATUS} />,
-                <Input name="evidence" label="证据" rule="LEN-0-200" />
-              ]}
-            />,
-            <List
-              name="priorityGaps"
-              title="优先差距"
-              block
-              addText="添加优先差距"
-              itemTitle={({ index }) => `差距 ${index + 1}`}
-              list={[
-                <InputNumber name="rank" label="排名" min={1} />,
-                <Input name="title" label="标题" rule="REQ LEN-1-400" />,
-                <TextArea name="description" label="描述" block />,
-                <InputNumber name="current" label="当前分" min={0} max={5} />,
-                <InputNumber name="required" label="要求分" min={0} max={5} />
-              ]}
-            />,
-            <Input name="developmentPlan.subtitle" label="发展计划副标题" rule="LEN-0-160" />,
-            <List
-              name="developmentPlan.horizons"
-              title="发展阶段"
-              block
-              addText="添加发展阶段"
-              itemTitle={({ index }) => `阶段 ${index + 1}`}
-              list={[
-                <Input name="key" label="key" hidden />,
-                <Input name="label" label="标签" rule="LEN-0-80" />,
-                <Input name="period" label="周期" rule="LEN-0-80" />,
-                <Select name="tone" label="色调" options={PLAN_TONES} />,
-                <Input name="title" label="阶段标题" rule="LEN-0-160" />,
-                <Input name="target" label="目标" rule="LEN-0-240" />,
-                <TableList name="items" title="阶段条目" block addText="添加条目" list={[<Input name="tag" label="Tag" rule="LEN-0-16" />, <Input name="title" label="标题" />, <Input name="meta" label="补充" rule="LEN-0-240" />]} />
-              ]}
-            />
-          ]}
-        />
+        <Flex justify="space-between" align="center" gap={12} wrap="wrap" className={style['view-mode-bar']}>
+          <Segmented
+            value={viewMode}
+            onChange={setViewMode}
+            options={[
+              { label: '编辑', value: 'edit' },
+              { label: '预览', value: 'preview' }
+            ]}
+          />
+        </Flex>
+        {viewMode === 'edit' ? <AiFillToolbar FormInfo={FormInfo} step="position" {...aiFillProps} importBundleRef={importBundleRef} context={context} /> : null}
+        <div className={viewMode === 'edit' ? style['edit-panel'] : style['edit-panel-hidden']}>
+          <FormInfo
+            column={1}
+            title="Role Outlook"
+            list={[
+              <TextArea name="verdict.summary" label="洞察摘要" rule="REQ" block key="verdict.summary" />,
+              <TextArea name="verdict.today" label="今日结论" rule="REQ" block key="verdict.today" />,
+              <TextArea name="verdict.future" label="未来结论" rule="REQ" block key="verdict.future" />,
+              <Input name="verdict.futureLabel" label="未来标签" key="verdict.futureLabel" />,
+              <Input name="verdict.aiEfficiencyGain" label="AI 效率增益（%）" key="verdict.aiEfficiencyGain" />
+            ]}
+          />
+          <List
+            name="skill"
+            title="Task 列表"
+            important
+            minLength={1}
+            addText="添加 Task"
+            itemTitle={({ index }) => `Task ${index + 1}`}
+            list={[
+              <Input name="id" label="id" hidden />,
+              <Input name="activityCode" label="编号" rule="REQ LEN-1-32" />,
+              <Input name="activityTitle" label="内容" rule="REQ LEN-1-200" />,
+              <Input name="name" label="Task" rule="REQ LEN-1-400" />,
+              <Select name="origin" label="来源" rule="REQ" options={ORIGIN_OPTIONS} />,
+              <Select name="importanceNow" label="当前重要性" rule="REQ" options={IMPORTANCE_OPTIONS} />,
+              <Select name="importanceYear" label="本年重要性" rule="REQ" options={IMPORTANCE_OPTIONS} />,
+              <Select name="change" label="变化" rule="REQ" options={CHANGE_OPTIONS} />,
+              <Select name="aiExposure" label="AI 暴露" options={LEVEL_OPTIONS} />,
+              <Select name="confidence" label="置信度" options={LEVEL_OPTIONS} />,
+              <List
+                name="contentItems"
+                title="依据"
+                block
+                addText="添加依据"
+                itemTitle={({ index }) => `依据 ${index + 1}`}
+                list={[
+                  <FormInfo column={1} list={[<Input name="title" label="标题" rule="LEN-0-400" block />, <TextArea name="description" label="描述" block rule="LEN-0-4000" />, <Input name="source" label="来源" rule="LEN-0-400" block />]} />
+                ]}
+              />
+            ]}
+          />
+          <List
+            name="workforceStrategy"
+            title="Gap Recommendations"
+            minLength={0}
+            maxLength={4}
+            addText="添加策略"
+            itemTitle={({ index, data }) => data?.action || `策略 ${index + 1}`}
+            list={[<Select name="action" label="类型" rule="REQ" options={STRATEGY_ACTION_OPTIONS} />, <Input name="title" label="标题" rule="LEN-0-200" />, <TextArea name="detail" label="说明" block rule="LEN-0-2000" />]}
+          />
+          <FormInfo
+            column={1}
+            title="工作内容 / 要求"
+            list={[
+              <Editor name="description" label="工作内容" block rule="LEN-0-20000" key="description" />,
+              <Editor name="requirement" label="工作要求" block rule="LEN-0-20000" key="requirement" />,
+              <TextArea name="developmentGoal" label="发展目标" description="未来业务目标：2-3 年，这个岗位需要帮助业务实现什么？（选填）" block rule="LEN-0-4000" key="developmentGoal" />
+            ]}
+          />
+        </div>
+        {viewMode === 'preview' ? <PositionPreview FormInfo={FormInfo} context={context} /> : null}
       </div>
     </AnalysisFormLayout>
   );
 };
 
 const CompletePositionAnalysisTask = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-admin:Editor']
+  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:FormInfo@useFormModal', 'components-admin:Editor']
 })(({ remoteModules, data, onSuccess, children, ...props }) => {
-  const [usePreset, FormInfo, Editor] = remoteModules;
+  const [usePreset, FormInfo, useFormModal, Editor] = remoteModules;
   const { apis, ajax } = usePreset();
   const { message } = App.useApp();
-  const useFormStepModal = FormInfo.useFormStepModal;
-  const formStepModal = useFormStepModal();
+  const formModal = useFormModal();
   const [loading, setLoading] = useState(false);
   const fillLanguageRef = useRef('zh-CN');
   const rehydrateOnceRef = useRef({});
@@ -812,7 +775,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
 
   const openStepForm = async () => {
     if (!contextApi || !completeApi) {
-      message.error('未配置 AI 岗位分析任务接口');
+      message.error('未配置岗位分析任务接口');
       return;
     }
     setLoading(true);
@@ -825,7 +788,6 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
       }
       const context = resData.data;
       const initial = buildInitialValues(context);
-      const employeeCount = (context.employees || []).length;
       const fillApi = apis?.talentSaas?.tenant?.position?.analysisAiFill;
       const defaultLanguage = context?.position?.language === 'en-US' ? 'en-US' : 'zh-CN';
       fillLanguageRef.current = defaultLanguage;
@@ -837,75 +799,37 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
         defaultLanguage,
         languageRef: fillLanguageRef
       };
-      const contextEmployees = context.employees || [];
-      const hasEmployees = employeeCount > 0;
+      const isRefineTask = data?.type === 'position-analysis-review' || context?.task?.type === 'position-analysis-review' || !!context?.task?.input?.skipAnalysisStatusUpdate;
+      const modalTitle = isRefineTask ? '完善岗位分析' : '完成 AI 岗位分析';
+      const successText = isRefineTask ? '完善岗位分析已完成' : 'AI岗位分析已完成';
 
-      const orgStep = {
-        title: '组织/部门',
-        formProps: {
-          data: initial.org,
-          onSubmit: () => {}
-        },
-        children: <OrgStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} importBundleRef={importBundleRef} />
-      };
-
-      const positionStep = {
-        title: '岗位',
+      formModal({
+        title: modalTitle,
+        size: 'large',
+        noPadding: true,
+        disabledScroller: true,
+        saveText: '完成分析',
         formProps: {
           data: initial.position,
-          onSubmit: hasEmployees
-            ? data => validatePositionStep(data, message)
-            : async (positionData, stepCtx) => {
-                const org = readStepFormData(stepCtx, 0);
-                return submitCompleteAnalysis({
-                  taskId: data.id,
-                  org,
-                  positionRaw: positionData,
-                  employeesInput: [],
-                  contextEmployees,
-                  ajax,
-                  completeApi,
-                  message,
-                  onSuccess
-                });
-              }
+          onSubmit: async positionData => {
+            if (validatePositionStep(positionData, message) === false) {
+              return false;
+            }
+            return submitCompleteAnalysis({
+              taskId: data.id,
+              org: initial.org || { tenantOrgId: context?.position?.tenantOrgId ?? null },
+              positionRaw: positionData,
+              employeesInput: [],
+              contextEmployees: [],
+              ajax,
+              completeApi,
+              message,
+              onSuccess,
+              successText
+            });
+          }
         },
         children: <PositionStep FormInfo={FormInfo} Editor={Editor} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} importBundleRef={importBundleRef} />
-      };
-
-      const personStep = hasEmployees
-        ? {
-            title: '个人',
-            formProps: {
-              data: { employees: initial.employees },
-              onSubmit: async (personData, stepCtx) => {
-                const org = readStepFormData(stepCtx, 0);
-                const positionRaw = readStepFormData(stepCtx, 1);
-                return submitCompleteAnalysis({
-                  taskId: data.id,
-                  org,
-                  positionRaw,
-                  employeesInput: personData?.employees,
-                  contextEmployees,
-                  ajax,
-                  completeApi,
-                  message,
-                  onSuccess
-                });
-              }
-            },
-            children: <PersonStep FormInfo={FormInfo} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} importBundleRef={importBundleRef} />
-          }
-        : null;
-
-      formStepModal({
-        title: '完成 AI 岗位分析',
-        size: 'large',
-        disabledScroller: true,
-        completeText: '完成分析',
-        nextText: '下一步',
-        cancelText: '取消',
-        items: hasEmployees ? [orgStep, positionStep, personStep] : [orgStep, positionStep]
       });
     } catch (e) {
       message.error(e.message || '打开完成任务表单失败');

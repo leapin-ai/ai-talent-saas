@@ -13,6 +13,9 @@ const getColumns = ({ onDetail, formatMessage }) => {
       name: 'department',
       title: formatMessage({ id: 'position.department' }),
       getValueOf: (item, { context } = {}) => {
+        if (item.departmentName) {
+          return item.departmentName;
+        }
         const data = context?.data || {};
         const org = data.orgEnums?.find(target => target.value === item.tenantOrgId);
         return org?.description || '-';
@@ -30,6 +33,12 @@ const getColumns = ({ onDetail, formatMessage }) => {
       type: 'otherSmall',
       hidden: true,
       getValueOf: item => (item.employeeCount == null ? 0 : item.employeeCount)
+    },
+    {
+      name: 'assessmentStatus',
+      title: formatMessage({ id: 'position.assessmentStatus' }),
+      type: 'other',
+      getValueOf: item => formatMessage({ id: `position.assessmentStatus.${item.assessmentStatus || 'pending'}` })
     },
     {
       name: 'status',

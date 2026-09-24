@@ -50,7 +50,7 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
       },
       status: {
         type: DataTypes.STRING,
-        comment: 'invited|opened|filling|interviewing|done',
+        comment: 'invited|opened|filling|interviewing|done|ended|canceled',
         defaultValue: 'invited',
         allowNull: false
       },

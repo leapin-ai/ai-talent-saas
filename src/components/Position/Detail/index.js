@@ -1,50 +1,22 @@
 import { useState } from 'react';
-import { App, Button, Empty, Flex, Spin, Tabs, Typography } from 'antd';
+import { App, Button, Empty, Spin, Tabs } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
 import { useFetch } from '@kne/react-fetch';
-import { useLocation, useMatch, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useMatch, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Page } from '@kne/system-layout';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
-import SkillList from './SkillList';
-import SkillOverview from './SkillList/SkillOverview';
 import AnalyzeTalent from './AnalyzeTalent';
+import RoleInsights from './RoleInsights';
+import PositionInfoPanel from './PositionInfoPanel';
 import AiAnalysis from './AiAnalysis';
 import style from './style.module.scss';
 
 const isAnalysisCardStatus = status => status === 'generating' || status === 'locked';
-
-const text = value => {
-  if (value == null || value === '') {
-    return '-';
-  }
-  return String(value);
-};
-
-const MetaGrid = ({ items }) => (
-  <div className={style['meta-grid']}>
-    {items.map(item => (
-      <div key={item.label} className={style['meta-item']}>
-        <div className={style['meta-label']}>{item.label}</div>
-        <div className={style['meta-value']}>{item.value}</div>
-      </div>
-    ))}
-  </div>
-);
-
-const DetailPanel = ({ title, extra, children, className }) => (
-  <section className={className ? `${style.panel} ${className}` : style.panel}>
-    {title || extra ? (
-      <div className={style['panel-header']}>
-        {title ? <h2 className={style['panel-title']}>{title}</h2> : null}
-        {extra}
-      </div>
-    ) : null}
-    <div className={style['panel-body']}>{children}</div>
-  </section>
-);
+const DETAIL_TAB_KEYS = ['insights', 'analyze', 'role'];
+const DEFAULT_DETAIL_TAB = 'insights';
 
 /** splat 布局下 useParams().id 偶发丢失时，用完整 pathname 再解析一次 */
 const resolvePositionId = ({ paramId, pathname, baseUrl = '' }) => {
@@ -63,15 +35,6 @@ const resolvePositionId = ({ paramId, pathname, baseUrl = '' }) => {
   return candidate;
 };
 
-/** 岗位描述/要求：表单为纯文本；历史数据可能含 HTML */
-const RichContent = ({ html }) => {
-  const content = html == null || html === '' ? '' : String(html);
-  if (!content) {
-    return '-';
-  }
-  return <div className={style['rich-html']} dangerouslySetInnerHTML={{ __html: content }} />;
-};
-
 const Detail = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-core:Permissions@usePermissionsPass']
 })(
@@ -79,17 +42,34 @@ const Detail = createWithRemoteLoader({
     const [usePreset, usePermissionsPass] = remoteModules;
     const { ajax } = usePreset();
     const { formatMessage } = useIntl();
-    const { message } = App.useApp();
+    const { message, modal } = App.useApp();
     const navigate = useNavigate();
     const { pathname } = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
     const canStartAnalysis = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionAnalysis });
     const canEdit = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionManagement });
     const { id: paramId } = useParams();
     const detailMatch = useMatch({ path: `${String(baseUrl).replace(/\/$/, '')}/position/:id`, end: true });
     const id = resolvePositionId({ paramId: paramId || detailMatch?.params?.id, pathname, baseUrl });
-    const [activeTab, setActiveTab] = useState('role');
+    const tabFromUrl = searchParams.get('tab');
+    const activeTab = DETAIL_TAB_KEYS.includes(tabFromUrl) ? tabFromUrl : DEFAULT_DETAIL_TAB;
     const [starting, setStarting] = useState(false);
     const pageTitleFallback = formatMessage({ id: 'position.bizName' });
+
+    const onTabChange = key => {
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev);
+          if (DETAIL_TAB_KEYS.includes(key) && key !== DEFAULT_DETAIL_TAB) {
+            next.set('tab', key);
+          } else {
+            next.delete('tab');
+          }
+          return next;
+        },
+        { replace: true }
+      );
+    };
 
     const renderShell = ({ title = pageTitleFallback, extra = null, noPadding = false, content }) => {
       if (typeof children === 'function') {
@@ -110,13 +90,6 @@ const Detail = createWithRemoteLoader({
       auto: Boolean(id)
     });
 
-    const enumLabel = (prefix, value) => {
-      if (!value) {
-        return '-';
-      }
-      return formatMessage({ id: `${prefix}.${value}`, defaultMessage: String(value) });
-    };
-
     if (!id) {
       return renderShell({
         content: statusContent(<Empty description={formatMessage({ id: 'position.detailMissing' })} />)
@@ -135,7 +108,6 @@ const Detail = createWithRemoteLoader({
       });
     }
 
-    const department = (data.orgEnums || []).find(target => target.value === data.tenantOrgId)?.description || '-';
     const showAnalysisCard = isAnalysisCardStatus(data.analysisStatus);
     const isLocked = data.analysisStatus === 'locked';
     const lockAnalysis = async () => {
@@ -170,14 +142,25 @@ const Detail = createWithRemoteLoader({
         reload();
       } catch (e) {
         message.error(e.message || formatMessage({ id: 'position.aiAnalysisStartFail' }));
+        throw e;
       } finally {
         setStarting(false);
       }
     };
 
+    const confirmStartAnalysis = () => {
+      if (!apis?.startAnalysis || starting) {
+        return;
+      }
+      modal.confirm({
+        title: formatMessage({ id: 'position.aiAnalysisConfirm' }, { name: data.name || '' }),
+        onOk: startAnalysis
+      });
+    };
+
     const extra =
       !showAnalysisCard && canStartAnalysis ? (
-        <Button type="primary" loading={starting} onClick={startAnalysis}>
+        <Button type="primary" loading={starting} onClick={confirmStartAnalysis}>
           {formatMessage({ id: 'position.aiAnalysisAction' })}
         </Button>
       ) : null;
@@ -188,71 +171,43 @@ const Detail = createWithRemoteLoader({
       </Button>
     ) : null;
 
-    const positionInfoCard = (
-      <DetailPanel className={style['position-info']} title={formatMessage({ id: 'position.positionInfo' })} extra={editExtra}>
-        <div className={style.sections}>
-          <section className={style.section}>
-            <h3 className={style['section-title']}>{formatMessage({ id: 'position.basicInfo' })}</h3>
-            <MetaGrid
-              items={[
-                { label: formatMessage({ id: 'position.name' }), value: text(data.name) },
-                { label: formatMessage({ id: 'position.department' }), value: text(department) },
-                { label: formatMessage({ id: 'position.status' }), value: enumLabel('positionStatus', data.status) },
-                { label: formatMessage({ id: 'position.language' }), value: enumLabel('language', data.language) }
-              ]}
-            />
-          </section>
-          <section className={style.section}>
-            <h3 className={style['section-title']}>{formatMessage({ id: 'position.workContent' })}</h3>
-            <div className={style['rich-content']}>
-              <RichContent html={data.description} />
-            </div>
-          </section>
-          <section className={style.section}>
-            <h3 className={style['section-title']}>{formatMessage({ id: 'position.workRequirement' })}</h3>
-            <div className={style['rich-content']}>
-              <RichContent html={data.requirement} />
-            </div>
-          </section>
-          <section className={style.section}>
-            <h3 className={style['section-title']}>{formatMessage({ id: 'position.futureBusinessGoal' })}</h3>
-            <Typography.Paragraph className={style['plain-text']}>{text(data.developmentGoal)}</Typography.Paragraph>
-          </section>
-        </div>
-      </DetailPanel>
-    );
-
     const content = showAnalysisCard ? (
       <AiAnalysis positionName={data.name} progress={data.analysisProgress} locked={isLocked} animate={!isLocked} onAnimationComplete={lockAnalysis} />
     ) : (
       <Tabs
         activeKey={activeTab}
-        onChange={setActiveTab}
+        onChange={onTabChange}
         items={[
           {
-            key: 'role',
-            label: formatMessage({ id: 'position.tabRoleDetails' }),
-            children: (
-              <Flex vertical gap={24}>
-                <SkillOverview skill={data.skill} verdict={data.verdict} />
-                <DetailPanel title={formatMessage({ id: 'position.skillListTitle' })}>
-                  <SkillList positionId={data.id} skill={data.skill} apis={apis} reload={reload} />
-                </DetailPanel>
-                {positionInfoCard}
-              </Flex>
-            )
+            key: 'insights',
+            label: formatMessage({ id: 'position.tabRoleInsights' }),
+            children: <RoleInsights apis={apis} position={data} />
           },
           {
             key: 'analyze',
             label: formatMessage({ id: 'position.tabAnalyzeTalent' }),
             children: <AnalyzeTalent baseUrl={baseUrl} positionId={data.id} employeeListApi={apis.employeeList} />
+          },
+          {
+            key: 'role',
+            label: formatMessage({ id: 'position.tabRoleDetails' }),
+            children: <PositionInfoPanel data={data} extra={editExtra} />
           }
         ]}
       />
     );
 
+    const pageTitle = showAnalysisCard ? (
+      data.name
+    ) : (
+      <span className={style['title-with-badge']}>
+        <span className={style['title-text']}>{data.name}</span>
+        <span className={style.badge}>{formatMessage({ id: 'position.futureRoleBadge' })}</span>
+      </span>
+    );
+
     return renderShell({
-      title: data.name,
+      title: pageTitle,
       extra,
       noPadding: showAnalysisCard,
       content

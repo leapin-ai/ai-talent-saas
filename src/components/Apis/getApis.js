@@ -53,6 +53,20 @@ const getApis = options => {
             url: `${prefix}/tenant/admin/position-create`,
             method: 'POST'
           }
+        },
+        readinessIssue: {
+          list: {
+            url: `${prefix}/tenant/admin/readiness-issue/list`,
+            method: 'GET'
+          },
+          detail: {
+            url: `${prefix}/tenant/admin/readiness-issue/detail`,
+            method: 'GET'
+          },
+          resolve: {
+            url: `${prefix}/tenant/admin/readiness-issue/resolve`,
+            method: 'POST'
+          }
         }
       },
       tenant: {
@@ -70,8 +84,28 @@ const getApis = options => {
             method: 'GET'
           },
           insight: {
-            url: `${prefix}/tenant/position/insight`,
+            url: `${prefix}/tenant/position/workforce-summary`,
             method: 'GET'
+          },
+          workforceSummary: {
+            url: `${prefix}/tenant/position/workforce-summary`,
+            method: 'GET'
+          },
+          tasks: {
+            url: `${prefix}/tenant/position/tasks`,
+            method: 'GET'
+          },
+          replaceTasks: {
+            url: `${prefix}/tenant/position/tasks/replace`,
+            method: 'POST'
+          },
+          taskReadiness: {
+            url: `${prefix}/tenant/position/task-readiness`,
+            method: 'GET'
+          },
+          taskReadinessReplace: {
+            url: `${prefix}/tenant/position/task-readiness/replace`,
+            method: 'POST'
           },
           detail: {
             url: `${prefix}/tenant/position/detail`,
@@ -145,6 +179,26 @@ const getApis = options => {
             url: `${prefix}/tenant/employee/my-detail`,
             method: 'GET'
           },
+          evidence: {
+            url: `${prefix}/tenant/employee/evidence`,
+            method: 'GET'
+          },
+          saveEvidence: {
+            url: `${prefix}/tenant/employee/evidence/save`,
+            method: 'POST'
+          },
+          replaceTaskEvidence: {
+            url: `${prefix}/tenant/employee/evidence/replace-task`,
+            method: 'POST'
+          },
+          removeEvidence: {
+            url: `${prefix}/tenant/employee/evidence/remove`,
+            method: 'POST'
+          },
+          reportReadinessIssue: {
+            url: `${prefix}/tenant/employee/readiness-issue`,
+            method: 'POST'
+          },
           create: {
             url: `${prefix}/tenant/employee/create`,
             method: 'POST'
@@ -159,6 +213,14 @@ const getApis = options => {
           },
           saveProfile: {
             url: `${prefix}/tenant/employee/save-profile`,
+            method: 'POST'
+          },
+          saveAiSuggest: {
+            url: `${prefix}/tenant/employee/save-ai-suggest`,
+            method: 'POST'
+          },
+          generateTalentInsight: {
+            url: `${prefix}/tenant/employee/generate-talent-insight`,
             method: 'POST'
           },
           createPerformance: {
@@ -228,6 +290,14 @@ const getApis = options => {
           interviewResult: {
             url: `${prefix}/tenant/position/talent-collect-invite/interview-result`,
             method: 'GET'
+          },
+          startAnalysis: {
+            url: `${prefix}/tenant/position/talent-collect-invite/start-analysis`,
+            method: 'POST'
+          },
+          cancel: {
+            url: `${prefix}/tenant/position/talent-collect-invite/cancel`,
+            method: 'POST'
           }
         },
         assessment: {
@@ -285,6 +355,10 @@ const getApis = options => {
           },
           generateAiFill: {
             url: `${prefix}/tenant/assessment/generate-ai-fill`,
+            method: 'POST'
+          },
+          generateTalentInsight: {
+            url: `${prefix}/tenant/assessment/generate-talent-insight`,
             method: 'POST'
           }
         }

@@ -2,6 +2,8 @@ const fp = require('fastify-plugin');
 const omit = require('lodash/omit');
 const dayjs = require('dayjs');
 const { requestAssessmentProfileFill, normalizeOutputLanguage } = require('../utils/llm-runner');
+const { extractInterviewSignals, runTalentInsightFill } = require('../utils/talent-insight');
+const { mergeVideoTranscriptsIntoInterview } = require('../utils/merge-video-transcripts');
 
 const FEATURE_KEY = 'Assessment';
 const SHORTEN_TTL_HOURS = 24;
@@ -179,7 +181,7 @@ const withInterviewRemote = (rowPublic, setting, services) =>
 module.exports = fp(async (fastify, options) => {
   const { models, services } = fastify[options.name];
 
-  const ensureGenerateTask = async row => {
+  const ensureGenerateTask = async (row, { forceNew = false } = {}) => {
     if (!row?.id) {
       return null;
     }
@@ -187,7 +189,16 @@ module.exports = fp(async (fastify, options) => {
       try {
         const existing = await fastify.task.services.detail({ id: row.generateTaskId });
         if (existing && ['pending', 'running', 'waiting'].includes(existing.status)) {
-          return existing;
+          if (!forceNew) {
+            return existing;
+          }
+          if (['pending', 'running'].includes(existing.status) && fastify.task?.services?.cancel) {
+            try {
+              await fastify.task.services.cancel({ id: row.generateTaskId });
+            } catch (e) {
+              fastify.log.warn({ err: e, taskId: row.generateTaskId }, 'cancel assessment generate task failed');
+            }
+          }
         }
       } catch (e) {
         // 任务不存在则重建
@@ -197,11 +208,21 @@ module.exports = fp(async (fastify, options) => {
     const profileData = row.profileData && typeof row.profileData === 'object' ? row.profileData : {};
     let employee = null;
     try {
-      const employeeRow = await models.employee.findOne({
-        where: { tenantId: row.tenantId, tenantUserId: row.tenantUserId },
-        include: [models.profile]
-      });
-      employee = employeeRow ? employeeRow.get({ plain: true }) : null;
+      if (row.tenantUserId) {
+        const employeeRow = await models.employee.findOne({
+          where: { tenantId: row.tenantId, tenantUserId: row.tenantUserId },
+          include: [models.profile]
+        });
+        employee = employeeRow ? employeeRow.get({ plain: true }) : null;
+      } else if (row.interviewData?.collectInviteId && models.talentCollectInvite) {
+        const invite = await models.talentCollectInvite.findByPk(String(row.interviewData.collectInviteId));
+        if (invite?.employeeId) {
+          const employeeRow = await models.employee.findByPk(invite.employeeId, {
+            include: [models.profile]
+          });
+          employee = employeeRow ? employeeRow.get({ plain: true }) : null;
+        }
+      }
     } catch (e) {
       employee = null;
     }
@@ -214,17 +235,18 @@ module.exports = fp(async (fastify, options) => {
       .filter(Boolean)
       .map(String);
 
-    const profileName = submittedInfo.name || profileData.name || '';
+    const profileName = submittedInfo.name || profileData.name || employee?.name || '';
     const task = await fastify.task.services.create({
       type: GENERATE_TASK_TYPE,
       targetId: String(row.id),
       targetType: 'assessment',
       runnerType: 'manual',
       input: {
-        name: profileName ? `完善档案生成审核：${profileName}` : `完善档案生成审核：${row.tenantUserId}`,
+        name: profileName ? `完善档案生成审核：${profileName}` : `完善档案生成审核：${row.tenantUserId || row.interviewData?.collectInviteId || row.id}`,
         assessmentId: row.id,
         tenantId: row.tenantId,
-        tenantUserId: row.tenantUserId,
+        tenantUserId: row.tenantUserId || null,
+        collectInviteId: row.interviewData?.collectInviteId ? String(row.interviewData.collectInviteId) : null,
         // 员工填写信息（不含简历附件/解析缓存字段）
         submittedInfo,
         // 简历解析数据
@@ -239,10 +261,10 @@ module.exports = fp(async (fastify, options) => {
     return task;
   };
 
-  const enterGenerating = async row => {
+  const enterGenerating = async (row, { forceNew = false } = {}) => {
     row.status = 'generating';
     await row.save();
-    await ensureGenerateTask(row);
+    await ensureGenerateTask(row, { forceNew });
     return row;
   };
 
@@ -602,11 +624,15 @@ module.exports = fp(async (fastify, options) => {
     const draft = draftSource
       ? {
           employee: draftSource.employee || mapped,
-          profile: draftSource.profile || mapped.profile
+          profile: draftSource.profile || mapped.profile,
+          aiSuggest: draftSource.aiSuggest || null,
+          skillAnalysis: draftSource.skillAnalysis || null
         }
       : {
           employee: mapped,
-          profile: mapped.profile
+          profile: mapped.profile,
+          aiSuggest: null,
+          skillAnalysis: null
         };
 
     const profileDetail = await buildProfileDetail(authenticatePayload, {
@@ -746,7 +772,8 @@ module.exports = fp(async (fastify, options) => {
         options: Object.assign({}, base.profile?.options || {}, profileDraft.options || {})
       }),
       performances: base.performances || [],
-      aiSuggest: base.aiSuggest || null
+      aiSuggest: draft?.aiSuggest || base.aiSuggest || null,
+      skillAnalysisDraft: draft?.skillAnalysis || null
     });
 
     const positionId = merged.options?.position;
@@ -784,14 +811,16 @@ module.exports = fp(async (fastify, options) => {
     if (!profileDetail) {
       return { employee: {}, profile: {} };
     }
-    const { profile, performances, orgEnums, positionEnums, aiSuggest, createdAt, updatedAt, deletedAt, ...employee } = profileDetail;
+    const { profile, performances, orgEnums, positionEnums, aiSuggest, skillAnalysisDraft, skillAnalysis, createdAt, updatedAt, deletedAt, ...employee } = profileDetail;
     if (employee.id != null && String(employee.id).startsWith('draft-')) {
       delete employee.id;
     }
     const cleanProfile = omit(profile || {}, ['id', 'employeeId', 'tenantId', 'createdAt', 'updatedAt', 'deletedAt']);
     return {
       employee,
-      profile: cleanProfile
+      profile: cleanProfile,
+      aiSuggest: aiSuggest || null,
+      skillAnalysis: skillAnalysisDraft || skillAnalysis || null
     };
   };
 
@@ -815,22 +844,41 @@ module.exports = fp(async (fastify, options) => {
     if (!row) {
       throw new Error('申请记录不存在');
     }
-    const employeeRow = await models.employee.findOne({
-      where: { tenantId, tenantUserId: row.tenantUserId },
-      include: [models.profile]
-    });
-    const employee = employeeRow ? employeeRow.get({ plain: true }) : null;
+    let employee = null;
+    try {
+      if (row.tenantUserId) {
+        const employeeRow = await models.employee.findOne({
+          where: { tenantId, tenantUserId: row.tenantUserId },
+          include: [models.profile]
+        });
+        employee = employeeRow ? employeeRow.get({ plain: true }) : null;
+      } else if (row.interviewData?.collectInviteId && models.talentCollectInvite) {
+        const invite = await models.talentCollectInvite.findByPk(String(row.interviewData.collectInviteId));
+        if (invite?.employeeId) {
+          const employeeRow = await models.employee.findByPk(invite.employeeId, {
+            include: [models.profile]
+          });
+          employee = employeeRow ? employeeRow.get({ plain: true }) : null;
+        }
+      }
+    } catch (e) {
+      employee = null;
+    }
     const assessment = enrichAssessmentRow(row, employee);
     const draftSource = row.reviewData && Object.keys(row.reviewData).length > 0 ? row.reviewData : null;
     const mapped = mapProfileDataToEmployeeDraft(row.profileData || {}, employee);
     const draft = draftSource
       ? {
           employee: draftSource.employee || mapped,
-          profile: draftSource.profile || mapped.profile
+          profile: draftSource.profile || mapped.profile,
+          aiSuggest: draftSource.aiSuggest || null,
+          skillAnalysis: draftSource.skillAnalysis || null
         }
       : {
           employee: mapped,
-          profile: mapped.profile
+          profile: mapped.profile,
+          aiSuggest: null,
+          skillAnalysis: null
         };
 
     const authenticatePayload = Object.assign({}, userInfo, { tenantId });
@@ -843,6 +891,129 @@ module.exports = fp(async (fastify, options) => {
     const resumes = pickResumeFiles(row.profileData || {}, employee);
     const resumeParsed = await resolveResumeParsed(row.profileData || {}, resumes);
     const { resumes: _r, resumeParsed: _rp, ...submittedProfileData } = row.profileData || {};
+
+    let interview = null;
+    let interviewError = null;
+    let apiHost = '';
+    let cdnUrl = '';
+    let version = '';
+    let videoTranscripts = null;
+    let videoAsrStatus = null;
+    let exportPosition = null;
+    let exportCompany = null;
+    let interviewId = row.clientUserId || row.interviewData?.interviewId || null;
+    try {
+      const companyRow = await fastify.tenant.services.company.detail({ tenantId });
+      if (companyRow) {
+        exportCompany = {
+          id: companyRow.id,
+          name: companyRow.name || '',
+          fullName: companyRow.fullName || '',
+          logo: companyRow.logo || null,
+          industry: companyRow.industry || '',
+          scale: companyRow.scale || '',
+          address: companyRow.address || '',
+          phone: companyRow.phone || '',
+          email: companyRow.email || '',
+          website: companyRow.website || '',
+          foundedDate: companyRow.foundedDate || null,
+          description: companyRow.description || '',
+          companyTags: companyRow.companyTags || []
+        };
+      }
+    } catch (e) {
+      exportCompany = null;
+    }
+    try {
+      const setting = await services.aiInterview.detail({ tenantId });
+      cdnUrl = setting?.cdnUrl || '';
+      version = setting?.version || '';
+      apiHost = setting?.apiUrl ? services.aiInterview.getAjaxBaseUrl(setting.apiUrl) : '';
+
+      // 采集邀请触发的任务：assessment 上可能尚未回写 clientUserId，从邀请记录解析
+      let collectInviteRow = null;
+      if (row.interviewData?.collectInviteId && models.talentCollectInvite) {
+        collectInviteRow = await models.talentCollectInvite.findByPk(String(row.interviewData.collectInviteId));
+      }
+      if (!interviewId && collectInviteRow) {
+        const invite = collectInviteRow;
+        if (invite.clientUserId) {
+          interviewId = String(invite.clientUserId);
+        } else if (invite.interviewId) {
+          interviewId = String(invite.interviewId);
+        } else if (invite.projectId) {
+          const listRes = await services.aiInterview.getInterviewList({
+            tenantId,
+            projectId: invite.projectId,
+            currentPage: 1,
+            perPage: 20,
+            filter: invite.inviteCode ? { code: invite.inviteCode } : undefined
+          });
+          const matched =
+            (listRes?.pageData || []).find(item => {
+              if (invite.inviteCode && item.code === invite.inviteCode) {
+                return true;
+              }
+              if (invite.email && (item.email === invite.email || item.user?.email === invite.email)) {
+                return true;
+              }
+              if (invite.phone && (item.phone === invite.phone || item.user?.phone === invite.phone)) {
+                return true;
+              }
+              return false;
+            }) || listRes?.pageData?.[0];
+          interviewId = matched?.id || matched?.clientUserId || matched?.interviewId || null;
+          if (interviewId) {
+            interviewId = String(interviewId);
+          }
+        }
+        if (interviewId && !row.clientUserId) {
+          row.clientUserId = interviewId;
+          row.interviewData = Object.assign({}, row.interviewData || {}, {
+            interviewId: row.interviewData?.interviewId || interviewId
+          });
+          row.changed('interviewData', true);
+          await row.save();
+        }
+      }
+
+      if (collectInviteRow?.interviewData?.videoTranscripts) {
+        videoTranscripts = collectInviteRow.interviewData.videoTranscripts;
+        videoAsrStatus = collectInviteRow.interviewData.videoAsrStatus || null;
+      }
+
+      const positionId = collectInviteRow?.positionId || task.input?.positionId || null;
+      if (positionId && services.position?.detail) {
+        const positionRow = await services.position.detail({ tenantId }, { id: String(positionId) });
+        const plain = positionRow?.get ? positionRow.get({ plain: true }) : positionRow;
+        if (plain) {
+          exportPosition = {
+            id: plain.id,
+            name: plain.name,
+            description: plain.description || '',
+            requirement: plain.requirement || '',
+            developmentGoal: plain.developmentGoal || '',
+            tenantOrgId: plain.tenantOrgId ?? null,
+            language: plain.language || null,
+            locationType: plain.locationType || null,
+            location: plain.location || {},
+            capacity: plain.capacity || '',
+            salary: plain.salary || {},
+            status: plain.status || null,
+            orgEnums: positionRow.getDataValue?.('orgEnums') || plain.orgEnums || []
+          };
+        }
+      }
+
+      if (!interviewId) {
+        interviewError = '缺少面试 clientUserId';
+      } else {
+        const interviewRaw = await services.aiInterview.getInterviewDetail({ tenantId, id: interviewId });
+        interview = mergeVideoTranscriptsIntoInterview(interviewRaw, videoTranscripts);
+      }
+    } catch (error) {
+      interviewError = error?.message || '拉取面试详情失败';
+    }
 
     return {
       task: {
@@ -857,7 +1028,16 @@ module.exports = fp(async (fastify, options) => {
       profileDetail,
       resumes,
       resumeParsed,
-      submittedInfo: submittedProfileData
+      submittedInfo: submittedProfileData,
+      position: exportPosition,
+      company: exportCompany,
+      interview,
+      interviewError,
+      videoTranscripts,
+      videoAsrStatus,
+      apiHost,
+      cdnUrl,
+      version
     };
   };
 
@@ -901,12 +1081,58 @@ module.exports = fp(async (fastify, options) => {
 
     row.reviewData = {
       employee: Object.assign({}, employeePart, { name, phone, email }),
-      profile: payload.profile && typeof payload.profile === 'object' ? payload.profile : mapProfileDataToEmployeeDraft(row.profileData || {}).profile
+      profile: payload.profile && typeof payload.profile === 'object' ? payload.profile : mapProfileDataToEmployeeDraft(row.profileData || {}).profile,
+      aiSuggest: payload.aiSuggest && typeof payload.aiSuggest === 'object' ? payload.aiSuggest : null,
+      skillAnalysis: payload.skillAnalysis && typeof payload.skillAnalysis === 'object' ? payload.skillAnalysis : null
     };
     row.changed('reviewData', true);
     row.status = 'submitted';
     row.generateTaskId = task.id;
     await row.save();
+    try {
+      let employeeId = null;
+      const linked = await loadEmployeeByTenantUserId(tenantId, row.tenantUserId);
+      if (linked?.id) {
+        employeeId = linked.id;
+      } else if (row.interviewData?.collectInviteId && models.talentCollectInvite) {
+        const invite = await models.talentCollectInvite.findByPk(String(row.interviewData.collectInviteId));
+        if (invite?.employeeId) {
+          employeeId = invite.employeeId;
+        }
+      }
+      if (employeeId && services.workforce) {
+        const employee = linked || (await models.employee.findByPk(employeeId));
+        if (employee) {
+          await services.workforce.seedEvidenceFromEmployee({ tenantId, employee, assessment: row });
+        }
+        await services.workforce.recomputeProfileCompletion({ tenantId, employeeId, assessment: row });
+      }
+      // 完成生成后立刻把就绪度/未来任务落到员工档案，避免「任务里填了、档案里全空」
+      const reviewSkillAnalysis = row.reviewData?.skillAnalysis;
+      const positionRef = row.reviewData?.employee?.options?.position || linked?.options?.position;
+      const positionId = typeof positionRef === 'object' && positionRef ? positionRef.id || positionRef.value : positionRef;
+      if (employeeId && reviewSkillAnalysis && typeof reviewSkillAnalysis === 'object' && positionId && services.position?.skillAnalysisSave) {
+        try {
+          await services.position.skillAnalysisSave(
+            { tenantId, id: userInfo?.id },
+            {
+              positionId: String(positionId),
+              employeeId: String(employeeId),
+              readiness: reviewSkillAnalysis.readiness,
+              summary: reviewSkillAnalysis.summary,
+              metrics: reviewSkillAnalysis.metrics,
+              skills: reviewSkillAnalysis.skills,
+              priorityGaps: reviewSkillAnalysis.priorityGaps,
+              developmentPlan: reviewSkillAnalysis.developmentPlan
+            }
+          );
+        } catch (error) {
+          fastify.log.warn({ err: error }, 'completeGenerate skillAnalysisSave failed');
+        }
+      }
+    } catch (error) {
+      fastify.log.warn({ err: error }, 'profile completion after generate failed');
+    }
 
     await fastify.task.services.complete({
       id: task.id,
@@ -918,6 +1144,26 @@ module.exports = fp(async (fastify, options) => {
         reviewData: row.reviewData
       }
     });
+
+    try {
+      const collectInviteId = row.interviewData?.collectInviteId;
+      if (collectInviteId && models.talentCollectInvite) {
+        const invite = await models.talentCollectInvite.findOne({
+          where: { id: String(collectInviteId), tenantId }
+        });
+        if (invite && (invite.status === 'done' || invite.status === 'ended')) {
+          invite.status = 'ended';
+          invite.interviewData = Object.assign({}, invite.interviewData || {}, {
+            analysisTaskId: String(task.id),
+            analysisCompletedAt: new Date().toISOString()
+          });
+          invite.changed('interviewData', true);
+          await invite.save();
+        }
+      }
+    } catch (error) {
+      fastify.log.warn({ err: error }, 'mark talent collect invite ended after generate failed');
+    }
 
     return toPublicAssessment(row);
   };
@@ -1045,6 +1291,154 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
+  const resolvePositionBrief = async (authenticatePayload, profileDetail) => {
+    const ref = profileDetail?.options?.position;
+    const positionId = typeof ref === 'object' && ref ? ref.id || ref.value : ref;
+    if (!positionId) {
+      return null;
+    }
+    try {
+      const position = await services.position.detail(authenticatePayload, { id: String(positionId) });
+      const plain = position.get ? position.get({ plain: true }) : position;
+      return {
+        id: plain.id,
+        name: plain.name,
+        description: plain.description,
+        requirement: plain.requirement,
+        developmentGoal: plain.developmentGoal,
+        skill: plain.skill,
+        language: plain.language
+      };
+    } catch (e) {
+      return { id: String(positionId), name: typeof ref === 'object' ? ref.name || '' : '' };
+    }
+  };
+
+  /**
+   * 根据面试问卷/作答(含视频转写)、简历解析、填写信息生成就绪度 + 成长/匹配。
+   * 默认不落库，返回给前端写回草稿；persist=true 且存在员工+岗位时写入正式表。
+   */
+  const generateTalentInsight = async (userInfo, { taskId, language, resumeParsed, submittedInfo, draft, persist }) => {
+    if (!taskId) {
+      throw new Error('任务ID不能为空');
+    }
+    const context = await getGenerateTaskContext(userInfo, { taskId });
+    const interviewSignals = extractInterviewSignals(context.interview);
+    const authenticatePayload = Object.assign({}, userInfo, { tenantId: context.task?.input?.tenantId || userInfo.tenantId });
+    const position = await resolvePositionBrief(authenticatePayload, context.profileDetail);
+
+    if (!context.interview && !(resumeParsed || context.resumeParsed) && !(submittedInfo || context.submittedInfo)) {
+      throw new Error('缺少可用的面试、简历或填写信息，无法生成洞察');
+    }
+
+    const promptContext = {
+      assessment: {
+        id: context.assessment?.id,
+        name: context.assessment?.name,
+        projectName: context.assessment?.projectName
+      },
+      employee: {
+        id: context.employee?.id || null,
+        name: context.profileDetail?.name || context.employee?.name || context.assessment?.name || '',
+        phone: context.profileDetail?.phone || context.assessment?.phone || '',
+        email: context.profileDetail?.email || context.assessment?.email || ''
+      },
+      position,
+      interviewSignals,
+      interviewError: context.interviewError || null,
+      resumeParsed: resumeParsed || context.resumeParsed || null,
+      submittedInfo: submittedInfo || context.submittedInfo || null
+    };
+
+    const draftPayload = {
+      readiness: draft?.skillAnalysisDraft || draft?.skillAnalysis || context.profileDetail?.skillAnalysisDraft || null,
+      aiSuggest: draft?.aiSuggest || context.profileDetail?.aiSuggest || null
+    };
+
+    const filled = await runTalentInsightFill(fastify, {
+      language: language || context.profileDetail?.language || 'zh-CN',
+      context: promptContext,
+      draft: draftPayload
+    });
+
+    let persisted = null;
+    if (persist && context.employee?.id) {
+      try {
+        await services.employee.saveAiSuggest(authenticatePayload, {
+          id: context.employee.id,
+          shortTerm: filled.aiSuggest.shortTerm,
+          longTerm: filled.aiSuggest.longTerm,
+          matchPosition: filled.aiSuggest.matchPosition
+        });
+        if (position?.id) {
+          persisted = await services.position.skillAnalysisSave(authenticatePayload, {
+            positionId: String(position.id),
+            employeeId: String(context.employee.id),
+            readiness: filled.readiness.readiness,
+            summary: filled.readiness.summary,
+            metrics: filled.readiness.metrics,
+            skills: filled.readiness.skills,
+            priorityGaps: filled.readiness.priorityGaps,
+            developmentPlan: filled.readiness.developmentPlan
+          });
+        }
+      } catch (error) {
+        fastify.log.warn({ err: error }, 'generateTalentInsight persist failed');
+      }
+    }
+
+    return {
+      language: filled.language,
+      readiness: filled.readiness,
+      aiSuggest: filled.aiSuggest,
+      persisted,
+      signals: {
+        hasInterview: !!context.interview,
+        interviewError: context.interviewError || null,
+        questionnaireAnswered: !!(interviewSignals.questionnaireAnswers && Object.keys(interviewSignals.questionnaireAnswers).length),
+        answerCount: interviewSignals.answers.length,
+        hasResumeParsed: !!(resumeParsed || context.resumeParsed),
+        hasSubmittedInfo: !!(submittedInfo || context.submittedInfo)
+      }
+    };
+  };
+
+  /**
+   * 完善档案生成审核：一键填充档案草稿 + 就绪度/成长/匹配（不落库）。
+   * 档案填充与洞察并行；洞察缺上下文时不阻断档案填充结果。
+   */
+  const aiFillAndInsightGenerate = async (userInfo, { taskId, draft, language, resumeParsed, submittedInfo, persist = false }) => {
+    if (!taskId) {
+      throw new Error('任务ID不能为空');
+    }
+
+    const [fillSettled, insightSettled] = await Promise.allSettled([
+      aiFillGenerate(userInfo, { taskId, draft, language, resumeParsed, submittedInfo }),
+      generateTalentInsight(userInfo, { taskId, language, resumeParsed, submittedInfo, draft, persist: !!persist })
+    ]);
+
+    if (fillSettled.status === 'rejected' && insightSettled.status === 'rejected') {
+      throw fillSettled.reason || insightSettled.reason || new Error('AI 填充失败');
+    }
+    if (fillSettled.status === 'rejected') {
+      throw fillSettled.reason || new Error('AI 填充档案失败');
+    }
+
+    const fillResult = fillSettled.value;
+    const insightResult = insightSettled.status === 'fulfilled' ? insightSettled.value : null;
+    const insightError = insightSettled.status === 'rejected' ? insightSettled.reason?.message || String(insightSettled.reason || '生成洞察失败') : null;
+
+    return {
+      language: fillResult.language || insightResult?.language || normalizeOutputLanguage(language || 'zh-CN'),
+      data: fillResult.data,
+      readiness: insightResult?.readiness || null,
+      aiSuggest: insightResult?.aiSuggest || null,
+      persisted: insightResult?.persisted || null,
+      signals: insightResult?.signals || null,
+      insightError
+    };
+  };
+
   const approve = async (authenticatePayload, { id }) => {
     const { tenantId } = authenticatePayload;
     const row = await findById(authenticatePayload, id);
@@ -1112,8 +1506,50 @@ module.exports = fp(async (fastify, options) => {
       await services.employee.saveProfile(authenticatePayload, Object.assign({}, profileUpdate, { id: employee.id }));
     }
 
+    const reviewAiSuggest = row.reviewData?.aiSuggest;
+    if (reviewAiSuggest && typeof reviewAiSuggest === 'object') {
+      try {
+        await services.employee.saveAiSuggest(authenticatePayload, {
+          id: employee.id,
+          shortTerm: reviewAiSuggest.shortTerm,
+          longTerm: reviewAiSuggest.longTerm,
+          matchPosition: reviewAiSuggest.matchPosition
+        });
+      } catch (error) {
+        fastify.log.warn({ err: error }, 'approve saveAiSuggest failed');
+      }
+    }
+
+    const reviewSkillAnalysis = row.reviewData?.skillAnalysis;
+    const positionRef = row.reviewData?.employee?.options?.position || employee.options?.position;
+    const positionId = typeof positionRef === 'object' && positionRef ? positionRef.id || positionRef.value : positionRef;
+    if (reviewSkillAnalysis && typeof reviewSkillAnalysis === 'object' && positionId) {
+      try {
+        await services.position.skillAnalysisSave(authenticatePayload, {
+          positionId: String(positionId),
+          employeeId: String(employee.id),
+          readiness: reviewSkillAnalysis.readiness,
+          summary: reviewSkillAnalysis.summary,
+          metrics: reviewSkillAnalysis.metrics,
+          skills: reviewSkillAnalysis.skills,
+          priorityGaps: reviewSkillAnalysis.priorityGaps,
+          developmentPlan: reviewSkillAnalysis.developmentPlan
+        });
+      } catch (error) {
+        fastify.log.warn({ err: error }, 'approve skillAnalysisSave failed');
+      }
+    }
+
     row.status = 'approved';
     await row.save();
+    try {
+      if (services.workforce) {
+        await services.workforce.seedEvidenceFromEmployee({ tenantId, employee, assessment: row });
+        await services.workforce.recomputeProfileCompletion({ tenantId, employeeId: employee.id, assessment: row });
+      }
+    } catch (error) {
+      fastify.log.warn({ err: error }, 'profile completion after approve failed');
+    }
 
     const linked = await loadEmployeeByTenantUserId(tenantId, row.tenantUserId);
     return enrichAssessmentRow(row, linked ? linked.get({ plain: true }) : { id: employee.id, name, phone, email, tenantUserId: row.tenantUserId });
@@ -1155,7 +1591,9 @@ module.exports = fp(async (fastify, options) => {
     }
     row.reviewData = {
       employee: Object.assign({}, employeePart, { name, phone, email }),
-      profile: profilePart
+      profile: profilePart,
+      aiSuggest: payload.aiSuggest && typeof payload.aiSuggest === 'object' ? payload.aiSuggest : row.reviewData?.aiSuggest || null,
+      skillAnalysis: payload.skillAnalysis && typeof payload.skillAnalysis === 'object' ? payload.skillAnalysis : row.reviewData?.skillAnalysis || null
     };
     row.changed('reviewData', true);
     await row.save();
@@ -1173,8 +1611,11 @@ module.exports = fp(async (fastify, options) => {
       getDetail,
       markSubmitted,
       getGenerateTaskContext,
+      enterGenerating,
       completeGenerate,
       aiFillGenerate,
+      aiFillAndInsightGenerate,
+      generateTalentInsight,
       saveReviewData,
       approve,
       reject

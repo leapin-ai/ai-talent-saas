@@ -1,8 +1,8 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
-import { Flex, Typography } from 'antd';
+import { useEffect, useState } from 'react';
+import { App, Flex, Tabs, Typography } from 'antd';
 import classnames from 'classnames';
 import { FaLightbulb } from 'react-icons/fa';
 import dayjs from 'dayjs';
@@ -12,6 +12,7 @@ import HeaderCard from './HeaderCard';
 import LeftColumn from './LeftColumn';
 import MiddleColumn from './MiddleColumn';
 import RightColumn from './RightColumn';
+import ProfileReadiness from './ProfileReadiness';
 import CardGate from './CardGate';
 import style from './style.module.scss';
 import { resolveIntentionDisplay } from './intentionPositionUtils';
@@ -36,6 +37,9 @@ const TalentProfile = createWithRemoteLoader({
       id: idProp,
       self,
       readOnly,
+      readinessReadOnly,
+      /** 证据区「看起来不对」：默认展示；仅手动 Task（如完善档案生成审核）传 false */
+      showLooksWrong = true,
       embed,
       empty,
       onData,
@@ -43,6 +47,8 @@ const TalentProfile = createWithRemoteLoader({
       data: controlledData,
       saveEmployee: controlledSaveEmployee,
       saveProfile: controlledSaveProfile,
+      saveAiSuggest: controlledSaveAiSuggest,
+      saveSkillAnalysis: controlledSaveSkillAnalysis,
       createPerformance: controlledCreatePerformance,
       removePerformance: controlledRemovePerformance,
       savePerformance: controlledSavePerformance,
@@ -53,9 +59,11 @@ const TalentProfile = createWithRemoteLoader({
       const [usePreset] = remoteModules;
       const { formatMessage } = useIntl();
       const { ajax } = usePreset();
+      const { message } = App.useApp();
       const { id: paramId } = useParams();
       const navigate = useNavigate();
       const id = idProp || paramId;
+      const [generatingInsight, setGeneratingInsight] = useState(false);
       // 首页 / 本人档案：走 my-detail，不依赖路由或 query 里的员工 id
       const useMyDetail = !controlledData && (self || !id);
       const fetchProps = useMyDetail ? Object.assign({}, apis.myDetail) : Object.assign({}, apis.detail, { params: { id } });
@@ -74,6 +82,38 @@ const TalentProfile = createWithRemoteLoader({
           );
         }
         const employeeId = data.id;
+        const positionId = data.options?.position?.id || (typeof data.options?.position === 'string' ? data.options.position : null);
+
+        const onGenerateInsight =
+          !readOnly && apis?.generateTalentInsight && !String(employeeId || '').startsWith('draft-')
+            ? async () => {
+                setGeneratingInsight(true);
+                try {
+                  const { data: resData } = await ajax(
+                    Object.assign({}, apis.generateTalentInsight, {
+                      data: {
+                        id: employeeId,
+                        positionId: positionId || undefined,
+                        persist: true
+                      }
+                    })
+                  );
+                  if (resData.code !== 0) {
+                    throw new Error(resData.msg || formatMessage({ id: 'talentProfile.generateInsightFailed' }));
+                  }
+                  message.success(formatMessage({ id: 'talentProfile.generateInsightSuccess' }));
+                  if (typeof reload === 'function') {
+                    reload();
+                  } else if (typeof controlledReload === 'function') {
+                    controlledReload();
+                  }
+                } catch (e) {
+                  message.error(e.message || formatMessage({ id: 'talentProfile.generateInsightFailed' }));
+                } finally {
+                  setGeneratingInsight(false);
+                }
+              }
+            : undefined;
         const saveProfile = async profileData => {
           if (readOnly) {
             return;
@@ -120,6 +160,34 @@ const TalentProfile = createWithRemoteLoader({
           reload();
           return data.data;
         };
+
+        const saveAiSuggest = async suggestData => {
+          if (readOnly) {
+            return;
+          }
+          if (controlledSaveAiSuggest) {
+            return controlledSaveAiSuggest(suggestData, { employeeId, reload });
+          }
+          const { data: resData } = await ajax(
+            Object.assign({}, apis.saveAiSuggest, {
+              data: Object.assign({}, suggestData, { id: employeeId })
+            })
+          );
+          if (resData.code !== 0) {
+            throw new Error(resData.msg || formatMessage({ id: 'talentProfile.editAiSuggestFailed' }));
+          }
+          reload();
+          return resData.data;
+        };
+
+        const saveSkillAnalysis = controlledSaveSkillAnalysis
+          ? async analysisData => {
+              if (readOnly) {
+                return;
+              }
+              return controlledSaveSkillAnalysis(analysisData, { employeeId, reload });
+            }
+          : undefined;
 
         const createPerformance = async performanceData => {
           if (readOnly) {
@@ -211,9 +279,15 @@ const TalentProfile = createWithRemoteLoader({
           phone: data.phone,
           email: data.email,
           description: data.description,
-          linkedin: '',
+          linkedin: data.profile?.options?.linkedin || data.options?.linkedin || '',
           location: data.city,
-          languages: '',
+          languages: (() => {
+            const raw = data.profile?.options?.languages || data.profile?.options?.language || data.options?.languages || data.options?.language || data.language || '';
+            if (Array.isArray(raw)) {
+              return raw.filter(Boolean).join(', ');
+            }
+            return raw || '';
+          })(),
           serviceYears: data.hireDate ? Math.floor((new Date() - new Date(data.hireDate)) / (365 * 24 * 60 * 60 * 1000)) : 0,
           totalWorkYears: data.options?.start_work_date ? Math.floor((new Date() - new Date(data.options.start_work_date)) / (365 * 24 * 60 * 60 * 1000)) : 0,
           isOnline: data.status === 'ACTIVE'
@@ -320,8 +394,30 @@ const TalentProfile = createWithRemoteLoader({
         const gotoPosition = positionId => {
           navigate(`${baseUrl}/position/${positionId}`);
         };
+
+        const hasGrowthData = !!(data.aiSuggest?.shortTerm?.target_position || data.aiSuggest?.longTerm?.target_position || (data.aiSuggest?.shortTerm?.development_points || []).length);
+        const hasMatchData = !!(data.aiSuggest?.matchPosition?.target_position || (data.aiSuggest?.matchPosition?.skill_match || []).length);
+        const hasProfileData = !!(
+          advantages.length ||
+          certificates.length ||
+          promotionHistory.length ||
+          skillTags.length ||
+          targetPositions.length ||
+          mobilityPreferences.length ||
+          interests.length ||
+          performanceReviews.length ||
+          (data.profile?.aiInterviewReport || []).length
+        );
+
+        const wrapPrintSection = (title, children, hasData = true) => (
+          <div className={classnames(style['print-section'], !hasData && style['print-section-empty'])}>
+            <div className={style['print-section-title']}>{title}</div>
+            {children}
+          </div>
+        );
+
         return (
-          <Flex className={classnames(style['talent-profile'], embed && style['talent-profile-embed'])} vertical gap={embed ? 12 : 16}>
+          <Flex className={classnames(style['talent-profile'], embed && style['talent-profile-embed'], readOnly && style['is-readonly'])} data-profile-mode={readOnly ? 'readonly' : 'editable'} vertical gap={embed ? 12 : 16}>
             <DataNotifier data={data} onData={onData} />
             <CardGate request={cardPermissions?.header}>
               <HeaderCard
@@ -330,49 +426,128 @@ const TalentProfile = createWithRemoteLoader({
                 saveEmployee={saveEmployee}
                 profileData={profileData}
                 readOnly={readOnly}
-                title={
-                  <Typography.Link
-                    onClick={() => {
-                      gotoPosition(profileData.positionId);
-                    }}
-                  >
-                    {profileData.position}
-                  </Typography.Link>
+                percent={data.profileCompletionPercent}
+                checklist={data.profileCompletionChecklist}
+                employeeId={employeeId}
+                onPositionClick={
+                  profileData.positionId
+                    ? () => {
+                        gotoPosition(profileData.positionId);
+                      }
+                    : undefined
                 }
               />
             </CardGate>
-            <div className={style['main-content']}>
-              <LeftColumn
-                readOnly={readOnly}
-                saveProfile={saveProfile}
-                profileData={profileData}
-                advantages={advantages}
-                certificates={certificates}
-                promotionHistory={promotionHistory}
-                gotoPosition={gotoPosition}
-                permissions={cardPermissions}
-              />
-              <MiddleColumn
-                readOnly={readOnly}
-                employeeId={employeeId}
-                createPerformance={createPerformance}
-                removePerformance={removePerformance}
-                savePerformance={savePerformance}
-                saveProfile={saveProfile}
-                skillTags={skillTags}
-                targetPositions={targetPositions}
-                mobilityPreferences={mobilityPreferences}
-                interests={interests}
-                performanceReviews={performanceReviews}
-                originData={data}
-                positionEnums={data.positionEnums}
-                positionListApi={apis.positionList}
-                skillRadarData={{ employee: data.profile?.aiInterviewReport || [], industry: [] }}
-                gotoPosition={gotoPosition}
-                permissions={cardPermissions}
-              />
-              <RightColumn saveProfile={saveProfile} careerPath={careerPath} aiRecommendations={aiRecommendations} gotoPosition={gotoPosition} permissions={cardPermissions} />
-            </div>
+            <Tabs
+              className={style['profile-tabs']}
+              items={[
+                {
+                  key: 'readiness',
+                  label: formatMessage({ id: 'talentProfile.tabReadiness' }),
+                  forceRender: true,
+                  children: wrapPrintSection(
+                    formatMessage({ id: 'talentProfile.tabReadiness' }),
+                    <ProfileReadiness
+                      employeeId={employeeId}
+                      displayName={profileData.name}
+                      positionId={positionId}
+                      readOnly={readOnly || readinessReadOnly}
+                      showLooksWrong={showLooksWrong}
+                      analysisOverride={data.skillAnalysisDraft || null}
+                      onSaveAnalysis={saveSkillAnalysis}
+                      onGenerateInsight={onGenerateInsight}
+                      generatingInsight={generatingInsight}
+                    />
+                  )
+                },
+                {
+                  key: 'growth',
+                  label: formatMessage({ id: 'talentProfile.tabGrowth' }),
+                  forceRender: true,
+                  children: wrapPrintSection(
+                    formatMessage({ id: 'talentProfile.tabGrowth' }),
+                    <RightColumn
+                      section="growth"
+                      careerPath={careerPath}
+                      aiRecommendations={aiRecommendations}
+                      gotoPosition={gotoPosition}
+                      permissions={cardPermissions}
+                      readOnly={readOnly || readinessReadOnly}
+                      employeeId={employeeId}
+                      saveAiSuggest={saveAiSuggest}
+                      aiSuggest={data.aiSuggest}
+                      onGenerateInsight={onGenerateInsight}
+                      generatingInsight={generatingInsight}
+                    />,
+                    hasGrowthData
+                  )
+                },
+                {
+                  key: 'match',
+                  label: formatMessage({ id: 'talentProfile.tabMatch' }),
+                  forceRender: true,
+                  children: wrapPrintSection(
+                    formatMessage({ id: 'talentProfile.tabMatch' }),
+                    <RightColumn
+                      section="match"
+                      careerPath={careerPath}
+                      aiRecommendations={aiRecommendations}
+                      gotoPosition={gotoPosition}
+                      permissions={cardPermissions}
+                      readOnly={readOnly || readinessReadOnly}
+                      employeeId={employeeId}
+                      saveAiSuggest={saveAiSuggest}
+                      aiSuggest={data.aiSuggest}
+                      onGenerateInsight={onGenerateInsight}
+                      generatingInsight={generatingInsight}
+                    />,
+                    hasMatchData
+                  )
+                },
+                {
+                  key: 'profile',
+                  label: formatMessage({ id: 'talentProfile.tabProfile' }),
+                  forceRender: true,
+                  children: wrapPrintSection(
+                    formatMessage({ id: 'talentProfile.tabProfile' }),
+                    <div className={style['main-content']}>
+                      <LeftColumn
+                        section="strengths"
+                        readOnly={readOnly}
+                        saveProfile={saveProfile}
+                        profileData={profileData}
+                        advantages={advantages}
+                        certificates={certificates}
+                        promotionHistory={promotionHistory}
+                        gotoPosition={gotoPosition}
+                        permissions={cardPermissions}
+                      />
+                      <MiddleColumn
+                        section="preferences"
+                        readOnly={readOnly}
+                        employeeId={employeeId}
+                        createPerformance={createPerformance}
+                        removePerformance={removePerformance}
+                        savePerformance={savePerformance}
+                        saveProfile={saveProfile}
+                        skillTags={skillTags}
+                        targetPositions={targetPositions}
+                        mobilityPreferences={mobilityPreferences}
+                        interests={interests}
+                        performanceReviews={performanceReviews}
+                        originData={data}
+                        positionEnums={data.positionEnums}
+                        positionListApi={apis.positionList}
+                        skillRadarData={{ employee: data.profile?.aiInterviewReport || [], industry: [] }}
+                        gotoPosition={gotoPosition}
+                        permissions={cardPermissions}
+                      />
+                    </div>,
+                    hasProfileData
+                  )
+                }
+              ]}
+            />
           </Flex>
         );
       };

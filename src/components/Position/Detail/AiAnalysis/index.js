@@ -11,29 +11,14 @@ const DEFAULT_PRIMARY = '#4F46E5';
 const ANIMATION_MS = 5000;
 const COMPLETE_DELAY_MS = 500;
 
-const STEP_KEYS = [
-  { id: 'org', labelId: 'position.aiAnalysisStepOrg' },
-  { id: 'position', labelId: 'position.aiAnalysisStepPosition' },
-  { id: 'person', labelId: 'position.aiAnalysisStepPerson' }
-];
+const STEP_KEYS = [{ id: 'position', labelId: 'position.aiAnalysisStepPosition' }];
 
 const DONE_ITEMS = [
   { titleId: 'position.aiAnalysisDoneItemSummary', descId: 'position.aiAnalysisDoneItemSummaryDesc' },
-  { titleId: 'position.aiAnalysisStepOrg', descId: 'position.aiAnalysisDoneItemOrgDesc' },
-  { titleId: 'position.aiAnalysisStepPosition', descId: 'position.aiAnalysisDoneItemPositionDesc' },
-  { titleId: 'position.aiAnalysisStepPerson', descId: 'position.aiAnalysisDoneItemPersonDesc' }
+  { titleId: 'position.aiAnalysisStepPosition', descId: 'position.aiAnalysisDoneItemPositionDesc' }
 ];
 
-const resolveActiveIndex = progress => {
-  const value = Number(progress) || 0;
-  if (value >= 70) {
-    return 2;
-  }
-  if (value >= 40) {
-    return 1;
-  }
-  return 0;
-};
+const resolveActiveIndex = () => 0;
 
 const PersonIcon = () => (
   <svg className={style['person-icon']} width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden>
@@ -133,7 +118,7 @@ const AiAnalysisInner = ({ positionName, progress = 0, animate = true, locked = 
     };
   }, [animate, initialProgress, locked]);
 
-  const activeIndex = resolveActiveIndex(displayProgress);
+  const activeIndex = resolveActiveIndex();
   const steps = useMemo(
     () =>
       STEP_KEYS.map((step, index) => {

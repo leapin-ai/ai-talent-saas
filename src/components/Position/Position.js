@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { Modal, message } from 'antd';
@@ -6,6 +6,8 @@ import withLocale from './withLocale';
 import getColumns from './getColumns';
 import BaseFormInner from './PositionForm';
 import InsightBanner from './InsightBanner';
+import WorkforceKpi from './WorkforceKpi';
+import { createPositionListCardsRender } from './PositionListCards';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
 import useTablePaginationSearchParams from '../../commons/useTablePaginationSearchParams';
 
@@ -112,6 +114,10 @@ const Position = createWithRemoteLoader({
     });
 
     const insightBanner = withInsightBanner ? <InsightBanner apis={apis} onReview={applyHighChangeFilter} /> : null;
+    const workforceKpi = withInsightBanner ? <WorkforceKpi apis={apis} /> : null;
+
+    const renderCard = useMemo(() => createPositionListCardsRender({ onDetail, formatMessage }), [onDetail, formatMessage]);
+    const renderMobile = renderCard;
 
     return (
       <BizUnit
@@ -151,6 +157,22 @@ const Position = createWithRemoteLoader({
           keywordFilterLabel: formatMessage({ id: 'position.keywordFilterLabel' }),
           mapFilterValue,
           tableProps: {
+            renderCard,
+            renderMobile,
+            dataFormat: data => {
+              const orgEnums = Array.isArray(data?.orgEnums) ? data.orgEnums : [];
+              const pageData = Array.isArray(data?.pageData) ? data.pageData : [];
+              return {
+                list: pageData.map(item => {
+                  const org = orgEnums.find(target => String(target.value) === String(item.tenantOrgId));
+                  return Object.assign({}, item, {
+                    departmentName: org?.description || '-'
+                  });
+                }),
+                total: data?.totalCount ?? data?.total ?? 0,
+                orgEnums
+              };
+            },
             pagination: {
               searchParams: paginationSearchParams.searchParams,
               setSearchParams: paginationSearchParams.setSearchParams
@@ -180,7 +202,7 @@ const Position = createWithRemoteLoader({
           }
         }}
       >
-        {typeof children === 'function' ? renderProps => children({ ...renderProps, insightBanner, listKey }) : children}
+        {typeof children === 'function' ? renderProps => children({ ...renderProps, insightBanner, workforceKpi, listKey }) : children}
       </BizUnit>
     );
   })

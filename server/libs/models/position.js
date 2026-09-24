@@ -76,6 +76,18 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
         allowNull: false,
         defaultValue: 'low',
         comment: '岗位变化幅度 low|medium|high（由 skill.change 汇总）'
+      },
+      outlook: {
+        type: DataTypes.JSONB,
+        allowNull: false,
+        defaultValue: {},
+        comment: 'Role Insights outlook，取代业务对 verdict 的依赖'
+      },
+      assessmentStatus: {
+        type: DataTypes.STRING(32),
+        allowNull: false,
+        defaultValue: 'pending',
+        comment: '访谈分析进度 pending|interviews_in_progress|completed'
       }
     },
     associate: ({ position }) => {

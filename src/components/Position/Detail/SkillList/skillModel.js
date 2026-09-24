@@ -8,7 +8,10 @@
  *
  * @typedef {Object} PositionSkillItem
  * @property {string} id
- * @property {string} name
+ * @property {string} name - Task title
+ * @property {string} [activityGroup] - derived from activityCode + activityTitle (e.g. "A01 · Customer Focus")
+ * @property {string} [activityCode] - Activity 编号 (e.g. "A01")
+ * @property {string} [activityTitle] - Activity 内容 (e.g. "Customer Focus")
  * @property {'existing'|'new'} origin
  * @property {number} importanceNow - baseline importance (1–5)
  * @property {number} importanceYear - current-year importance (1–5), not a fixed calendar year like 2030
@@ -28,12 +31,12 @@ export const IMPORTANCE_MIN = 1;
 export const IMPORTANCE_MAX = 5;
 
 export const CHANGE_META = {
-  must_build: { labelKey: 'position.skillChange.must_build', bg: '#dfdeff', color: '#121163' },
-  ai_emerging: { labelKey: 'position.skillChange.ai_emerging', bg: '#ecf2ed', color: '#2a533c' },
-  new: { labelKey: 'position.skillChange.new', bg: '#a4e0fc', color: '#0d4159' },
-  enhanced: { labelKey: 'position.skillChange.enhanced', bg: '#fce0d1', color: '#5f2d11' },
-  stable: { labelKey: 'position.skillChange.stable', bg: '#d1dce7', color: '#132c5d' },
-  declining: { labelKey: 'position.skillChange.declining', bg: '#f0dcf6', color: '#5a105f' }
+  must_build: { labelKey: 'position.skillChange.must_build', filterLabelKey: 'position.skillFilter.must_build', bg: '#dfdeff', color: '#121163' },
+  ai_emerging: { labelKey: 'position.skillChange.ai_emerging', filterLabelKey: 'position.skillFilter.ai_emerging', bg: '#ecf2ed', color: '#2a533c' },
+  new: { labelKey: 'position.skillChange.new', filterLabelKey: 'position.skillFilter.new', bg: '#a4e0fc', color: '#0d4159' },
+  enhanced: { labelKey: 'position.skillChange.enhanced', filterLabelKey: 'position.skillFilter.enhanced', bg: '#fce0d1', color: '#5f2d11' },
+  stable: { labelKey: 'position.skillChange.stable', filterLabelKey: 'position.skillFilter.stable', bg: '#d1dce7', color: '#132c5d' },
+  declining: { labelKey: 'position.skillChange.declining', filterLabelKey: 'position.skillFilter.declining', bg: '#f0dcf6', color: '#5a105f' }
 };
 
 export const ORIGIN_META = {
@@ -131,10 +134,55 @@ export const createSkillId = () => {
   return `skill-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
+export const formatActivityGroup = (code, title) => {
+  const c = String(code || '')
+    .trim()
+    .slice(0, 32);
+  const t = String(title || '')
+    .trim()
+    .slice(0, 160);
+  if (c && t) {
+    return `${c} · ${t}`.slice(0, 200);
+  }
+  return (c || t).slice(0, 200);
+};
+
+const readActivityText = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
+
+const parseActivityGroup = value => {
+  const text = readActivityText(value, 200);
+  if (!text) {
+    return { activityCode: '', activityTitle: '' };
+  }
+  const matched = text.match(/^([A-Za-z]?\d{1,3})\s*[·.\-–—:]?\s*(.*)$/);
+  if (matched && matched[1]) {
+    return {
+      activityCode: matched[1].toUpperCase().slice(0, 32),
+      activityTitle: readActivityText(matched[2], 160)
+    };
+  }
+  return { activityCode: '', activityTitle: text.slice(0, 160) };
+};
+
+const resolveActivityFields = raw => {
+  const activity = raw?.activity && typeof raw.activity === 'object' && !Array.isArray(raw.activity) ? raw.activity : null;
+  const grouped = parseActivityGroup(raw?.activityGroup || activity?.activityGroup);
+  const activityCode = readActivityText(raw?.activityCode, 32) || readActivityText(activity?.activityCode, 32) || readActivityText(activity?.code, 32) || grouped.activityCode;
+  const activityTitle = readActivityText(raw?.activityTitle, 160) || readActivityText(activity?.activityTitle, 160) || readActivityText(activity?.title, 160) || readActivityText(activity?.content, 160) || grouped.activityTitle;
+  return {
+    activityCode,
+    activityTitle,
+    activityGroup: formatActivityGroup(activityCode, activityTitle)
+  };
+};
+
 /** @returns {PositionSkillItem} */
 export const createEmptySkill = () => ({
   id: createSkillId(),
   name: '',
+  activityCode: '',
+  activityTitle: '',
+  activityGroup: '',
   origin: 'existing',
   importanceNow: 3,
   importanceYear: 3,
@@ -172,9 +220,13 @@ export const normalizeSkillItem = (raw, index = 0) => {
   }
   // Prefer persisted id; otherwise a stable fallback so hover/list lookups stay consistent across normalize passes.
   const id = typeof raw.id === 'string' && raw.id ? raw.id : `skill-${index}-${name.slice(0, 40)}`;
+  const activity = resolveActivityFields(raw);
   return {
     id,
     name: name.slice(0, 200),
+    activityCode: activity.activityCode,
+    activityTitle: activity.activityTitle,
+    activityGroup: activity.activityGroup,
     origin,
     importanceNow,
     importanceYear,
@@ -212,18 +264,31 @@ export const countByChange = skills => {
  * @property {string} today
  * @property {string} future
  * @property {string} [futureLabel] - optional display label, e.g. "2026–2030"
+ * @property {number|null} [aiEfficiencyGain] - role-level AI efficiency gain, 0-100
  */
+
+const normalizeAiEfficiencyGain = value => {
+  if (value == null || value === '') {
+    return null;
+  }
+  const num = Number(String(value).trim().replace(/%$/, ''));
+  if (!Number.isFinite(num)) {
+    return null;
+  }
+  return Math.max(0, Math.min(100, Math.round(num)));
+};
 
 /** @returns {PositionVerdict} */
 export const normalizeVerdict = raw => {
   if (!raw || typeof raw !== 'object') {
-    return { summary: '', today: '', future: '', futureLabel: '' };
+    return { summary: '', today: '', future: '', futureLabel: '', aiEfficiencyGain: null };
   }
   return {
     summary: typeof raw.summary === 'string' ? raw.summary : '',
     today: typeof raw.today === 'string' ? raw.today : '',
     future: typeof raw.future === 'string' ? raw.future : '',
-    futureLabel: typeof raw.futureLabel === 'string' ? raw.futureLabel : ''
+    futureLabel: typeof raw.futureLabel === 'string' ? raw.futureLabel : '',
+    aiEfficiencyGain: normalizeAiEfficiencyGain(raw.aiEfficiencyGain)
   };
 };
 

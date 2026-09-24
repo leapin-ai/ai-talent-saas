@@ -12,7 +12,9 @@ const STATUS_LABEL_IDS = {
   opened: 'position.talentInviteStatusOpened',
   filling: 'position.talentInviteStatusFilling',
   interviewing: 'position.talentInviteStatusInterviewing',
-  done: 'position.talentInviteStatusDone'
+  done: 'position.talentInviteStatusDone',
+  ended: 'position.talentInviteStatusEnded',
+  canceled: 'position.talentInviteStatusCanceled'
 };
 
 const TYPE_LABEL_IDS = {
@@ -201,6 +203,98 @@ const InviteRecords = createWithRemoteLoader({
       [ajax, apis, formatMessage, locale, message, modal]
     );
 
+    const startInviteAnalysis = useCallback(
+      (item, { reanalyze = false } = {}) => {
+        if (!item?.id) {
+          return;
+        }
+        const isManager = item.inviteType === 'manager';
+        const confirmId = reanalyze
+          ? isManager
+            ? 'position.talentInviteReanalyzeConfirmManager'
+            : 'position.talentInviteReanalyzeConfirm'
+          : isManager
+            ? 'position.talentInviteStartAnalysisConfirmManager'
+            : 'position.talentInviteStartAnalysisConfirm';
+        modal.confirm({
+          title: formatMessage({ id: confirmId }, { name: item.name || '' }),
+          onOk: async () => {
+            setLoadingId(item.id);
+            setActionType('analysis');
+            try {
+              const { data: resData } = await ajax(
+                Object.assign({}, apis.talentSaas.tenant.talentCollectInvite.startAnalysis, {
+                  data: { id: String(item.id) }
+                })
+              );
+              if (resData.code !== 0) {
+                throw new Error(resData.msg || formatMessage({ id: 'position.talentInviteStartAnalysisFailed' }));
+              }
+              const asrStatus = resData.data?.asrStatus;
+              if (asrStatus === 'running') {
+                message.success(formatMessage({ id: 'position.talentInviteStartAnalysisAsrQueued' }));
+              } else {
+                const analysisKind = resData.data?.analysisKind;
+                message.success(
+                  formatMessage({
+                    id: reanalyze
+                      ? analysisKind === 'position-analysis-review' || isManager
+                        ? 'position.talentInviteReanalyzeSuccessManager'
+                        : 'position.talentInviteReanalyzeSuccess'
+                      : analysisKind === 'position-analysis-review' || isManager
+                        ? 'position.talentInviteStartAnalysisSuccessManager'
+                        : 'position.talentInviteStartAnalysisSuccess'
+                  })
+                );
+              }
+              setReloadKey(key => key + 1);
+            } catch (e) {
+              message.error(e.message || formatMessage({ id: 'position.talentInviteStartAnalysisFailed' }));
+              throw e;
+            } finally {
+              setLoadingId(null);
+              setActionType('');
+            }
+          }
+        });
+      },
+      [ajax, apis, formatMessage, message, modal]
+    );
+
+    const cancelInvite = useCallback(
+      item => {
+        if (!item?.id) {
+          return;
+        }
+        modal.confirm({
+          title: formatMessage({ id: 'position.talentInviteCancelConfirm' }, { name: item.name || '' }),
+          onOk: async () => {
+            setLoadingId(item.id);
+            setActionType('cancel');
+            try {
+              const { data: resData } = await ajax(
+                Object.assign({}, apis.talentSaas.tenant.talentCollectInvite.cancel, {
+                  data: { id: String(item.id) }
+                })
+              );
+              if (resData.code !== 0) {
+                throw new Error(resData.msg || formatMessage({ id: 'position.talentInviteCancelFailed' }));
+              }
+              message.success(formatMessage({ id: 'position.talentInviteCancelSuccess' }));
+              setReloadKey(key => key + 1);
+            } catch (e) {
+              message.error(e.message || formatMessage({ id: 'position.talentInviteCancelFailed' }));
+              throw e;
+            } finally {
+              setLoadingId(null);
+              setActionType('');
+            }
+          }
+        });
+      },
+      [ajax, apis, formatMessage, message, modal]
+    );
+
     const columns = useMemo(
       () => [
         {
@@ -229,7 +323,20 @@ const InviteRecords = createWithRemoteLoader({
         {
           name: 'status',
           title: formatMessage({ id: 'position.talentInviteStatus' }),
-          getValueOf: item => formatMessage({ id: STATUS_LABEL_IDS[item.status] || 'position.talentInviteStatusInvited' })
+          getValueOf: item => {
+            const base = formatMessage({ id: STATUS_LABEL_IDS[item.status] || 'position.talentInviteStatusInvited' });
+            const asr = item.interviewData?.videoAsrStatus;
+            if (asr === 'running' || asr === 'pending') {
+              return `${base} · ${formatMessage({ id: 'position.talentInviteVideoAsrRunning' })}`;
+            }
+            if (asr === 'failed') {
+              return `${base} · ${formatMessage({ id: 'position.talentInviteVideoAsrFailed' })}`;
+            }
+            if (asr === 'succeeded') {
+              return `${base} · ${formatMessage({ id: 'position.talentInviteVideoAsrSucceeded' })}`;
+            }
+            return base;
+          }
         },
         {
           name: 'deadline',
@@ -249,31 +356,60 @@ const InviteRecords = createWithRemoteLoader({
           fixed: 'right',
           renderType: 'options',
           getValueOf: item => {
-            const actions = [
-              {
+            if (item.status === 'canceled') {
+              return [];
+            }
+            const actions = [];
+            if (item.status !== 'ended') {
+              actions.push({
                 children: formatMessage({ id: 'position.talentInviteGetLink' }),
                 loading: loadingId === item.id && actionType === 'link',
                 onClick: () => fetchInviteLink(item)
-              }
-            ];
-            if (item.status === 'done') {
+              });
+            }
+            if (item.status === 'done' || item.status === 'ended') {
               actions.push({
                 children: formatMessage({ id: 'position.talentInviteViewResult' }),
                 loading: loadingId === item.id && actionType === 'result',
                 onClick: () => fetchInterviewResult(item)
               });
-              return actions;
+              if (item.status === 'done') {
+                actions.push({
+                  children: formatMessage({
+                    id: item.inviteType === 'manager' ? 'position.talentInviteStartAnalysisManager' : 'position.talentInviteStartAnalysis'
+                  }),
+                  loading: loadingId === item.id && actionType === 'analysis',
+                  onClick: () => startInviteAnalysis(item)
+                });
+              } else {
+                actions.push({
+                  children: formatMessage({
+                    id: item.inviteType === 'manager' ? 'position.talentInviteReanalyzeManager' : 'position.talentInviteReanalyze'
+                  }),
+                  loading: loadingId === item.id && actionType === 'analysis',
+                  onClick: () => startInviteAnalysis(item, { reanalyze: true })
+                });
+              }
+            } else if (item.status !== 'ended') {
+              actions.push({
+                children: formatMessage({ id: 'position.talentInviteResend' }),
+                loading: loadingId === item.id && actionType === 'resend',
+                onClick: () => resendInvite(item)
+              });
             }
-            actions.push({
-              children: formatMessage({ id: 'position.talentInviteResend' }),
-              loading: loadingId === item.id && actionType === 'resend',
-              onClick: () => resendInvite(item)
-            });
+            if (item.status !== 'ended') {
+              actions.push({
+                children: formatMessage({ id: 'position.talentInviteCancel' }),
+                danger: true,
+                loading: loadingId === item.id && actionType === 'cancel',
+                onClick: () => cancelInvite(item)
+              });
+            }
             return actions;
           }
         }
       ],
-      [actionType, fetchInterviewResult, fetchInviteLink, formatMessage, loadingId, resendInvite]
+      [actionType, cancelInvite, fetchInterviewResult, fetchInviteLink, formatMessage, loadingId, resendInvite, startInviteAnalysis]
     );
 
     const listApi = useMemo(() => {
@@ -327,7 +463,9 @@ const InviteRecords = createWithRemoteLoader({
                     { label: formatMessage({ id: 'position.talentInviteStatusOpened' }), value: 'opened' },
                     { label: formatMessage({ id: 'position.talentInviteStatusFilling' }), value: 'filling' },
                     { label: formatMessage({ id: 'position.talentInviteStatusInterviewing' }), value: 'interviewing' },
-                    { label: formatMessage({ id: 'position.talentInviteStatusDone' }), value: 'done' }
+                    { label: formatMessage({ id: 'position.talentInviteStatusDone' }), value: 'done' },
+                    { label: formatMessage({ id: 'position.talentInviteStatusEnded' }), value: 'ended' },
+                    { label: formatMessage({ id: 'position.talentInviteStatusCanceled' }), value: 'canceled' }
                   ]
                 }
               },

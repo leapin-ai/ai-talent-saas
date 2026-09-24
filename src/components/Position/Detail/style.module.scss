@@ -58,20 +58,92 @@ $value: #334155;
 .section-title {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   margin: 0 0 12px;
   font-size: 14px;
   font-weight: 600;
   line-height: 22px;
-  color: var(--primary-color);
+  color: #0d4159;
 
   &::after {
-    content: '';
-    flex: 1 1 auto;
-    min-width: 24px;
-    height: 1px;
-    background: $divider;
+    content: none;
   }
+}
+
+.section-icon {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  display: block;
+}
+
+.section-title-duty {
+  color: #2a533c;
+}
+
+.section-title-req {
+  color: #5a105f;
+}
+
+.bullets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    position: relative;
+    padding-left: 16px;
+    margin-bottom: 8px;
+    color: $value;
+    font-size: 14px;
+    line-height: 22px;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 8px;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #93c5fd;
+    }
+  }
+}
+
+.title-with-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Figma 651:17918 Badge&Status — 贴在岗位标题右侧 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: 20px;
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid #cdd4ff;
+  border-radius: 999px;
+  background: #f3f5ff;
+  color: #5b6cff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .meta-grid {

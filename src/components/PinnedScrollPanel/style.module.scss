@@ -1,0 +1,46 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.fill {
+  flex: 1 1 auto;
+  height: 100%;
+  max-height: 100%;
+}
+
+.header,
+.footer {
+  flex: none;
+  min-width: 0;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.body-inner {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+@media print {
+  .panel,
+  .fill {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .body {
+    overflow: visible !important;
+    flex: none !important;
+  }
+}

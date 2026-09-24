@@ -37,11 +37,13 @@ const MiddleColumn = createWithRemoteLoader({
       readOnly,
       positionListApi,
       positionEnums,
-      permissions
+      permissions,
+      section = 'all'
     }) => {
       const { formatMessage } = useIntl();
       const [useFormModal, ConfirmButton] = remoteModules;
       const formModal = useFormModal();
+      const preferencesOnly = section === 'preferences';
       const EmptyState = ({ text }) => (
         <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: '20px 0' }}>
           {text || formatMessage({ id: 'talentProfile.NoData' })}
@@ -83,58 +85,60 @@ const MiddleColumn = createWithRemoteLoader({
 
       return (
         <div className={style['middle-column']}>
-          <CardGate request={permissions?.skillMetrics}>
-            <Card className={style['skill-card']}>
-              <Flex justify="space-between" className={style['card-title']}>
-                <Space>
-                  <span className="anticon">
-                    <FaHeadSideVirus style={{ color: '#9F70FD' }} />
-                  </span>
-                  {formatMessage({ id: 'talentProfile.SkillMetrics' })}
-                </Space>
-              </Flex>
-              {skillRadarData && skillRadarData.employee && skillRadarData.employee.length > 0 ? (
-                <div className={style['radar-chart']}>
-                  <SkillRadarChart data={skillRadarData} />
-                </div>
-              ) : (
-                <EmptyState text={formatMessage({ id: 'talentProfile.NoSkillRadar' })} />
-              )}
-              <Space wrap className={style['skill-tags']}>
-                {skillTags.length > 0 ? skillTags.map((skill, index) => <Tag key={index}>{skill}</Tag>) : <EmptyState text={formatMessage({ id: 'talentProfile.NoSkillTags' })} />}
-                {!readOnly && (
-                  <Button
-                    type="text"
-                    className={style['edit-btn']}
-                    icon={<MdOutlineEdit />}
-                    onClick={() => {
-                      formModal({
-                        title: formatMessage({ id: 'talentProfile.EditSkillTags' }),
-                        size: 'small',
-                        formProps: {
-                          data: Object.assign({}, originData.profile?.skills),
-                          onSubmit: formData => {
-                            return saveProfile({
-                              skills: Object.assign(
-                                {},
-                                {
-                                  cert_mapped: [],
-                                  interest_strength: [],
-                                  work_related: []
-                                },
-                                formData
-                              )
-                            });
-                          }
-                        },
-                        children: <SkillFormInner />
-                      });
-                    }}
-                  />
+          {preferencesOnly ? null : (
+            <CardGate request={permissions?.skillMetrics}>
+              <Card className={style['skill-card']}>
+                <Flex justify="space-between" className={style['card-title']}>
+                  <Space>
+                    <span className="anticon">
+                      <FaHeadSideVirus style={{ color: '#9F70FD' }} />
+                    </span>
+                    {formatMessage({ id: 'talentProfile.SkillMetrics' })}
+                  </Space>
+                </Flex>
+                {skillRadarData && skillRadarData.employee && skillRadarData.employee.length > 0 ? (
+                  <div className={style['radar-chart']}>
+                    <SkillRadarChart data={skillRadarData} />
+                  </div>
+                ) : (
+                  <EmptyState text={formatMessage({ id: 'talentProfile.NoSkillRadar' })} />
                 )}
-              </Space>
-            </Card>
-          </CardGate>
+                <Space wrap className={style['skill-tags']}>
+                  {skillTags.length > 0 ? skillTags.map((skill, index) => <Tag key={index}>{skill}</Tag>) : <EmptyState text={formatMessage({ id: 'talentProfile.NoSkillTags' })} />}
+                  {!readOnly && (
+                    <Button
+                      type="text"
+                      className={style['edit-btn']}
+                      icon={<MdOutlineEdit />}
+                      onClick={() => {
+                        formModal({
+                          title: formatMessage({ id: 'talentProfile.EditSkillTags' }),
+                          size: 'small',
+                          formProps: {
+                            data: Object.assign({}, originData.profile?.skills),
+                            onSubmit: formData => {
+                              return saveProfile({
+                                skills: Object.assign(
+                                  {},
+                                  {
+                                    cert_mapped: [],
+                                    interest_strength: [],
+                                    work_related: []
+                                  },
+                                  formData
+                                )
+                              });
+                            }
+                          },
+                          children: <SkillFormInner />
+                        });
+                      }}
+                    />
+                  )}
+                </Space>
+              </Card>
+            </CardGate>
+          )}
 
           <CardGate request={permissions?.targetPosition}>
             <Card className={style['target-card']}>
@@ -341,97 +345,99 @@ const MiddleColumn = createWithRemoteLoader({
             </Card>
           </CardGate>
 
-          <CardGate request={permissions?.performanceReview}>
-            <Card className={style['performance-card']}>
-              <Flex justify="space-between" className={style['card-title']}>
-                <Space>
-                  <span className="anticon">
-                    <FaClipboardList style={{ color: 'rgba(17, 24, 39, 0.78)' }} />
-                  </span>
-                  {formatMessage({ id: 'talentProfile.PerformanceReview' })}
-                </Space>
-                {!readOnly && <Button type="text" className={style['edit-btn']} icon={<MdAdd />} onClick={handleAddPerformance} />}
-              </Flex>
-              {performanceReviews.length > 0 ? (
-                <Timeline
-                  className={style['timeline']}
-                  items={performanceReviews.map((review, index) => ({
-                    dot: <span className={classnames(style['timeline-dot'], index === 0 && style['timeline-dot-active'])} />,
-                    children: (
-                      <div key={index} className={style['performance-item']}>
-                        <Flex justify="space-between" align="flex-start" className={style['performance-header']}>
-                          <div>
-                            <Space className={style['review-date']}>
-                              <Text
-                                className={classnames(style['review-date-text'], {
-                                  [style['active']]: index === 0
-                                })}
-                              >
-                                {review.date}
-                              </Text>
-                            </Space>
-                            <Flex align="center" gap={4} className={style['review-rating-wrapper']}>
-                              <Rate disabled value={review.rating} className={style['review-rating']} />
-                              <Text type="secondary" className={style['review-rating-text']}>
-                                {review.rating}/5
-                              </Text>
-                            </Flex>
-                          </div>
-                          <Flex vertical align="flex-end">
-                            <Text strong className={classnames(style['reviewer-name'])}>
-                              {review.reviewer}
-                            </Text>
-                            {!readOnly && (
-                              <Flex align="center" gap={4} className={style['performance-actions']}>
-                                <Button
-                                  type="text"
-                                  size="small"
-                                  className={style['edit-btn']}
-                                  icon={<MdOutlineEdit />}
-                                  onClick={() => {
-                                    formModal({
-                                      title: formatMessage({ id: 'talentProfile.EditPerformanceReview' }),
-                                      size: 'small',
-                                      formProps: {
-                                        data: {
-                                          date: review.date,
-                                          score: review.rating,
-                                          evaluatorName: review.reviewer,
-                                          comment: review.comment
-                                        },
-                                        onSubmit: formData => {
-                                          return savePerformance(Object.assign({}, formData, { id: review.id }));
-                                        }
-                                      },
-                                      children: <PerformanceReviewFormInner />
-                                    });
-                                  }}
-                                />
-                                <ConfirmButton
-                                  type="text"
-                                  size="small"
-                                  className={style['edit-btn']}
-                                  isDelete
-                                  danger
-                                  icon={<MdOutlineDeleteOutline />}
-                                  onClick={() => {
-                                    return removePerformance(review.id);
-                                  }}
-                                />
+          {preferencesOnly ? null : (
+            <CardGate request={permissions?.performanceReview}>
+              <Card className={style['performance-card']}>
+                <Flex justify="space-between" className={style['card-title']}>
+                  <Space>
+                    <span className="anticon">
+                      <FaClipboardList style={{ color: 'rgba(17, 24, 39, 0.78)' }} />
+                    </span>
+                    {formatMessage({ id: 'talentProfile.PerformanceReview' })}
+                  </Space>
+                  {!readOnly && <Button type="text" className={style['edit-btn']} icon={<MdAdd />} onClick={handleAddPerformance} />}
+                </Flex>
+                {performanceReviews.length > 0 ? (
+                  <Timeline
+                    className={style['timeline']}
+                    items={performanceReviews.map((review, index) => ({
+                      dot: <span className={classnames(style['timeline-dot'], index === 0 && style['timeline-dot-active'])} />,
+                      children: (
+                        <div key={index} className={style['performance-item']}>
+                          <Flex justify="space-between" align="flex-start" className={style['performance-header']}>
+                            <div>
+                              <Space className={style['review-date']}>
+                                <Text
+                                  className={classnames(style['review-date-text'], {
+                                    [style['active']]: index === 0
+                                  })}
+                                >
+                                  {review.date}
+                                </Text>
+                              </Space>
+                              <Flex align="center" gap={4} className={style['review-rating-wrapper']}>
+                                <Rate disabled value={review.rating} className={style['review-rating']} />
+                                <Text type="secondary" className={style['review-rating-text']}>
+                                  {review.rating}/5
+                                </Text>
                               </Flex>
-                            )}
+                            </div>
+                            <Flex vertical align="flex-end">
+                              <Text strong className={classnames(style['reviewer-name'])}>
+                                {review.reviewer}
+                              </Text>
+                              {!readOnly && (
+                                <Flex align="center" gap={4} className={style['performance-actions']}>
+                                  <Button
+                                    type="text"
+                                    size="small"
+                                    className={style['edit-btn']}
+                                    icon={<MdOutlineEdit />}
+                                    onClick={() => {
+                                      formModal({
+                                        title: formatMessage({ id: 'talentProfile.EditPerformanceReview' }),
+                                        size: 'small',
+                                        formProps: {
+                                          data: {
+                                            date: review.date,
+                                            score: review.rating,
+                                            evaluatorName: review.reviewer,
+                                            comment: review.comment
+                                          },
+                                          onSubmit: formData => {
+                                            return savePerformance(Object.assign({}, formData, { id: review.id }));
+                                          }
+                                        },
+                                        children: <PerformanceReviewFormInner />
+                                      });
+                                    }}
+                                  />
+                                  <ConfirmButton
+                                    type="text"
+                                    size="small"
+                                    className={style['edit-btn']}
+                                    isDelete
+                                    danger
+                                    icon={<MdOutlineDeleteOutline />}
+                                    onClick={() => {
+                                      return removePerformance(review.id);
+                                    }}
+                                  />
+                                </Flex>
+                              )}
+                            </Flex>
                           </Flex>
-                        </Flex>
-                        <Paragraph className={style['review-comment']}>{review.comment}</Paragraph>
-                      </div>
-                    )
-                  }))}
-                />
-              ) : (
-                <EmptyState text={formatMessage({ id: 'talentProfile.NoPerformanceReview' })} />
-              )}
-            </Card>
-          </CardGate>
+                          <Paragraph className={style['review-comment']}>{review.comment}</Paragraph>
+                        </div>
+                      )
+                    }))}
+                  />
+                ) : (
+                  <EmptyState text={formatMessage({ id: 'talentProfile.NoPerformanceReview' })} />
+                )}
+              </Card>
+            </CardGate>
+          )}
         </div>
       );
     }
