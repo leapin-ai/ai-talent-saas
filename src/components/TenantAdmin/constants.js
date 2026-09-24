@@ -9,11 +9,19 @@ export const TENANT_ADMIN_PERMISSIONS = {
   positionPublish: ['tenant-admin:position-management:publish'],
   positionRemove: ['tenant-admin:position-management:remove'],
   positionAnalysis: ['tenant-admin:position-management:analyze'],
+  /** 岗位详情：发送评估邀请（员工/经理） */
+  positionInvite: ['tenant-admin:position-management:invite'],
+  /** 岗位详情：邀请记录查看与管理（链接/重发/取消/看结果） */
+  positionInviteRecords: ['tenant-admin:position-management:invite-records'],
   employeeProfile: ['tenant-admin:employee-profile', 'tenant-admin:employee-profile:view'],
   employeeCreate: ['tenant-admin:employee-profile:create'],
   employeeEdit: ['tenant-admin:employee-profile:edit'],
   employeeRemove: ['tenant-admin:employee-profile:remove'],
   employeeLinkUser: ['tenant-admin:employee-profile:link-user'],
+  /** 完善档案申请（邀请评估提交后的审核列表） */
+  completeProfileApplication: ['tenant-admin:complete-profile-application', 'tenant-admin:complete-profile-application:view'],
+  completeProfileApplicationReview: ['tenant-admin:complete-profile-application:review'],
+  completeProfileApplicationEdit: ['tenant-admin:complete-profile-application:edit'],
   companySetting: ['setting:company-setting', 'setting:company-setting:view'],
   orgSetting: ['setting:org', 'setting:org:view'],
   userManagement: ['setting:user-manager', 'setting:user-manager:view'],
@@ -23,6 +31,8 @@ export const TENANT_ADMIN_PERMISSIONS = {
 /** 员工档案各 Card 显示权限；传给 TalentProfile 的 permissions，未传的 Card 默认展示 */
 export const TALENT_PROFILE_CARD_PERMISSIONS = {
   header: employeeArchiveCard('header'),
+  /** 控制整个「就绪度」Tab（总览 / 优先差距 / 未来任务） */
+  readiness: employeeArchiveCard('readiness'),
   advantages: employeeArchiveCard('advantages'),
   duration: employeeArchiveCard('duration'),
   certificates: employeeArchiveCard('certificates'),
