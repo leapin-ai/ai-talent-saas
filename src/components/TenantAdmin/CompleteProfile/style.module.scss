@@ -428,10 +428,9 @@ $surface: #fafafe;
 
 .upload-drag-outer {
   width: 100%;
-
-  :global(.file-list-outer) {
-    width: 100%;
-  }
+  /* FileList.container 默认 --min-inner-height:380px，会在上传区下方留白 */
+  --min-inner-height: 0px;
+  min-height: 0 !important;
 }
 
 .upload-zone {
