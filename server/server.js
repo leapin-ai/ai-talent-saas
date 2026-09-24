@@ -38,6 +38,7 @@ const createServer = () => {
         DB_USERNAME: { type: 'string' },
         DB_PASSWORD: { type: 'string' },
         DB_DATABASE: { type: 'string' },
+        DB_TABLE_PREFIX: { type: 'string' },
         ENV: { type: 'string', default: 'local' },
         PORT: { type: 'number', default: 8040 },
         RESUME_PARSE_URL: { type: 'string' },
@@ -97,6 +98,8 @@ const createServer = () => {
 
   fastify.register(
     require('fastify-plugin')(async fastify => {
+      const tablePrefix = fastify.config.DB_TABLE_PREFIX || null;
+
       fastify.register(require('@kne/fastify-sequelize'), {
         db: {
           dialect: fastify.config.DB_DIALECT,
@@ -107,6 +110,7 @@ const createServer = () => {
           password: fastify.config.DB_PASSWORD,
           logging: false
         },
+        prefix: tablePrefix || 't_',
         modelsGlobOptions: {
           syncOptions: {}
         },
@@ -139,6 +143,7 @@ const createServer = () => {
       fastify.register(require('@kne/fastify-account'), {
         isTest: true,
         prefix: `${options.prefix}`,
+        dbTableNamePrefix: tablePrefix ? `${tablePrefix}account_` : 't_account_',
         sendMessage: async ({ name, type, messageType, props }) => {
           const language = props.options?.language === 'zh-CN' ? 'zh-CN' : 'en-US';
           // messageType: 0:短信验证码，1:邮件验证码 type: 0:注册,2:登录,4:验证租户管理员,5:忘记密码,6:候选人登录验证
@@ -191,6 +196,7 @@ const createServer = () => {
 
       fastify.register(require('@kne/fastify-message'), {
         //isTest: fastify.config.IS_TEST,
+        dbTableNamePrefix: tablePrefix ? `${tablePrefix}message_` : 't_message_',
         emailConfig: {
           host: fastify.config.ALISMTP_ENDPOINT,
           port: 465,
@@ -272,6 +278,7 @@ const createServer = () => {
 
       fastify.register(require('@kne/fastify-tenant'), {
         prefix: `${options.prefix}/tenant`,
+        dbTableNamePrefix: tablePrefix || 't_',
         getUserModel: options.getUserModel,
         syncOrgType: fastify.config.SYNC_ORG_TYPE,
         syncOrgTask: async input => {

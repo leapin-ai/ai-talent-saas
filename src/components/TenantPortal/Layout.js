@@ -5,6 +5,7 @@ import { Outlet } from 'react-router-dom';
 import '@kne/system-layout/dist/index.css';
 import TenantThemeProvider from '../../commons/TenantThemeProvider';
 import { resolveTenantThemeColor } from '../../commons/themeColor';
+import { withPublicUrl } from '../../commons/publicUrl';
 
 const Layout = createWithRemoteLoader({
   modules: ['components-admin:Tenant@Authenticate', 'components-admin:Account@useLogout', 'components-core:Permissions', 'components-core:Global@SetGlobal']
@@ -38,7 +39,7 @@ const Layout = createWithRemoteLoader({
                       label: 'Switch Tenant',
                       icon: <UserSwitchOutlined />,
                       onClick: () => {
-                        window.location.href = '/login-tenant';
+                        window.location.href = withPublicUrl('/login-tenant');
                       }
                     },
                     {
