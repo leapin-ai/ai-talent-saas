@@ -329,14 +329,8 @@ const InviteRecords = createWithRemoteLoader({
           getValueOf: item => {
             const base = formatMessage({ id: STATUS_LABEL_IDS[item.status] || 'position.talentInviteStatusInvited' });
             const asr = item.interviewData?.videoAsrStatus;
-            if (asr === 'running' || asr === 'pending') {
-              return `${base} · ${formatMessage({ id: 'position.talentInviteVideoAsrRunning' })}`;
-            }
             if (asr === 'failed') {
               return `${base} · ${formatMessage({ id: 'position.talentInviteVideoAsrFailed' })}`;
-            }
-            if (asr === 'succeeded') {
-              return `${base} · ${formatMessage({ id: 'position.talentInviteVideoAsrSucceeded' })}`;
             }
             return base;
           }
