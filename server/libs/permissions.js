@@ -221,7 +221,7 @@ module.exports = {
               ]
             },
             {
-              name: 'AI职业成长规划',
+              name: '成长计划',
               code: 'career-plan',
               permissions: [
                 {
@@ -231,7 +231,7 @@ module.exports = {
               ]
             },
             {
-              name: 'AI 推荐',
+              name: '岗位匹配',
               code: 'ai-recommend',
               permissions: [
                 {

@@ -42,7 +42,9 @@ export const TALENT_PROFILE_CARD_PERMISSIONS = {
   mobilityPreference: employeeArchiveCard('mobility-preference'),
   hobbies: employeeArchiveCard('hobbies'),
   performanceReview: employeeArchiveCard('performance-review'),
+  /** 控制整个「成长计划」Tab（code 仍为 career-plan，与历史角色授权兼容） */
   careerPlan: employeeArchiveCard('career-plan'),
+  /** 控制整个「岗位匹配」Tab（code 仍为 ai-recommend） */
   aiRecommend: employeeArchiveCard('ai-recommend')
 };
 
