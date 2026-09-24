@@ -4,6 +4,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useParams } from 'react-router-dom';
 import { applyAiInterviewRemote } from '../../../preset';
+import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
 import withLocale from '../withLocale';
 import InviteAssessmentResultModal from './InviteAssessmentResultModal';
 
@@ -39,15 +40,17 @@ const copyText = async text => {
 };
 
 const InviteRecords = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:TablePage', 'components-core:Filter']
+  modules: ['components-core:Global@usePreset', 'components-core:TablePage', 'components-core:Filter', 'components-core:Permissions@usePermissionsPass']
 })(
   withLocale(({ remoteModules, children }) => {
-    const [usePreset, TablePage, Filter] = remoteModules;
+    const [usePreset, TablePage, Filter, usePermissionsPass] = remoteModules;
     const { apis, ajax } = usePreset();
     const { formatMessage, locale } = useIntl();
     const { message, modal } = App.useApp();
     const { id: positionId } = useParams();
     const { InputFilterItem, SuperSelectFilterItem } = Filter.fields;
+    const canManageInvite = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInviteRecords });
+    const canStartAnalysis = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionAnalysis });
     const [reloadKey, setReloadKey] = useState(0);
     const [loadingId, setLoadingId] = useState(null);
     const [actionType, setActionType] = useState('');
@@ -360,7 +363,7 @@ const InviteRecords = createWithRemoteLoader({
               return [];
             }
             const actions = [];
-            if (item.status !== 'ended') {
+            if (canManageInvite && item.status !== 'ended') {
               actions.push({
                 children: formatMessage({ id: 'position.talentInviteGetLink' }),
                 loading: loadingId === item.id && actionType === 'link',
@@ -368,36 +371,47 @@ const InviteRecords = createWithRemoteLoader({
               });
             }
             if (item.status === 'done' || item.status === 'ended') {
-              actions.push({
-                children: formatMessage({ id: 'position.talentInviteViewResult' }),
-                loading: loadingId === item.id && actionType === 'result',
-                onClick: () => fetchInterviewResult(item)
-              });
-              if (item.status === 'done') {
+              if (canManageInvite) {
                 actions.push({
-                  children: formatMessage({
-                    id: item.inviteType === 'manager' ? 'position.talentInviteStartAnalysisManager' : 'position.talentInviteStartAnalysis'
-                  }),
-                  loading: loadingId === item.id && actionType === 'analysis',
-                  onClick: () => startInviteAnalysis(item)
-                });
-              } else {
-                actions.push({
-                  children: formatMessage({
-                    id: item.inviteType === 'manager' ? 'position.talentInviteReanalyzeManager' : 'position.talentInviteReanalyze'
-                  }),
-                  loading: loadingId === item.id && actionType === 'analysis',
-                  onClick: () => startInviteAnalysis(item, { reanalyze: true })
+                  children: formatMessage({ id: 'position.talentInviteViewResult' }),
+                  loading: loadingId === item.id && actionType === 'result',
+                  onClick: () => fetchInterviewResult(item)
                 });
               }
-            } else if (item.status !== 'ended') {
+              if (canStartAnalysis) {
+                if (item.status === 'done') {
+                  actions.push({
+                    children: formatMessage({
+                      id: item.inviteType === 'manager' ? 'position.talentInviteStartAnalysisManager' : 'position.talentInviteStartAnalysis'
+                    }),
+                    loading: loadingId === item.id && actionType === 'analysis',
+                    onClick: () => startInviteAnalysis(item)
+                  });
+                } else {
+                  actions.push({
+                    children: formatMessage({
+                      id: item.inviteType === 'manager' ? 'position.talentInviteReanalyzeManager' : 'position.talentInviteReanalyze'
+                    }),
+                    loading: loadingId === item.id && actionType === 'analysis',
+                    onClick: () => startInviteAnalysis(item, { reanalyze: true })
+                  });
+                }
+              }
+              if (canManageInvite && item.status === 'done') {
+                actions.push({
+                  children: formatMessage({ id: 'position.talentInviteResend' }),
+                  loading: loadingId === item.id && actionType === 'resend',
+                  onClick: () => resendInvite(item)
+                });
+              }
+            } else if (canManageInvite && item.status !== 'ended') {
               actions.push({
                 children: formatMessage({ id: 'position.talentInviteResend' }),
                 loading: loadingId === item.id && actionType === 'resend',
                 onClick: () => resendInvite(item)
               });
             }
-            if (item.status !== 'ended') {
+            if (canManageInvite && item.status !== 'ended') {
               actions.push({
                 children: formatMessage({ id: 'position.talentInviteCancel' }),
                 danger: true,
@@ -409,7 +423,7 @@ const InviteRecords = createWithRemoteLoader({
           }
         }
       ],
-      [actionType, cancelInvite, fetchInterviewResult, fetchInviteLink, formatMessage, loadingId, resendInvite, startInviteAnalysis]
+      [actionType, canManageInvite, canStartAnalysis, cancelInvite, fetchInterviewResult, fetchInviteLink, formatMessage, loadingId, resendInvite, startInviteAnalysis]
     );
 
     const listApi = useMemo(() => {

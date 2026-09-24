@@ -49,6 +49,14 @@ module.exports = {
               code: 'analyze'
             },
             {
+              name: '邀请评估',
+              code: 'invite'
+            },
+            {
+              name: '邀请记录',
+              code: 'invite-records'
+            },
+            {
               name: '删除',
               code: 'remove'
             }
@@ -81,12 +89,40 @@ module.exports = {
           ]
         },
         {
+          name: '完善档案申请',
+          code: 'complete-profile-application',
+          permissions: [
+            {
+              name: '查看',
+              code: 'view'
+            },
+            {
+              name: '审核',
+              code: 'review'
+            },
+            {
+              name: '编辑',
+              code: 'edit'
+            }
+          ]
+        },
+        {
           name: '员工档案',
           code: 'employee-archive',
           modules: [
             {
               name: '个人信息',
               code: 'header',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
+              name: '就绪度',
+              code: 'readiness',
               permissions: [
                 {
                   name: '显示',

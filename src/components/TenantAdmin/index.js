@@ -79,7 +79,7 @@ const TenantAdmin = createWithRemoteLoader({
             path: 'complete-profile-applications',
             title: formatMessage({ id: 'tenantAdmin.completeProfileApplications' }),
             element: (
-              <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
+              <Permissions request={TENANT_ADMIN_PERMISSIONS.completeProfileApplication} type="error">
                 <CompleteProfileApplications baseUrl={baseUrl} />
               </Permissions>
             )
@@ -88,7 +88,7 @@ const TenantAdmin = createWithRemoteLoader({
             path: 'complete-profile-applications/:id',
             title: formatMessage({ id: 'tenantAdmin.completeProfileApplicationDetail' }),
             element: (
-              <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
+              <Permissions request={TENANT_ADMIN_PERMISSIONS.completeProfileApplication} type="error">
                 <CompleteProfileApplicationDetail baseUrl={baseUrl} />
               </Permissions>
             )
@@ -169,6 +169,7 @@ const TenantAdmin = createWithRemoteLoader({
               apis: Object.assign({}, apis.talentSaas.tenant.position, {
                 orgList: apis.tenant.orgList
               }),
+              baseUrl,
               withInsightBanner: true,
               onDetail: ({ colItem }) => {
                 navigate(`${baseUrl}/position/${colItem.id}`);
@@ -242,7 +243,7 @@ const TenantAdmin = createWithRemoteLoader({
             elementProps: {
               baseUrl,
               children: ({ title, children }) => (
-                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
+                <Permissions request={TENANT_ADMIN_PERMISSIONS.positionInviteRecords} type="error">
                   <Page back title={title}>
                     {children}
                   </Page>
