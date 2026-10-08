@@ -12,6 +12,7 @@ import { enums as talentEnums } from '@components/EnumLoader';
 import ensureSlash from '@kne/ensure-slash';
 import TenantUserPlugin, { personalCard, getUserListColumns, enhanceUserData, getUserListActions } from '@components/TenantUserPlugin';
 import reactBoxCardPreset from './commons/reactBoxCardThemes';
+import { withPublicUrl } from './commons/publicUrl';
 import '@kne/react-box/dist/index.css';
 import './locale/registerRemoteMessages';
 
@@ -38,7 +39,7 @@ export const globalInit = async () => {
           const searchParams = new URLSearchParams(window.location.search);
           const referer = encodeURIComponent(window.location.pathname + window.location.search);
           searchParams.append('referer', referer);
-          window.location.href = '/account/login?' + searchParams.toString();
+          window.location.href = `${withPublicUrl('/account/login')}?${searchParams.toString()}`;
           response.showError = false;
         }
         return response;
