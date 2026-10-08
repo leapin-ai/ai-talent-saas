@@ -74,7 +74,8 @@ const TalentProfile = createWithRemoteLoader({
       const matchRequest = cardPermissions?.aiRecommend;
       const allowMatch = usePermissionsPass({ request: matchRequest || [] });
       const showMatchTab = !matchRequest || allowMatch;
-      const defaultProfileTab = showReadinessTab ? 'readiness' : showGrowthTab ? 'growth' : showMatchTab ? 'match' : 'profile';
+      // 顺序：就绪度 → 档案 → 成长计划 → 岗位匹配；默认落在第一个有权限（可见）的 Tab
+      const defaultProfileTab = [showReadinessTab && 'readiness', 'profile', showGrowthTab && 'growth', showMatchTab && 'match'].filter(Boolean)[0];
       // 首页 / 本人档案：走 my-detail，不依赖路由或 query 里的员工 id
       const useMyDetail = !controlledData && (self || !id);
       const fetchProps = useMyDetail ? Object.assign({}, apis.myDetail) : Object.assign({}, apis.detail, { params: { id } });
@@ -474,6 +475,48 @@ const TalentProfile = createWithRemoteLoader({
                       )
                     }
                   : null,
+                {
+                  key: 'profile',
+                  label: formatMessage({ id: 'talentProfile.tabProfile' }),
+                  forceRender: true,
+                  children: wrapPrintSection(
+                    formatMessage({ id: 'talentProfile.tabProfile' }),
+                    <div className={style['main-content']}>
+                      <LeftColumn
+                        section="strengths"
+                        readOnly={readOnly}
+                        saveProfile={saveProfile}
+                        profileData={profileData}
+                        advantages={advantages}
+                        certificates={certificates}
+                        promotionHistory={promotionHistory}
+                        gotoPosition={gotoPosition}
+                        permissions={cardPermissions}
+                      />
+                      <MiddleColumn
+                        section="preferences"
+                        readOnly={readOnly}
+                        employeeId={employeeId}
+                        createPerformance={createPerformance}
+                        removePerformance={removePerformance}
+                        savePerformance={savePerformance}
+                        saveProfile={saveProfile}
+                        skillTags={skillTags}
+                        targetPositions={targetPositions}
+                        mobilityPreferences={mobilityPreferences}
+                        interests={interests}
+                        performanceReviews={performanceReviews}
+                        originData={data}
+                        positionEnums={data.positionEnums}
+                        positionListApi={apis.positionList}
+                        skillRadarData={{ employee: data.profile?.aiInterviewReport || [], industry: [] }}
+                        gotoPosition={gotoPosition}
+                        permissions={cardPermissions}
+                      />
+                    </div>,
+                    hasProfileData
+                  )
+                },
                 showGrowthTab
                   ? {
                       key: 'growth',
@@ -521,49 +564,7 @@ const TalentProfile = createWithRemoteLoader({
                         hasMatchData
                       )
                     }
-                  : null,
-                {
-                  key: 'profile',
-                  label: formatMessage({ id: 'talentProfile.tabProfile' }),
-                  forceRender: true,
-                  children: wrapPrintSection(
-                    formatMessage({ id: 'talentProfile.tabProfile' }),
-                    <div className={style['main-content']}>
-                      <LeftColumn
-                        section="strengths"
-                        readOnly={readOnly}
-                        saveProfile={saveProfile}
-                        profileData={profileData}
-                        advantages={advantages}
-                        certificates={certificates}
-                        promotionHistory={promotionHistory}
-                        gotoPosition={gotoPosition}
-                        permissions={cardPermissions}
-                      />
-                      <MiddleColumn
-                        section="preferences"
-                        readOnly={readOnly}
-                        employeeId={employeeId}
-                        createPerformance={createPerformance}
-                        removePerformance={removePerformance}
-                        savePerformance={savePerformance}
-                        saveProfile={saveProfile}
-                        skillTags={skillTags}
-                        targetPositions={targetPositions}
-                        mobilityPreferences={mobilityPreferences}
-                        interests={interests}
-                        performanceReviews={performanceReviews}
-                        originData={data}
-                        positionEnums={data.positionEnums}
-                        positionListApi={apis.positionList}
-                        skillRadarData={{ employee: data.profile?.aiInterviewReport || [], industry: [] }}
-                        gotoPosition={gotoPosition}
-                        permissions={cardPermissions}
-                      />
-                    </div>,
-                    hasProfileData
-                  )
-                }
+                  : null
               ].filter(Boolean)}
             />
           </Flex>

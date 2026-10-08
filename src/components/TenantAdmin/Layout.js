@@ -8,7 +8,7 @@ import { TENANT_ADMIN_PERMISSIONS } from './constants';
 import TenantThemeProvider from '../../commons/TenantThemeProvider';
 import { resolveTenantThemeColor } from '../../commons/themeColor';
 import { withPublicUrl } from '../../commons/publicUrl';
-import { WorkforceMenuIcon, TalentsMenuIcon, HomeMenuIcon, CompanyMenuIcon, OrgMenuIcon, UserMenuIcon, SwitchTenantMenuIcon, LogoutMenuIcon } from './MenuIcons';
+import { WorkforceMenuIcon, TalentsMenuIcon, HomeMenuIcon, MarketMenuIcon, CompanyMenuIcon, OrgMenuIcon, UserMenuIcon, SwitchTenantMenuIcon, LogoutMenuIcon } from './MenuIcons';
 
 const Layout = createWithRemoteLoader({
   modules: [
@@ -46,6 +46,7 @@ const Layout = createWithRemoteLoader({
 
 const TenantAdminMenu = ({ baseUrl, tenant, tenantUserInfo, logout, formatMessage, usePermissionsPass, Language, children }) => {
   const allowHome = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.home });
+  const allowTalentMarketplace = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.talentMarketplace });
   const allowPositionManagement = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionManagement });
   const allowEmployeeProfile = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeProfile });
   const allowCompanySetting = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.companySetting });
@@ -59,6 +60,14 @@ const TenantAdminMenu = ({ baseUrl, tenant, tenantUserInfo, logout, formatMessag
           label: formatMessage({ id: 'tenantAdmin.myProfile' }),
           toolbar: true,
           icon: <HomeMenuIcon />
+        }
+      : null,
+    allowTalentMarketplace
+      ? {
+          path: '/market',
+          label: formatMessage({ id: 'tenantAdmin.internalTalentMarket' }),
+          toolbar: true,
+          icon: <MarketMenuIcon />
         }
       : null,
     allowPositionManagement
