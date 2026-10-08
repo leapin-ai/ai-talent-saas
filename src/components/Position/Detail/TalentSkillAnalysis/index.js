@@ -19,7 +19,7 @@ const padRank = rank => String(rank).padStart(2, '0');
 
 const resolveSkillStatus = skill => {
   if (skill?.status) {
-    return skill.status;
+    return statusToneClass[skill.status] ? skill.status : 'unknown';
   }
   const current = Number(skill?.current) || 0;
   const required = Number(skill?.required) || 0;
@@ -39,14 +39,16 @@ const statusToneClass = {
   critical: 'status-critical',
   gap: 'status-gap',
   onTarget: 'status-on-target',
-  above: 'status-above'
+  above: 'status-above',
+  unknown: 'status-unknown'
 };
 
 const statusDotClass = {
   critical: 'dot-critical',
   gap: 'dot-gap',
   onTarget: 'dot-on-target',
-  above: 'dot-above'
+  above: 'dot-above',
+  unknown: 'dot-unknown'
 };
 
 const ReadinessRing = ({ value, formatMessage }) => {
@@ -170,7 +172,8 @@ const SkillsTable = ({ skills, firstName, formatMessage, cardColor, isMobile }) 
       critical: 'position.talentSkillStatusCritical',
       gap: 'position.talentSkillStatusGap',
       onTarget: 'position.talentSkillStatusOnTarget',
-      above: 'position.talentSkillStatusAbove'
+      above: 'position.talentSkillStatusAbove',
+      unknown: 'position.talentSkillStatusUnknown'
     };
     return formatMessage({ id: map[status] || map.gap });
   };

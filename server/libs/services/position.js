@@ -444,7 +444,7 @@ module.exports = fp(async (fastify, options) => {
     if (!Array.isArray(skills)) {
       return [];
     }
-    const allowedStatus = new Set(['critical', 'gap', 'onTarget', 'above']);
+    const allowedStatus = new Set(['critical', 'gap', 'onTarget', 'above', 'unknown']);
     return skills
       .map(item => {
         if (!item || typeof item !== 'object') {
@@ -456,7 +456,8 @@ module.exports = fp(async (fastify, options) => {
         }
         const current = Number(item.current);
         const required = Number(item.required);
-        const status = typeof item.status === 'string' && allowedStatus.has(item.status) ? item.status : undefined;
+        const rawStatus = typeof item.status === 'string' ? item.status.trim() : '';
+        const status = rawStatus ? (allowedStatus.has(rawStatus) ? rawStatus : 'unknown') : undefined;
         const confidence = normalizeSkillConfidence(item.confidence);
         const evidence = normalizeSkillEvidenceValue(item.evidence);
         return {
@@ -875,7 +876,7 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
-  const skillAnalysisSave = async (authenticatePayload, { positionId, employeeId, readiness, summary, metrics, skills, priorityGaps, developmentPlan }) => {
+  const skillAnalysisSave = async (authenticatePayload, { positionId, employeeId, readiness, summary, metrics, skills, priorityGaps, developmentPlan, replaceReadiness = false }) => {
     const { tenantId } = authenticatePayload;
     if (!positionId || !employeeId) {
       throw new Error('岗位与员工不能为空');
@@ -922,7 +923,8 @@ module.exports = fp(async (fastify, options) => {
           positionId: String(positionId),
           employeeId: String(employeeId),
           skills: payload.skills,
-          ensureTasks: true
+          ensureTasks: true,
+          replace: replaceReadiness === true
         });
       } catch (error) {
         fastify.log.warn({ err: error, positionId, employeeId }, 'skillAnalysisSave importSkillReadiness failed');

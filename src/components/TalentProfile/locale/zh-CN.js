@@ -215,6 +215,7 @@ const zhCN = {
   'talentProfile.statusGap': '差距',
   'talentProfile.statusOnTarget': '达标',
   'talentProfile.statusAbove': '超出',
+  'talentProfile.statusUnknown': '未知',
   'talentProfile.legendCurrent': '当前水平',
   'talentProfile.legendRequired': '要求水平',
   'talentProfile.legendGap': '技能差距',

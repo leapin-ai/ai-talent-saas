@@ -330,6 +330,7 @@ const enUS = {
   'position.talentSkillStatusGap': 'Gap',
   'position.talentSkillStatusOnTarget': 'On target',
   'position.talentSkillStatusAbove': 'Above',
+  'position.talentSkillStatusUnknown': 'Unknown',
   'position.talentSkillPlanTitle': 'Development Plan',
   'position.talentSkillPlanSubtitle': '9 months · 3 horizons',
   'position.talentSkillHorizon': 'Horizon {n}',

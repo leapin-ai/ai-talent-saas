@@ -1123,7 +1123,8 @@ module.exports = fp(async (fastify, options) => {
               metrics: reviewSkillAnalysis.metrics,
               skills: reviewSkillAnalysis.skills,
               priorityGaps: reviewSkillAnalysis.priorityGaps,
-              developmentPlan: reviewSkillAnalysis.developmentPlan
+              developmentPlan: reviewSkillAnalysis.developmentPlan,
+              replaceReadiness: true
             }
           );
         } catch (error) {
@@ -1533,7 +1534,8 @@ module.exports = fp(async (fastify, options) => {
           metrics: reviewSkillAnalysis.metrics,
           skills: reviewSkillAnalysis.skills,
           priorityGaps: reviewSkillAnalysis.priorityGaps,
-          developmentPlan: reviewSkillAnalysis.developmentPlan
+          developmentPlan: reviewSkillAnalysis.developmentPlan,
+          replaceReadiness: true
         });
       } catch (error) {
         fastify.log.warn({ err: error }, 'approve skillAnalysisSave failed');
