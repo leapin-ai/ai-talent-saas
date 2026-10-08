@@ -4,7 +4,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import TalentProfile from '@components/TalentProfile';
 import ContextSidePanel from './ContextSidePanel';
-import { toReviewData, parseClipboardProfilePayload, applyClipboardToProfileDetail, withEstimatedCompletion } from './assessmentReviewUtils';
+import { toReviewData, parseClipboardProfilePayload, applyClipboardToProfileDetail, applyAiFillToProfileDetail, withEstimatedCompletion } from './assessmentReviewUtils';
 import style from './style.module.scss';
 
 const AI_FILL_LANGUAGE_OPTIONS = [
@@ -103,27 +103,11 @@ const AiFillToolbar = ({ taskId, ajax, fillApi, profileDetail, setProfileDetail,
                 if (!nextData || typeof nextData !== 'object') {
                   throw new Error('AI 未返回可用档案数据');
                 }
-                setProfileDetail(prev =>
-                  withEstimatedCompletion(
-                    Object.assign({}, prev, nextData, {
-                      id: prev?.id,
-                      orgEnums: prev?.orgEnums,
-                      positionEnums: prev?.positionEnums,
-                      performances: prev?.performances || [],
-                      aiSuggest: payload.aiSuggest || prev?.aiSuggest || null,
-                      skillAnalysisDraft: payload.readiness || prev?.skillAnalysisDraft || null,
-                      profile: Object.assign({}, prev?.profile || {}, nextData.profile || {}, {
-                        options: Object.assign({}, prev?.profile?.options || {}, nextData.profile?.options || {})
-                      }),
-                      options: Object.assign({}, prev?.options || {}, nextData.options || {})
-                    }),
-                    completionExtras
-                  )
-                );
+                setProfileDetail(prev => applyAiFillToProfileDetail(prev, payload, completionExtras));
                 if (payload.insightError) {
-                  msg.warning(`档案已填充；就绪度/成长/匹配未生成：${payload.insightError}`);
+                  msg.warning(`档案空白项已填充；就绪度/成长/匹配未生成：${payload.insightError}`);
                 } else {
-                  msg.success('已生成档案与就绪度/成长/匹配，并重算完成度');
+                  msg.success('已用 AI 补全空白的档案与就绪度/成长/匹配（已有内容保留），并重算完成度');
                 }
               } catch (e) {
                 msg.error(e.message || 'AI 填充失败');
@@ -136,7 +120,7 @@ const AiFillToolbar = ({ taskId, ajax, fillApi, profileDetail, setProfileDetail,
           </Button>
         ) : null}
       </div>
-      <div className={style['ai-fill-hint']}>可粘贴 reviewData JSON（employee/profile/skillAnalysis/aiSuggest）；或点 AI 填充一键生成；完成后会重算档案完成度，均不自动提交</div>
+      <div className={style['ai-fill-hint']}>可粘贴 reviewData JSON（employee/profile/skillAnalysis/aiSuggest）；或点 AI 填充补全空白项（不覆盖已有内容）；完成后会重算档案完成度，均不自动提交</div>
     </div>
   );
 };

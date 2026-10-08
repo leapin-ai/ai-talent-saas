@@ -444,7 +444,7 @@ module.exports = fp(async (fastify, options) => {
     if (!Array.isArray(skills)) {
       return [];
     }
-    const allowedStatus = new Set(['critical', 'gap', 'onTarget', 'above']);
+    const allowedStatus = new Set(['critical', 'gap', 'onTarget', 'above', 'unknown']);
     return skills
       .map(item => {
         if (!item || typeof item !== 'object') {
@@ -456,7 +456,8 @@ module.exports = fp(async (fastify, options) => {
         }
         const current = Number(item.current);
         const required = Number(item.required);
-        const status = typeof item.status === 'string' && allowedStatus.has(item.status) ? item.status : undefined;
+        const rawStatus = typeof item.status === 'string' ? item.status.trim() : '';
+        const status = rawStatus ? (allowedStatus.has(rawStatus) ? rawStatus : 'unknown') : undefined;
         const confidence = normalizeSkillConfidence(item.confidence);
         const evidence = normalizeSkillEvidenceValue(item.evidence);
         return {

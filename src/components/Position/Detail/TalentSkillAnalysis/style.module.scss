@@ -448,6 +448,10 @@
   background: #34d399;
 }
 
+.dot-unknown {
+  background: #9ca3af;
+}
+
 .skill-progress-cell {
   display: flex;
   align-items: center;
@@ -536,6 +540,12 @@
   color: #0e7490;
   background: rgba(207, 244, 252, 0.9);
   border: 1px solid rgba(14, 116, 144, 0.16);
+}
+
+.status-unknown {
+  color: #6b7280;
+  background: rgba(243, 244, 246, 0.9);
+  border: 1px solid rgba(107, 114, 128, 0.16);
 }
 
 .skill-evidence {

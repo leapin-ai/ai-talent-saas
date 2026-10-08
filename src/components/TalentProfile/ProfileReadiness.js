@@ -34,7 +34,7 @@ const parseActivityGroup = raw => {
 
 const resolveStatus = row => {
   if (row?.status) {
-    return row.status;
+    return STATUS_META[row.status] ? row.status : 'unknown';
   }
   const current = Number(row?.current) || 0;
   const required = Number(row?.required) || 0;
@@ -54,7 +54,8 @@ const STATUS_META = {
   critical: { tone: 'status-critical', labelKey: 'talentProfile.statusCritical' },
   gap: { tone: 'status-gap', labelKey: 'talentProfile.statusGap' },
   onTarget: { tone: 'status-on-target', labelKey: 'talentProfile.statusOnTarget' },
-  above: { tone: 'status-above', labelKey: 'talentProfile.statusAbove' }
+  above: { tone: 'status-above', labelKey: 'talentProfile.statusAbove' },
+  unknown: { tone: 'status-unknown', labelKey: 'talentProfile.statusUnknown' }
 };
 
 const CONFIDENCE_KEYS = {

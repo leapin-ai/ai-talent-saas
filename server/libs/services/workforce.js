@@ -2,7 +2,7 @@ const fp = require('fastify-plugin');
 
 const CHANGE_TAGS = ['critical_to_build', 'ai_emerging', 'new', 'increasing', 'stable', 'decreasing'];
 const ACTIONS = ['BUILD', 'MOVE', 'BUY', 'AUGMENT'];
-const READINESS_STATUS = ['critical', 'gap', 'onTarget', 'above'];
+const READINESS_STATUS = ['critical', 'gap', 'onTarget', 'above', 'unknown'];
 
 const SKILL_CHANGE_TO_TAG = {
   must_build: 'critical_to_build',

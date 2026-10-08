@@ -215,6 +215,7 @@ const enUS = {
   'talentProfile.statusGap': 'Gap',
   'talentProfile.statusOnTarget': 'On Target',
   'talentProfile.statusAbove': 'Above',
+  'talentProfile.statusUnknown': 'Unknown',
   'talentProfile.legendCurrent': 'Current level',
   'talentProfile.legendRequired': 'Required level',
   'talentProfile.legendGap': 'Skill gap',
