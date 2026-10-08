@@ -2,7 +2,7 @@ const fp = require('fastify-plugin');
 
 const CHANGE_TAGS = ['critical_to_build', 'ai_emerging', 'new', 'increasing', 'stable', 'decreasing'];
 const ACTIONS = ['BUILD', 'MOVE', 'BUY', 'AUGMENT'];
-const READINESS_STATUS = ['critical', 'gap', 'onTarget', 'above'];
+const READINESS_STATUS = ['critical', 'gap', 'onTarget', 'above', 'unknown'];
 
 const SKILL_CHANGE_TO_TAG = {
   must_build: 'critical_to_build',
@@ -361,7 +361,31 @@ module.exports = fp(async (fastify, options) => {
     return getTaskReadiness(authenticatePayload, { positionId, employeeId });
   };
 
-  const importSkillReadiness = async (authenticatePayload, { positionId, employeeId, skills = [], ensureTasks = false } = {}) => {
+  // 由 skills 补建的 Imported 任务，若已无任何员工就绪度引用则删除，避免旧 AI 技能名残留在岗位上
+  const removeOrphanImportedTasks = async ({ tenantId, positionId }) => {
+    const imported = await models.positionTask.findAll({
+      where: { tenantId, positionId, activityGroup: 'Imported' }
+    });
+    if (!imported.length) {
+      return;
+    }
+    const referenced = await models.employeeTaskReadiness.findAll({
+      attributes: ['taskId'],
+      where: { tenantId, taskId: { [Op.in]: imported.map(task => String(task.id)) } }
+    });
+    const referencedIds = new Set(referenced.map(row => String(row.taskId)));
+    for (const task of imported) {
+      if (referencedIds.has(String(task.id))) {
+        continue;
+      }
+      if (models.evidenceTaskLink) {
+        await models.evidenceTaskLink.destroy({ where: { tenantId, positionTaskId: String(task.id) } });
+      }
+      await task.destroy();
+    }
+  };
+
+  const importSkillReadiness = async (authenticatePayload, { positionId, employeeId, skills = [], ensureTasks = false, replace = false } = {}) => {
     const { tenantId } = authenticatePayload;
     const skillList = Array.isArray(skills) ? skills : [];
     const skillTitle = skill => (typeof skill?.name === 'string' && skill.name.trim()) || (typeof skill?.title === 'string' && skill.title.trim()) || '';
@@ -416,6 +440,12 @@ module.exports = fp(async (fastify, options) => {
       .filter(Boolean);
     if (!rows.length) {
       return { pageData: [], unmapped: true };
+    }
+    if (replace) {
+      await models.employeeTaskReadiness.destroy({
+        where: { tenantId, positionId, employeeId, taskId: { [Op.notIn]: rows.map(row => String(row.taskId)) } }
+      });
+      await removeOrphanImportedTasks({ tenantId, positionId });
     }
     return replaceTaskReadiness(authenticatePayload, { positionId, employeeId, rows });
   };

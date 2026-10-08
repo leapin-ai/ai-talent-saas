@@ -115,14 +115,14 @@ export const globalInit = async () => {
         //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.112'
+        defaultVersion: '1.1.114'
       },
       'components-thirdparty': {
         ...registry,
         //url: 'http://localhost:3010',
         //tpl: '{{url}}',
         remote: 'components-thirdparty',
-        defaultVersion: '0.1.49'
+        defaultVersion: '0.1.50'
       },
       // AI 面试远程组件：url/version 由租户设置在运行时 applyAiInterviewRemote 写入
       'ai-interview-flowup': {

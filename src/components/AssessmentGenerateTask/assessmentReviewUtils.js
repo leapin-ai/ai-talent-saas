@@ -271,6 +271,49 @@ export const applyClipboardToProfileDetail = (prev, bundle, extras = {}) => {
   return withEstimatedCompletion(next, extras);
 };
 
+const isEmptyValue = value => {
+  if (value == null) {
+    return true;
+  }
+  if (typeof value === 'string') {
+    return !value.trim();
+  }
+  if (Array.isArray(value)) {
+    return value.length === 0;
+  }
+  if (typeof value === 'object') {
+    return Object.values(value).every(isEmptyValue);
+  }
+  return false;
+};
+
+const pickNonEmpty = obj => {
+  if (!obj || typeof obj !== 'object') {
+    return {};
+  }
+  return Object.fromEntries(Object.entries(obj).filter(([, value]) => !isEmptyValue(value)));
+};
+
+/** AI 填充只补空白：草稿里已有的值（剪贴板导入 / 手动编辑）不被覆盖 */
+export const applyAiFillToProfileDetail = (prev, payload, extras = {}) => {
+  const base = prev && typeof prev === 'object' ? prev : {};
+  const nextData = payload?.data && typeof payload.data === 'object' ? payload.data : {};
+  const hasSkills = Array.isArray(base.skillAnalysisDraft?.skills) && base.skillAnalysisDraft.skills.length > 0;
+  const next = Object.assign({}, base, nextData, pickNonEmpty(base), {
+    id: base.id,
+    orgEnums: base.orgEnums,
+    positionEnums: base.positionEnums,
+    performances: base.performances || [],
+    aiSuggest: isEmptyValue(base.aiSuggest) ? payload?.aiSuggest || base.aiSuggest || null : base.aiSuggest,
+    skillAnalysisDraft: hasSkills ? base.skillAnalysisDraft : payload?.readiness || base.skillAnalysisDraft || null,
+    profile: Object.assign({}, base.profile || {}, nextData.profile || {}, pickNonEmpty(base.profile), {
+      options: Object.assign({}, base.profile?.options || {}, nextData.profile?.options || {}, pickNonEmpty(base.profile?.options))
+    }),
+    options: Object.assign({}, base.options || {}, nextData.options || {}, pickNonEmpty(base.options))
+  });
+  return withEstimatedCompletion(next, extras);
+};
+
 const hasText = value => {
   if (typeof value === 'string') {
     return value.trim().length > 0;

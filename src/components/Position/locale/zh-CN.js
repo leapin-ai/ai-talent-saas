@@ -333,6 +333,7 @@ const zhCN = {
   'position.talentSkillStatusGap': '差距',
   'position.talentSkillStatusOnTarget': '达标',
   'position.talentSkillStatusAbove': '超出',
+  'position.talentSkillStatusUnknown': '未知',
   'position.talentSkillPlanTitle': '发展计划',
   'position.talentSkillPlanSubtitle': '9 个月 · 3 个阶段',
   'position.talentSkillHorizon': '阶段 {n}',
