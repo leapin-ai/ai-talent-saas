@@ -3,16 +3,22 @@ import Fetch from '@kne/react-fetch';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useNavigate } from 'react-router-dom';
 import { useIntl } from '@kne/react-intl';
+import { TENANT_ADMIN_PERMISSIONS } from './constants';
 import withLocale from './withLocale';
 
 const CompleteProfileApplicationEntry = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
+  modules: ['components-core:Global@usePreset', 'components-core:Permissions@usePermissionsPass']
 })(
   withLocale(({ remoteModules, baseUrl }) => {
-    const [usePreset] = remoteModules;
+    const [usePreset, usePermissionsPass] = remoteModules;
     const { apis } = usePreset();
     const navigate = useNavigate();
     const { formatMessage } = useIntl();
+    const canView = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.completeProfileApplication });
+
+    if (!canView) {
+      return null;
+    }
 
     return (
       <Fetch

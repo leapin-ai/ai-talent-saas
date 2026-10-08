@@ -4,6 +4,7 @@ import { Page } from '@kne/system-layout';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useNavigate } from 'react-router-dom';
 import { useIntl } from '@kne/react-intl';
+import { TENANT_ADMIN_PERMISSIONS } from './constants';
 import withLocale from './withLocale';
 
 const STATUS_LABEL_IDS = {
@@ -16,15 +17,16 @@ const STATUS_LABEL_IDS = {
 };
 
 const CompleteProfileApplications = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:TablePage', 'components-core:Filter']
+  modules: ['components-core:Global@usePreset', 'components-core:TablePage', 'components-core:Filter', 'components-core:Permissions@usePermissionsPass']
 })(
   withLocale(({ remoteModules, baseUrl }) => {
-    const [usePreset, TablePage, Filter] = remoteModules;
+    const [usePreset, TablePage, Filter, usePermissionsPass] = remoteModules;
     const { apis, ajax } = usePreset();
     const navigate = useNavigate();
     const { formatMessage } = useIntl();
     const { InputFilterItem, SuperSelectFilterItem } = Filter.fields;
     const [reloadKey, setReloadKey] = useState(0);
+    const canReview = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.completeProfileApplicationReview });
 
     const runAction = useCallback(
       async (api, id, successId) => {
@@ -84,7 +86,7 @@ const CompleteProfileApplications = createWithRemoteLoader({
                 onClick: () => navigate(`${baseUrl}/complete-profile-applications/${item.id}`)
               }
             ];
-            if (item.status === 'submitted') {
+            if (canReview && item.status === 'submitted') {
               actions.push(
                 {
                   children: formatMessage({ id: 'tenantAdmin.completeProfileApprove' }),
@@ -111,7 +113,7 @@ const CompleteProfileApplications = createWithRemoteLoader({
           }
         }
       ],
-      [apis, baseUrl, formatMessage, navigate, runAction]
+      [apis, baseUrl, canReview, formatMessage, navigate, runAction]
     );
 
     return (

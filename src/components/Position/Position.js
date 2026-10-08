@@ -8,6 +8,7 @@ import BaseFormInner from './PositionForm';
 import InsightBanner from './InsightBanner';
 import WorkforceKpi from './WorkforceKpi';
 import { createPositionListCardsRender } from './PositionListCards';
+import InviteAssessment from './Detail/AnalyzeTalent/InviteAssessment';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
 import useTablePaginationSearchParams from '../../commons/useTablePaginationSearchParams';
 
@@ -18,7 +19,7 @@ const mapFilterValue = (value, getFilterValue) => ({
 const Position = createWithRemoteLoader({
   modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter', 'components-core:Permissions@usePermissionsPass']
 })(
-  withLocale(({ remoteModules, apis, onDetail, onCreate, onEdit, withInsightBanner, children, ...props }) => {
+  withLocale(({ remoteModules, apis, baseUrl = '', onDetail, onCreate, onEdit, withInsightBanner, children, ...props }) => {
     const [BizUnit, usePreset, Filter, usePermissionsPass] = remoteModules;
     const { SuperSelectFilterItem } = Filter.fields;
     const { formatMessage } = useIntl();
@@ -30,6 +31,7 @@ const Position = createWithRemoteLoader({
     const canEdit = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionEdit });
     const canPublish = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionPublish });
     const canRemove = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionRemove });
+    const canInvite = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInvite });
 
     const handleSetStatus = (id, status, onSuccess) => {
       const isPublish = status === 'published';
@@ -57,7 +59,6 @@ const Position = createWithRemoteLoader({
           ...actionProps,
           data,
           onSuccess,
-          index: 0,
           children: formatMessage({ id: 'action.edit' }),
           onClick: () => {
             if (typeof onEdit === 'function') {
@@ -72,7 +73,6 @@ const Position = createWithRemoteLoader({
             ...actionProps,
             data,
             onSuccess,
-            index: actions.length,
             children: formatMessage({ id: 'action.unpublish' }),
             onClick: () => handleSetStatus(data.id, 'draft', onSuccess)
           });
@@ -81,11 +81,35 @@ const Position = createWithRemoteLoader({
             ...actionProps,
             data,
             onSuccess,
-            index: actions.length,
             children: formatMessage({ id: 'action.publish' }),
             onClick: () => handleSetStatus(data.id, 'published', onSuccess)
           });
         }
+      }
+      // 邀请评估员工 / 经理共用 positionInvite，可同时控制
+      if (canInvite) {
+        actions.push({
+          ...actionProps,
+          data,
+          onSuccess,
+          baseUrl,
+          inviteType: 'employee',
+          buttonComponent: InviteAssessment,
+          children: formatMessage({ id: 'position.talentInviteEmployeesAction' })
+        });
+        actions.push({
+          ...actionProps,
+          data,
+          onSuccess,
+          baseUrl,
+          inviteType: 'manager',
+          buttonComponent: InviteAssessment,
+          children: formatMessage({ id: 'position.talentInviteManagersAction' })
+        });
+      }
+      // 删除必须在操作列最后
+      if (canRemove) {
+        actions.push({ name: 'remove' });
       }
       return actions;
     };

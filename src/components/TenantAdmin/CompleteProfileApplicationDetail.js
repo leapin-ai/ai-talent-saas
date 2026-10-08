@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 import TalentProfile from '@components/TalentProfile';
 import { toReviewData } from '@components/AssessmentGenerateTask/assessmentReviewUtils';
 import { ensurePositionEnums, fromIntentionSelectValue } from '@components/TalentProfile/intentionPositionUtils';
-import { TALENT_PROFILE_CARD_PERMISSIONS } from './constants';
+import { TALENT_PROFILE_CARD_PERMISSIONS, TENANT_ADMIN_PERMISSIONS } from './constants';
 import withLocale from './withLocale';
 
 const STATUS_LABEL_IDS = {
@@ -164,16 +164,18 @@ const ApplicationProfileEditor = ({ baseUrl, employeeApis, ajax, positionDetailA
 };
 
 const CompleteProfileApplicationDetail = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
+  modules: ['components-core:Global@usePreset', 'components-core:Permissions@usePermissionsPass']
 })(
   withLocale(({ remoteModules, baseUrl }) => {
-    const [usePreset] = remoteModules;
+    const [usePreset, usePermissionsPass] = remoteModules;
     const { apis, ajax } = usePreset();
     const { id } = useParams();
     const navigate = useNavigate();
     const { formatMessage } = useIntl();
     const [reloadKey, setReloadKey] = useState(0);
     const [acting, setActing] = useState('');
+    const allowReview = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.completeProfileApplicationReview });
+    const allowEdit = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.completeProfileApplicationEdit });
 
     const employeeApis = useMemo(
       () =>
@@ -220,8 +222,8 @@ const CompleteProfileApplicationDetail = createWithRemoteLoader({
             );
           }
 
-          const canReview = data?.status === 'submitted';
-          const canEdit = data?.status === 'submitted';
+          const canReview = allowReview && data?.status === 'submitted';
+          const canEdit = allowEdit && data?.status === 'submitted';
           const displayName = data?.profileDetail?.name || data?.reviewData?.employee?.name || data?.name || formatMessage({ id: 'tenantAdmin.completeProfileApplicationDetail' });
           const statusLabel = formatMessage({ id: STATUS_LABEL_IDS[data?.status] || 'tenantAdmin.assessmentInterviewStatusUnknown' });
           const metaParts = [

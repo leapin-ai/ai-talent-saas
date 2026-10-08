@@ -14,7 +14,7 @@ const ActivityTaskTable = ({ groups = [], columns = [], expanded = {}, onToggle,
   const [primaryTitle, secondaryTitle, metricTitle, trailingTitle] = columns;
 
   if (!groups.length) {
-    return <div className={style.table}>{empty}</div>;
+    return <div className={style.table}>{empty ? <div className={style['task-empty']}>{empty}</div> : null}</div>;
   }
 
   const head = !isMobile ? (

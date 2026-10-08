@@ -11,26 +11,23 @@ const ImportanceBar = ({ importanceNow, importanceYear }) => {
   const declining = year < now;
   const equal = year === now;
 
-  let left;
-  let width;
-  if (equal) {
-    left = 0;
-    width = Math.max(toTrackPercent(now), 8);
-  } else {
+  const tone = declining ? 'down' : 'up';
+
+  let fillStyle = null;
+  if (!equal) {
     const low = Math.min(now, year);
     const high = Math.max(now, year);
-    left = toTrackPercent(low);
-    width = Math.max(toTrackPercent(high) - left, 6);
+    const left = toTrackPercent(low);
+    const width = Math.max(toTrackPercent(high) - left, 6);
+    fillStyle = { left: `${left}%`, width: `${width}%` };
   }
-
-  const tone = declining ? 'down' : 'up';
 
   return (
     <div className={style.importance}>
       <div className={style['importance-track']}>
-        <div className={classnames(style['importance-fill'], style[`importance-fill-${tone}`])} style={{ left: `${left}%`, width: `${width}%` }} />
+        {fillStyle ? <div className={classnames(style['importance-fill'], style[`importance-fill-${tone}`])} style={fillStyle} /> : null}
         <span className={classnames(style['importance-dot'], style[`importance-dot-${tone}`])} style={{ left: `${toTrackPercent(now)}%` }} />
-        <span className={classnames(style['importance-dot'], style[`importance-dot-${tone}`])} style={{ left: `${toTrackPercent(year)}%` }} />
+        {!equal ? <span className={classnames(style['importance-dot'], style[`importance-dot-${tone}`])} style={{ left: `${toTrackPercent(year)}%` }} /> : null}
       </div>
       <span className={classnames(style['importance-label'], style[`importance-label-${tone}`])}>
         {now}→{year}

@@ -27,7 +27,7 @@ const DataNotifier = ({ data, onData }) => {
 };
 
 const TalentProfile = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
+  modules: ['components-core:Global@usePreset', 'components-core:Permissions@usePermissionsPass']
 })(
   withLocale(
     ({
@@ -53,10 +53,10 @@ const TalentProfile = createWithRemoteLoader({
       removePerformance: controlledRemovePerformance,
       savePerformance: controlledSavePerformance,
       reload: controlledReload,
-      /** 各 Card 显示权限，key 见 TALENT_PROFILE_CARD_PERMISSIONS；未传的 Card 默认展示 */
+      /** 各 Card/Tab 显示权限，key 见 TALENT_PROFILE_CARD_PERMISSIONS；未传则默认展示 */
       permissions: cardPermissions
     }) => {
-      const [usePreset] = remoteModules;
+      const [usePreset, usePermissionsPass] = remoteModules;
       const { formatMessage } = useIntl();
       const { ajax } = usePreset();
       const { message } = App.useApp();
@@ -64,6 +64,18 @@ const TalentProfile = createWithRemoteLoader({
       const navigate = useNavigate();
       const id = idProp || paramId;
       const [generatingInsight, setGeneratingInsight] = useState(false);
+      // 未传对应权限码时默认展示；传入后无权限则隐藏整 Tab（不只藏内容）
+      const readinessRequest = cardPermissions?.readiness;
+      const allowReadiness = usePermissionsPass({ request: readinessRequest || [] });
+      const showReadinessTab = !readinessRequest || allowReadiness;
+      const growthRequest = cardPermissions?.careerPlan;
+      const allowGrowth = usePermissionsPass({ request: growthRequest || [] });
+      const showGrowthTab = !growthRequest || allowGrowth;
+      const matchRequest = cardPermissions?.aiRecommend;
+      const allowMatch = usePermissionsPass({ request: matchRequest || [] });
+      const showMatchTab = !matchRequest || allowMatch;
+      // 顺序：就绪度 → 档案 → 成长计划 → 岗位匹配；默认落在第一个有权限（可见）的 Tab
+      const defaultProfileTab = [showReadinessTab && 'readiness', 'profile', showGrowthTab && 'growth', showMatchTab && 'match'].filter(Boolean)[0];
       // 首页 / 本人档案：走 my-detail，不依赖路由或 query 里的员工 id
       const useMyDetail = !controlledData && (self || !id);
       const fetchProps = useMyDetail ? Object.assign({}, apis.myDetail) : Object.assign({}, apis.detail, { params: { id } });
@@ -440,70 +452,29 @@ const TalentProfile = createWithRemoteLoader({
             </CardGate>
             <Tabs
               className={style['profile-tabs']}
+              defaultActiveKey={defaultProfileTab}
               items={[
-                {
-                  key: 'readiness',
-                  label: formatMessage({ id: 'talentProfile.tabReadiness' }),
-                  forceRender: true,
-                  children: wrapPrintSection(
-                    formatMessage({ id: 'talentProfile.tabReadiness' }),
-                    <ProfileReadiness
-                      employeeId={employeeId}
-                      displayName={profileData.name}
-                      positionId={positionId}
-                      readOnly={readOnly || readinessReadOnly}
-                      showLooksWrong={showLooksWrong}
-                      analysisOverride={data.skillAnalysisDraft || null}
-                      onSaveAnalysis={saveSkillAnalysis}
-                      onGenerateInsight={onGenerateInsight}
-                      generatingInsight={generatingInsight}
-                    />
-                  )
-                },
-                {
-                  key: 'growth',
-                  label: formatMessage({ id: 'talentProfile.tabGrowth' }),
-                  forceRender: true,
-                  children: wrapPrintSection(
-                    formatMessage({ id: 'talentProfile.tabGrowth' }),
-                    <RightColumn
-                      section="growth"
-                      careerPath={careerPath}
-                      aiRecommendations={aiRecommendations}
-                      gotoPosition={gotoPosition}
-                      permissions={cardPermissions}
-                      readOnly={readOnly || readinessReadOnly}
-                      employeeId={employeeId}
-                      saveAiSuggest={saveAiSuggest}
-                      aiSuggest={data.aiSuggest}
-                      onGenerateInsight={onGenerateInsight}
-                      generatingInsight={generatingInsight}
-                    />,
-                    hasGrowthData
-                  )
-                },
-                {
-                  key: 'match',
-                  label: formatMessage({ id: 'talentProfile.tabMatch' }),
-                  forceRender: true,
-                  children: wrapPrintSection(
-                    formatMessage({ id: 'talentProfile.tabMatch' }),
-                    <RightColumn
-                      section="match"
-                      careerPath={careerPath}
-                      aiRecommendations={aiRecommendations}
-                      gotoPosition={gotoPosition}
-                      permissions={cardPermissions}
-                      readOnly={readOnly || readinessReadOnly}
-                      employeeId={employeeId}
-                      saveAiSuggest={saveAiSuggest}
-                      aiSuggest={data.aiSuggest}
-                      onGenerateInsight={onGenerateInsight}
-                      generatingInsight={generatingInsight}
-                    />,
-                    hasMatchData
-                  )
-                },
+                showReadinessTab
+                  ? {
+                      key: 'readiness',
+                      label: formatMessage({ id: 'talentProfile.tabReadiness' }),
+                      forceRender: true,
+                      children: wrapPrintSection(
+                        formatMessage({ id: 'talentProfile.tabReadiness' }),
+                        <ProfileReadiness
+                          employeeId={employeeId}
+                          displayName={profileData.name}
+                          positionId={positionId}
+                          readOnly={readOnly || readinessReadOnly}
+                          showLooksWrong={showLooksWrong}
+                          analysisOverride={data.skillAnalysisDraft || null}
+                          onSaveAnalysis={saveSkillAnalysis}
+                          onGenerateInsight={onGenerateInsight}
+                          generatingInsight={generatingInsight}
+                        />
+                      )
+                    }
+                  : null,
                 {
                   key: 'profile',
                   label: formatMessage({ id: 'talentProfile.tabProfile' }),
@@ -545,8 +516,56 @@ const TalentProfile = createWithRemoteLoader({
                     </div>,
                     hasProfileData
                   )
-                }
-              ]}
+                },
+                showGrowthTab
+                  ? {
+                      key: 'growth',
+                      label: formatMessage({ id: 'talentProfile.tabGrowth' }),
+                      forceRender: true,
+                      children: wrapPrintSection(
+                        formatMessage({ id: 'talentProfile.tabGrowth' }),
+                        <RightColumn
+                          section="growth"
+                          careerPath={careerPath}
+                          aiRecommendations={aiRecommendations}
+                          gotoPosition={gotoPosition}
+                          permissions={cardPermissions}
+                          readOnly={readOnly || readinessReadOnly}
+                          employeeId={employeeId}
+                          saveAiSuggest={saveAiSuggest}
+                          aiSuggest={data.aiSuggest}
+                          onGenerateInsight={onGenerateInsight}
+                          generatingInsight={generatingInsight}
+                        />,
+                        hasGrowthData
+                      )
+                    }
+                  : null,
+                showMatchTab
+                  ? {
+                      key: 'match',
+                      label: formatMessage({ id: 'talentProfile.tabMatch' }),
+                      forceRender: true,
+                      children: wrapPrintSection(
+                        formatMessage({ id: 'talentProfile.tabMatch' }),
+                        <RightColumn
+                          section="match"
+                          careerPath={careerPath}
+                          aiRecommendations={aiRecommendations}
+                          gotoPosition={gotoPosition}
+                          permissions={cardPermissions}
+                          readOnly={readOnly || readinessReadOnly}
+                          employeeId={employeeId}
+                          saveAiSuggest={saveAiSuggest}
+                          aiSuggest={data.aiSuggest}
+                          onGenerateInsight={onGenerateInsight}
+                          generatingInsight={generatingInsight}
+                        />,
+                        hasMatchData
+                      )
+                    }
+                  : null
+              ].filter(Boolean)}
             />
           </Flex>
         );

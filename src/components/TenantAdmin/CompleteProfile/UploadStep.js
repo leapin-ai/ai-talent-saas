@@ -128,7 +128,7 @@ const UploadStep = ({ usePreset, DragAreaOuter, UploadTips, UploadButton, FileLi
             id: parsing ? 'tenantAdmin.completeResumeParsing' : 'tenantAdmin.completeResumeUploading'
           })}
         >
-          <DragAreaOuter accept={ACCEPT} fileSize={FILE_SIZE_MB} maxLength={1} onFileSelected={onFileSelected}>
+          <DragAreaOuter className={style['upload-drag-outer']} accept={ACCEPT} fileSize={FILE_SIZE_MB} maxLength={1} onFileSelected={onFileSelected}>
             <div
               className={style['upload-zone']}
               onDragEnter={e => {
