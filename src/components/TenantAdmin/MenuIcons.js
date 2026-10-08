@@ -61,6 +61,16 @@ export const HomeMenuIcon = props => (
   </NavIcon>
 );
 
+/** 内部人才市场：双人轮廓，与其它描边图标同重量 */
+export const MarketMenuIcon = props => (
+  <NavIcon {...props}>
+    <circle cx="7.2" cy="6.6" r="2.1" {...strokeProps} />
+    <path d="M3.4 15.4c.5-2.4 2-3.7 3.8-3.7s3.3 1.3 3.8 3.7" {...strokeProps} />
+    <circle cx="13.2" cy="7" r="1.8" {...strokeProps} />
+    <path d="M11.4 15.4c.3-1.7 1.3-2.7 2.8-2.7 1.4 0 2.4.9 2.8 2.5" {...strokeProps} />
+  </NavIcon>
+);
+
 export const CompanyMenuIcon = props => (
   <NavIcon {...props}>
     <rect x="3.8" y="2.8" width="12.4" height="14.4" rx="1.2" {...strokeProps} />
