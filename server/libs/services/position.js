@@ -876,7 +876,7 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
-  const skillAnalysisSave = async (authenticatePayload, { positionId, employeeId, readiness, summary, metrics, skills, priorityGaps, developmentPlan }) => {
+  const skillAnalysisSave = async (authenticatePayload, { positionId, employeeId, readiness, summary, metrics, skills, priorityGaps, developmentPlan, replaceReadiness = false }) => {
     const { tenantId } = authenticatePayload;
     if (!positionId || !employeeId) {
       throw new Error('岗位与员工不能为空');
@@ -923,7 +923,8 @@ module.exports = fp(async (fastify, options) => {
           positionId: String(positionId),
           employeeId: String(employeeId),
           skills: payload.skills,
-          ensureTasks: true
+          ensureTasks: true,
+          replace: replaceReadiness === true
         });
       } catch (error) {
         fastify.log.warn({ err: error, positionId, employeeId }, 'skillAnalysisSave importSkillReadiness failed');

@@ -152,6 +152,27 @@ const ProfileReadiness = createWithRemoteLoader({
     const [selectedId, setSelectedId] = useState(null);
     const [expanded, setExpanded] = useState({});
     const [reloadKey, setReloadKey] = useState(0);
+    const [positionTasks, setPositionTasks] = useState(null);
+    const hasDraftSkills = Array.isArray(analysisOverride?.skills) && analysisOverride.skills.length > 0;
+
+    useEffect(() => {
+      const tasksApi = apis?.talentSaas?.tenant?.position?.tasks;
+      if (!hasDraftSkills || !positionId || !tasksApi) {
+        setPositionTasks(null);
+        return;
+      }
+      let cancelled = false;
+      ajax(Object.assign({}, tasksApi, { params: { positionId: String(positionId) } }))
+        .then(({ data: resData }) => {
+          if (!cancelled && resData?.code === 0) {
+            setPositionTasks(resData.data?.pageData || []);
+          }
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }, [ajax, apis, hasDraftSkills, positionId]);
 
     useEffect(() => {
       let cancelled = false;
@@ -222,6 +243,15 @@ const ProfileReadiness = createWithRemoteLoader({
         // positionTask.id 为 bigint；skill-* 等字符串 id 不能当作 taskId
         return /^\d+$/.test(text) ? text : null;
       };
+      // 草稿 skills 只按标题借用岗位任务的分组与顺序；不带 taskId，证据仍取草稿
+      const taskOrder = new Map(
+        (positionTasks || []).map((task, index) => [
+          String(task.title || '')
+            .trim()
+            .toLowerCase(),
+          { task, index }
+        ])
+      );
       return skills
         .map((item, index) => {
           if (!item || typeof item !== 'object') {
@@ -231,7 +261,9 @@ const ProfileReadiness = createWithRemoteLoader({
           if (!title) {
             return null;
           }
-          const activityGroup = typeof item.activityGroup === 'string' && item.activityGroup.trim() ? item.activityGroup.trim() : [item.activityCode, item.activityTitle].filter(Boolean).join(' · ');
+          const matched = taskOrder.get(title.toLowerCase());
+          const ownGroup = typeof item.activityGroup === 'string' && item.activityGroup.trim() ? item.activityGroup.trim() : [item.activityCode, item.activityTitle].filter(Boolean).join(' · ');
+          const activityGroup = ownGroup || matched?.task?.activityGroup || '';
           const taskId = toNumericTaskId(item.taskId);
           return {
             id: item.id || (taskId ? `task-${taskId}` : `draft-skill-${index}`),
@@ -242,18 +274,21 @@ const ProfileReadiness = createWithRemoteLoader({
             required: item.required ?? 0,
             status: item.status,
             confidence: normalizeConfidence(item.confidence),
-            evidence: item.evidence || ''
+            evidence: item.evidence || '',
+            sortIndex: matched ? matched.index : Number.MAX_SAFE_INTEGER
           };
         })
-        .filter(Boolean);
-    }, [effectiveAnalysis]);
+        .filter(Boolean)
+        .sort((a, b) => a.sortIndex - b.sortIndex);
+    }, [effectiveAnalysis, positionTasks]);
 
-    // 有真实 taskReadiness 行优先；否则用 skillAnalysis.skills 兜底（完成/审批后常见）
+    // 审核草稿有 skills 时以草稿为准（完成/审批会按草稿替换就绪度）；
+    // 否则真实 taskReadiness 行优先，skillAnalysis.skills 兜底（完成/审批后常见）
     // 接口行不含 evidence 文案，按 title/name 从 skills 合并，供右侧「所用证据」展示
     const displayRows = useMemo(() => {
       const apiRows = rows || [];
       const skillRows = overrideSkillRows || [];
-      if (!apiRows.length) {
+      if (!apiRows.length || hasDraftSkills) {
         return skillRows;
       }
       const evidenceByTitle = new Map();
@@ -310,7 +345,7 @@ const ProfileReadiness = createWithRemoteLoader({
         }
         return Object.keys(patch).length ? Object.assign({}, item, patch) : item;
       });
-    }, [rows, overrideSkillRows, effectiveAnalysis]);
+    }, [rows, overrideSkillRows, effectiveAnalysis, hasDraftSkills]);
 
     const groups = useMemo(() => {
       const list = displayRows;
@@ -604,7 +639,7 @@ const ProfileReadiness = createWithRemoteLoader({
       });
     };
 
-    const canEditFutureTasks = !readOnly && positionId && employeeId && !String(employeeId).startsWith('draft-');
+    const canEditFutureTasks = !readOnly && !hasDraftSkills && positionId && employeeId && !String(employeeId).startsWith('draft-');
     const canEditReadiness = !readOnly && (typeof onSaveAnalysis === 'function' || (positionId && employeeId && !String(employeeId).startsWith('draft-')));
 
     const handleSaveTaskEvidence = async ({ items, confidence } = {}, task) => {
