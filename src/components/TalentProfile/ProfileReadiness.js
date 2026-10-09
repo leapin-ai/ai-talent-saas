@@ -58,6 +58,8 @@ const STATUS_META = {
   unknown: { tone: 'status-unknown', labelKey: 'talentProfile.statusUnknown' }
 };
 
+const STATUS_FILTER_KEYS = ['critical', 'gap', 'onTarget', 'above', 'unknown'];
+
 const CONFIDENCE_KEYS = {
   high: 'talentProfile.confidenceHigh',
   medium: 'talentProfile.confidenceMedium',
@@ -74,11 +76,11 @@ const normalizeConfidence = value => {
   return null;
 };
 
-const SkillProgress = ({ current, required }) => {
+const SkillProgress = ({ current, required, unknown }) => {
   const max = Math.max(5, Number(required) || 5, Number(current) || 0);
-  const currentPct = Math.min(100, ((Number(current) || 0) / max) * 100);
+  const currentPct = unknown ? 0 : Math.min(100, ((Number(current) || 0) / max) * 100);
   const requiredPct = Math.min(100, ((Number(required) || 0) / max) * 100);
-  const gap = Number(required) > Number(current);
+  const gap = !unknown && Number(required) > Number(current);
   const gapLeft = Math.min(currentPct, requiredPct);
   const gapWidth = Math.max(0, requiredPct - currentPct);
 
@@ -150,6 +152,7 @@ const ProfileReadiness = createWithRemoteLoader({
     const [analysis, setAnalysis] = useState(null);
     const [error, setError] = useState('');
     const [selectedId, setSelectedId] = useState(null);
+    const [statusFilter, setStatusFilter] = useState('all');
     const [expanded, setExpanded] = useState({});
     const [reloadKey, setReloadKey] = useState(0);
     const [positionTasks, setPositionTasks] = useState(null);
@@ -347,10 +350,17 @@ const ProfileReadiness = createWithRemoteLoader({
       });
     }, [rows, overrideSkillRows, effectiveAnalysis, hasDraftSkills]);
 
-    const groups = useMemo(() => {
-      const list = displayRows;
+    const statusCounts = useMemo(() => {
+      const counts = STATUS_FILTER_KEYS.reduce((acc, key) => Object.assign(acc, { [key]: 0 }), {});
+      (displayRows || []).forEach(item => {
+        counts[resolveStatus(item)] += 1;
+      });
+      return counts;
+    }, [displayRows]);
+
+    const buildGroups = list => {
       const map = new Map();
-      list.forEach(item => {
+      (list || []).forEach(item => {
         const key = item.activityGroup || '';
         if (!map.has(key)) {
           map.set(key, []);
@@ -367,7 +377,13 @@ const ProfileReadiness = createWithRemoteLoader({
           children
         };
       });
-    }, [displayRows, formatMessage]);
+    };
+
+    const groups = useMemo(
+      () => buildGroups(statusFilter === 'all' ? displayRows : (displayRows || []).filter(item => resolveStatus(item) === statusFilter)),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [displayRows, statusFilter, formatMessage]
+    );
 
     useEffect(() => {
       const flat = groups.flatMap(group => group.children);
@@ -804,9 +820,28 @@ const ProfileReadiness = createWithRemoteLoader({
           ) : (
             <div className={style['future-task-body']}>
               <div className={style['future-task-main']}>
+                <div className={style['status-filters']}>
+                  {[{ key: 'all', label: formatMessage({ id: 'talentProfile.statusFilterAll' }), count: (displayRows || []).length }]
+                    .concat(STATUS_FILTER_KEYS.map(key => ({ key, label: formatMessage({ id: STATUS_META[key].labelKey }), count: statusCounts[key], tone: STATUS_META[key].tone })))
+                    .map(item => {
+                      const selected = statusFilter === item.key;
+                      return (
+                        <button
+                          key={item.key}
+                          type="button"
+                          className={classnames(style['status-filter'], item.tone && style[item.tone], selected && style['status-filter-selected'], item.key === 'all' && selected && style['status-filter-all-selected'])}
+                          onClick={() => setStatusFilter(item.key)}
+                        >
+                          <span>{item.label}</span>
+                          <span className={style['status-filter-count']}>{item.count}</span>
+                        </button>
+                      );
+                    })}
+                </div>
                 <ActivityTaskTable
                   maxBodyHeight={PINNED_SCROLL_MAX_HEIGHT}
                   groups={groups}
+                  empty={<Empty description={formatMessage({ id: 'talentProfile.statusFilterEmpty' })} />}
                   columns={[
                     formatMessage({ id: 'talentProfile.colActivityTask' }),
                     formatMessage({ id: 'talentProfile.status' }),
@@ -828,12 +863,15 @@ const ProfileReadiness = createWithRemoteLoader({
                     const meta = STATUS_META[status] || STATUS_META.gap;
                     return <span className={classnames(style['status-pill'], style[meta.tone])}>{formatMessage({ id: meta.labelKey })}</span>;
                   }}
-                  renderMetric={item => (
-                    <div className={style['task-progress-cell']}>
-                      <SkillProgress current={item.current} required={item.required} />
-                      <span className={style['skill-score']}>{formatMessage({ id: 'talentProfile.scoreSlash' }, { current: item.current ?? 0, required: item.required ?? 0 })}</span>
-                    </div>
-                  )}
+                  renderMetric={item => {
+                    const unknown = resolveStatus(item) === 'unknown';
+                    return (
+                      <div className={style['task-progress-cell']}>
+                        <SkillProgress current={item.current} required={item.required} unknown={unknown} />
+                        <span className={style['skill-score']}>{unknown ? (item.required ?? 0) : formatMessage({ id: 'talentProfile.scoreSlash' }, { current: item.current ?? 0, required: item.required ?? 0 })}</span>
+                      </div>
+                    );
+                  }}
                   renderTrailing={item => {
                     const confidence = normalizeConfidence(item.confidence);
                     if (!confidence) {

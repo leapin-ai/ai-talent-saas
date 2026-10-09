@@ -173,6 +173,27 @@ module.exports = fp(async (fastify, options) => {
     }
   );
 
+  fastify.post(
+    `${options.prefix}/tenant/position/talent-collect-invite/update-status`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '手动修改人才评估收集邀请的完成状态',
+        body: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            status: { type: 'string', enum: ['invited', 'opened', 'filling', 'interviewing', 'done', 'ended', 'canceled'] }
+          },
+          required: ['id', 'status']
+        }
+      }
+    },
+    async request => {
+      return services.talentCollectInvite.updateStatus(request.tenantUserInfo, request.body);
+    }
+  );
+
   fastify.get(
     `${options.prefix}/public/talent-collect-invite`,
     {

@@ -4,6 +4,10 @@
  */
 const { getAsrConfigFromEnv, transcribeFileLink } = require('../../utils/ali-filetrans-asr');
 
+const NO_INTERVIEW_MESSAGES = ['面试记录不存在'];
+
+const isNoInterviewError = e => NO_INTERVIEW_MESSAGES.some(text => String(e?.message || '').includes(text));
+
 const collectVideoJobs = interview => {
   const jobs = [];
   const answers = interview?.answers && typeof interview.answers === 'object' ? interview.answers : {};
@@ -82,27 +86,32 @@ const runner = async (fastify, options, { task, updateProgress }) => {
     await updateProgress?.(5);
     const auth = { tenantId: String(tenantId) };
     const clientUserId = await services.talentCollectInvite.resolveClientUserId(tenantId, row);
-    if (!clientUserId) {
-      throw new Error('未找到对应面试记录，无法转写');
-    }
-    const interview = await services.aiInterview.getInterviewDetail({
-      tenantId: String(tenantId),
-      id: String(clientUserId)
-    });
-    if (!interview) {
-      throw new Error('未找到面试详情，无法转写');
+    let interview = null;
+    if (clientUserId) {
+      try {
+        interview = await services.aiInterview.getInterviewDetail({
+          tenantId: String(tenantId),
+          id: String(clientUserId)
+        });
+      } catch (e) {
+        // open-api 统一包成 500，只能按文案识别「无面试数据」
+        if (!isNoInterviewError(e)) {
+          throw e;
+        }
+      }
     }
 
-    const jobs = collectVideoJobs(interview);
+    const jobs = interview ? collectVideoJobs(interview) : [];
     const asrConfig = getAsrConfigFromEnv(fastify.config);
     const videoTranscripts = {};
     const errors = [];
 
     if (!jobs.length) {
-      // 无视频题：视为成功空转写，仍继续创建完善任务
+      // 无面试数据 / 无视频题：跳过转写视为成功空转写，仍继续创建完善任务；接口本身失败仍走 catch 维持失败
       await patchInterviewData({
         videoAsrStatus: 'succeeded',
         videoTranscripts: {},
+        videoAsrSkipReason: interview ? 'no-video' : 'no-interview',
         videoAsrCompletedAt: new Date().toISOString(),
         videoAsrError: null
       });
@@ -163,6 +172,7 @@ const runner = async (fastify, options, { task, updateProgress }) => {
       videoAsrStatus: 'succeeded',
       videoTranscripts,
       videoAsrErrors: errors.length ? errors : null,
+      videoAsrSkipReason: null,
       videoAsrCompletedAt: new Date().toISOString(),
       videoAsrError: null
     });

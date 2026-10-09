@@ -298,6 +298,10 @@ const getApis = options => {
           cancel: {
             url: `${prefix}/tenant/position/talent-collect-invite/cancel`,
             method: 'POST'
+          },
+          updateStatus: {
+            url: `${prefix}/tenant/position/talent-collect-invite/update-status`,
+            method: 'POST'
           }
         },
         assessment: {
