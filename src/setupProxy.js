@@ -13,7 +13,7 @@ module.exports = function (app) {
       pathFilter: '/api',
       changeOrigin: true,
       on: {
-        proxyReq(proxyReq, req) {
+        proxyReq(proxyReq, req, res) {
           if (!isSseRequest(req)) return;
 
           const abortUpstream = () => {
@@ -22,7 +22,8 @@ module.exports = function (app) {
           };
 
           req.once('aborted', abortUpstream);
-          req.once('close', abortUpstream);
+          // req 的 close 在请求体读完时就会触发，客户端断开要监听 res
+          res.once('close', abortUpstream);
           req.socket?.once('close', abortUpstream);
         }
       }
