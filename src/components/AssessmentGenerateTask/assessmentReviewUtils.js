@@ -16,11 +16,33 @@ export const formatValue = value => {
   return String(value);
 };
 
+/** 档案完成度派生字段：不属于员工可编辑字段，写入 reviewData.employee 前须剔除 */
+export const PROFILE_COMPLETION_FIELDS = ['profileCompletionPercent', 'profileCompletionChecklist', 'profileCompletionEstimate', 'profileCompletionOverride'];
+
+const omitProfileCompletionFields = obj => {
+  const next = Object.assign({}, obj);
+  PROFILE_COMPLETION_FIELDS.forEach(key => delete next[key]);
+  return next;
+};
+
+/** 人工完成度：0–100 整数；空 / 非法返回 null（表示按规则自动计算） */
+export const normalizeProfileCompletionPercent = value => {
+  if (value == null || value === '') {
+    return null;
+  }
+  const num = Number(typeof value === 'string' ? value.replace(/%\s*$/, '').trim() : value);
+  if (!Number.isFinite(num)) {
+    return null;
+  }
+  return Math.min(100, Math.max(0, Math.round(num)));
+};
+
 export const toReviewData = profileDetail => {
   if (!profileDetail) {
     return { employee: {}, profile: {} };
   }
-  const { profile, performances, orgEnums, positionEnums, aiSuggest, skillAnalysisDraft, skillAnalysis, createdAt, updatedAt, deletedAt, ...employee } = profileDetail;
+  const { profile, performances, orgEnums, positionEnums, aiSuggest, skillAnalysisDraft, skillAnalysis, createdAt, updatedAt, deletedAt, ...rest } = profileDetail;
+  const employee = omitProfileCompletionFields(rest);
   if (employee.id != null && String(employee.id).startsWith('draft-')) {
     delete employee.id;
   }
@@ -35,13 +57,14 @@ export const toReviewData = profileDetail => {
     employee,
     profile: cleanProfile,
     aiSuggest: aiSuggest || null,
-    skillAnalysis: skillAnalysisDraft || skillAnalysis || null
+    skillAnalysis: skillAnalysisDraft || skillAnalysis || null,
+    profileCompletionPercent: normalizeProfileCompletionPercent(profileDetail.profileCompletionOverride)
   };
 };
 
 /**
  * 剪贴板 JSON 支持（完善档案生成审核）：
- * 1) reviewData：{ employee?, profile?, skillAnalysis?, aiSuggest? }
+ * 1) reviewData：{ employee?, profile?, skillAnalysis?, aiSuggest?, profileCompletionPercent? }
  * 2) 扁平档案详情：顶层含 name/email 等员工字段，或含 profile / skillAnalysisDraft
  * 3) AI 填充接口返回体：{ data, readiness, aiSuggest }
  */
@@ -190,11 +213,21 @@ export const parseClipboardProfilePayload = text => {
     });
   }
 
-  const hasReviewKeys = root.employee != null || root.profile != null || root.skillAnalysis != null || root.skillAnalysisDraft != null || root.aiSuggest != null;
+  const hasReviewKeys = root.employee != null || root.profile != null || root.skillAnalysis != null || root.skillAnalysisDraft != null || root.aiSuggest != null || root.profileCompletionPercent != null;
   const looksFlatEmployee = typeof root.name === 'string' || typeof root.email === 'string' || typeof root.phone === 'string' || root.profile != null;
 
   if (!hasReviewKeys && !looksFlatEmployee) {
-    throw new Error('未识别到 employee / profile / skillAnalysis / aiSuggest');
+    throw new Error('未识别到 employee / profile / skillAnalysis / aiSuggest / profileCompletionPercent');
+  }
+
+  // 扁平档案详情顶层的 profileCompletionPercent 是员工表旧值，不当作人工完成度
+  const isFlatEmployee = !(root.employee && typeof root.employee === 'object') && looksFlatEmployee;
+  let profileCompletionPercent = null;
+  if (!isFlatEmployee && root.profileCompletionPercent != null && root.profileCompletionPercent !== '') {
+    profileCompletionPercent = normalizeProfileCompletionPercent(root.profileCompletionPercent);
+    if (profileCompletionPercent == null) {
+      throw new Error('profileCompletionPercent 须为 0–100 的数字');
+    }
   }
 
   let employee = {};
@@ -218,6 +251,7 @@ export const parseClipboardProfilePayload = text => {
     } = root;
     employee = rest;
   }
+  employee = omitProfileCompletionFields(employee);
   if (employee.id != null && String(employee.id).startsWith('draft-')) {
     delete employee.id;
   }
@@ -240,11 +274,11 @@ export const parseClipboardProfilePayload = text => {
 
   const aiSuggest = root.aiSuggest && typeof root.aiSuggest === 'object' ? root.aiSuggest : null;
 
-  if (!Object.keys(employee).length && !Object.keys(profile).length && !skillAnalysis && !aiSuggest) {
+  if (!Object.keys(employee).length && !Object.keys(profile).length && !skillAnalysis && !aiSuggest && profileCompletionPercent == null) {
     throw new Error('剪贴板没有可导入的字段');
   }
 
-  return { employee, profile, skillAnalysis, aiSuggest };
+  return { employee, profile, skillAnalysis, aiSuggest, profileCompletionPercent };
 };
 
 /** 将剪贴板解析结果合并进右侧档案草稿（保留 id / enums / performances） */
@@ -267,6 +301,9 @@ export const applyClipboardToProfileDetail = (prev, bundle, extras = {}) => {
   }
   if (bundle?.skillAnalysis) {
     next.skillAnalysisDraft = bundle.skillAnalysis;
+  }
+  if (bundle?.profileCompletionPercent != null) {
+    next.profileCompletionOverride = bundle.profileCompletionPercent;
   }
   return withEstimatedCompletion(next, extras);
 };
@@ -387,9 +424,25 @@ export const withEstimatedCompletion = (profileDetail, extras = {}) => {
     submittedInfo: extras.submittedInfo,
     assessment: extras.assessment
   });
+  const override = normalizeProfileCompletionPercent(profileDetail.profileCompletionOverride);
   return Object.assign({}, profileDetail, {
-    profileCompletionPercent: percent,
+    profileCompletionEstimate: percent,
+    profileCompletionOverride: override,
+    profileCompletionPercent: override != null ? override : percent,
     profileCompletionChecklist: checklist
+  });
+};
+
+/** 审核人手动设置完成度；value 为空表示恢复自动计算（profileCompletionEstimate） */
+export const applyProfileCompletionOverride = (profileDetail, value) => {
+  if (!profileDetail || typeof profileDetail !== 'object') {
+    return profileDetail;
+  }
+  const override = normalizeProfileCompletionPercent(value);
+  const estimate = normalizeProfileCompletionPercent(profileDetail.profileCompletionEstimate);
+  return Object.assign({}, profileDetail, {
+    profileCompletionOverride: override,
+    profileCompletionPercent: override != null ? override : estimate != null ? estimate : profileDetail.profileCompletionPercent
   });
 };
 
