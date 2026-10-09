@@ -8,9 +8,9 @@ function isSseRequest(req) {
 
 module.exports = function (app) {
   app.use(
-    '/api',
     createProxyMiddleware({
       target: 'http://localhost:8040',
+      pathFilter: '/api',
       changeOrigin: true,
       on: {
         proxyReq(proxyReq, req) {
@@ -26,6 +26,15 @@ module.exports = function (app) {
           req.socket?.once('close', abortUpstream);
         }
       }
+    })
+  );
+  // 保留 Host（localhost:3040），oidc-provider 据此生成 issuer 一致的跳转地址
+  app.use(
+    createProxyMiddleware({
+      target: 'http://localhost:8040',
+      // 前缀匹配会误伤前端路由 /oidc-interaction、/oidc-callback
+      pathFilter: path => path === '/oidc' || path.startsWith('/oidc/'),
+      xfwd: true
     })
   );
 };

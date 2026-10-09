@@ -46,6 +46,7 @@ const createServer = () => {
         SEARCH_API_URL: { type: 'string' },
 
         ORIGIN: { type: 'string', default: '' },
+        OIDC_KEY_SECRET: { type: 'string' },
         TASK_CRON: { type: 'string', default: '' },
         OSS_REGION: { type: 'string' },
         OSS_BUCKET: { type: 'string' },
@@ -148,6 +149,7 @@ const createServer = () => {
         isTest: true,
         prefix: `${options.prefix}`,
         dbTableNamePrefix: tablePrefix ? `${tablePrefix}account_` : 't_account_',
+        getUserAuthenticate: () => fastify.oidc.authenticate.user,
         sendMessage: async ({ name, type, messageType, props }) => {
           const language = props.options?.language === 'zh-CN' ? 'zh-CN' : 'en-US';
           // messageType: 0:短信验证码，1:邮件验证码 type: 0:注册,2:登录,4:验证租户管理员,5:忘记密码,6:候选人登录验证
@@ -284,6 +286,7 @@ const createServer = () => {
         prefix: `${options.prefix}/tenant`,
         dbTableNamePrefix: tablePrefix || 't_',
         getUserModel: options.getUserModel,
+        onPermissionChange: payload => fastify.oidc.onPermissionChange(payload),
         syncOrgType: fastify.config.SYNC_ORG_TYPE,
         syncOrgTask: async input => {
           const { tenantId } = input;
@@ -310,6 +313,15 @@ const createServer = () => {
             }
           });
         }
+      });
+
+      // @fastify/env 7 不再把 .env 写入 process.env，fastify-oidc 的环境变量默认值读不到，需显式传入
+      fastify.register(require('@kne/fastify-oidc'), {
+        isMain: true,
+        selfClient: { clientName: 'LeapIn Talent SaaS' },
+        dbTableNamePrefix: tablePrefix || 't_',
+        origin: fastify.config.ORIGIN,
+        keyEncryptionSecret: fastify.config.OIDC_KEY_SECRET
       });
 
       fastify.register(require('@kne/fastify-aws'), {
