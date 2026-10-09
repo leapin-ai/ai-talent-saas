@@ -5,6 +5,7 @@ import { preset as remoteLoaderPreset, loadModule } from '@kne/remote-loader';
 import { preset as boxPreset } from '@kne/react-box';
 import createAjax from '@kne/axios-fetch';
 import { getToken } from '@kne/token-storage';
+import localStorage from '@kne/local-storage';
 import transform from 'lodash/transform';
 import loadable from '@loadable/component';
 import { getApis } from '@components/Apis';
@@ -30,7 +31,8 @@ export const globalInit = async () => {
     errorHandler: error => message.error(error),
     getDefaultHeaders: () => {
       return {
-        'X-User-Token': getToken('X-User-Token')
+        'X-User-Token': getToken('X-User-Token'),
+        'X-User-Locale': localStorage.getItem('X-User-Locale')
       };
     },
     registerInterceptors: interceptors => {

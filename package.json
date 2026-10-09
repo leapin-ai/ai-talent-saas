@@ -1,6 +1,6 @@
 {
   "name": "@kne/ai-talent-saas",
-  "version": "0.1.88",
+  "version": "0.1.89",
   "description": "",
   "scripts": {
     "init": "npm run init-server && husky",
@@ -96,6 +96,7 @@
     "@kne/axios-fetch": "^1.2.4",
     "@kne/ensure-slash": "^0.1.0",
     "@kne/fastify-aliyun": "^1.1.7",
+    "@kne/local-storage": "^0.1.2",
     "@kne/pay-details": "^0.1.1",
     "@kne/react-box": "^0.1.11",
     "@kne/react-form-antd": "^4.1.3",

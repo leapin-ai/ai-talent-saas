@@ -96,6 +96,10 @@ const createServer = () => {
 
   fastify.register(require('fastify-cron'));
 
+  fastify.register(require('@kne/fastify-intl'), {
+    defaultLocale: 'zh-CN'
+  });
+
   fastify.register(
     require('fastify-plugin')(async fastify => {
       const tablePrefix = fastify.config.DB_TABLE_PREFIX || null;
