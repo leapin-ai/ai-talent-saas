@@ -124,14 +124,14 @@ const AppContent = withLocale(({ baseUrl, AfterUserLoginLayout, AfterAdminUserLo
                           path: '/admin/signature'
                         },
                         {
-                          key: 'message',
-                          title: formatMessage({ id: 'app.MessageManagement' }),
-                          path: '/admin/message'
-                        },
-                        {
                           key: 'oidc',
                           title: formatMessage({ id: 'app.OidcManagement' }),
                           path: `${baseUrl}/admin/oidc`
+                        },
+                        {
+                          key: 'message',
+                          title: formatMessage({ id: 'app.MessageManagement' }),
+                          path: '/admin/message'
                         }
                       ]
                     }}
