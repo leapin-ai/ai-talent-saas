@@ -5,6 +5,7 @@ import { CHANGE_VALUES, LEVEL_VALUES, ORIGIN_VALUES, createEmptySkill, createSki
 import RoleInsightsContent from '@components/Position/Detail/RoleInsightsContent';
 import PositionInfoPanel from '@components/Position/Detail/PositionInfoPanel';
 import AnalysisFormLayout from './AnalysisFormLayout';
+import TaskListField from './TaskListField';
 import style from './style.module.scss';
 
 const AI_FILL_LANGUAGE_OPTIONS = [
@@ -64,6 +65,8 @@ const ORIGIN_OPTIONS = ORIGIN_VALUES.map(value => ({
 const LEVEL_OPTIONS = LEVEL_VALUES.map(value => ({ value, label: value }));
 
 const IMPORTANCE_OPTIONS = [1, 2, 3, 4, 5].map(value => ({ label: String(value), value }));
+
+const TASK_FIELD_OPTIONS = { change: CHANGE_OPTIONS, origin: ORIGIN_OPTIONS, level: LEVEL_OPTIONS, importance: IMPORTANCE_OPTIONS };
 
 const emptyEmployeeSkill = (fromPositionSkill = null) => ({
   id: fromPositionSkill?.id || createSkillId(),
@@ -661,7 +664,7 @@ const PositionPreview = ({ FormInfo, context }) => {
   );
 };
 
-const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef, importBundleRef }) => {
+const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef, importBundleRef, taskEditingRef }) => {
   const { List } = FormInfo;
   const { Input, TextArea, Select } = FormInfo.fields;
   const initialData = useMemo(() => buildInitialValues(context).position, [context]);
@@ -696,36 +699,7 @@ const PositionStep = ({ FormInfo, Editor, aiFillProps, context, rehydrateOnceRef
               <Input name="verdict.aiEfficiencyGain" label="AI 效率增益（%）" key="verdict.aiEfficiencyGain" />
             ]}
           />
-          <List
-            name="skill"
-            title="Task 列表"
-            important
-            minLength={1}
-            addText="添加 Task"
-            itemTitle={({ index }) => `Task ${index + 1}`}
-            list={[
-              <Input name="id" label="id" hidden />,
-              <Input name="activityCode" label="编号" rule="REQ LEN-1-32" />,
-              <Input name="activityTitle" label="内容" rule="REQ LEN-1-200" />,
-              <Input name="name" label="Task" rule="REQ LEN-1-400" />,
-              <Select name="origin" label="来源" rule="REQ" options={ORIGIN_OPTIONS} />,
-              <Select name="importanceNow" label="当前重要性" rule="REQ" options={IMPORTANCE_OPTIONS} />,
-              <Select name="importanceYear" label="本年重要性" rule="REQ" options={IMPORTANCE_OPTIONS} />,
-              <Select name="change" label="变化" rule="REQ" options={CHANGE_OPTIONS} />,
-              <Select name="aiExposure" label="AI 暴露" options={LEVEL_OPTIONS} />,
-              <Select name="confidence" label="置信度" options={LEVEL_OPTIONS} />,
-              <List
-                name="contentItems"
-                title="依据"
-                block
-                addText="添加依据"
-                itemTitle={({ index }) => `依据 ${index + 1}`}
-                list={[
-                  <FormInfo column={1} list={[<Input name="title" label="标题" rule="LEN-0-400" block />, <TextArea name="description" label="描述" block rule="LEN-0-4000" />, <Input name="source" label="来源" rule="LEN-0-400" block />]} />
-                ]}
-              />
-            ]}
-          />
+          <FormInfo column={1} title="Task 列表" list={[<TaskListField name="skill" block minLength={1} options={TASK_FIELD_OPTIONS} editingRef={taskEditingRef} />]} />
           <List
             name="workforceStrategy"
             title="Gap Recommendations"
@@ -762,6 +736,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
   const fillLanguageRef = useRef('zh-CN');
   const rehydrateOnceRef = useRef({});
   const importBundleRef = useRef(null);
+  const taskEditingRef = useRef(false);
 
   const contextApi = useMemo(() => {
     const api = apis?.talentSaas?.tenant?.position?.analysisTaskContext;
@@ -782,6 +757,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
     try {
       rehydrateOnceRef.current = {};
       importBundleRef.current = { value: null, listeners: new Set() };
+      taskEditingRef.current = false;
       const { data: resData } = await ajax(contextApi);
       if (resData.code !== 0) {
         throw new Error(resData.msg || '加载任务上下文失败');
@@ -812,6 +788,10 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
         formProps: {
           data: initial.position,
           onSubmit: async positionData => {
+            if (taskEditingRef.current) {
+              message.warning('请先保存或取消正在编辑的 Task');
+              return false;
+            }
             if (validatePositionStep(positionData, message) === false) {
               return false;
             }
@@ -829,7 +809,7 @@ const CompletePositionAnalysisTask = createWithRemoteLoader({
             });
           }
         },
-        children: <PositionStep FormInfo={FormInfo} Editor={Editor} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} importBundleRef={importBundleRef} />
+        children: <PositionStep FormInfo={FormInfo} Editor={Editor} aiFillProps={aiFillProps} context={context} rehydrateOnceRef={rehydrateOnceRef} importBundleRef={importBundleRef} taskEditingRef={taskEditingRef} />
       });
     } catch (e) {
       message.error(e.message || '打开完成任务表单失败');
