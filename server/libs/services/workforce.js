@@ -1,4 +1,5 @@
 const fp = require('fastify-plugin');
+const { normalizeProfileCompletionPercent } = require('../utils/profile-completion');
 
 const CHANGE_TAGS = ['critical_to_build', 'ai_emerging', 'new', 'increasing', 'stable', 'decreasing'];
 const ACTIONS = ['BUILD', 'MOVE', 'BUY', 'AUGMENT'];
@@ -733,17 +734,10 @@ module.exports = fp(async (fastify, options) => {
   };
 
   /**
-   * 完善档案生成审核结束后，按本次提交内容估算档案完成度。
+   * 按审核草稿与员工现有数据估算档案完成度（纯计算，不落库）。
    * 五项等权：基础信息、简历、填写信息、AI 面试、就绪度。（成长建议已下线，不计入）
    */
-  const recomputeProfileCompletion = async ({ tenantId, employeeId, assessment } = {}) => {
-    const employee = await models.employee.findOne({
-      where: { id: employeeId, tenantId },
-      include: [models.profile]
-    });
-    if (!employee) {
-      return null;
-    }
+  const computeProfileCompletion = ({ employee = {}, assessment } = {}) => {
     const review = assessment?.reviewData && typeof assessment.reviewData === 'object' ? assessment.reviewData : {};
     const reviewEmployee = review.employee && typeof review.employee === 'object' ? review.employee : {};
     const reviewProfile = review.profile && typeof review.profile === 'object' ? review.profile : {};
@@ -768,6 +762,24 @@ module.exports = fp(async (fastify, options) => {
     ];
     const done = checklist.filter(item => item.done).length;
     const percent = Math.round((done / checklist.length) * 100);
+    return { percent, checklist };
+  };
+
+  /**
+   * 完善档案生成审核结束 / 审核通过后落库档案完成度。
+   * reviewData.profileCompletionPercent 为审核人填写（或导入）的值时优先采用，否则按五项规则计算。
+   */
+  const recomputeProfileCompletion = async ({ tenantId, employeeId, assessment } = {}) => {
+    const employee = await models.employee.findOne({
+      where: { id: employeeId, tenantId },
+      include: [models.profile]
+    });
+    if (!employee) {
+      return null;
+    }
+    const { percent: estimated, checklist } = computeProfileCompletion({ employee, assessment });
+    const override = normalizeProfileCompletionPercent(assessment?.reviewData?.profileCompletionPercent);
+    const percent = override != null ? override : estimated;
     employee.profileCompletionPercent = percent;
     employee.profileCompletionChecklist = checklist;
     employee.changed('profileCompletionChecklist', true);
@@ -1093,6 +1105,7 @@ module.exports = fp(async (fastify, options) => {
       replaceTaskEvidence,
       saveEvidence,
       removeEvidence,
+      computeProfileCompletion,
       recomputeProfileCompletion,
       seedEvidenceFromEmployee,
       reportReadinessIssue,

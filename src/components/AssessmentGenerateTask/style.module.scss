@@ -270,3 +270,40 @@
   line-height: 1.4;
   color: #94a3b8;
 }
+
+.completion-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.completion-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.completion-label {
+  font-size: 13px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.completion-input {
+  width: 120px;
+}
+
+.completion-reset {
+  padding-inline: 0;
+}
+
+.completion-hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #94a3b8;
+}

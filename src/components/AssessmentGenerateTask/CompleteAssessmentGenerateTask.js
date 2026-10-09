@@ -4,6 +4,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import TalentProfile from '@components/TalentProfile';
 import ContextSidePanel from './ContextSidePanel';
+import ProfileCompletionField from './ProfileCompletionField';
 import { toReviewData, parseClipboardProfilePayload, applyClipboardToProfileDetail, applyAiFillToProfileDetail, withEstimatedCompletion } from './assessmentReviewUtils';
 import style from './style.module.scss';
 
@@ -50,7 +51,10 @@ const AiFillToolbar = ({ taskId, ajax, fillApi, profileDetail, setProfileDetail,
       if (bundle.aiSuggest) {
         parts.push('成长/匹配');
       }
-      msg.success(`已从剪贴板导入：${parts.join('、') || '数据'}（已重算完成度）`);
+      if (bundle.profileCompletionPercent != null) {
+        parts.push(`完成度 ${bundle.profileCompletionPercent}%`);
+      }
+      msg.success(`已从剪贴板导入：${parts.join('、') || '数据'}${bundle.profileCompletionPercent != null ? '' : '（已重算完成度）'}`);
     } catch (e) {
       msg.error(e.message || '导入失败');
     } finally {
@@ -120,7 +124,9 @@ const AiFillToolbar = ({ taskId, ajax, fillApi, profileDetail, setProfileDetail,
           </Button>
         ) : null}
       </div>
-      <div className={style['ai-fill-hint']}>可粘贴 reviewData JSON（employee/profile/skillAnalysis/aiSuggest）；或点 AI 填充补全空白项（不覆盖已有内容）；完成后会重算档案完成度，均不自动提交</div>
+      <div className={style['ai-fill-hint']}>
+        可粘贴 reviewData JSON（employee/profile/skillAnalysis/aiSuggest/profileCompletionPercent）；或点 AI 填充补全空白项（不覆盖已有内容）；完成后会重算档案完成度（已手动设置或导入的完成度保留），均不自动提交
+      </div>
     </div>
   );
 };
@@ -423,6 +429,7 @@ const TaskContextBody = ({ taskId, context, profileDetail, setProfileDetail, emp
               languageRef={fillLanguageRef}
               completionExtras={completionExtras}
             />
+            {currentDetail ? <ProfileCompletionField profileDetail={currentDetail} onChange={value => setProfileDetailWithCompletion(prev => Object.assign({}, prev || currentDetail, { profileCompletionOverride: value }))} /> : null}
             <ProfileEditorPanel employeeApis={employeeApis} profileDetail={currentDetail} setProfileDetail={setProfileDetailWithCompletion} />
           </Flex>
         </div>

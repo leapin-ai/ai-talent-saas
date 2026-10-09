@@ -31,6 +31,8 @@ export const TENANT_ADMIN_PERMISSIONS = {
 /** 员工档案各 Card 显示权限；传给 TalentProfile 的 permissions，未传的 Card 默认展示 */
 export const TALENT_PROFILE_CARD_PERMISSIONS = {
   header: employeeArchiveCard('header'),
+  /** 控制个人信息卡右侧「档案数据与详情」（完成度环、说明与查看来源） */
+  profileData: employeeArchiveCard('profile-data'),
   /** 控制整个「就绪度」Tab（总览 / 优先差距 / 未来任务） */
   readiness: employeeArchiveCard('readiness'),
   advantages: employeeArchiveCard('advantages'),

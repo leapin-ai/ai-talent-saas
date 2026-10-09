@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { PROFILE_COMPLETION_FIELDS, normalizeProfileCompletionPercent } from '@components/AssessmentGenerateTask/assessmentReviewUtils';
 
 const getByPath = (data, path) => {
   if (data == null || path == null || path === '') {
@@ -694,7 +695,7 @@ const buildReviewDataExport = profileDetail => {
   const profile = profileDetail.profile && typeof profileDetail.profile === 'object' ? profileDetail.profile : {};
   const aiSuggest = profileDetail.aiSuggest && typeof profileDetail.aiSuggest === 'object' ? profileDetail.aiSuggest : null;
   const skillAnalysis = buildSkillAnalysisExport(profileDetail.skillAnalysisDraft || profileDetail.skillAnalysis);
-  const omitEmployee = new Set(['profile', 'performances', 'orgEnums', 'positionEnums', 'aiSuggest', 'skillAnalysisDraft', 'skillAnalysis', 'createdAt', 'updatedAt', 'deletedAt']);
+  const omitEmployee = new Set(['profile', 'performances', 'orgEnums', 'positionEnums', 'aiSuggest', 'skillAnalysisDraft', 'skillAnalysis', 'createdAt', 'updatedAt', 'deletedAt', ...PROFILE_COMPLETION_FIELDS]);
   const cleanEmployee = {};
   Object.keys(profileDetail).forEach(key => {
     if (omitEmployee.has(key)) {
@@ -716,7 +717,8 @@ const buildReviewDataExport = profileDetail => {
     employee: pickDefined(cleanEmployee),
     profile: pickDefined(cleanProfile),
     skillAnalysis,
-    aiSuggest
+    aiSuggest,
+    profileCompletionPercent: normalizeProfileCompletionPercent(profileDetail.profileCompletionOverride)
   });
 };
 
@@ -765,6 +767,9 @@ export const buildInterviewExport = ({
       }
       if (review.aiSuggest) {
         data.aiSuggest = review.aiSuggest;
+      }
+      if (review.profileCompletionPercent != null) {
+        data.profileCompletionPercent = review.profileCompletionPercent;
       }
     }
   }

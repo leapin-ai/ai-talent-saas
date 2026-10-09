@@ -4,6 +4,7 @@ const dayjs = require('dayjs');
 const { requestAssessmentProfileFill, normalizeOutputLanguage } = require('../utils/llm-runner');
 const { extractInterviewSignals, runTalentInsightFill } = require('../utils/talent-insight');
 const { mergeVideoTranscriptsIntoInterview } = require('../utils/merge-video-transcripts');
+const { PROFILE_COMPLETION_FIELDS, normalizeProfileCompletionPercent } = require('../utils/profile-completion');
 
 const FEATURE_KEY = 'Assessment';
 const SHORTEN_TTL_HOURS = 24;
@@ -626,13 +627,15 @@ module.exports = fp(async (fastify, options) => {
           employee: draftSource.employee || mapped,
           profile: draftSource.profile || mapped.profile,
           aiSuggest: draftSource.aiSuggest || null,
-          skillAnalysis: draftSource.skillAnalysis || null
+          skillAnalysis: draftSource.skillAnalysis || null,
+          profileCompletionPercent: draftSource.profileCompletionPercent ?? null
         }
       : {
           employee: mapped,
           profile: mapped.profile,
           aiSuggest: null,
-          skillAnalysis: null
+          skillAnalysis: null,
+          profileCompletionPercent: null
         };
 
     const profileDetail = await buildProfileDetail(authenticatePayload, {
@@ -640,6 +643,17 @@ module.exports = fp(async (fastify, options) => {
       employee,
       draft
     });
+    if (services.workforce?.computeProfileCompletion) {
+      const { percent, checklist } = services.workforce.computeProfileCompletion({
+        employee: employee || {},
+        assessment: { reviewData: draft, profileData: row.profileData, interviewData: row.interviewData, clientUserId: row.clientUserId }
+      });
+      Object.assign(profileDetail, {
+        profileCompletionEstimate: percent,
+        profileCompletionChecklist: checklist,
+        profileCompletionPercent: profileDetail.profileCompletionOverride != null ? profileDetail.profileCompletionOverride : percent
+      });
+    }
 
     return Object.assign({}, enriched, { profileDetail });
   };
@@ -760,8 +774,7 @@ module.exports = fp(async (fastify, options) => {
       };
     }
 
-    const empDraft = Object.assign({}, draft?.employee || {});
-    delete empDraft.profile;
+    const empDraft = omit(draft?.employee || {}, ['profile', ...PROFILE_COMPLETION_FIELDS]);
     const profileDraft = draft?.profile || {};
 
     const merged = Object.assign({}, base, empDraft, {
@@ -773,7 +786,8 @@ module.exports = fp(async (fastify, options) => {
       }),
       performances: base.performances || [],
       aiSuggest: draft?.aiSuggest || base.aiSuggest || null,
-      skillAnalysisDraft: draft?.skillAnalysis || null
+      skillAnalysisDraft: draft?.skillAnalysis || null,
+      profileCompletionOverride: normalizeProfileCompletionPercent(draft?.profileCompletionPercent)
     });
 
     const positionId = merged.options?.position;
@@ -811,7 +825,8 @@ module.exports = fp(async (fastify, options) => {
     if (!profileDetail) {
       return { employee: {}, profile: {} };
     }
-    const { profile, performances, orgEnums, positionEnums, aiSuggest, skillAnalysisDraft, skillAnalysis, createdAt, updatedAt, deletedAt, ...employee } = profileDetail;
+    const { profile, performances, orgEnums, positionEnums, aiSuggest, skillAnalysisDraft, skillAnalysis, createdAt, updatedAt, deletedAt, ...rest } = profileDetail;
+    const employee = omit(rest, PROFILE_COMPLETION_FIELDS);
     if (employee.id != null && String(employee.id).startsWith('draft-')) {
       delete employee.id;
     }
@@ -820,7 +835,8 @@ module.exports = fp(async (fastify, options) => {
       employee,
       profile: cleanProfile,
       aiSuggest: aiSuggest || null,
-      skillAnalysis: skillAnalysisDraft || skillAnalysis || null
+      skillAnalysis: skillAnalysisDraft || skillAnalysis || null,
+      profileCompletionPercent: normalizeProfileCompletionPercent(profileDetail.profileCompletionOverride)
     };
   };
 
@@ -872,13 +888,15 @@ module.exports = fp(async (fastify, options) => {
           employee: draftSource.employee || mapped,
           profile: draftSource.profile || mapped.profile,
           aiSuggest: draftSource.aiSuggest || null,
-          skillAnalysis: draftSource.skillAnalysis || null
+          skillAnalysis: draftSource.skillAnalysis || null,
+          profileCompletionPercent: draftSource.profileCompletionPercent ?? null
         }
       : {
           employee: mapped,
           profile: mapped.profile,
           aiSuggest: null,
-          skillAnalysis: null
+          skillAnalysis: null,
+          profileCompletionPercent: null
         };
 
     const authenticatePayload = Object.assign({}, userInfo, { tenantId });
@@ -1068,7 +1086,8 @@ module.exports = fp(async (fastify, options) => {
     }
 
     const payload = reviewData && typeof reviewData === 'object' ? reviewData : {};
-    const employeePart = payload.employee && typeof payload.employee === 'object' ? payload.employee : payload;
+    const isReviewShape = payload.employee && typeof payload.employee === 'object';
+    const employeePart = isReviewShape ? payload.employee : payload;
     const name = typeof employeePart.name === 'string' ? employeePart.name.trim() : '';
     const phone = pickContact(employeePart.phone);
     const email = pickContact(employeePart.email);
@@ -1080,10 +1099,12 @@ module.exports = fp(async (fastify, options) => {
     }
 
     row.reviewData = {
-      employee: Object.assign({}, employeePart, { name, phone, email }),
+      employee: Object.assign({}, omit(employeePart, PROFILE_COMPLETION_FIELDS), { name, phone, email }),
       profile: payload.profile && typeof payload.profile === 'object' ? payload.profile : mapProfileDataToEmployeeDraft(row.profileData || {}).profile,
       aiSuggest: payload.aiSuggest && typeof payload.aiSuggest === 'object' ? payload.aiSuggest : null,
-      skillAnalysis: payload.skillAnalysis && typeof payload.skillAnalysis === 'object' ? payload.skillAnalysis : null
+      skillAnalysis: payload.skillAnalysis && typeof payload.skillAnalysis === 'object' ? payload.skillAnalysis : null,
+      // 扁平 payload 顶层的 profileCompletionPercent 是员工表旧值，不当作人工完成度
+      profileCompletionPercent: isReviewShape ? normalizeProfileCompletionPercent(payload.profileCompletionPercent) : null
     };
     row.changed('reviewData', true);
     row.status = 'submitted';
@@ -1463,7 +1484,7 @@ module.exports = fp(async (fastify, options) => {
       throw new Error('申请缺少有效手机号或邮箱');
     }
 
-    const employeeFields = Object.assign({}, reviewEmployee, {
+    const employeeFields = Object.assign({}, omit(reviewEmployee, PROFILE_COMPLETION_FIELDS), {
       name,
       phone: phone || '',
       email: email || ''
@@ -1592,10 +1613,13 @@ module.exports = fp(async (fastify, options) => {
       throw new Error('请至少填写手机号或邮箱');
     }
     row.reviewData = {
-      employee: Object.assign({}, employeePart, { name, phone, email }),
+      employee: Object.assign({}, omit(employeePart, PROFILE_COMPLETION_FIELDS), { name, phone, email }),
       profile: profilePart,
       aiSuggest: payload.aiSuggest && typeof payload.aiSuggest === 'object' ? payload.aiSuggest : row.reviewData?.aiSuggest || null,
-      skillAnalysis: payload.skillAnalysis && typeof payload.skillAnalysis === 'object' ? payload.skillAnalysis : row.reviewData?.skillAnalysis || null
+      skillAnalysis: payload.skillAnalysis && typeof payload.skillAnalysis === 'object' ? payload.skillAnalysis : row.reviewData?.skillAnalysis || null,
+      profileCompletionPercent: Object.prototype.hasOwnProperty.call(payload, 'profileCompletionPercent')
+        ? normalizeProfileCompletionPercent(payload.profileCompletionPercent)
+        : normalizeProfileCompletionPercent(row.reviewData?.profileCompletionPercent)
     };
     row.changed('reviewData', true);
     await row.save();

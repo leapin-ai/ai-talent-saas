@@ -121,6 +121,16 @@ module.exports = {
               ]
             },
             {
+              name: '档案数据与详情',
+              code: 'profile-data',
+              permissions: [
+                {
+                  name: '显示',
+                  code: 'view'
+                }
+              ]
+            },
+            {
               name: '就绪度',
               code: 'readiness',
               permissions: [

@@ -108,7 +108,7 @@
 
 ## 2. 完善档案生成审核
 
-任务 type：`assessment-profile-review`。对应右侧草稿：`employee` + `profile` + `skillAnalysis` + `aiSuggest`。导入后会重算档案完成度，不自动提交。
+任务 type：`assessment-profile-review`。对应右侧草稿：`employee` + `profile` + `skillAnalysis` + `aiSuggest` + `profileCompletionPercent`。导入后会重算档案完成度（若带 `profileCompletionPercent` 则以导入值覆盖），不自动提交。
 
 完成提交时，`skillAnalysis` 会按 `skills[].name`（或 `title`）同步到岗位任务就绪度；名称需与 §1 里 `skill[].name`（Task 标题）一致。
 
@@ -209,7 +209,8 @@
       "skill_match": ["需求分析"],
       "skill_gap": [{ "name": "SQL" }]
     }
-  }
+  },
+  "profileCompletionPercent": 80
 }
 ```
 
@@ -221,11 +222,13 @@
 | `profile` | `skills`、`intentionPosition`、`workPreference`、`options.linkedin` 等 |
 | `skillAnalysis` | 就绪度；`skills[].name` 或 `title`；**每项应含 `confidence`（high/medium/low）与 `evidence`**；也可用别名 `skillAnalysisDraft` / `readiness` |
 | `aiSuggest` | `shortTerm` / `longTerm` / `matchPosition`；`match_rate` 用 **0–1**（`0.78` = 78%） |
+| `profileCompletionPercent` | 可选，**根级**；人工档案完成度，0–100 整数（见 §2.5） |
 
 ### 2.3 兼容形态
 
-- 扁平档案详情：顶层直接带 `name` / `email` / `profile` / `skillAnalysisDraft` 等。
+- 扁平档案详情：顶层直接带 `name` / `email` / `profile` / `skillAnalysisDraft` 等。此形态顶层的 `profileCompletionPercent` 视为员工表旧值，**不会**覆盖完成度。
 - AI 填充 / 洞察返回体：`{ data, readiness, aiSuggest }`（`readiness` 会落到 `skillAnalysis`，其中 `skills[].confidence` 会一并导入）。
+- 只改完成度：`{ "profileCompletionPercent": 80 }`。
 
 ### 2.4 枚举
 
@@ -249,6 +252,13 @@
 
 导入时若缺 `source` / `title` 会尽量补齐；**每一条**都应自带字段，不要只填数组第一项。
 
+### 2.5 档案完成度 `profileCompletionPercent`
+
+- **自动计算（默认）**：基础信息、简历、填写信息、AI 面试、就绪度五项等权，完成项数 ÷ 5 × 100 取整。
+- **审核时手动修改**：审核弹窗「完善档案生成审核」与申请详情页的「档案完成度」输入框默认展示自动计算值；改成其它值后作为人工值保存，点「恢复自动计算」清除人工值。
+- **导入覆盖**：剪贴板根级 `profileCompletionPercent` 会覆盖当前值（等同于手动修改）；接受数字或 `"80"` / `"80%"`，超出 0–100 会被截断，非数字报错。`employee.profileCompletionPercent` 会被忽略。
+- **落库**：草稿保存在 `reviewData.profileCompletionPercent`（`null` 表示自动计算）；完成生成任务与审核通过时，有人工值则写入员工 `profileCompletionPercent`，否则按五项规则计算。完成度清单 `profileCompletionChecklist` 始终按规则计算。
+
 ---
 
 ## 3. 跨任务对齐建议
@@ -268,4 +278,4 @@
 | 场景 | 导出文件 | 可回贴导入 |
 | --- | --- | --- |
 | 岗位分析 | `analysis-data-*.json` → `position` | 本文 §1 |
-| 档案审核 | `profile-data-*.json` → `employee` / `profile` / `skillAnalysis` / `aiSuggest` | 本文 §2（含 `confidence` 与 `evidence[{ source, title, summary }]`） |
+| 档案审核 | `profile-data-*.json` → `employee` / `profile` / `skillAnalysis` / `aiSuggest` / `profileCompletionPercent` | 本文 §2（含 `confidence` 与 `evidence[{ source, title, summary }]`） |
