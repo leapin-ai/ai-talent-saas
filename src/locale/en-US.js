@@ -5,9 +5,13 @@ const enUS = {
   'app.FileManagement': 'File Management',
   'app.SignatureManagement': 'Signature Management',
   'app.MessageManagement': 'Message Management',
+  'app.OidcManagement': 'Authentication',
   'app.collectAssessment': 'Assessment',
   'app.collectInviteInvalidTitle': 'Invalid invite link',
-  'app.collectInviteInvalidDesc': 'This link may have expired or is incorrect. Please ask the inviter for a new one.'
+  'app.collectInviteInvalidDesc': 'This link may have expired or is incorrect. Please ask the inviter for a new one.',
+  'app.menuAccount': 'Account',
+  'app.menuSwitchTenant': 'Switch Tenant',
+  'app.menuLogout': 'Logout'
 };
 
 export default enUS;

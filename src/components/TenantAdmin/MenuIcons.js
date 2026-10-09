@@ -105,7 +105,7 @@ export const SwitchTenantMenuIcon = props => (
 
 export const LogoutMenuIcon = props => (
   <NavIcon {...props}>
-    <path d="M8.4 4.2H5.4A1.2 1.2 0 0 0 4.2 5.4v9.2a1.2 1.2 0 0 0 1.2 1.2h3" {...strokeProps} />
-    <path d="M9.4 10h6.6M13.4 6.8 16.6 10l-3.2 3.2" {...strokeProps} />
+    <path d="M14.24 5.76A6 6 0 1 0 14.24 14.24" {...strokeProps} />
+    <path d="M9.6 10h7.4M14.8 7.8 17 10l-2.2 2.2" {...strokeProps} />
   </NavIcon>
 );
