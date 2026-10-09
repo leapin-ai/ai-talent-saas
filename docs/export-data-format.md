@@ -109,19 +109,21 @@
   "submittedInfo": { },
   "profile": { },
   "skillAnalysis": { },
-  "aiSuggest": { }
+  "aiSuggest": { },
+  "profileCompletionPercent": 80
 }
 ```
 
 | 字段 | 说明 |
 | --- | --- |
 | `position` / `company` / `questionnaire` / `questions` | 同 §1，上下文参考 |
-| `employee` | 员工基础信息（与草稿合并；`draft-*` id 会去掉） |
+| `employee` | 员工基础信息（与草稿合并；`draft-*` id 与完成度派生字段会去掉） |
 | `resumeParsed` | 简历解析结果（不含文件 id / oss 等附件字段） |
 | `submittedInfo` | 调研填写信息；**含 `projects[]` 项目经历** |
 | `profile` | 档案扩展（技能标签、意向岗位、工作偏好、linkedin 等） |
 | `skillAnalysis` | Workforce Readiness 草稿，见 §2.2；可回贴 [导入 §2](./clipboard-import-data-format.md) |
 | `aiSuggest` | 成长建议 / 岗位匹配 |
+| `profileCompletionPercent` | 审核人手动设置（或导入）的档案完成度 0–100；**仅在已手动设置时导出**，自动计算时省略。回贴见 [导入 §2.5](./clipboard-import-data-format.md) |
 
 ### 2.2 `skillAnalysis`（含置信度与结构化证据）
 
@@ -183,8 +185,9 @@
 
 可将导出 JSON 中的下列块直接用于「从剪贴板导入」（或整包粘贴，解析器会识别）：
 
-- `employee` + `profile` + `skillAnalysis` + `aiSuggest`
+- `employee` + `profile` + `skillAnalysis` + `aiSuggest`（+ 根级 `profileCompletionPercent`，有则覆盖完成度）
 - 或仅 `skillAnalysis`（含 `confidence` / `evidence`）
+- 或仅 `{ "profileCompletionPercent": 80 }`
 
 别名兼容与导入文档相同：`skillAnalysisDraft` / `readiness` 等。
 

@@ -7,7 +7,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useIntl } from '@kne/react-intl';
 import dayjs from 'dayjs';
 import TalentProfile from '@components/TalentProfile';
-import { toReviewData } from '@components/AssessmentGenerateTask/assessmentReviewUtils';
+import { toReviewData, applyProfileCompletionOverride } from '@components/AssessmentGenerateTask/assessmentReviewUtils';
+import ProfileCompletionField from '@components/AssessmentGenerateTask/ProfileCompletionField';
 import { ensurePositionEnums, fromIntentionSelectValue } from '@components/TalentProfile/intentionPositionUtils';
 import { TALENT_PROFILE_CARD_PERMISSIONS, TENANT_ADMIN_PERMISSIONS } from './constants';
 import withLocale from './withLocale';
@@ -117,6 +118,25 @@ const ApplicationProfileEditor = ({ baseUrl, employeeApis, ajax, positionDetailA
     [ajax, persist, positionDetailApi, profileDetail]
   );
 
+  const saveCompletion = useCallback(
+    async value => {
+      const next = applyProfileCompletionOverride(profileDetail, value);
+      setProfileDetail(next);
+      await persist(next);
+    },
+    [persist, profileDetail]
+  );
+
+  const completionLabels = useMemo(
+    () => ({
+      title: formatMessage({ id: 'tenantAdmin.completeProfileCompletionTitle' }),
+      autoHint: formatMessage({ id: 'tenantAdmin.completeProfileCompletionAutoHint' }),
+      manualHint: estimate => formatMessage({ id: 'tenantAdmin.completeProfileCompletionManualHint' }, { estimate }),
+      reset: formatMessage({ id: 'tenantAdmin.completeProfileCompletionReset' })
+    }),
+    [formatMessage]
+  );
+
   const createPerformance = useCallback(async performanceData => {
     setProfileDetail(prev =>
       Object.assign({}, prev, {
@@ -146,7 +166,8 @@ const ApplicationProfileEditor = ({ baseUrl, employeeApis, ajax, positionDetailA
   }
 
   return (
-    <div style={{ opacity: saving ? 0.85 : 1 }}>
+    <Flex vertical gap={16} style={{ opacity: saving ? 0.85 : 1 }}>
+      {canEdit ? <ProfileCompletionField profileDetail={profileDetail} disabled={saving} onChange={value => saveCompletion(value).catch(() => {})} labels={completionLabels} /> : null}
       <TalentProfile
         baseUrl={baseUrl}
         apis={employeeApis}
@@ -159,7 +180,7 @@ const ApplicationProfileEditor = ({ baseUrl, employeeApis, ajax, positionDetailA
         removePerformance={canEdit ? removePerformance : undefined}
         savePerformance={canEdit ? savePerformance : undefined}
       />
-    </div>
+    </Flex>
   );
 };
 
