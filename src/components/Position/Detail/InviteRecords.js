@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { App, Button, Flex, Input, Space, Typography } from 'antd';
+import { App, Button, Flex, Input, Select, Space, Typography } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useParams } from 'react-router-dom';
@@ -51,6 +51,7 @@ const InviteRecords = createWithRemoteLoader({
     const { InputFilterItem, SuperSelectFilterItem } = Filter.fields;
     const canManageInvite = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInviteRecords });
     const canStartAnalysis = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionAnalysis });
+    const canUpdateStatus = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInviteStatus });
     const [reloadKey, setReloadKey] = useState(0);
     const [loadingId, setLoadingId] = useState(null);
     const [actionType, setActionType] = useState('');
@@ -298,6 +299,58 @@ const InviteRecords = createWithRemoteLoader({
       [ajax, apis, formatMessage, message, modal]
     );
 
+    const updateInviteStatus = useCallback(
+      item => {
+        if (!item?.id) {
+          return;
+        }
+        let nextStatus = item.status;
+        modal.confirm({
+          title: formatMessage({ id: 'position.talentInviteUpdateStatusTitle' }, { name: item.name || '' }),
+          icon: null,
+          content: (
+            <Select
+              style={{ width: '100%' }}
+              defaultValue={item.status}
+              onChange={value => {
+                nextStatus = value;
+              }}
+              options={Object.keys(STATUS_LABEL_IDS).map(value => ({
+                label: formatMessage({ id: STATUS_LABEL_IDS[value] }),
+                value
+              }))}
+            />
+          ),
+          onOk: async () => {
+            if (!nextStatus || nextStatus === item.status) {
+              return;
+            }
+            setLoadingId(item.id);
+            setActionType('status');
+            try {
+              const { data: resData } = await ajax(
+                Object.assign({}, apis.talentSaas.tenant.talentCollectInvite.updateStatus, {
+                  data: { id: String(item.id), status: nextStatus }
+                })
+              );
+              if (resData.code !== 0) {
+                throw new Error(resData.msg || formatMessage({ id: 'position.talentInviteUpdateStatusFailed' }));
+              }
+              message.success(formatMessage({ id: 'position.talentInviteUpdateStatusSuccess' }));
+              setReloadKey(key => key + 1);
+            } catch (e) {
+              message.error(e.message || formatMessage({ id: 'position.talentInviteUpdateStatusFailed' }));
+              throw e;
+            } finally {
+              setLoadingId(null);
+              setActionType('');
+            }
+          }
+        });
+      },
+      [ajax, apis, formatMessage, message, modal]
+    );
+
     const columns = useMemo(
       () => [
         {
@@ -353,8 +406,13 @@ const InviteRecords = createWithRemoteLoader({
           fixed: 'right',
           renderType: 'options',
           getValueOf: item => {
+            const statusAction = {
+              children: formatMessage({ id: 'position.talentInviteUpdateStatus' }),
+              loading: loadingId === item.id && actionType === 'status',
+              onClick: () => updateInviteStatus(item)
+            };
             if (item.status === 'canceled') {
-              return [];
+              return canUpdateStatus ? [statusAction] : [];
             }
             const actions = [];
             if (canManageInvite && item.status !== 'ended') {
@@ -405,6 +463,9 @@ const InviteRecords = createWithRemoteLoader({
                 onClick: () => resendInvite(item)
               });
             }
+            if (canUpdateStatus) {
+              actions.push(statusAction);
+            }
             if (canManageInvite && item.status !== 'ended') {
               actions.push({
                 children: formatMessage({ id: 'position.talentInviteCancel' }),
@@ -417,7 +478,7 @@ const InviteRecords = createWithRemoteLoader({
           }
         }
       ],
-      [actionType, canManageInvite, canStartAnalysis, cancelInvite, fetchInterviewResult, fetchInviteLink, formatMessage, loadingId, resendInvite, startInviteAnalysis]
+      [actionType, canManageInvite, canStartAnalysis, canUpdateStatus, cancelInvite, fetchInterviewResult, fetchInviteLink, formatMessage, loadingId, resendInvite, startInviteAnalysis, updateInviteStatus]
     );
 
     const listApi = useMemo(() => {

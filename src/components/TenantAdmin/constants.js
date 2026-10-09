@@ -13,6 +13,8 @@ export const TENANT_ADMIN_PERMISSIONS = {
   positionInvite: ['tenant-admin:position-management:invite'],
   /** 岗位详情：邀请记录查看与管理（链接/重发/取消/看结果） */
   positionInviteRecords: ['tenant-admin:position-management:invite-records'],
+  /** 邀请记录：手动修改完成状态 */
+  positionInviteStatus: ['tenant-admin:position-management:invite-status'],
   employeeProfile: ['tenant-admin:employee-profile', 'tenant-admin:employee-profile:view'],
   employeeCreate: ['tenant-admin:employee-profile:create'],
   employeeEdit: ['tenant-admin:employee-profile:edit'],

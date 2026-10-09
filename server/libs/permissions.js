@@ -57,6 +57,10 @@ module.exports = {
               code: 'invite-records'
             },
             {
+              name: '修改邀请状态',
+              code: 'invite-status'
+            },
+            {
               name: '删除',
               code: 'remove'
             }
