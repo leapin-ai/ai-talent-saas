@@ -4,7 +4,6 @@ import { Spin, Empty, message } from 'antd';
 import { preset as remoteLoaderPreset, loadModule } from '@kne/remote-loader';
 import { preset as boxPreset } from '@kne/react-box';
 import createAjax from '@kne/axios-fetch';
-import { getToken } from '@kne/token-storage';
 import localStorage from '@kne/local-storage';
 import transform from 'lodash/transform';
 import loadable from '@loadable/component';
@@ -13,7 +12,7 @@ import { enums as talentEnums } from '@components/EnumLoader';
 import ensureSlash from '@kne/ensure-slash';
 import TenantUserPlugin, { personalCard, getUserListColumns, enhanceUserData, getUserListActions } from '@components/TenantUserPlugin';
 import reactBoxCardPreset from './commons/reactBoxCardThemes';
-import { withPublicUrl } from './commons/publicUrl';
+import { setOidcClient } from './commons/oidcClient';
 import '@kne/react-box/dist/index.css';
 import './locale/registerRemoteMessages';
 
@@ -26,54 +25,6 @@ boxPreset({
 });
 
 export const globalInit = async () => {
-  const ajax = createAjax({
-    baseURL: baseApiUrl,
-    errorHandler: error => message.error(error),
-    getDefaultHeaders: () => {
-      return {
-        'X-User-Token': getToken('X-User-Token'),
-        'X-User-Locale': localStorage.getItem('X-User-Locale')
-      };
-    },
-    registerInterceptors: interceptors => {
-      interceptors.response.use(response => {
-        if (response.config.ignoreState !== true && (response.status === 401 || response.data.code === 401)) {
-          const searchParams = new URLSearchParams(window.location.search);
-          const referer = encodeURIComponent(window.location.pathname + window.location.search);
-          searchParams.append('referer', referer);
-          window.location.href = `${withPublicUrl('/account/login')}?${searchParams.toString()}`;
-          response.showError = false;
-        }
-        return response;
-      });
-    }
-  });
-
-  fetchPreset({
-    ajax,
-    loading: (
-      <Spin
-        delay={500}
-        style={{
-          position: 'absolute',
-          left: '50%',
-          padding: '10px',
-          transform: 'translateX(-50%)'
-        }}
-      />
-    ),
-    error: null,
-    empty: <Empty />,
-    transformResponse: response => {
-      const { data } = response;
-      response.data = {
-        code: data.code === 0 ? 200 : data.code,
-        msg: data.msg,
-        results: data.data
-      };
-      return response;
-    }
-  });
   const registry = {
     url: 'https://cdn.leapin-ai.com',
     tpl: '{{url}}/components/@kne-components/{{remote}}/{{version}}/build'
@@ -117,7 +68,7 @@ export const globalInit = async () => {
         //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.114'
+        defaultVersion: '1.1.115'
       },
       'components-thirdparty': {
         ...registry,
@@ -145,6 +96,51 @@ export const globalInit = async () => {
               remote: 'fastify-app',
               defaultVersion: process.env.DEFAULT_VERSION
             }
+    }
+  });
+
+  const { default: createOidcClient } = await loadModule('components-admin:Oidc@createOidcClient');
+  const oidcClient = createOidcClient({
+    issuer: window.runtimeOidcIssuer || `${window.location.origin}/oidc`,
+    clientId: window.runtimeOidcClientId || 'oidc-spa',
+    resource: window.runtimeOidcResource || `${window.location.origin}/api`
+  });
+  setOidcClient(oidcClient);
+
+  const ajax = createAjax({
+    baseURL: baseApiUrl,
+    errorHandler: error => message.error(error),
+    getDefaultHeaders: () => {
+      return {
+        'X-User-Locale': localStorage.getItem('X-User-Locale')
+      };
+    },
+    registerInterceptors: interceptors => oidcClient.registerInterceptors(interceptors)
+  });
+
+  fetchPreset({
+    ajax,
+    loading: (
+      <Spin
+        delay={500}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          padding: '10px',
+          transform: 'translateX(-50%)'
+        }}
+      />
+    ),
+    error: null,
+    empty: <Empty />,
+    transformResponse: response => {
+      const { data } = response;
+      response.data = {
+        code: data.code === 0 ? 200 : data.code,
+        msg: data.msg,
+        results: data.data
+      };
+      return response;
     }
   });
 
@@ -180,6 +176,7 @@ export const globalInit = async () => {
 
   return {
     ajax,
+    oidc: oidcClient,
     staticUrl: baseApiUrl,
     enums: Object.assign({}, enums),
     plugins: {
