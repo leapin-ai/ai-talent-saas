@@ -77,7 +77,7 @@ const openEditModal = ({ formModal, formatMessage, originData, saveEmployee, api
 const HeaderCard = createWithRemoteLoader({
   modules: ['components-core:Image.Avatar', 'components-core:FormInfo@useFormModal']
 })(
-  withLocale(({ remoteModules, profileData, originData, saveEmployee, apis, readOnly, percent, checklist, employeeId, onPositionClick }) => {
+  withLocale(({ remoteModules, profileData, originData, saveEmployee, apis, readOnly, showProfileData = true, percent, checklist, employeeId, onPositionClick }) => {
     const { formatMessage } = useIntl();
     const [Avatar, useFormModal] = remoteModules;
     const [sourcesOpen, setSourcesOpen] = useState(false);
@@ -124,23 +124,27 @@ const HeaderCard = createWithRemoteLoader({
                 </div>
               </div>
             </div>
-            <div className={style['ph-aside']}>
-              <CompletionRing value={pct} formatMessage={formatMessage} />
-              <div className={style['ph-aside-copy']}>
-                <div className={style['ph-aside-text']}>
-                  <div className={style['ph-aside-title']}>{formatMessage({ id: 'talentProfile.profileDataDetails' })}</div>
-                  <div className={style['ph-aside-desc']}>{formatMessage({ id: 'talentProfile.completionHint' })}</div>
+            {showProfileData ? (
+              <div className={style['ph-aside']}>
+                <CompletionRing value={pct} formatMessage={formatMessage} />
+                <div className={style['ph-aside-copy']}>
+                  <div className={style['ph-aside-text']}>
+                    <div className={style['ph-aside-title']}>{formatMessage({ id: 'talentProfile.profileDataDetails' })}</div>
+                    <div className={style['ph-aside-desc']}>{formatMessage({ id: 'talentProfile.completionHint' })}</div>
+                  </div>
+                  <button type="button" className={style['ph-aside-btn']} onClick={() => setSourcesOpen(true)}>
+                    {formatMessage({ id: 'talentProfile.viewSources' })}
+                  </button>
                 </div>
-                <button type="button" className={style['ph-aside-btn']} onClick={() => setSourcesOpen(true)}>
-                  {formatMessage({ id: 'talentProfile.viewSources' })}
-                </button>
               </div>
-            </div>
+            ) : null}
           </div>
         </Card>
-        <Drawer title={formatMessage({ id: 'talentProfile.viewSources' })} open={sourcesOpen} onClose={() => setSourcesOpen(false)} width={mobile ? '100%' : 420} destroyOnClose>
-          <ProfileEvidence employeeId={employeeId} percent={percent} checklist={checklist} variant="sources" />
-        </Drawer>
+        {showProfileData ? (
+          <Drawer title={formatMessage({ id: 'talentProfile.viewSources' })} open={sourcesOpen} onClose={() => setSourcesOpen(false)} width={mobile ? '100%' : 420} destroyOnClose>
+            <ProfileEvidence employeeId={employeeId} percent={percent} checklist={checklist} variant="sources" />
+          </Drawer>
+        ) : null}
       </>
     );
   })
