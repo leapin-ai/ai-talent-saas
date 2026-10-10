@@ -15,6 +15,7 @@ const COLLECT_INVITE_SHORTEN_TYPE = 'talentCollectInvite';
 const COLLECT_INVITE_LINK_TTL_DAYS = 90;
 const VIDEO_ASR_TASK_TYPE = 'invite-video-asr';
 const DEADLINE_DISPLAY_TZ = 'Asia/Shanghai';
+const INVITE_STATUSES = ['invited', 'opened', 'filling', 'interviewing', 'done', 'ended', 'canceled'];
 
 /** 系统语言：仅 zh-CN 用中文模版，其余（含 en-US、未知）默认英文 */
 const normalizeMessageLanguage = language => (language === 'zh-CN' ? 'zh-CN' : 'en-US');
@@ -1001,6 +1002,37 @@ module.exports = fp(async (fastify, options) => {
     return toPublic(row);
   };
 
+  /** 手动修改完成状态（任意状态互转），变更记录写入 interviewData.statusChanges */
+  const updateStatus = async (authenticatePayload, { id, status } = {}) => {
+    const { tenantId, id: tenantUserId } = authenticatePayload;
+    if (!tenantId) {
+      throw new Error('未登录租户用户');
+    }
+    if (!id) {
+      throw new Error('缺少邀请记录ID');
+    }
+    if (!INVITE_STATUSES.includes(status)) {
+      throw new Error('状态不合法');
+    }
+    const row = await models.talentCollectInvite.findOne({
+      where: { id: String(id), tenantId }
+    });
+    if (!row) {
+      throw new Error('邀请记录不存在');
+    }
+    if (row.status === status) {
+      return toPublic(row);
+    }
+    const statusChanges = Array.isArray(row.interviewData?.statusChanges) ? row.interviewData.statusChanges : [];
+    row.interviewData = Object.assign({}, row.interviewData || {}, {
+      statusChanges: statusChanges.concat([{ from: row.status, to: status, at: new Date().toISOString(), by: tenantUserId ? String(tenantUserId) : null }])
+    });
+    row.status = status;
+    row.changed('interviewData', true);
+    await row.save();
+    return toPublic(row);
+  };
+
   const list = async (authenticatePayload, { positionId, filter = {}, perPage = 20, currentPage = 1 } = {}) => {
     const { tenantId } = authenticatePayload;
     if (!tenantId) {
@@ -1262,6 +1294,7 @@ module.exports = fp(async (fastify, options) => {
       createRefineOrGenerateTask,
       resolveClientUserId,
       cancel,
+      updateStatus,
       toPublic
     }
   });

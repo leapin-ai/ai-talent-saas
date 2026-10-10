@@ -530,7 +530,9 @@ const ProfileEvidence = createWithRemoteLoader({
                         <div className={style['task-evidence-title']}>{selectedTask.title}</div>
                         <div className={style['task-evidence-meta']}>
                           <span>{formatMessage({ id: 'talentProfile.currentVsRequired' })}</span>
-                          <span className={style['task-evidence-score']}>{formatMessage({ id: 'talentProfile.scoreSlash' }, { current: selectedTask.current ?? 0, required: selectedTask.required ?? 0 })}</span>
+                          <span className={style['task-evidence-score']}>
+                            {selectedTask.status === 'unknown' ? (selectedTask.required ?? 0) : formatMessage({ id: 'talentProfile.scoreSlash' }, { current: selectedTask.current ?? 0, required: selectedTask.required ?? 0 })}
+                          </span>
                           {selectedTask.statusLabel ? <span className={classnames(style['status-pill'], style[selectedTask.statusTone] || style['status-gap'])}>{selectedTask.statusLabel}</span> : null}
                         </div>
                       </div>

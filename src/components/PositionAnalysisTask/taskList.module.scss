@@ -1,0 +1,107 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.task-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #94a3b8;
+  border: 1px dashed #e2e8f0;
+  border-radius: 8px;
+}
+
+.task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.task-row-editing {
+  display: block;
+  padding: 12px;
+  border-color: var(--ant-color-primary, var(--primary-color));
+}
+
+.task-index {
+  flex-shrink: 0;
+  min-width: 20px;
+  font-size: 12px;
+  line-height: 20px;
+  color: #94a3b8;
+}
+
+.task-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-group {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 18px;
+  word-break: break-word;
+}
+
+.task-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  line-height: 20px;
+  word-break: break-word;
+}
+
+.task-placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.task-tag {
+  padding: 0 6px;
+  border-radius: 4px;
+  line-height: 18px;
+  background: #f1f5f9;
+}
+
+.task-actions {
+  flex-shrink: 0;
+}
+
+.task-edit-actions {
+  margin-top: 12px;
+}
+
+.task-add-btn {
+  margin-top: 4px;
+}
+
+@include resp.mobile-container {
+  .task-row {
+    flex-wrap: wrap;
+  }
+
+  .task-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
