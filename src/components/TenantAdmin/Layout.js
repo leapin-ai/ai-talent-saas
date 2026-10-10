@@ -8,22 +8,16 @@ import { TENANT_ADMIN_PERMISSIONS } from './constants';
 import TenantThemeProvider from '../../commons/TenantThemeProvider';
 import { resolveTenantThemeColor } from '../../commons/themeColor';
 import { withPublicUrl } from '../../commons/publicUrl';
+import { getOidcClient } from '../../commons/oidcClient';
 import { WorkforceMenuIcon, TalentsMenuIcon, HomeMenuIcon, MarketMenuIcon, CompanyMenuIcon, OrgMenuIcon, UserMenuIcon, SwitchTenantMenuIcon, LogoutMenuIcon } from './MenuIcons';
 
 const Layout = createWithRemoteLoader({
-  modules: [
-    'components-admin:Tenant@Authenticate',
-    'components-admin:Account@useLogout',
-    'components-core:Permissions',
-    'components-core:Permissions@usePermissionsPass',
-    'components-admin:Account@Language',
-    'components-core:Global@SetGlobal'
-  ]
+  modules: ['components-admin:Tenant@Authenticate', 'components-core:Permissions', 'components-core:Permissions@usePermissionsPass', 'components-admin:Account@Language', 'components-core:Global@SetGlobal']
 })(
   withLocale(({ remoteModules, baseUrl, children }) => {
     const { formatMessage } = useIntl();
-    const [Authenticate, useLogout, Permissions, usePermissionsPass, Language, SetGlobal] = remoteModules;
-    const logout = useLogout();
+    const [Authenticate, Permissions, usePermissionsPass, Language, SetGlobal] = remoteModules;
+    const logout = () => getOidcClient().logout();
     return (
       <Authenticate>
         {({ global }) => {
