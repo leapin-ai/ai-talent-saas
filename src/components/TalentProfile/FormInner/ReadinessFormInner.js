@@ -16,8 +16,6 @@ const ReadinessFormInner = createWithRemoteLoader({
         list={[
           <InputNumber name="readiness" label={formatMessage({ id: 'talentProfile.editReadinessPercent' })} rule="REQ" min={0} max={100} />,
           <TextArea name="summary" label={formatMessage({ id: 'talentProfile.editReadinessSummary' })} rule="LEN-0-2000" block />,
-          <InputNumber name="metrics.criticalGaps" label={formatMessage({ id: 'talentProfile.criticalGaps' })} min={0} />,
-          <InputNumber name="metrics.atOrAbove" label={formatMessage({ id: 'talentProfile.atOrAbove' })} min={0} />,
           <InputNumber name="metrics.monthsToClose" label={formatMessage({ id: 'talentProfile.toClose' })} min={0} />
         ]}
       />

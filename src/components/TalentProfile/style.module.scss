@@ -262,6 +262,16 @@
       border-inline-start: 1px solid #afc9ff;
     }
   }
+
+  &:global(.ant-timeline) :global(.ant-timeline-item),
+  &:global(.ant-timeline) :global(.ant-timeline-item .ant-timeline-item-icon) {
+    --ant-cmp-steps-icon-size: 14px;
+  }
+
+  &:global(.ant-timeline) :global(.ant-timeline-item-rail) {
+    --ant-cmp-steps-item-solid-line-color: #afc9ff;
+    --ant-cmp-steps-rail-size: 1px;
+  }
 }
 
 .timeline-dot {
@@ -298,6 +308,19 @@
 .radar-chart {
   height: 320px;
   margin-bottom: 24px;
+}
+
+.ellipsis-tag {
+  max-width: 160px;
+  vertical-align: top;
+}
+
+.ellipsis-tag-text {
+  max-width: 100%;
+  min-width: 0;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .skill-tags {
@@ -1461,9 +1484,11 @@
 }
 
 .evidence-group-count {
+  flex-shrink: 0;
   font-size: 11px;
   font-weight: 400;
   color: #64748b;
+  white-space: nowrap;
 }
 
 .evidence-dot {

@@ -68,7 +68,7 @@ export const globalInit = async () => {
         //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.115'
+        defaultVersion: '1.1.116'
       },
       'components-thirdparty': {
         ...registry,
