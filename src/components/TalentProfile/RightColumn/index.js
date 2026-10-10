@@ -1,5 +1,5 @@
 import React from 'react';
-import { App, Button, Card, Tag, Space, Flex, Typography, Progress } from 'antd';
+import { App, Button, Card, Space, Flex, Typography, Progress } from 'antd';
 import { FaCompass, FaDirections, FaCrosshairs, FaLightbulb } from 'react-icons/fa';
 import { MdOutlineEdit } from 'react-icons/md';
 import { createWithRemoteLoader } from '@kne/remote-loader';
@@ -7,6 +7,7 @@ import style from '../style.module.scss';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
 import CardGate from '../CardGate';
+import EllipsisTag from '../EllipsisTag';
 import { GrowthPlanFormInner, MatchPositionFormInner } from '../FormInner';
 
 const { Text } = Typography;
@@ -195,9 +196,9 @@ const AiRecommendCard = ({ aiRecommendations, formatMessage }) => {
                 </Text>
                 <Space wrap>
                   {skills.map((skill, i) => (
-                    <Tag key={i} className={style['match-tag']}>
+                    <EllipsisTag key={i} className={style['match-tag']}>
                       {skill}
-                    </Tag>
+                    </EllipsisTag>
                   ))}
                 </Space>
               </div>
@@ -209,9 +210,9 @@ const AiRecommendCard = ({ aiRecommendations, formatMessage }) => {
                 </Text>
                 <Space wrap>
                   {gaps.map((gap, i) => (
-                    <Tag key={i} className={style['gap-tag']}>
+                    <EllipsisTag key={i} className={style['gap-tag']}>
                       {gap}
-                    </Tag>
+                    </EllipsisTag>
                   ))}
                 </Space>
               </div>
