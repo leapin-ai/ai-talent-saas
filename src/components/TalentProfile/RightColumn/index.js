@@ -1,6 +1,6 @@
 import React from 'react';
 import { App, Button, Card, Tag, Space, Flex, Typography, Progress } from 'antd';
-import { FaCompass, FaDirections, FaCrosshairs } from 'react-icons/fa';
+import { FaCompass, FaDirections, FaCrosshairs, FaLightbulb } from 'react-icons/fa';
 import { MdOutlineEdit } from 'react-icons/md';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import style from '../style.module.scss';
@@ -334,48 +334,79 @@ const RightColumn = createWithRemoteLoader({
       });
     };
 
-    const growthActions =
-      !readOnly && (onGenerateInsight || (employeeId && saveAiSuggest)) ? (
-        <Flex justify="flex-end" gap={4} style={{ marginBottom: 8 }}>
-          {onGenerateInsight ? (
+    const renderActions = (kind, { withGenerate = true, ...flexProps } = {}) => {
+      const showGenerate = withGenerate && !!onGenerateInsight;
+      const showEdit = !!(employeeId && saveAiSuggest);
+      if (readOnly || !(showGenerate || showEdit)) {
+        return null;
+      }
+      return (
+        <Flex justify="flex-end" gap={4} {...flexProps}>
+          {showGenerate ? (
             <Button type="text" className={style['edit-btn']} loading={!!generatingInsight} onClick={() => onGenerateInsight()}>
               {formatMessage({ id: 'talentProfile.generateInsight' })}
             </Button>
           ) : null}
-          {employeeId && saveAiSuggest ? (
-            <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={section === 'match' ? openEditMatch : openEditGrowth}>
-              {formatMessage({ id: section === 'match' ? 'talentProfile.editMatch' : 'talentProfile.editGrowth' })}
+          {showEdit ? (
+            <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={kind === 'match' ? openEditMatch : openEditGrowth}>
+              {formatMessage({ id: kind === 'match' ? 'talentProfile.editMatch' : 'talentProfile.editGrowth' })}
             </Button>
           ) : null}
         </Flex>
-      ) : null;
+      );
+    };
 
-    const careerCard = (
-      <CardGate request={permissions?.careerPlan}>
-        {section === 'growth' ? growthActions : null}
-        <CareerPath careerPath={careerPath} renderProgress={renderProgress} getPriorityText={getPriorityText} gotoPosition={gotoPosition} formatMessage={formatMessage} />
-      </CardGate>
-    );
-
-    const matchCard = (
-      <CardGate request={permissions?.aiRecommend}>
-        {section === 'match' ? growthActions : null}
-        <AiRecommendCard aiRecommendations={aiRecommendations} formatMessage={formatMessage} />
-      </CardGate>
-    );
+    const careerContent = <CareerPath careerPath={careerPath} renderProgress={renderProgress} getPriorityText={getPriorityText} gotoPosition={gotoPosition} formatMessage={formatMessage} />;
+    const matchContent = <AiRecommendCard aiRecommendations={aiRecommendations} formatMessage={formatMessage} />;
 
     if (section === 'growth') {
-      return careerCard;
+      return (
+        <CardGate request={permissions?.careerPlan}>
+          {renderActions('growth', { style: { marginBottom: 8 } })}
+          {careerContent}
+        </CardGate>
+      );
     }
 
     if (section === 'match') {
-      return matchCard;
+      return (
+        <CardGate request={permissions?.aiRecommend}>
+          {renderActions('match', { style: { marginBottom: 8 } })}
+          {matchContent}
+        </CardGate>
+      );
     }
 
     return (
       <div className={style['right-column']}>
-        {careerCard}
-        {matchCard}
+        <CardGate request={permissions?.careerPlan}>
+          <Card className={style['career-card']}>
+            <Flex justify="space-between" align="center" className={style['card-title']}>
+              <Space>
+                <span className="anticon">
+                  <FaLightbulb style={{ color: '#8B5CF6' }} />
+                </span>
+                {formatMessage({ id: 'talentProfile.tabGrowth' })}
+              </Space>
+              {renderActions('growth')}
+            </Flex>
+            {careerContent}
+          </Card>
+        </CardGate>
+        <CardGate request={permissions?.aiRecommend}>
+          <Card className={style['recommend-card']}>
+            <Flex justify="space-between" align="center" className={style['card-title']}>
+              <Space>
+                <span className="anticon">
+                  <FaCrosshairs style={{ color: '#5386FA' }} />
+                </span>
+                {formatMessage({ id: 'talentProfile.tabMatch' })}
+              </Space>
+              {renderActions('match', { withGenerate: false })}
+            </Flex>
+            {matchContent}
+          </Card>
+        </CardGate>
       </div>
     );
   })
