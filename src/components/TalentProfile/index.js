@@ -453,6 +453,7 @@ const TalentProfile = createWithRemoteLoader({
             <Tabs
               className={style['profile-tabs']}
               defaultActiveKey={defaultProfileTab}
+              renderTabBar={showReadinessTab ? undefined : () => null}
               items={[
                 showReadinessTab
                   ? {
