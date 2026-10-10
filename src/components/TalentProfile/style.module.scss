@@ -125,6 +125,10 @@
 
 .right-column {
   flex: 4 1 0;
+
+  .growth-plan-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .left-column:not(:has(:global(.ant-card))),
@@ -1204,7 +1208,8 @@
   display: flex;
   flex-direction: column;
   align-self: stretch;
-  /* 与 PinnedScrollPanel PINNED_SCROLL_MAX_HEIGHT 对齐 */
+  /* 与 PinnedScrollPanel PINNED_SCROLL_MAX_HEIGHT 对齐；固定高度，切换任务时不随内容跳动 */
+  height: min(70vh, 560px);
   max-height: min(70vh, 560px);
   overflow: hidden;
   background: #fbfaff;
@@ -1995,7 +2000,7 @@
     width: 100%;
     min-width: 0;
     max-width: none;
-    height: auto;
+    height: min(70vh, 560px);
     min-height: 0;
     max-height: min(70vh, 560px);
   }
