@@ -1,6 +1,6 @@
 import React from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { Card, Tag, Space, Flex, Typography, Rate, Timeline, Button } from 'antd';
+import { Card, Space, Flex, Typography, Rate, Timeline, Button } from 'antd';
 import { LuWorkflow } from 'react-icons/lu';
 import { FaClipboardList, FaPlaneArrival, FaExchangeAlt, FaHeadSideVirus, FaBriefcase } from 'react-icons/fa';
 import { PiFlowerLight } from 'react-icons/pi';
@@ -11,6 +11,7 @@ import classnames from 'classnames';
 import { TargetPositionFormInner, MobilityPreferenceFormInner, InterestFormInner, PerformanceReviewFormInner, SkillFormInner } from '../FormInner';
 import { fromIntentionSelectValue, toIntentionSelectValue } from '../intentionPositionUtils';
 import CardGate from '../CardGate';
+import EllipsisTag from '../EllipsisTag';
 import withLocale from '../withLocale';
 import { useIntl } from '@kne/react-intl';
 
@@ -104,7 +105,7 @@ const MiddleColumn = createWithRemoteLoader({
                   <EmptyState text={formatMessage({ id: 'talentProfile.NoSkillRadar' })} />
                 )}
                 <Space wrap className={style['skill-tags']}>
-                  {skillTags.length > 0 ? skillTags.map((skill, index) => <Tag key={index}>{skill}</Tag>) : <EmptyState text={formatMessage({ id: 'talentProfile.NoSkillTags' })} />}
+                  {skillTags.length > 0 ? skillTags.map((skill, index) => <EllipsisTag key={index}>{skill}</EllipsisTag>) : <EmptyState text={formatMessage({ id: 'talentProfile.NoSkillTags' })} />}
                   {!readOnly && (
                     <Button
                       type="text"
@@ -187,7 +188,7 @@ const MiddleColumn = createWithRemoteLoader({
                 <Space wrap className={style['target-positions']}>
                   {targetPositions.map(({ positionId, position }, index) => {
                     return (
-                      <Tag
+                      <EllipsisTag
                         key={index}
                         className={positionId ? style['target-position-tag'] : undefined}
                         onClick={() => {
@@ -195,7 +196,7 @@ const MiddleColumn = createWithRemoteLoader({
                         }}
                       >
                         {position}
-                      </Tag>
+                      </EllipsisTag>
                     );
                   })}
                 </Space>
@@ -336,7 +337,7 @@ const MiddleColumn = createWithRemoteLoader({
               {interests.length > 0 ? (
                 <Space wrap>
                   {interests.map((interest, index) => (
-                    <Tag key={index}>{interest}</Tag>
+                    <EllipsisTag key={index}>{interest}</EllipsisTag>
                   ))}
                 </Space>
               ) : (

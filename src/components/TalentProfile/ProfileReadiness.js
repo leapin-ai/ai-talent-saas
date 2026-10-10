@@ -358,6 +358,16 @@ const ProfileReadiness = createWithRemoteLoader({
       return counts;
     }, [displayRows]);
 
+    // 关键差距 / 达标或以上 只按未来任务状态实时计算，不读 skillAnalysis.metrics 里存的值
+    const taskMetrics = useMemo(
+      () => ({
+        criticalGaps: statusCounts.critical + statusCounts.gap,
+        atOrAbove: statusCounts.onTarget + statusCounts.above
+      }),
+      [statusCounts]
+    );
+    const displayMetrics = Object.assign({}, metrics, taskMetrics);
+
     const buildGroups = list => {
       const map = new Map();
       (list || []).forEach(item => {
@@ -462,16 +472,15 @@ const ProfileReadiness = createWithRemoteLoader({
             readiness: readiness ?? 0,
             summary: summary || '',
             metrics: {
-              criticalGaps: metrics?.criticalGaps ?? 0,
-              atOrAbove: metrics?.atOrAbove ?? 0,
               monthsToClose: metrics?.monthsToClose ?? null
             }
           },
           onSubmit: async formData => {
+            const nextMetrics = Object.assign({}, formData.metrics, taskMetrics);
             const nextAnalysis = Object.assign({}, effectiveAnalysis || analysis || {}, {
               readiness: formData.readiness,
               summary: formData.summary,
-              metrics: formData.metrics,
+              metrics: nextMetrics,
               priorityGaps: priorityGaps || [],
               skills: effectiveAnalysis?.skills || analysis?.skills || [],
               developmentPlan: effectiveAnalysis?.developmentPlan || analysis?.developmentPlan || null
@@ -488,7 +497,7 @@ const ProfileReadiness = createWithRemoteLoader({
                   employeeId: String(employeeId),
                   readiness: formData.readiness,
                   summary: formData.summary,
-                  metrics: formData.metrics,
+                  metrics: nextMetrics,
                   priorityGaps: nextAnalysis.priorityGaps,
                   skills: nextAnalysis.skills,
                   developmentPlan: nextAnalysis.developmentPlan
@@ -757,7 +766,7 @@ const ProfileReadiness = createWithRemoteLoader({
       <div className={style['readiness-root']}>
         {error ? <Typography.Text type="danger">{error}</Typography.Text> : null}
         <div className={style['readiness-top']}>
-          <CapabilityStatusCard name={displayName} readiness={readiness} summary={summary} metrics={metrics} themeColor={themeColor} extra={readinessEditButton} />
+          <CapabilityStatusCard name={displayName} readiness={readiness} summary={summary} metrics={displayMetrics} themeColor={themeColor} extra={readinessEditButton} />
 
           <Card
             className={style['gaps-card']}

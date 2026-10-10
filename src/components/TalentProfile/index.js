@@ -483,7 +483,6 @@ const TalentProfile = createWithRemoteLoader({
                     formatMessage({ id: 'talentProfile.tabProfile' }),
                     <div className={style['main-content']}>
                       <LeftColumn
-                        section="strengths"
                         readOnly={readOnly}
                         saveProfile={saveProfile}
                         profileData={profileData}
@@ -494,7 +493,6 @@ const TalentProfile = createWithRemoteLoader({
                         permissions={cardPermissions}
                       />
                       <MiddleColumn
-                        section="preferences"
                         readOnly={readOnly}
                         employeeId={employeeId}
                         createPerformance={createPerformance}

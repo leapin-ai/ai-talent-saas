@@ -1,6 +1,6 @@
 import React from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { Card, Typography, Space, Timeline, Flex, Divider, Tag, Button } from 'antd';
+import { Card, Typography, Space, Timeline, Flex, Divider, Button } from 'antd';
 import { IoTimerOutline, IoTimeOutline } from 'react-icons/io5';
 import { FaAward } from 'react-icons/fa';
 import { MdOutlineDiamond, MdOutlineEdit } from 'react-icons/md';
@@ -8,6 +8,7 @@ import classnames from 'classnames';
 import style from '../style.module.scss';
 import AdvantagesCard from '../AdvantagesCard';
 import CardGate from '../CardGate';
+import EllipsisTag from '../EllipsisTag';
 import { CertificateFormInner, PromotionHistoryFormInner } from '../FormInner';
 import dayjs from 'dayjs';
 import withLocale from '../withLocale';
@@ -111,7 +112,7 @@ const LeftColumn = createWithRemoteLoader({
                 {certificates.length > 0 ? (
                   <Space wrap>
                     {certificates.map((cert, index) => (
-                      <Tag key={index}>{cert}</Tag>
+                      <EllipsisTag key={index}>{cert}</EllipsisTag>
                     ))}
                   </Space>
                 ) : (
