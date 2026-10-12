@@ -29,7 +29,7 @@ const AccountLoginRedirect = () => {
   return null;
 };
 
-const AppContent = withLocale(({ baseUrl, AfterUserLoginLayout, AfterAdminUserLoginLayout }) => {
+const AppContent = withLocale(({ baseUrl, isOidcClient, AfterUserLoginLayout, AfterAdminUserLoginLayout }) => {
   const { formatMessage } = useIntl();
   return (
     <AppChildrenRouter
@@ -123,7 +123,7 @@ const AppContent = withLocale(({ baseUrl, AfterUserLoginLayout, AfterAdminUserLo
                           title: formatMessage({ id: 'app.SignatureManagement' }),
                           path: '/admin/signature'
                         },
-                        {
+                        !isOidcClient && {
                           key: 'oidc',
                           title: formatMessage({ id: 'app.OidcManagement' }),
                           path: `${baseUrl}/admin/oidc`
@@ -133,7 +133,7 @@ const AppContent = withLocale(({ baseUrl, AfterUserLoginLayout, AfterAdminUserLo
                           title: formatMessage({ id: 'app.MessageManagement' }),
                           path: '/admin/message'
                         }
-                      ]
+                      ].filter(Boolean)
                     }}
                   />
                 }
@@ -166,12 +166,12 @@ const AppContent = withLocale(({ baseUrl, AfterUserLoginLayout, AfterAdminUserLo
                     title: formatMessage({ id: 'app.MessageManagement' }),
                     element: <RemoteLoader module="components-admin:MessageManger" baseUrl={`${baseUrl}/admin/message`} />
                   },
-                  {
+                  !isOidcClient && {
                     path: 'oidc/*',
                     title: formatMessage({ id: 'app.OidcManagement' }),
                     element: <RemoteLoader module="components-admin:OidcAdmin" baseUrl={`${baseUrl}/admin/oidc`} />
                   }
-                ]}
+                ].filter(Boolean)}
               >
                 <Admin baseUrl={baseUrl + '/admin'}>
                   <RemoteLoader module="components-admin:Admin" baseUrl={baseUrl + '/admin'} />
@@ -245,7 +245,7 @@ const App = createWithRemoteLoader({
   const baseUrl = '';
   return (
     <Global preset={globalPreset} themeToken={globalPreset.themeToken}>
-      <AppContent baseUrl={baseUrl} AfterUserLoginLayout={AfterUserLoginLayout} AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} />
+      <AppContent baseUrl={baseUrl} isOidcClient={globalPreset.oidcMode === 'central'} AfterUserLoginLayout={AfterUserLoginLayout} AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} />
     </Global>
   );
 });
