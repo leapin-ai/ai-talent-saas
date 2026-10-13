@@ -77,7 +77,7 @@ const SkillList = withLocale(({ skill }) => {
 
   const filterItems = [
     { key: 'all', label: formatMessage({ id: 'position.skillFilterAll' }), count: skills.length },
-    ...CHANGE_VALUES.map(key => ({
+    ...CHANGE_VALUES.filter(key => key !== 'new').map(key => ({
       key,
       label: formatMessage({ id: CHANGE_META[key].filterLabelKey || CHANGE_META[key].labelKey }),
       count: counts[key],
