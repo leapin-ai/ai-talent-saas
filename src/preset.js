@@ -24,6 +24,17 @@ boxPreset({
   card: reactBoxCardPreset
 });
 
+const loadOidcConfig = async () => {
+  try {
+    const response = await fetch(`${baseApiUrl.replace(/\/+$/, '')}/api/oidc/config`);
+    const body = await response.json();
+    return body && Object.prototype.hasOwnProperty.call(body, 'code') && Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body;
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
+};
+
 export const globalInit = async () => {
   const registry = {
     url: 'https://cdn.leapin-ai.com',
@@ -65,10 +76,8 @@ export const globalInit = async () => {
       },
       'components-admin': {
         ...registry,
-        //url: 'http://localhost:3016',
-        //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.116'
+        defaultVersion: '1.1.117'
       },
       'components-thirdparty': {
         ...registry,
@@ -100,10 +109,12 @@ export const globalInit = async () => {
   });
 
   const { default: createOidcClient } = await loadModule('components-admin:Oidc@createOidcClient');
+  // 部署在应用中心时以 central 模式运行，issuer / clientId / audience 由宿主注入到服务端环境变量，只能从服务端配置接口读取
+  const oidcConfig = await loadOidcConfig();
   const oidcClient = createOidcClient({
-    issuer: window.runtimeOidcIssuer || `${window.location.origin}/oidc`,
-    clientId: window.runtimeOidcClientId || 'oidc-spa',
-    resource: window.runtimeOidcResource || `${window.location.origin}/api`
+    issuer: oidcConfig?.issuer || window.runtimeOidcIssuer || `${window.location.origin}/oidc`,
+    clientId: oidcConfig?.clientId || window.runtimeOidcClientId || 'oidc-spa',
+    resource: oidcConfig?.audience || window.runtimeOidcResource || `${window.location.origin}/api`
   });
   setOidcClient(oidcClient);
 
@@ -177,6 +188,7 @@ export const globalInit = async () => {
   return {
     ajax,
     oidc: oidcClient,
+    oidcMode: oidcConfig?.mode,
     staticUrl: baseApiUrl,
     enums: Object.assign({}, enums),
     plugins: {
