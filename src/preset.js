@@ -12,7 +12,7 @@ import { enums as talentEnums } from '@components/EnumLoader';
 import ensureSlash from '@kne/ensure-slash';
 import TenantUserPlugin, { personalCard, getUserListColumns, enhanceUserData, getUserListActions } from '@components/TenantUserPlugin';
 import reactBoxCardPreset from './commons/reactBoxCardThemes';
-import { setOidcClient } from './commons/oidcClient';
+import { normalizeOidcClientLogout, setOidcClient } from './commons/oidcClient';
 import '@kne/react-box/dist/index.css';
 import './locale/registerRemoteMessages';
 
@@ -77,7 +77,7 @@ export const globalInit = async () => {
       'components-admin': {
         ...registry,
         remote: 'components-admin',
-        defaultVersion: '1.1.117'
+        defaultVersion: '1.1.118'
       },
       'components-thirdparty': {
         ...registry,
@@ -111,11 +111,13 @@ export const globalInit = async () => {
   const { default: createOidcClient } = await loadModule('components-admin:Oidc@createOidcClient');
   // 部署在应用中心时以 central 模式运行，issuer / clientId / audience 由宿主注入到服务端环境变量，只能从服务端配置接口读取
   const oidcConfig = await loadOidcConfig();
-  const oidcClient = createOidcClient({
-    issuer: oidcConfig?.issuer || window.runtimeOidcIssuer || `${window.location.origin}/oidc`,
-    clientId: oidcConfig?.clientId || window.runtimeOidcClientId || 'oidc-spa',
-    resource: oidcConfig?.audience || window.runtimeOidcResource || `${window.location.origin}/api`
-  });
+  const oidcClient = normalizeOidcClientLogout(
+    createOidcClient({
+      issuer: oidcConfig?.issuer || window.runtimeOidcIssuer || `${window.location.origin}/oidc`,
+      clientId: oidcConfig?.clientId || window.runtimeOidcClientId || 'oidc-spa',
+      resource: oidcConfig?.audience || window.runtimeOidcResource || `${window.location.origin}/api`
+    })
+  );
   setOidcClient(oidcClient);
 
   const ajax = createAjax({
