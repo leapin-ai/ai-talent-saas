@@ -205,6 +205,17 @@ module.exports = fp(async (fastify, options) => {
       whereQuery.changeMagnitude = changeMagnitudeValue;
     }
 
+    // 与 workforce.workforceSummary 的 KPI 口径保持一致，改一处需同步另一处
+    const kpiWhere = {
+      rolesInScope: {},
+      rolesRequiringChange: { assessmentStatus: 'completed', changeMagnitude: { [Op.in]: ['medium', 'high'] } },
+      highChangeRoles: { assessmentStatus: 'completed', changeMagnitude: 'high' },
+      assessmentsRemaining: { assessmentStatus: { [Op.in]: ['pending', 'interviews_in_progress'] } }
+    }[filter.kpi];
+    if (kpiWhere) {
+      whereQuery[Op.and] = [Object.assign({ status: { [Op.ne]: 'closed' } }, kpiWhere)];
+    }
+
     if (filter['ids'] && filter['ids'].length > 0) {
       whereQuery.id = {
         [Op.in]: filter['ids']

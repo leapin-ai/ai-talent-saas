@@ -1,6 +1,6 @@
 const zhCN = {
   'tenantAdmin.myProfile': '我的档案',
-  'tenantAdmin.workforceReadiness': 'Workforce Readiness',
+  'tenantAdmin.workforceReadiness': '人才队伍就绪度',
   'tenantAdmin.talents': '人才',
   'tenantAdmin.aiAssistant': 'AI 助手',
   'tenantAdmin.aiAssistantPlaceholder': 'AI 助手入口已打开。具体对话能力随后接入。',
@@ -197,7 +197,7 @@ const zhCN = {
   'tenantAdmin.employeeProfile': '人才',
   'tenantAdmin.export': '导出',
   'tenantAdmin.internalTalentMarket': '内部人才市场',
-  'tenantAdmin.positionManagement': 'Workforce Readiness',
+  'tenantAdmin.positionManagement': '人才队伍就绪度',
   'tenantAdmin.settings': '设置',
   'tenantAdmin.companyInfo': '公司信息',
   'tenantAdmin.orgStructure': '组织架构',

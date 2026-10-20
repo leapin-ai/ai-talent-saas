@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useIntl } from '@kne/react-intl';
 import withLocale from '../withLocale';
 import SkillList from './SkillList';
@@ -10,18 +11,19 @@ import style from './RoleInsights.module.scss';
  */
 const RoleInsightsContent = withLocale(({ skill, verdict, impact = null, strategies = null }) => {
   const { formatMessage } = useIntl();
+  const [changeFilter, setChangeFilter] = useState('all');
   const skills = Array.isArray(skill) ? skill : [];
   const strategyList = Array.isArray(strategies) ? strategies.filter(card => card && (card.action || card.title || card.detail)) : [];
 
   return (
     <div className={style.stack}>
       <section className={style['overview-shell']}>
-        <SkillOverview skill={skills} verdict={verdict} />
+        <SkillOverview skill={skills} verdict={verdict} activeFilter={changeFilter} onSelect={setChangeFilter} />
         {impact}
       </section>
       <section className={style.card}>
         <h2 className={style['section-title']}>{formatMessage({ id: 'position.skillListTitle' })}</h2>
-        <SkillList skill={skills} />
+        <SkillList skill={skills} filter={changeFilter} onFilterChange={setChangeFilter} />
       </section>
       {strategyList.length ? (
         <section className={style.card}>

@@ -103,6 +103,24 @@
   box-sizing: border-box;
 }
 
+.metric-clickable {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--primary-color) 4%, #fcfbff);
+  }
+}
+
+.metric-active,
+.metric-active:hover {
+  background: color-mix(in srgb, var(--primary-color) 8%, #fff);
+}
+
 .metric-value,
 .metric-value-must,
 .metric-value-emerging,

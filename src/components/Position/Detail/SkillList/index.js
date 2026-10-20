@@ -11,9 +11,11 @@ import SkillPreview from './SkillPreview';
 import { CHANGE_META, CHANGE_VALUES, countByChange, LEVEL_META, formatActivityGroup, normalizeSkills } from './skillModel';
 import style from './style.module.scss';
 
-const SkillList = withLocale(({ skill }) => {
+const SkillList = withLocale(({ skill, filter: controlledFilter, onFilterChange }) => {
   const { formatMessage } = useIntl();
-  const [filter, setFilter] = useState('all');
+  const [innerFilter, setInnerFilter] = useState('all');
+  const filter = controlledFilter ?? innerFilter;
+  const setFilter = onFilterChange || setInnerFilter;
   const [selectedId, setSelectedId] = useState(null);
   const [expanded, setExpanded] = useState({});
 

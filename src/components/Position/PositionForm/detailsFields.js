@@ -40,6 +40,7 @@ export const buildDetailsFields = ({ FormInfo, apis, formatMessage, mobile, requ
       key="location"
       name="location"
       label={formatMessage({ id: 'position.city' })}
+      rule={req}
       display={context => {
         const { formData } = context;
         return formData.locationType === 'on-site';

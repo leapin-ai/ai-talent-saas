@@ -203,7 +203,7 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
       schema: {
-        summary: 'Workforce Readiness 岗位汇总 KPI'
+        summary: '人才队伍就绪度岗位汇总 KPI'
       }
     },
     async request => {
