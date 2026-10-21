@@ -92,7 +92,7 @@ const createServer = () => {
         ALI_ASR_API_VERSION: { type: 'string', default: '2018-08-17' },
         ALI_ASR_ENDPOINT: { type: 'string' },
 
-        APP_MANAGER_ENABLED: { type: 'boolean', default: false },
+        APP_MANAGER_ENABLED: { type: 'boolean', default: true },
         APPS_ROOT: { type: 'string', default: '' },
         APPS_DB_DATABASE: { type: 'string', default: '' }
       }
