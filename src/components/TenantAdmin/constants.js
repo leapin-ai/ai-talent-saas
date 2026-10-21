@@ -24,6 +24,7 @@ export const TENANT_ADMIN_PERMISSIONS = {
   completeProfileApplication: ['tenant-admin:complete-profile-application', 'tenant-admin:complete-profile-application:view'],
   completeProfileApplicationReview: ['tenant-admin:complete-profile-application:review'],
   completeProfileApplicationEdit: ['tenant-admin:complete-profile-application:edit'],
+  appCenter: ['tenant-admin:app-center', 'tenant-admin:app-center:view'],
   companySetting: ['setting:company-setting', 'setting:company-setting:view'],
   orgSetting: ['setting:org', 'setting:org:view'],
   userManagement: ['setting:user-manager', 'setting:user-manager:view'],

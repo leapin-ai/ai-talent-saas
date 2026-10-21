@@ -102,4 +102,18 @@ module.exports = fp(async (fastify, options) => {
       });
     }
   );
+
+  fastify.get(
+    `${options.prefix}/capabilities`,
+    {
+      schema: {
+        summary: '系统可选能力开关'
+      }
+    },
+    async () => {
+      return {
+        appManager: !!fastify.config.APP_MANAGER_ENABLED
+      };
+    }
+  );
 });

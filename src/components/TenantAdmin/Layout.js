@@ -9,14 +9,22 @@ import TenantThemeProvider from '../../commons/TenantThemeProvider';
 import { resolveTenantThemeColor } from '../../commons/themeColor';
 import { withPublicUrl } from '../../commons/publicUrl';
 import { getOidcClient } from '../../commons/oidcClient';
-import { WorkforceMenuIcon, TalentsMenuIcon, HomeMenuIcon, MarketMenuIcon, CompanyMenuIcon, OrgMenuIcon, UserMenuIcon, SwitchTenantMenuIcon, LogoutMenuIcon } from './MenuIcons';
+import { WorkforceMenuIcon, TalentsMenuIcon, HomeMenuIcon, MarketMenuIcon, AppCenterMenuIcon, CompanyMenuIcon, OrgMenuIcon, UserMenuIcon, SwitchTenantMenuIcon, LogoutMenuIcon } from './MenuIcons';
 
 const Layout = createWithRemoteLoader({
-  modules: ['components-admin:Tenant@Authenticate', 'components-core:Permissions', 'components-core:Permissions@usePermissionsPass', 'components-admin:Account@Language', 'components-core:Global@SetGlobal']
+  modules: [
+    'components-admin:Tenant@Authenticate',
+    'components-core:Permissions',
+    'components-core:Permissions@usePermissionsPass',
+    'components-admin:Account@Language',
+    'components-core:Global@SetGlobal',
+    'components-core:Global@usePreset'
+  ]
 })(
   withLocale(({ remoteModules, baseUrl, children }) => {
     const { formatMessage } = useIntl();
-    const [Authenticate, Permissions, usePermissionsPass, Language, SetGlobal] = remoteModules;
+    const [Authenticate, Permissions, usePermissionsPass, Language, SetGlobal, usePreset] = remoteModules;
+    const { capabilities } = usePreset();
     const logout = () => getOidcClient().logout();
     return (
       <Authenticate>
@@ -26,7 +34,16 @@ const Layout = createWithRemoteLoader({
           return (
             <TenantThemeProvider themeColor={themeColor} SetGlobal={SetGlobal}>
               <Permissions request={['tenant-admin']} type="error">
-                <TenantAdminMenu baseUrl={baseUrl} tenant={tenant} tenantUserInfo={tenantUserInfo} logout={logout} formatMessage={formatMessage} usePermissionsPass={usePermissionsPass} Language={Language}>
+                <TenantAdminMenu
+                  baseUrl={baseUrl}
+                  appManagerEnabled={!!capabilities?.appManager}
+                  tenant={tenant}
+                  tenantUserInfo={tenantUserInfo}
+                  logout={logout}
+                  formatMessage={formatMessage}
+                  usePermissionsPass={usePermissionsPass}
+                  Language={Language}
+                >
                   {children || <Outlet />}
                 </TenantAdminMenu>
               </Permissions>
@@ -38,11 +55,12 @@ const Layout = createWithRemoteLoader({
   })
 );
 
-const TenantAdminMenu = ({ baseUrl, tenant, tenantUserInfo, logout, formatMessage, usePermissionsPass, Language, children }) => {
+const TenantAdminMenu = ({ baseUrl, appManagerEnabled, tenant, tenantUserInfo, logout, formatMessage, usePermissionsPass, Language, children }) => {
   const allowHome = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.home });
   const allowTalentMarketplace = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.talentMarketplace });
   const allowPositionManagement = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionManagement });
   const allowEmployeeProfile = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeProfile });
+  const allowAppCenter = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.appCenter });
   const allowCompanySetting = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.companySetting });
   const allowOrgSetting = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.orgSetting });
   const allowUserManagement = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.userManagement });
@@ -78,13 +96,19 @@ const TenantAdminMenu = ({ baseUrl, tenant, tenantUserInfo, logout, formatMessag
           icon: <TalentsMenuIcon />
         }
       : null,
+    appManagerEnabled && allowAppCenter
+      ? {
+          label: formatMessage({ id: 'tenantAdmin.appCenter' }),
+          path: '/apps',
+          icon: <AppCenterMenuIcon />
+        }
+      : null,
     allowCompanySetting
       ? {
           group: 'tenantSetting',
           groupLabel: formatMessage({ id: 'tenantAdmin.settings' }),
           label: formatMessage({ id: 'tenantAdmin.companyInfo' }),
           path: '/setting/company',
-          toolbar: true,
           icon: <CompanyMenuIcon />
         }
       : null,
@@ -94,7 +118,6 @@ const TenantAdminMenu = ({ baseUrl, tenant, tenantUserInfo, logout, formatMessag
           groupLabel: formatMessage({ id: 'tenantAdmin.settings' }),
           label: formatMessage({ id: 'tenantAdmin.orgStructure' }),
           path: '/setting/org',
-          toolbar: true,
           icon: <OrgMenuIcon />
         }
       : null,

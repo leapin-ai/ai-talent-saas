@@ -4,6 +4,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import { applyAiInterviewRemote } from '../../preset';
 import dayjs from 'dayjs';
 import ResumeParseEditor from './ResumeParseEditor';
+import QuestionnaireRecords from '@components/QuestionnaireRecords';
 import { formatValue } from './assessmentReviewUtils';
 import InterviewVideoTranscript from '@components/InterviewVideoTranscript';
 import { downloadInterviewExport } from '@components/PositionAnalysisTask/exportInterviewData';
@@ -154,6 +155,7 @@ const ContextSidePanel = ({ context, resumeParsed, onResumeParsedChange, profile
   const resumeFile = resumes[0];
   const fileId = resumeFile?.id || resumeFile?.ossId || resumeFile?.fileId || resumeParsed?.fileId;
   const filename = resumeFile?.filename || resumeFile?.originalName || resumeFile?.name || resumeParsed?.filename;
+  const questionnaires = Array.isArray(context?.questionnaires) ? context.questionnaires : [];
 
   const exportData = () => {
     const submittedInfo = context?.submittedInfo || context?.assessment?.profileData || null;
@@ -172,6 +174,8 @@ const ContextSidePanel = ({ context, resumeParsed, onResumeParsedChange, profile
       resumeParsed,
       submittedInfo,
       profileDetail,
+      collectInvites: context?.collectInvites,
+      questionnaires: context?.questionnaires,
       includeEmployee: true,
       includeResume: true,
       includeSubmittedInfo: true,
@@ -226,8 +230,17 @@ const ContextSidePanel = ({ context, resumeParsed, onResumeParsedChange, profile
                 </Flex>
               </div>
             )
+          },
+          questionnaires.length > 0 && {
+            key: 'questionnaire',
+            label: '补充问卷',
+            children: (
+              <div className={style['side-tab-body']}>
+                <QuestionnaireRecords data={questionnaires} showSummary={false} />
+              </div>
+            )
           }
-        ]}
+        ].filter(Boolean)}
       />
     </div>
   );

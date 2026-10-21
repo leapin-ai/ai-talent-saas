@@ -1,0 +1,101 @@
+<!-- subject -->
+<%= subject || ((companyName || tenantName) + ' | 问卷邀请：' + projectName) %>
+<!-- html -->
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>问卷邀请</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            font-family: Arial, sans-serif;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: <%= themeColor %>;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 28px 24px;
+            background: #f9f9f9;
+        }
+
+        .content p {
+            margin: 0 0 14px;
+        }
+
+        .cta {
+            margin: 24px 0;
+        }
+
+        .cta a {
+            display: inline-block;
+            padding: 12px 20px;
+            background: <%= themeColor %>;
+            color: #fff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .link {
+            word-break: break-all;
+            margin-top: 12px;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .footer {
+            margin-top: 20px;
+            color: #64748b;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1 style="margin:0;font-size:20px;"><%= projectName %></h1>
+    </div>
+    <div class="content">
+        <p>您好，<%= name %>：</p>
+        <p>作为 <%= companyName || tenantName %> Workforce Readiness 项目的一部分，我们邀请您补充填写问卷「<%= projectName %>」。</p>
+        <p>您的回答将用于完善您的人才档案与岗位就绪度分析。</p>
+        <p>请<% if (deadlineText) { %>于 <strong><%= deadlineText %></strong> 前<% } %>完成填写。</p>
+        <div class="cta">
+            <a href="<%= inviteUrl %>" target="_blank">开始填写</a>
+        </div>
+        <div class="link">若按钮无法打开，请复制以下链接到浏览器访问：<br/><a href="<%= inviteUrl %>" target="_blank" style="color: <%= themeColor %>;"><%= inviteUrl %></a></div>
+        <% if (contactEmail) { %>
+        <p class="footer">如有任何问题或需要支持，请联系 <a href="mailto:<%= contactEmail %>" style="color: <%= themeColor %>;"><%= contactEmail %></a>。</p>
+        <% } %>
+        <p class="footer">感谢您的参与和反馈。</p>
+        <p class="footer" style="margin-bottom:0;"><%= teamName || companyName || tenantName %></p>
+    </div>
+</div>
+</body>
+</html>
+<!-- signature -->
+LeapIn
+<!-- text -->
+您好，<%= name %>：
+
+作为 <%= companyName || tenantName %> Workforce Readiness 项目的一部分，我们邀请您补充填写问卷「<%= projectName %>」。
+
+您的回答将用于完善您的人才档案与岗位就绪度分析。
+
+请<% if (deadlineText) { %>于 <%= deadlineText %> 前<% } %>完成填写。
+
+开始填写：<%= inviteUrl %>
+<% if (contactEmail) { %>
+如有任何问题或需要支持，请联系 <%= contactEmail %>。
+<% } %>
+感谢您的参与和反馈。
+
+<%= teamName || companyName || tenantName %>
