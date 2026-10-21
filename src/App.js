@@ -29,7 +29,7 @@ const AccountLoginRedirect = () => {
   return null;
 };
 
-const AppContent = withLocale(({ baseUrl, isOidcClient, AfterUserLoginLayout, AfterAdminUserLoginLayout }) => {
+const AppContent = withLocale(({ baseUrl, isOidcClient, appManagerEnabled, AfterUserLoginLayout, AfterAdminUserLoginLayout }) => {
   const { formatMessage } = useIntl();
   return (
     <AppChildrenRouter
@@ -132,6 +132,11 @@ const AppContent = withLocale(({ baseUrl, isOidcClient, AfterUserLoginLayout, Af
                           key: 'message',
                           title: formatMessage({ id: 'app.MessageManagement' }),
                           path: '/admin/message'
+                        },
+                        appManagerEnabled && {
+                          key: 'app-manager',
+                          title: formatMessage({ id: 'app.AppManagement' }),
+                          path: `${baseUrl}/admin/app-manager`
                         }
                       ].filter(Boolean)
                     }}
@@ -170,6 +175,11 @@ const AppContent = withLocale(({ baseUrl, isOidcClient, AfterUserLoginLayout, Af
                     path: 'oidc/*',
                     title: formatMessage({ id: 'app.OidcManagement' }),
                     element: <RemoteLoader module="components-admin:OidcAdmin" baseUrl={`${baseUrl}/admin/oidc`} />
+                  },
+                  appManagerEnabled && {
+                    path: 'app-manager/*',
+                    title: formatMessage({ id: 'app.AppManagement' }),
+                    element: <RemoteLoader module="components-app-manager:Manager" baseUrl={`${baseUrl}/admin`} />
                   }
                 ].filter(Boolean)}
               >
@@ -204,6 +214,15 @@ const AppContent = withLocale(({ baseUrl, isOidcClient, AfterUserLoginLayout, Af
               <AppChildrenRouter
                 baseUrl={baseUrl}
                 list={[
+                  appManagerEnabled && {
+                    path: 'apps',
+                    title: formatMessage({ id: 'app.AppCenter' }),
+                    element: (
+                      <UserSystemLayout>
+                        <RemoteLoader module="components-app-manager:Center" />
+                      </UserSystemLayout>
+                    )
+                  },
                   {
                     path: 'join-tenant',
                     title: 'Join Tenant',
@@ -228,7 +247,7 @@ const AppContent = withLocale(({ baseUrl, isOidcClient, AfterUserLoginLayout, Af
                     path: '*',
                     element: <TenantPortal baseUrl={baseUrl} />
                   }
-                ]}
+                ].filter(Boolean)}
               />
             </Protected>
           )
@@ -245,7 +264,13 @@ const App = createWithRemoteLoader({
   const baseUrl = '';
   return (
     <Global preset={globalPreset} themeToken={globalPreset.themeToken}>
-      <AppContent baseUrl={baseUrl} isOidcClient={globalPreset.oidcMode === 'central'} AfterUserLoginLayout={AfterUserLoginLayout} AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} />
+      <AppContent
+        baseUrl={baseUrl}
+        isOidcClient={globalPreset.oidcMode === 'central'}
+        appManagerEnabled={!!globalPreset.capabilities?.appManager}
+        AfterUserLoginLayout={AfterUserLoginLayout}
+        AfterAdminUserLoginLayout={AfterAdminUserLoginLayout}
+      />
     </Global>
   );
 });

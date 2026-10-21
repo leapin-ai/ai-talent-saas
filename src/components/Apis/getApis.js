@@ -270,6 +270,20 @@ const getApis = options => {
             method: 'GET'
           }
         },
+        employeeQuestionnaire: {
+          projectList: {
+            url: `${prefix}/tenant/employee-questionnaire/project/list`,
+            method: 'GET'
+          },
+          send: {
+            url: `${prefix}/tenant/employee-questionnaire/send`,
+            method: 'POST'
+          },
+          list: {
+            url: `${prefix}/tenant/employee-questionnaire/list`,
+            method: 'GET'
+          }
+        },
         talentCollectInvite: {
           send: {
             url: `${prefix}/tenant/position/talent-collect-invite/send`,

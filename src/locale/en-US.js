@@ -6,6 +6,8 @@ const enUS = {
   'app.SignatureManagement': 'Signature Management',
   'app.MessageManagement': 'Message Management',
   'app.OidcManagement': 'Authentication',
+  'app.AppManagement': 'App Management',
+  'app.AppCenter': 'App Center',
   'app.collectAssessment': 'Assessment',
   'app.collectInviteInvalidTitle': 'Invalid invite link',
   'app.collectInviteInvalidDesc': 'This link may have expired or is incorrect. Please ask the inviter for a new one.',

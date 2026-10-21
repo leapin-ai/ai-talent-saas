@@ -38,4 +38,12 @@ module.exports = function (app) {
       xfwd: true
     })
   );
+  // 应用中心托管的子应用挂在 /app/{name}；不能用前缀匹配，会误伤前端路由 /apps
+  app.use(
+    createProxyMiddleware({
+      target: 'http://localhost:8040',
+      pathFilter: path => path === '/app' || path.startsWith('/app/'),
+      changeOrigin: true
+    })
+  );
 };
