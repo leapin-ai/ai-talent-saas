@@ -10,6 +10,11 @@
     "build:md": "npx @kne/md-doc",
     "start:md": "npx @kne/md-doc --watch"
   },
+  "nodemonConfig": {
+    "ignore": [
+      "managed-apps/*"
+    ]
+  },
   "files": [
     "index.js",
     "libs"
@@ -31,6 +36,7 @@
     "@kne/ensure-slash": "^0.1.0",
     "@kne/fastify-account": "^2.0.9",
     "@kne/fastify-aliyun": "^1.1.7",
+    "@kne/fastify-app-manager": "^0.1.26",
     "@kne/fastify-aws": "^0.1.0",
     "@kne/fastify-file-manager": "^3.0.8",
     "@kne/fastify-intl": "^0.1.6",

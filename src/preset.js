@@ -35,6 +35,17 @@ const loadOidcConfig = async () => {
   }
 };
 
+const loadCapabilities = async () => {
+  try {
+    const response = await fetch(`${baseApiUrl.replace(/\/+$/, '')}/api/v1/capabilities`);
+    const body = await response.json();
+    return Object.assign({}, body?.data);
+  } catch (e) {
+    console.error(e);
+    return {};
+  }
+};
+
 export const globalInit = async () => {
   const registry = {
     url: 'https://cdn.leapin-ai.com',
@@ -84,7 +95,14 @@ export const globalInit = async () => {
         //url: 'http://localhost:3010',
         //tpl: '{{url}}',
         remote: 'components-thirdparty',
-        defaultVersion: '0.1.50'
+        defaultVersion: '0.1.54'
+      },
+      'components-app-manager': {
+        ...registry,
+        //url: 'http://localhost:3012',
+        //tpl: '{{url}}',
+        remote: 'components-app-manager',
+        defaultVersion: '0.1.0'
       },
       // AI 面试远程组件：url/version 由租户设置在运行时 applyAiInterviewRemote 写入
       'ai-interview-flowup': {
@@ -110,7 +128,7 @@ export const globalInit = async () => {
 
   const { default: createOidcClient } = await loadModule('components-admin:Oidc@createOidcClient');
   // 部署在应用中心时以 central 模式运行，issuer / clientId / audience 由宿主注入到服务端环境变量，只能从服务端配置接口读取
-  const oidcConfig = await loadOidcConfig();
+  const [oidcConfig, capabilities] = await Promise.all([loadOidcConfig(), loadCapabilities()]);
   const oidcClient = normalizeOidcClientLogout(
     createOidcClient({
       issuer: oidcConfig?.issuer || window.runtimeOidcIssuer || `${window.location.origin}/oidc`,
@@ -168,9 +186,12 @@ export const globalInit = async () => {
     }
   };
   const remoteApis = await (async () => {
-    const input = {
-      fileManager: 'components-file-manager:Apis@getApis'
-    };
+    const input = Object.assign(
+      {
+        fileManager: 'components-file-manager:Apis@getApis'
+      },
+      capabilities.appManager ? { appManager: 'components-app-manager:Apis@getApis' } : {}
+    );
 
     const remoteApiKeys = Object.keys(input);
     return transform(
@@ -191,6 +212,8 @@ export const globalInit = async () => {
     ajax,
     oidc: oidcClient,
     oidcMode: oidcConfig?.mode,
+    capabilities,
+    getUserAccessToken: () => oidcClient.getTokenSet()?.accessToken || null,
     staticUrl: baseApiUrl,
     enums: Object.assign({}, enums),
     plugins: {

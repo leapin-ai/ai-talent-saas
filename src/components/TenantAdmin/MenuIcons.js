@@ -94,6 +94,15 @@ export const UserMenuIcon = props => (
   </NavIcon>
 );
 
+export const AppCenterMenuIcon = props => (
+  <NavIcon {...props}>
+    <rect x="3.4" y="3.4" width="5.4" height="5.4" rx="1.2" {...strokeProps} />
+    <rect x="11.2" y="3.4" width="5.4" height="5.4" rx="1.2" {...strokeProps} />
+    <rect x="3.4" y="11.2" width="5.4" height="5.4" rx="1.2" {...strokeProps} />
+    <rect x="11.2" y="11.2" width="5.4" height="5.4" rx="1.2" {...strokeProps} />
+  </NavIcon>
+);
+
 export const SwitchTenantMenuIcon = props => (
   <NavIcon {...props}>
     <circle cx="7.4" cy="7.2" r="2.2" {...strokeProps} />

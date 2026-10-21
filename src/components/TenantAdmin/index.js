@@ -4,7 +4,7 @@ import AppChildrenRouter from '@kne/app-children-router';
 import Layout from './Layout';
 import { Page } from '@kne/system-layout';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { createWithRemoteLoader } from '@kne/remote-loader';
+import RemoteLoader, { createWithRemoteLoader } from '@kne/remote-loader';
 import TalentMarket from '@components/TalentMarket';
 import TalentProfile from '@components/TalentProfile';
 import PositionDetail from '@components/Position/Detail';
@@ -28,7 +28,7 @@ const TenantAdmin = createWithRemoteLoader({
   withLocale(({ remoteModules, baseUrl }) => {
     const { formatMessage } = useIntl();
     const [Setting, usePreset, TablePageRender, PrintButton, Permissions] = remoteModules;
-    const { apis } = usePreset();
+    const { apis, capabilities } = usePreset();
     const profileRef = useRef(null);
     const navigate = useNavigate();
     const settingUserApis = useMemo(
@@ -273,6 +273,17 @@ const TenantAdmin = createWithRemoteLoader({
               </PositionDetail>
             )
           },
+          capabilities?.appManager && {
+            path: 'apps',
+            title: formatMessage({ id: 'tenantAdmin.appCenter' }),
+            element: (
+              <Permissions request={TENANT_ADMIN_PERMISSIONS.appCenter} type="error">
+                <Page title={formatMessage({ id: 'tenantAdmin.appCenter' })}>
+                  <RemoteLoader module="components-app-manager:Center" bordered={false} />
+                </Page>
+              </Permissions>
+            )
+          },
           {
             path: 'hiring/*',
             title: 'Hiring',
@@ -302,7 +313,7 @@ const TenantAdmin = createWithRemoteLoader({
             title: 'Setting/Permission',
             element: <Setting.Permission baseUrl={`${baseUrl}/setting`}>{({ title, children }) => <Page title={title}>{children}</Page>}</Setting.Permission>
           }
-        ]}
+        ].filter(Boolean)}
       />
     );
   })

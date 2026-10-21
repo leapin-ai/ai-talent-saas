@@ -111,6 +111,16 @@ module.exports = {
           ]
         },
         {
+          name: '应用中心',
+          code: 'app-center',
+          permissions: [
+            {
+              name: '查看',
+              code: 'view'
+            }
+          ]
+        },
+        {
           name: '员工档案',
           code: 'employee-archive',
           modules: [
