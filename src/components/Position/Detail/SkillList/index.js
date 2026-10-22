@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Empty, Flex } from 'antd';
+import { Empty, Flex, Tooltip } from 'antd';
 import { useIntl } from '@kne/react-intl';
 import classnames from 'classnames';
 import withLocale from '../../withLocale';
@@ -11,9 +11,11 @@ import SkillPreview from './SkillPreview';
 import { CHANGE_META, CHANGE_VALUES, countByChange, LEVEL_META, formatActivityGroup, normalizeSkills } from './skillModel';
 import style from './style.module.scss';
 
-const SkillList = withLocale(({ skill }) => {
+const SkillList = withLocale(({ skill, filter: controlledFilter, onFilterChange }) => {
   const { formatMessage } = useIntl();
-  const [filter, setFilter] = useState('all');
+  const [innerFilter, setInnerFilter] = useState('all');
+  const filter = controlledFilter ?? innerFilter;
+  const setFilter = onFilterChange || setInnerFilter;
   const [selectedId, setSelectedId] = useState(null);
   const [expanded, setExpanded] = useState({});
 
@@ -120,7 +122,22 @@ const SkillList = withLocale(({ skill }) => {
           <ActivityTaskTable
             maxBodyHeight={PINNED_SCROLL_MAX_HEIGHT}
             groups={groups}
-            columns={[formatMessage({ id: 'position.skillName' }), formatMessage({ id: 'position.skillChangeColumn' }), formatMessage({ id: 'position.skillImportanceColumn' }), formatMessage({ id: 'position.confidence' })]}
+            columns={[
+              <span>
+                {formatMessage({ id: 'position.activityColumn' })}
+                {' / '}
+                {formatMessage({ id: 'position.taskColumn' })}
+              </span>,
+              <Tooltip title={formatMessage({ id: 'position.skillChangeColumnTip' })}>
+                <span className={style['head-tip']}>{formatMessage({ id: 'position.skillChangeColumn' })}</span>
+              </Tooltip>,
+              <Tooltip styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line' }}>{formatMessage({ id: 'position.skillImportanceColumnTip' })}</div>}>
+                <span className={style['head-tip']}>{formatMessage({ id: 'position.skillImportanceColumn' })}</span>
+              </Tooltip>,
+              <Tooltip styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line' }}>{formatMessage({ id: 'position.confidenceTip' })}</div>}>
+                <span className={style['head-tip']}>{formatMessage({ id: 'position.confidence' })}</span>
+              </Tooltip>
+            ]}
             expanded={expanded}
             onToggle={toggleGroup}
             selectedId={selectedSkill?.id}
@@ -128,7 +145,11 @@ const SkillList = withLocale(({ skill }) => {
             onHover={item => selectSkillById(item.id)}
             empty={<Empty description={formatMessage({ id: 'position.roleTasksEmpty' })} />}
             renderPrimary={item => item.name}
-            renderSecondary={item => <ChangeTag change={item.change} />}
+            renderSecondary={item => (
+              <div className={style['change-cell']}>
+                <ChangeTag change={item.change} />
+              </div>
+            )}
             renderMetric={item => <ImportanceBar importanceNow={item.importanceNow} importanceYear={item.importanceYear} />}
             renderTrailing={item => formatMessage({ id: (LEVEL_META[item.confidence] || LEVEL_META.medium).labelKey })}
           />

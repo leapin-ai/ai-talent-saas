@@ -530,6 +530,13 @@ module.exports = fp(async (fastify, options) => {
     return metrics;
   };
 
+  // 与 summarizeTalentMetrics 口径一致：非 assessed/outdated 都计入 never（含 inProgress）
+  const TALENT_STATUS_FILTER = {
+    assessed: status => status === 'assessed',
+    outdated: status => status === 'outdated',
+    never: status => status !== 'assessed' && status !== 'outdated'
+  };
+
   const EMPLOYEE_STATUS = new Set(['ACTIVE', 'RESIGN', 'STOP_SALARY', 'RETIRE', 'INTERN', 'PRE_EMPLOYEE']);
 
   const buildPositionWhere = positionId => {
@@ -630,18 +637,33 @@ module.exports = fp(async (fastify, options) => {
 
     const whereQuery = { [Op.and]: andConditions };
     const withTalentAnalysis = filter.withTalentAnalysis === true || filter.withTalentAnalysis === 'true' || !!positionId;
+    const order = [
+      ['createdAt', 'DESC'],
+      ['id', 'DESC']
+    ];
+    const matchTalentStatus = TALENT_STATUS_FILTER[filter.talentStatus];
 
-    const { count, rows } = await models.employee.findAndCountAll({
-      where: whereQuery,
-      offset: perPage * (currentPage - 1),
-      limit: perPage,
-      order: [
-        ['createdAt', 'DESC'],
-        ['id', 'DESC']
-      ]
-    });
-
-    const pageData = withTalentAnalysis ? await enrichTalentRows(authenticatePayload, rows, { positionId }) : rows;
+    let pageData;
+    let count;
+    let talentMetrics;
+    if (matchTalentStatus && positionId) {
+      // lastAssessment 为计算字段，需全量计算后在内存中筛选分页
+      const allRows = await models.employee.findAll({ where: whereQuery, order });
+      const enrichedAll = await enrichTalentRows(authenticatePayload, allRows, { positionId });
+      talentMetrics = summarizeTalentMetrics(enrichedAll);
+      const matched = enrichedAll.filter(item => matchTalentStatus(item.lastAssessment));
+      count = matched.length;
+      pageData = matched.slice(perPage * (currentPage - 1), perPage * currentPage);
+    } else {
+      const result = await models.employee.findAndCountAll({
+        where: whereQuery,
+        offset: perPage * (currentPage - 1),
+        limit: perPage,
+        order
+      });
+      count = result.count;
+      pageData = withTalentAnalysis ? await enrichTalentRows(authenticatePayload, result.rows, { positionId }) : result.rows;
+    }
 
     const positionEnums = await services.position.enums(authenticatePayload, {
       ids: pageData.map(item => get(item, 'options.position')).filter(item => !!item)
@@ -667,7 +689,9 @@ module.exports = fp(async (fastify, options) => {
       totalCount: count
     };
 
-    if (withTalentAnalysis && positionId) {
+    if (talentMetrics) {
+      result.talentMetrics = talentMetrics;
+    } else if (withTalentAnalysis && positionId) {
       const allRows = await models.employee.findAll({
         where: whereQuery,
         attributes: ['id', 'tenantUserId', 'hireDate', 'city', 'options', 'name', 'nameEn', 'avatar']

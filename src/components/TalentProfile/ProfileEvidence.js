@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { App, Button, Drawer, Empty, Flex, Input, Typography } from 'antd';
+import { App, Button, Drawer, Empty, Flex, Input, Tooltip, Typography } from 'antd';
 import { MdOutlineEdit } from 'react-icons/md';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
@@ -498,10 +498,12 @@ const ProfileEvidence = createWithRemoteLoader({
               <div className={classnames(style['task-evidence-confidence'], style[`task-evidence-confidence-${displayConfidence}`])}>
                 <span className={style['task-evidence-confidence-icon']} aria-hidden />
                 <span className={style['task-evidence-confidence-text']}>
-                  <span className={style['task-evidence-confidence-title']}>
-                    {formatMessage({ id: 'talentProfile.confidenceBasedOnSources' }, { level: confidenceLabel })}
-                    {!explicitConfidence ? <span className={style['task-evidence-confidence-hint']}>{formatMessage({ id: 'talentProfile.confidenceDerivedHint' })}</span> : null}
-                  </span>
+                  <Tooltip title={formatMessage({ id: `talentProfile.${explicitConfidence ? 'confidenceLevelTip' : 'confidenceDerivedTip'}.${displayConfidence}` })}>
+                    <span className={classnames(style['task-evidence-confidence-title'], style['value-tip'])}>
+                      {formatMessage({ id: 'talentProfile.confidenceBasedOnSources' }, { level: confidenceLabel })}
+                      {!explicitConfidence ? <span className={style['task-evidence-confidence-hint']}>{formatMessage({ id: 'talentProfile.confidenceDerivedHint' })}</span> : null}
+                    </span>
+                  </Tooltip>
                 </span>
               </div>
             );

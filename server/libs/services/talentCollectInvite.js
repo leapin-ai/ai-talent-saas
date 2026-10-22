@@ -210,8 +210,8 @@ module.exports = fp(async (fastify, options) => {
           ? `${orgLabel} Workforce Readiness | Manager Role Interview`
           : `${orgLabel} Workforce Readiness | Employee Role Interview`
         : isManager
-          ? `${orgLabel} Workforce Readiness | 经理岗位访谈`
-          : `${orgLabel} Workforce Readiness | 员工岗位访谈`;
+          ? `${orgLabel} 人才队伍就绪度 | 经理岗位访谈`
+          : `${orgLabel} 人才队伍就绪度 | 员工岗位访谈`;
     const messageCode = `${MESSAGE_CODE}[${language}]`;
     const props = {
       name: row.name,
