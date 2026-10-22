@@ -1357,6 +1357,11 @@
   opacity: 0.6;
 }
 
+.head-tip {
+  cursor: help;
+  border-bottom: 1px dashed currentColor;
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;

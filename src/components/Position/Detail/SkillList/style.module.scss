@@ -223,6 +223,11 @@
   background: #fff;
 }
 
+.head-tip {
+  cursor: help;
+  border-bottom: 1px dashed currentColor;
+}
+
 .importance {
   display: flex;
   align-items: center;
@@ -292,16 +297,24 @@
   color: #cc4b4b;
 }
 
+.change-cell {
+  min-width: 0;
+  padding-right: 8px;
+}
+
 .change-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
   line-height: 16px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 .preview {

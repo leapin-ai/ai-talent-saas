@@ -70,7 +70,39 @@ const AnalyzeTalent = createWithRemoteLoader({
     const tableRef = useRef(null);
     const [pageList, setPageList] = useState([]);
     const [metrics, setMetrics] = useState(EMPTY_METRICS);
+    const [talentStatus, setTalentStatus] = useState(null);
+    // mapFilterValue 在搜索时读取，需拿到最新值
+    const talentStatusRef = useRef(null);
     const { selectedRows, getRowSelection } = Table.useSelectedRow({ rowKey: 'id' });
+
+    const withTalentFilter = filterValue => {
+      const next = Object.assign({}, filterValue, { withTalentAnalysis: true });
+      delete next.talentStatus;
+      if (talentStatusRef.current) {
+        next.talentStatus = talentStatusRef.current;
+      }
+      return next;
+    };
+
+    const selectTalentStatus = status => {
+      const next = status && status !== talentStatus ? status : null;
+      if (next === talentStatus) {
+        return;
+      }
+      talentStatusRef.current = next;
+      setTalentStatus(next);
+      const table = tableRef.current;
+      if (!table) {
+        return;
+      }
+      const prevParams = table.requestParams?.params || {};
+      table.reload({
+        params: Object.assign({}, prevParams, {
+          currentPage: 1,
+          filter: withTalentFilter(prevParams.filter)
+        })
+      });
+    };
 
     const goEmployeeProfile = item => {
       if (!item?.id) {
@@ -129,22 +161,23 @@ const AnalyzeTalent = createWithRemoteLoader({
     return (
       <div className={style.root}>
         <div className={style.metrics}>
-          <div className={style.metric}>
-            <div className={style['metric-value']}>{metrics.total}</div>
-            <div className={style['metric-label']}>{formatMessage({ id: 'position.talentMetricPeople' })}</div>
-          </div>
-          <div className={style.metric}>
-            <div className={`${style['metric-value']} ${style['metric-value-assessed']}`}>{metrics.assessed}</div>
-            <div className={style['metric-label']}>{formatMessage({ id: 'position.talentMetricAssessed' })}</div>
-          </div>
-          <div className={style.metric}>
-            <div className={`${style['metric-value']} ${style['metric-value-outdated']}`}>{metrics.outdated}</div>
-            <div className={style['metric-label']}>{formatMessage({ id: 'position.talentMetricOutdated' })}</div>
-          </div>
-          <div className={style.metric}>
-            <div className={`${style['metric-value']} ${style['metric-value-never']}`}>{metrics.never + (metrics.inProgress || 0)}</div>
-            <div className={style['metric-label']}>{formatMessage({ id: 'position.talentMetricNever' })}</div>
-          </div>
+          {[
+            { status: null, value: metrics.total, label: 'position.talentMetricPeople' },
+            { status: 'assessed', value: metrics.assessed, label: 'position.talentMetricAssessed' },
+            { status: 'outdated', value: metrics.outdated, label: 'position.talentMetricOutdated' },
+            { status: 'never', value: metrics.never + (metrics.inProgress || 0), label: 'position.talentMetricNever' }
+          ].map(card => (
+            <button
+              key={card.label}
+              type="button"
+              className={`${style.metric} ${card.status && talentStatus === card.status ? style['metric-active'] : ''}`}
+              aria-pressed={!!card.status && talentStatus === card.status}
+              onClick={() => selectTalentStatus(card.status)}
+            >
+              <div className={`${style['metric-value']} ${card.status ? style[`metric-value-${card.status}`] : ''}`}>{card.value}</div>
+              <div className={style['metric-label']}>{formatMessage({ id: card.label })}</div>
+            </button>
+          ))}
         </div>
 
         <TablePage
@@ -167,9 +200,7 @@ const AnalyzeTalent = createWithRemoteLoader({
           filter={{
             mapFilterValue: value => ({
               positionId: String(positionId),
-              filter: Object.assign({}, Filter.getFilterValue(value), {
-                withTalentAnalysis: true
-              })
+              filter: withTalentFilter(Filter.getFilterValue(value))
             })
           }}
           buttonGroup={{

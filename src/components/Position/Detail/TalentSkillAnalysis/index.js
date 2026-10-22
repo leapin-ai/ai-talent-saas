@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Button, Empty, Flex } from 'antd';
+import { Button, Empty, Flex, Tooltip } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -104,28 +104,55 @@ const SkillProgress = ({ current, required }) => {
   );
 };
 
-const HaloMetrics = ({ metrics, formatMessage }) => {
+const HaloMetrics = ({ metrics, formatMessage, activeMetric, onMetricClick }) => {
   const criticalGaps = metrics?.criticalGaps ?? 0;
   const atOrAbove = metrics?.atOrAbove ?? 0;
   const monthsToClose = metrics?.monthsToClose;
 
+  const renderMetric = (key, children) =>
+    onMetricClick ? (
+      <button type="button" className={`${style['halo-metric']} ${style['halo-metric-clickable']}`} aria-pressed={activeMetric === key} onClick={() => onMetricClick(key)}>
+        {children}
+      </button>
+    ) : (
+      <div className={style['halo-metric']}>{children}</div>
+    );
+
   return (
     <Flex className={style['halo-metrics']} align="stretch" gap={0}>
-      <div className={style['halo-metric']}>
-        <div className={`${style['halo-metric-value']} ${style['halo-metric-critical']}`}>{criticalGaps}</div>
-        <div className={style['halo-metric-label']}>{formatMessage({ id: 'position.talentSkillCriticalGaps' })}</div>
-      </div>
+      {renderMetric(
+        'belowTarget',
+        <>
+          <div className={`${style['halo-metric-value']} ${style['halo-metric-critical']}`}>{criticalGaps}</div>
+          <div className={style['halo-metric-label']}>{formatMessage({ id: 'position.talentSkillCriticalGaps' })}</div>
+        </>
+      )}
       <div className={style['halo-divider']} />
-      <div className={style['halo-metric']}>
-        <div className={`${style['halo-metric-value']} ${style['halo-metric-ok']}`}>{atOrAbove}</div>
-        <div className={style['halo-metric-label']}>{formatMessage({ id: 'position.talentSkillAtOrAbove' })}</div>
-      </div>
+      {renderMetric(
+        'atOrAbove',
+        <>
+          <div className={`${style['halo-metric-value']} ${style['halo-metric-ok']}`}>{atOrAbove}</div>
+          <div className={style['halo-metric-label']}>{formatMessage({ id: 'position.talentSkillAtOrAbove' })}</div>
+        </>
+      )}
       <div className={style['halo-divider']} />
       <div className={style['halo-metric']}>
         <div className={`${style['halo-metric-value']} ${style['halo-metric-close']}`}>
-          {monthsToClose == null ? formatMessage({ id: 'position.talentSkillEmptyValue' }) : formatMessage({ id: 'position.talentSkillMonthsValue' }, { months: monthsToClose })}
+          <Tooltip
+            placement="top"
+            styles={{ root: { maxWidth: 440 } }}
+            title={
+              <div style={{ textAlign: 'justify' }}>{monthsToClose == null ? formatMessage({ id: 'position.talentSkillToCloseValueTipEmpty' }) : formatMessage({ id: 'position.talentSkillToCloseValueTip' }, { months: monthsToClose })}</div>
+            }
+          >
+            <span className={style['halo-value-tip']}>{monthsToClose == null ? formatMessage({ id: 'position.talentSkillEmptyValue' }) : formatMessage({ id: 'position.talentSkillMonthsValue' }, { months: monthsToClose })}</span>
+          </Tooltip>
         </div>
-        <div className={style['halo-metric-label']}>{formatMessage({ id: 'position.talentSkillToClose' })}</div>
+        <div className={style['halo-metric-label']}>
+          <Tooltip placement="bottom" styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line', textAlign: 'justify' }}>{formatMessage({ id: 'position.talentSkillToCloseTip' })}</div>}>
+            <span className={style['halo-label-tip']}>{formatMessage({ id: 'position.talentSkillToClose' })}</span>
+          </Tooltip>
+        </div>
       </div>
     </Flex>
   );
@@ -306,7 +333,7 @@ const DevelopmentPlan = ({ plan, formatMessage, cardColor }) => {
   );
 };
 
-const CapabilityStatusCard = withLocale(({ name, readiness, summary, metrics, themeColor, extra = null }) => {
+const CapabilityStatusCard = withLocale(({ name, readiness, summary, metrics, themeColor, extra = null, activeMetric = null, onMetricClick }) => {
   const { formatMessage } = useIntl();
   const displayName = name || formatMessage({ id: 'position.talentSkillEmptyValue' });
   const firstName = String(displayName).split(/\s+/).filter(Boolean)[0] || displayName;
@@ -327,7 +354,7 @@ const CapabilityStatusCard = withLocale(({ name, readiness, summary, metrics, th
             {extra}
           </div>
           <div className={style['halo-summary']}>{summary || formatMessage({ id: 'position.talentSkillNoSummary' })}</div>
-          <HaloMetrics metrics={metrics} formatMessage={formatMessage} />
+          <HaloMetrics metrics={metrics} formatMessage={formatMessage} activeMetric={activeMetric} onMetricClick={onMetricClick} />
         </div>
       </div>
     </Card>

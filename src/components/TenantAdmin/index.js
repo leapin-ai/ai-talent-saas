@@ -34,6 +34,7 @@ const TenantAdmin = createWithRemoteLoader({
     const settingUserApis = useMemo(
       () => ({
         positionList: apis.talentSaas.tenant.position.list,
+        positionCreate: apis.talentSaas.tenant.position.create,
         list: apis.talentSaas.tenant.userList,
         sendOrgMessage: apis.talentSaas.tenantAdmin.sendOrgMessage,
         linkTenantUser: apis.talentSaas.tenant.employee.linkTenantUser,
@@ -42,6 +43,7 @@ const TenantAdmin = createWithRemoteLoader({
       }),
       [
         apis.talentSaas.tenant.position.list,
+        apis.talentSaas.tenant.position.create,
         apis.talentSaas.tenant.userList,
         apis.talentSaas.tenantAdmin.sendOrgMessage,
         apis.talentSaas.tenant.employee.linkTenantUser,

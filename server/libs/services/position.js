@@ -1,6 +1,7 @@
 const fp = require('fastify-plugin');
 const omit = require('lodash/omit');
 const { requestPositionAnalysisFill, repairDevelopmentPlanItems } = require('../utils/llm-runner');
+const { resolveEmployeeTargetTasks, alignSkillsToTargetTasks } = require('../utils/employee-tasks');
 
 const ANALYSIS_TASK_TYPE = 'position-ai-analysis';
 /** 经理邀请触发：完善岗位分析（不改职位 assessmentStatus / analysisStatus） */
@@ -927,14 +928,13 @@ module.exports = fp(async (fastify, options) => {
       });
     }
 
-    // 同步 skills → employeeTaskReadiness（未来任务就绪表），否则档案页只认 taskReadiness 会空
+    // 同步 skills → employeeTaskReadiness（未来任务就绪表），否则档案页只认 taskReadiness 会空；只写已有岗位任务，不补建
     if (services.workforce?.importSkillReadiness && Array.isArray(payload.skills) && payload.skills.length) {
       try {
         await services.workforce.importSkillReadiness(authenticatePayload, {
           positionId: String(positionId),
           employeeId: String(employeeId),
           skills: payload.skills,
-          ensureTasks: true,
           replace: replaceReadiness === true
         });
       } catch (error) {
@@ -1831,6 +1831,7 @@ module.exports = fp(async (fastify, options) => {
     if (contextEmployees.length === 0) {
       return { employees: [] };
     }
+    const targetTasks = resolveEmployeeTargetTasks(promptContext?.position?.skill);
 
     const employees = await Promise.all(
       contextEmployees.map(async employee => {
@@ -1845,6 +1846,7 @@ module.exports = fp(async (fastify, options) => {
           ]
         };
         const singleContext = Object.assign({}, promptContext, {
+          targetTasks,
           employees: [
             {
               id: employee.id,
@@ -1865,6 +1867,7 @@ module.exports = fp(async (fastify, options) => {
         const normalized = normalizeAiFillResult('person', raw, singleDraft, { employees: [employee] });
         const item = normalized.employees[0];
         return Object.assign({}, item, {
+          skills: alignSkillsToTargetTasks(item.skills, targetTasks),
           developmentPlan: fillEmptyHorizonItems(normalizeDevelopmentPlan(item.developmentPlan)) || item.developmentPlan
         });
       })

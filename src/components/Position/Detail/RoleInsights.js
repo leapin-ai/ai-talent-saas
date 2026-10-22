@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Tooltip } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import withLocale from '../withLocale';
@@ -149,21 +150,43 @@ const RoleInsights = createWithRemoteLoader({
       return null;
     }
 
+    const renderCaption = (captionId, tipId) => (
+      <div className={style['impact-caption']}>
+        <Tooltip placement="bottom" styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line', textAlign: 'justify' }}>{formatMessage({ id: tipId })}</div>}>
+          <span className={style['impact-caption-tip']}>{formatMessage({ id: captionId })}</span>
+        </Tooltip>
+      </div>
+    );
+
+    const renderValue = (text, tip) => (
+      <div className={style['impact-value']}>
+        <Tooltip placement="top" styles={{ root: { maxWidth: 440 } }} title={<div style={{ textAlign: 'justify' }}>{tip}</div>}>
+          <span className={style['impact-value-tip']}>{text}</span>
+        </Tooltip>
+      </div>
+    );
+
+    const teamReadiness = talentMetrics?.teamReadiness;
+    const efficiencyValue = efficiencyText === '—' ? null : Math.round(Number(efficiencyGain));
+
     const impact = (
       <div className={style.impact}>
         <div className={style['impact-item']}>
-          <div className={style['impact-value']}>{formatMessage({ id: `position.changeMagnitude.${magnitude}` })}</div>
-          <div className={style['impact-caption']}>{formatMessage({ id: 'position.aiImpactCaption' })}</div>
+          {renderValue(formatMessage({ id: `position.changeMagnitude.${magnitude}` }), formatMessage({ id: `position.aiImpactValueTip.${magnitude}` }))}
+          {renderCaption('position.aiImpactCaption', 'position.aiImpactTip')}
         </div>
         <div className={style['impact-divider']} />
         <div className={style['impact-item']}>
-          <div className={style['impact-value']}>{talentMetrics?.teamReadiness == null ? '—' : `${talentMetrics.teamReadiness}%`}</div>
-          <div className={style['impact-caption']}>{formatMessage({ id: 'position.teamReadinessCaption' })}</div>
+          {renderValue(
+            teamReadiness == null ? '—' : `${teamReadiness}%`,
+            teamReadiness == null ? formatMessage({ id: 'position.teamReadinessValueTipEmpty' }) : formatMessage({ id: 'position.teamReadinessValueTip' }, { count: assessed, value: teamReadiness })
+          )}
+          {renderCaption('position.teamReadinessCaption', 'position.teamReadinessTip')}
         </div>
         <div className={style['impact-divider']} />
         <div className={style['impact-item']}>
-          <div className={style['impact-value']}>{efficiencyText}</div>
-          <div className={style['impact-caption']}>{formatMessage({ id: 'position.aiEfficiencyGainCaption' })}</div>
+          {renderValue(efficiencyText, efficiencyValue == null ? formatMessage({ id: 'position.aiEfficiencyGainValueTipEmpty' }) : formatMessage({ id: 'position.aiEfficiencyGainValueTip' }, { value: efficiencyValue }))}
+          {renderCaption('position.aiEfficiencyGainCaption', 'position.aiEfficiencyGainTip')}
         </div>
         <div className={style['impact-divider']} />
         <div className={style['impact-item']}>

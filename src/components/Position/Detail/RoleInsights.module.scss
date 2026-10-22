@@ -75,11 +75,20 @@
   white-space: nowrap;
 }
 
+.impact-value-tip {
+  cursor: help;
+}
+
 .impact-caption {
   font-size: 12px;
   font-weight: 400;
   line-height: 16px;
   color: #94a3b8;
+}
+
+.impact-caption-tip {
+  cursor: help;
+  border-bottom: 1px dashed currentColor;
 }
 
 .impact-divider {
@@ -113,6 +122,11 @@
   letter-spacing: 0;
   line-height: 16px;
   color: #4654d9;
+}
+
+.strategy-action-label {
+  cursor: help;
+  border-bottom: 1px dashed currentColor;
 }
 
 .strategy-title {

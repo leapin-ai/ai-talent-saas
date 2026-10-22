@@ -6,9 +6,10 @@ import style from './style.module.scss';
 const ChangeTag = ({ change }) => {
   const { formatMessage } = useIntl();
   const meta = CHANGE_META[change] || CHANGE_META.stable;
+  const label = formatMessage({ id: meta.labelKey });
   return (
-    <span className={style['change-tag']} style={{ background: meta.bg, color: meta.color }}>
-      {formatMessage({ id: meta.labelKey })}
+    <span className={style['change-tag']} style={{ background: meta.bg, color: meta.color }} title={label}>
+      {label}
     </span>
   );
 };

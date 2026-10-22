@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { App, Button, Empty, Flex, Typography } from 'antd';
+import { App, Button, Empty, Flex, Tooltip, Typography } from 'antd';
 import { MdOutlineEdit } from 'react-icons/md';
 import { Card } from '@kne/react-box';
 import '@kne/react-box/dist/index.css';
@@ -59,6 +59,14 @@ const STATUS_META = {
 };
 
 const STATUS_FILTER_KEYS = ['critical', 'gap', 'onTarget', 'above', 'unknown'];
+
+// 顶部指标一次筛多个状态
+const METRIC_STATUS_GROUPS = {
+  belowTarget: ['critical', 'gap'],
+  atOrAbove: ['onTarget', 'above']
+};
+
+const resolveFilterStatuses = filter => METRIC_STATUS_GROUPS[filter] || [filter];
 
 const CONFIDENCE_KEYS = {
   high: 'talentProfile.confidenceHigh',
@@ -160,22 +168,26 @@ const ProfileReadiness = createWithRemoteLoader({
 
     useEffect(() => {
       const tasksApi = apis?.talentSaas?.tenant?.position?.tasks;
-      if (!hasDraftSkills || !positionId || !tasksApi) {
+      if (!positionId || !tasksApi) {
         setPositionTasks(null);
         return;
       }
       let cancelled = false;
       ajax(Object.assign({}, tasksApi, { params: { positionId: String(positionId) } }))
         .then(({ data: resData }) => {
-          if (!cancelled && resData?.code === 0) {
-            setPositionTasks(resData.data?.pageData || []);
+          if (!cancelled) {
+            setPositionTasks(resData?.code === 0 ? resData.data?.pageData || [] : []);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          if (!cancelled) {
+            setPositionTasks([]);
+          }
+        });
       return () => {
         cancelled = true;
       };
-    }, [ajax, apis, hasDraftSkills, positionId]);
+    }, [ajax, apis, positionId]);
 
     useEffect(() => {
       let cancelled = false;
@@ -247,6 +259,8 @@ const ProfileReadiness = createWithRemoteLoader({
         return /^\d+$/.test(text) ? text : null;
       };
       // 草稿 skills 只按标题借用岗位任务的分组与顺序；不带 taskId，证据仍取草稿
+      // 有岗位任务时，个人任务 = 岗位任务 − AI 新兴任务，对不上岗位任务的丢弃
+      const scopeToPositionTasks = Array.isArray(positionTasks) && positionTasks.length > 0;
       const taskOrder = new Map(
         (positionTasks || []).map((task, index) => [
           String(task.title || '')
@@ -265,6 +279,9 @@ const ProfileReadiness = createWithRemoteLoader({
             return null;
           }
           const matched = taskOrder.get(title.toLowerCase());
+          if (scopeToPositionTasks && (!matched || matched.task.changeTag === 'ai_emerging')) {
+            return null;
+          }
           const ownGroup = typeof item.activityGroup === 'string' && item.activityGroup.trim() ? item.activityGroup.trim() : [item.activityCode, item.activityTitle].filter(Boolean).join(' · ');
           const activityGroup = ownGroup || matched?.task?.activityGroup || '';
           const taskId = toNumericTaskId(item.taskId);
@@ -368,6 +385,31 @@ const ProfileReadiness = createWithRemoteLoader({
     );
     const displayMetrics = Object.assign({}, metrics, taskMetrics);
 
+    const renderAiLevelTip = (item, unknown) => {
+      const isLevel = value => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 5;
+      if (!isLevel(item.required)) {
+        return null;
+      }
+      const required = Number(item.required);
+      const values = {
+        required: formatMessage({ id: `talentProfile.aiLevel.${required}` }),
+        requiredDesc: formatMessage({ id: `talentProfile.aiLevelDesc.${required}` })
+      };
+      if (unknown || !isLevel(item.current)) {
+        return formatMessage({ id: 'talentProfile.aiLevelTip.unknown' }, values);
+      }
+      const current = Number(item.current);
+      const tone = current < required ? 'below' : current > required ? 'above' : 'same';
+      return formatMessage(
+        { id: `talentProfile.aiLevelTip.${tone}` },
+        Object.assign(values, {
+          current: formatMessage({ id: `talentProfile.aiLevel.${current}` }),
+          currentDesc: formatMessage({ id: `talentProfile.aiLevelDesc.${current}` }),
+          delta: required - current
+        })
+      );
+    };
+
     const buildGroups = list => {
       const map = new Map();
       (list || []).forEach(item => {
@@ -390,7 +432,7 @@ const ProfileReadiness = createWithRemoteLoader({
     };
 
     const groups = useMemo(
-      () => buildGroups(statusFilter === 'all' ? displayRows : (displayRows || []).filter(item => resolveStatus(item) === statusFilter)),
+      () => buildGroups(statusFilter === 'all' ? displayRows : (displayRows || []).filter(item => resolveFilterStatuses(statusFilter).includes(resolveStatus(item)))),
       // eslint-disable-next-line react-hooks/exhaustive-deps
       [displayRows, statusFilter, formatMessage]
     );
@@ -443,6 +485,10 @@ const ProfileReadiness = createWithRemoteLoader({
     }
     // 有草稿 skills 时可直接预览，不必等 taskReadiness 接口
     if (rows == null && positionId && !overrideSkillRows?.length) {
+      return null;
+    }
+    // 岗位任务未返回前不展示草稿，避免先闪出未过滤的任务
+    if (hasDraftSkills && positionId && apis?.talentSaas?.tenant?.position?.tasks && positionTasks == null) {
       return null;
     }
 
@@ -766,7 +812,16 @@ const ProfileReadiness = createWithRemoteLoader({
       <div className={style['readiness-root']}>
         {error ? <Typography.Text type="danger">{error}</Typography.Text> : null}
         <div className={style['readiness-top']}>
-          <CapabilityStatusCard name={displayName} readiness={readiness} summary={summary} metrics={displayMetrics} themeColor={themeColor} extra={readinessEditButton} />
+          <CapabilityStatusCard
+            name={displayName}
+            readiness={readiness}
+            summary={summary}
+            metrics={displayMetrics}
+            themeColor={themeColor}
+            extra={readinessEditButton}
+            activeMetric={METRIC_STATUS_GROUPS[statusFilter] ? statusFilter : null}
+            onMetricClick={(displayRows || []).length ? key => setStatusFilter(prev => (prev === key ? 'all' : key)) : undefined}
+          />
 
           <Card
             className={style['gaps-card']}
@@ -833,7 +888,7 @@ const ProfileReadiness = createWithRemoteLoader({
                   {[{ key: 'all', label: formatMessage({ id: 'talentProfile.statusFilterAll' }), count: (displayRows || []).length }]
                     .concat(STATUS_FILTER_KEYS.map(key => ({ key, label: formatMessage({ id: STATUS_META[key].labelKey }), count: statusCounts[key], tone: STATUS_META[key].tone })))
                     .map(item => {
-                      const selected = statusFilter === item.key;
+                      const selected = item.key === 'all' ? statusFilter === 'all' : statusFilter !== 'all' && resolveFilterStatuses(statusFilter).includes(item.key);
                       return (
                         <button
                           key={item.key}
@@ -854,8 +909,12 @@ const ProfileReadiness = createWithRemoteLoader({
                   columns={[
                     formatMessage({ id: 'talentProfile.colActivityTask' }),
                     formatMessage({ id: 'talentProfile.status' }),
-                    formatMessage({ id: 'talentProfile.currentVsRequiredScale' }),
-                    formatMessage({ id: 'talentProfile.confidence' })
+                    <Tooltip styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line', textAlign: 'justify' }}>{formatMessage({ id: 'talentProfile.aiLevelColumnTip' })}</div>}>
+                      <span className={style['head-tip']}>{formatMessage({ id: 'talentProfile.currentVsRequiredScale' })}</span>
+                    </Tooltip>,
+                    <Tooltip styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line' }}>{formatMessage({ id: 'talentProfile.confidenceTip' })}</div>}>
+                      <span className={style['head-tip']}>{formatMessage({ id: 'talentProfile.confidence' })}</span>
+                    </Tooltip>
                   ]}
                   expanded={expanded}
                   onToggle={toggleGroup}
@@ -874,11 +933,19 @@ const ProfileReadiness = createWithRemoteLoader({
                   }}
                   renderMetric={item => {
                     const unknown = resolveStatus(item) === 'unknown';
-                    return (
+                    const tip = renderAiLevelTip(item, unknown);
+                    const cell = (
                       <div className={style['task-progress-cell']}>
                         <SkillProgress current={item.current} required={item.required} unknown={unknown} />
                         <span className={style['skill-score']}>{unknown ? (item.required ?? 0) : formatMessage({ id: 'talentProfile.scoreSlash' }, { current: item.current ?? 0, required: item.required ?? 0 })}</span>
                       </div>
+                    );
+                    return tip ? (
+                      <Tooltip styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line', textAlign: 'justify' }}>{tip}</div>}>
+                        {cell}
+                      </Tooltip>
+                    ) : (
+                      cell
                     );
                   }}
                   renderTrailing={item => {

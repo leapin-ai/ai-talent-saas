@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Empty, Flex } from 'antd';
+import { Empty, Flex, Tooltip } from 'antd';
 import { useIntl } from '@kne/react-intl';
 import classnames from 'classnames';
 import withLocale from '../../withLocale';
@@ -122,7 +122,18 @@ const SkillList = withLocale(({ skill, filter: controlledFilter, onFilterChange 
           <ActivityTaskTable
             maxBodyHeight={PINNED_SCROLL_MAX_HEIGHT}
             groups={groups}
-            columns={[formatMessage({ id: 'position.skillName' }), formatMessage({ id: 'position.skillChangeColumn' }), formatMessage({ id: 'position.skillImportanceColumn' }), formatMessage({ id: 'position.confidence' })]}
+            columns={[
+              formatMessage({ id: 'position.skillName' }),
+              <Tooltip title={formatMessage({ id: 'position.skillChangeColumnTip' })}>
+                <span className={style['head-tip']}>{formatMessage({ id: 'position.skillChangeColumn' })}</span>
+              </Tooltip>,
+              <Tooltip styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line' }}>{formatMessage({ id: 'position.skillImportanceColumnTip' })}</div>}>
+                <span className={style['head-tip']}>{formatMessage({ id: 'position.skillImportanceColumn' })}</span>
+              </Tooltip>,
+              <Tooltip styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line' }}>{formatMessage({ id: 'position.confidenceTip' })}</div>}>
+                <span className={style['head-tip']}>{formatMessage({ id: 'position.confidence' })}</span>
+              </Tooltip>
+            ]}
             expanded={expanded}
             onToggle={toggleGroup}
             selectedId={selectedSkill?.id}
@@ -130,7 +141,11 @@ const SkillList = withLocale(({ skill, filter: controlledFilter, onFilterChange 
             onHover={item => selectSkillById(item.id)}
             empty={<Empty description={formatMessage({ id: 'position.roleTasksEmpty' })} />}
             renderPrimary={item => item.name}
-            renderSecondary={item => <ChangeTag change={item.change} />}
+            renderSecondary={item => (
+              <div className={style['change-cell']}>
+                <ChangeTag change={item.change} />
+              </div>
+            )}
             renderMetric={item => <ImportanceBar importanceNow={item.importanceNow} importanceYear={item.importanceYear} />}
             renderTrailing={item => formatMessage({ id: (LEVEL_META[item.confidence] || LEVEL_META.medium).labelKey })}
           />
