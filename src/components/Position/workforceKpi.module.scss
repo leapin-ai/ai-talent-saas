@@ -46,15 +46,9 @@
   }
 }
 
-.titleTail {
-  white-space: nowrap;
-}
-
-.info {
-  margin-inline-start: 4px;
-  color: rgba(0, 0, 0, 0.45);
-  font-size: 14px;
+.titleTip {
   cursor: help;
+  border-bottom: 1px dashed currentColor;
 }
 
 .valueChange :global(.ant-statistic-content) {

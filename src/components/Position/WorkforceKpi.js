@@ -1,30 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Card, Col, Row, Statistic, Tooltip } from 'antd';
-import { InfoCircleOutlined } from '@ant-design/icons';
 import classnames from 'classnames';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
 import style from './workforceKpi.module.scss';
 
-const KpiTitle = ({ label, hint }) => {
-  const text = String(label || '');
-  const wordMatch = text.match(/^(.*\s)(\S+)$/);
-  // 有空格时跟最后一个词，否则跟最后一个字，避免图标单独换行或拆开英文单词
-  const head = wordMatch ? wordMatch[1] : text.slice(0, -1);
-  const tail = wordMatch ? wordMatch[2] : text.slice(-1);
-  return (
-    <>
-      {head}
-      <span className={style.titleTail}>
-        {tail}
-        <Tooltip title={hint}>
-          <InfoCircleOutlined className={style.info} onClick={e => e.stopPropagation()} />
-        </Tooltip>
-      </span>
-    </>
-  );
-};
+const KpiTitle = ({ label, hint }) => (
+  <Tooltip placement="bottom" title={hint}>
+    <span className={style.titleTip}>{label}</span>
+  </Tooltip>
+);
 
 const WorkforceKpi = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']
