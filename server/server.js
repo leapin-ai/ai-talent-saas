@@ -90,7 +90,11 @@ const createServer = () => {
         ALI_ASR_REGION: { type: 'string', default: 'cn-shanghai' },
         ALI_ASR_DOMAIN: { type: 'string', default: 'filetrans.cn-shanghai.aliyuncs.com' },
         ALI_ASR_API_VERSION: { type: 'string', default: '2018-08-17' },
-        ALI_ASR_ENDPOINT: { type: 'string' }
+        ALI_ASR_ENDPOINT: { type: 'string' },
+
+        APP_MANAGER_ENABLED: { type: 'boolean', default: true },
+        APPS_ROOT: { type: 'string', default: '' },
+        APPS_DB_DATABASE: { type: 'string', default: '' }
       }
     }
   });
@@ -116,6 +120,24 @@ const createServer = () => {
           logging: false
         },
         prefix: tablePrefix || 't_',
+        connections:
+          fastify.config.APP_MANAGER_ENABLED && fastify.config.APPS_DB_DATABASE
+            ? {
+                appManagerApps: {
+                  db: {
+                    dialect: fastify.config.DB_DIALECT,
+                    host: fastify.config.DB_HOST,
+                    port: fastify.config.DB_PORT,
+                    database: fastify.config.APPS_DB_DATABASE,
+                    username: fastify.config.DB_USERNAME,
+                    password: fastify.config.DB_PASSWORD,
+                    logging: false
+                  },
+                  sqlPath: false,
+                  modelsPath: null
+                }
+              }
+            : {},
         modelsGlobOptions: {
           syncOptions: {}
         },
@@ -340,6 +362,46 @@ const createServer = () => {
           from: fastify.config.AWS_SES_SOURCE_EMAIL
         }
       });
+
+      // 应用中心会连接 PM2 托管子应用进程，默认关闭，仅在作为宿主部署时开启
+      if (fastify.config.APP_MANAGER_ENABLED) {
+        // 与 fastify-oidc 主 IdP 默认的 mountPath(/oidc)、prefix(/api/oidc) 保持一致
+        const oidcOrigin = new URL(fastify.config.ORIGIN).origin;
+        const appOidc = require('@kne/fastify-app-manager/oidc')(fastify, {
+          origin: oidcOrigin,
+          issuer: `${oidcOrigin}/oidc`,
+          serviceAudience: `${oidcOrigin}/api/oidc`
+        });
+        fastify.register(require('@kne/fastify-app-manager'), {
+          prefix: `${options.prefix}/app-manager`,
+          dbTableNamePrefix: tablePrefix ? `${tablePrefix}app_manager_` : 't_app_manager_',
+          appsRoot: path.resolve(fastify.config.APPS_ROOT || './managed-apps'),
+          // 本机与 developer-document 共用 pm2，其应用中心从 4000 分配端口，这里错开
+          portMin: 4100,
+          migrateBeforeStart: true,
+          defaultAppDbConnection: fastify.config.APPS_DB_DATABASE ? 'appManagerApps' : null,
+          defaultAppDb: fastify.config.APPS_DB_DATABASE
+            ? {
+                dialect: fastify.config.DB_DIALECT,
+                host: fastify.config.DB_HOST,
+                port: fastify.config.DB_PORT,
+                database: fastify.config.APPS_DB_DATABASE,
+                username: fastify.config.DB_USERNAME,
+                password: fastify.config.DB_PASSWORD,
+                logging: false
+              }
+            : null,
+          systemEnvKeys: appOidc.systemEnvKeys,
+          resolveSystemEnv: appOidc.resolveSystemEnv,
+          onAppRemoved: appOidc.onAppRemoved,
+          getOpenApiToken: appOidc.getOpenApiToken,
+          issueUserAccessToken: appOidc.issueUserAccessToken,
+          resolveVersionFile: async ({ fileId }) => {
+            const { buffer } = await fastify.fileManager.services.fileRecord.getFileBlob({ id: fileId });
+            return buffer;
+          }
+        });
+      }
     })
   );
 

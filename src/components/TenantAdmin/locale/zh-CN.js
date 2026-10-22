@@ -198,6 +198,7 @@ const zhCN = {
   'tenantAdmin.export': '导出',
   'tenantAdmin.internalTalentMarket': '内部人才市场',
   'tenantAdmin.positionManagement': '人才队伍就绪度',
+  'tenantAdmin.appCenter': '应用中心',
   'tenantAdmin.settings': '设置',
   'tenantAdmin.companyInfo': '公司信息',
   'tenantAdmin.orgStructure': '组织架构',

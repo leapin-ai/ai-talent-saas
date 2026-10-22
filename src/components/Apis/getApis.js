@@ -12,16 +12,6 @@ const getApis = options => {
           url: `${prefix}/tenant/admin/send-org-message`,
           method: 'POST'
         },
-        position: {
-          list: {
-            url: `${prefix}/tenant/admin/position-list`,
-            method: 'GET'
-          },
-          create: {
-            url: `${prefix}/tenant/admin/position-create`,
-            method: 'POST'
-          }
-        },
         homeSetting: {
           detail: {
             url: `${prefix}/tenant/admin/home-setting`,
@@ -277,6 +267,20 @@ const getApis = options => {
         aiInterview: {
           projects: {
             url: `${prefix}/tenant/ai-interview-projects`,
+            method: 'GET'
+          }
+        },
+        employeeQuestionnaire: {
+          projectList: {
+            url: `${prefix}/tenant/employee-questionnaire/project/list`,
+            method: 'GET'
+          },
+          send: {
+            url: `${prefix}/tenant/employee-questionnaire/send`,
+            method: 'POST'
+          },
+          list: {
+            url: `${prefix}/tenant/employee-questionnaire/list`,
             method: 'GET'
           }
         },

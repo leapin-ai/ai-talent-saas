@@ -722,6 +722,40 @@ const buildReviewDataExport = profileDetail => {
   });
 };
 
+/** 员工历次评估邀请（入库的填写信息与视频转写，不含 AI 面试问答） */
+const buildPreviousAssessmentsExport = collectInvites => {
+  const list = (Array.isArray(collectInvites) ? collectInvites : [])
+    .map(item => {
+      const transcripts = item.videoTranscripts && typeof item.videoTranscripts === 'object' ? Object.values(item.videoTranscripts).map(transcriptText).filter(Boolean) : [];
+      return pickDefined({
+        projectName: item.projectName || null,
+        status: item.status || null,
+        invitedAt: formatSubmittedAt(item.invitedAt) || null,
+        completedAt: formatSubmittedAt(item.completedAt) || null,
+        submittedInfo: buildSubmittedInfoExport(item.profileData),
+        videoTranscripts: transcripts.length ? transcripts : null
+      });
+    })
+    .filter(item => item && Object.keys(item).length > 0);
+  return list.length ? list : null;
+};
+
+/** 员工全部补充问卷答卷，按题目 schema 转成可读结构 */
+export const buildQuestionnaireResponsesExport = questionnaires => {
+  const list = (Array.isArray(questionnaires) ? questionnaires : [])
+    .map(item => {
+      const blocks = item.schema?.blocks;
+      const answers = Array.isArray(blocks) && item.answers ? walkBlocks(blocks, item.answers) : null;
+      return pickDefined({
+        projectName: item.projectName || null,
+        submittedAt: formatSubmittedAt(item.submittedAt) || null,
+        answers: answers && Object.keys(answers).length ? answers : null
+      });
+    })
+    .filter(item => item && Object.keys(item).length > 0);
+  return list.length ? list : null;
+};
+
 export const buildInterviewExport = ({
   interview,
   videoTranscripts,
@@ -732,6 +766,8 @@ export const buildInterviewExport = ({
   resumeParsed,
   submittedInfo,
   profileDetail,
+  collectInvites,
+  questionnaires,
   includeEmployee = false,
   includeResume = false,
   includeSubmittedInfo = false,
@@ -743,6 +779,14 @@ export const buildInterviewExport = ({
     questionnaire: buildQuestionnaireExport(interview),
     questions: buildQuestions(interview, videoTranscripts)
   };
+  const previousAssessments = buildPreviousAssessmentsExport(collectInvites);
+  if (previousAssessments) {
+    data.previousAssessments = previousAssessments;
+  }
+  const questionnaireResponses = buildQuestionnaireResponsesExport(questionnaires);
+  if (questionnaireResponses) {
+    data.questionnaireResponses = questionnaireResponses;
+  }
   if (includeEmployee) {
     data.employee = buildEmployeeExport(employee, assessment);
   }

@@ -223,6 +223,12 @@ module.exports = fp(async (fastify, options) => {
           });
           employee = employeeRow ? employeeRow.get({ plain: true }) : null;
         }
+      } else if (row.interviewData?.employeeId) {
+        const employeeRow = await models.employee.findOne({
+          where: { id: String(row.interviewData.employeeId), tenantId: row.tenantId },
+          include: [models.profile]
+        });
+        employee = employeeRow ? employeeRow.get({ plain: true }) : null;
       }
     } catch (e) {
       employee = null;
@@ -876,6 +882,12 @@ module.exports = fp(async (fastify, options) => {
           });
           employee = employeeRow ? employeeRow.get({ plain: true }) : null;
         }
+      } else if (row.interviewData?.employeeId) {
+        const employeeRow = await models.employee.findOne({
+          where: { id: String(row.interviewData.employeeId), tenantId },
+          include: [models.profile]
+        });
+        employee = employeeRow ? employeeRow.get({ plain: true }) : null;
       }
     } catch (e) {
       employee = null;
@@ -1033,6 +1045,27 @@ module.exports = fp(async (fastify, options) => {
       interviewError = error?.message || '拉取面试详情失败';
     }
 
+    // 历史评估邀请只带入库数据，不逐条拉 AI 面试详情
+    let collectInvites = [];
+    let questionnaires = [];
+    if (employee?.id) {
+      const inviteRows = await models.talentCollectInvite.findAll({
+        where: { tenantId, employeeId: String(employee.id), inviteType: 'employee' },
+        order: [['createdAt', 'ASC']]
+      });
+      collectInvites = inviteRows.map(item => ({
+        id: item.id,
+        positionId: item.positionId,
+        projectName: item.projectName || '',
+        status: item.status,
+        invitedAt: item.createdAt,
+        completedAt: item.interviewData?.completedAt || null,
+        profileData: item.profileData || {},
+        videoTranscripts: item.interviewData?.videoTranscripts || null
+      }));
+      questionnaires = await services.employeeQuestionnaire.listSubmitted({ tenantId, employeeId: employee.id });
+    }
+
     return {
       task: {
         id: task.id,
@@ -1053,6 +1086,8 @@ module.exports = fp(async (fastify, options) => {
       interviewError,
       videoTranscripts,
       videoAsrStatus,
+      collectInvites,
+      questionnaires,
       apiHost,
       cdnUrl,
       version
@@ -1120,6 +1155,8 @@ module.exports = fp(async (fastify, options) => {
         if (invite?.employeeId) {
           employeeId = invite.employeeId;
         }
+      } else if (row.interviewData?.employeeId) {
+        employeeId = String(row.interviewData.employeeId);
       }
       if (employeeId && services.workforce) {
         const employee = linked || (await models.employee.findByPk(employeeId));

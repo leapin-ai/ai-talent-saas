@@ -7,6 +7,9 @@ import withLocale from '../../withLocale';
 import AssessmentTag from './AssessmentTag';
 import ReadinessBar from './ReadinessBar';
 import InviteAssessment from './InviteAssessment';
+import useInviteQuestionnaire from './useInviteQuestionnaire';
+import useQuestionnaireRecords from './useQuestionnaireRecords';
+import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
 import style from './style.module.scss';
 
 const EMPTY_METRICS = { total: 0, assessed: 0, outdated: 0, never: 0, inProgress: 0 };
@@ -59,10 +62,25 @@ const PersonCell = ({ Avatar, item, onOpen }) => {
 };
 
 const AnalyzeTalent = createWithRemoteLoader({
-  modules: ['components-core:Table@TablePage', 'components-core:Table', 'components-core:Filter', 'components-core:Image.Avatar']
+  modules: [
+    'components-core:Table@TablePage',
+    'components-core:Table',
+    'components-core:Filter',
+    'components-core:Image.Avatar',
+    'components-core:FormInfo',
+    'components-core:FormInfo@useFormModal',
+    'components-core:Global@usePreset',
+    'components-core:Permissions@usePermissionsPass',
+    'components-core:Modal@useModal',
+    'components-core:ButtonGroup'
+  ]
 })(
   withLocale(({ remoteModules, baseUrl = '', positionId, employeeListApi }) => {
-    const [TablePage, Table, Filter, Avatar] = remoteModules;
+    const [TablePage, Table, Filter, Avatar, FormInfo, useFormModal, usePreset, usePermissionsPass, useModal, ButtonGroup] = remoteModules;
+    const { capabilities } = usePreset();
+    const canInvite = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInvite });
+    const inviteQuestionnaire = useInviteQuestionnaire({ useFormModal, FormInfo, usePreset, positionId });
+    const showQuestionnaireRecords = useQuestionnaireRecords({ useModal, usePreset });
     // 此处远程模块已加载完成，覆盖才不会被 table-page 自带语言包盖掉
     registerTablePageMessages();
     const { formatMessage } = useIntl();
@@ -151,8 +169,35 @@ const AnalyzeTalent = createWithRemoteLoader({
         title: formatMessage({ id: 'position.talentLastAssessment' }),
         type: 'other',
         valueOf: item => <AssessmentTag status={item.lastAssessment} />
-      }
-    ];
+      },
+      capabilities?.appManager && canInvite
+        ? {
+            name: 'options',
+            title: formatMessage({ id: 'position.talentInviteActions' }),
+            type: 'options',
+            fixed: 'right',
+            valueOf: item => ({
+              children: ({ itemClassName, moreType, buttonProps }) => (
+                <ButtonGroup
+                  showLength={0}
+                  itemClassName={itemClassName}
+                  moreType={moreType}
+                  list={[
+                    {
+                      children: formatMessage({ id: 'position.questionnaireInviteAction' }),
+                      onClick: () => inviteQuestionnaire(item)
+                    },
+                    {
+                      children: formatMessage({ id: 'position.questionnaireRecordAction' }),
+                      onClick: () => showQuestionnaireRecords(item)
+                    }
+                  ].map(action => Object.assign({}, action, buttonProps))}
+                />
+              )
+            })
+          }
+        : null
+    ].filter(Boolean);
 
     if (!listApi) {
       return <div className={style.root}>{formatMessage({ id: 'position.tabAnalyzeTalentPlaceholder' })}</div>;

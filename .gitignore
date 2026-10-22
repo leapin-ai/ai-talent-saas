@@ -135,3 +135,7 @@ graphify-out
 
 # macOS Finder metadata
 .DS_Store
+
+# 应用中心托管的子应用
+managed-apps
+server/managed-apps
