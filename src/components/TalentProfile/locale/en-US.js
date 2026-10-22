@@ -213,8 +213,7 @@ const enUS = {
   'talentProfile.scoreSlash': '{current} → {required}',
   'talentProfile.currentVsRequired': 'AI Level Current → Required',
   'talentProfile.currentVsRequiredScale': 'AI Level Current → Required (1-5)',
-  'talentProfile.aiLevelColumnTip':
-    "How much AI is involved in doing the task. It describes the human–AI split, not the task's value. The employee's current level and the role's future requirement use the same scale.\nA1 Not Applicable · A2 Light Assist · A3 Partial Assist · A4 Strong Assist · A5 Full Automation\nUndeterminable is not part of A1–A5 and is excluded from gap calculation.\nHover a bar for details",
+  'talentProfile.aiLevelColumnTip': 'How much AI is involved in doing the task.\nA1 Human-led · A5 Automated',
   'talentProfile.aiLevel.1': 'A1 Not Applicable',
   'talentProfile.aiLevel.2': 'A2 Light Assist',
   'talentProfile.aiLevel.3': 'A3 Partial Assist',
@@ -233,15 +232,13 @@ const enUS = {
   'talentProfile.statusFilterEmpty': 'No tasks with this status',
   'talentProfile.futureTaskReadiness': 'Future Task Readiness',
   'talentProfile.colActivity': 'Activity',
-  'talentProfile.colActivityTip': 'An area of responsibility in the role, numbered A01, A02… Each activity groups several concrete tasks.',
   'talentProfile.colTask': 'Task',
-  'talentProfile.colTaskTip': 'A concrete piece of work within an activity; the smallest unit for assessing importance, AI impact and people readiness.',
   'talentProfile.statusTip':
     'How the current AI level compares with the role requirement.\nCritical Gap: 2 or more levels below\nGap: 1 level below\nOn Target: equal to the requirement\nAbove: higher than the requirement\nUnknown: the current AI level cannot be determined and is excluded from gap calculation',
   'talentProfile.activityTaskCount': '{count} tasks',
   'talentProfile.confidence': 'Confidence',
   'talentProfile.confidenceTip':
-    "How reliable the judgment of this employee's current AI level on the task is.\nHigh: evidence maps to the task and describes the human–AI split\nMedium: evidence maps to the task but doesn't describe the split\nLow: evidence doesn't map to the task directly (inferred from the activity), or there is no confidence basis",
+    "Confidence in the judgment of this employee's current AI level on the task.\nHigh: strong support from the employee's profile and survey\nMedium: some support, but not enough\nLow: little direct support from the employee's profile and survey",
   'talentProfile.confidenceHigh': 'High',
   'talentProfile.confidenceMedium': 'Medium',
   'talentProfile.confidenceLow': 'Low',

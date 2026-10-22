@@ -124,13 +124,9 @@ const SkillList = withLocale(({ skill, filter: controlledFilter, onFilterChange 
             groups={groups}
             columns={[
               <span>
-                <Tooltip title={formatMessage({ id: 'position.activityColumnTip' })}>
-                  <span className={style['head-tip']}>{formatMessage({ id: 'position.activityColumn' })}</span>
-                </Tooltip>
+                {formatMessage({ id: 'position.activityColumn' })}
                 {' / '}
-                <Tooltip title={formatMessage({ id: 'position.taskColumnTip' })}>
-                  <span className={style['head-tip']}>{formatMessage({ id: 'position.taskColumn' })}</span>
-                </Tooltip>
+                {formatMessage({ id: 'position.taskColumn' })}
               </span>,
               <Tooltip title={formatMessage({ id: 'position.skillChangeColumnTip' })}>
                 <span className={style['head-tip']}>{formatMessage({ id: 'position.skillChangeColumn' })}</span>

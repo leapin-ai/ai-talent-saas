@@ -908,13 +908,9 @@ const ProfileReadiness = createWithRemoteLoader({
                   empty={<Empty description={formatMessage({ id: 'talentProfile.statusFilterEmpty' })} />}
                   columns={[
                     <span>
-                      <Tooltip title={formatMessage({ id: 'talentProfile.colActivityTip' })}>
-                        <span className={style['head-tip']}>{formatMessage({ id: 'talentProfile.colActivity' })}</span>
-                      </Tooltip>
+                      {formatMessage({ id: 'talentProfile.colActivity' })}
                       {' / '}
-                      <Tooltip title={formatMessage({ id: 'talentProfile.colTaskTip' })}>
-                        <span className={style['head-tip']}>{formatMessage({ id: 'talentProfile.colTask' })}</span>
-                      </Tooltip>
+                      {formatMessage({ id: 'talentProfile.colTask' })}
                     </span>,
                     <Tooltip styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line' }}>{formatMessage({ id: 'talentProfile.statusTip' })}</div>}>
                       <span className={style['head-tip']}>{formatMessage({ id: 'talentProfile.status' })}</span>
