@@ -51,8 +51,9 @@ const statusDotClass = {
   unknown: 'dot-unknown'
 };
 
-const ReadinessRing = ({ value, formatMessage }) => {
+const ReadinessRing = ({ value, name, formatMessage }) => {
   const pct = Math.min(100, Math.max(0, Number(value) || 0));
+  const hasValue = value != null && value !== '' && Number.isFinite(Number(value));
   const size = 132;
   const stroke = 10;
   const radius = (size - stroke) / 2;
@@ -78,8 +79,18 @@ const ReadinessRing = ({ value, formatMessage }) => {
         />
       </svg>
       <div className={style['ring-label']}>
-        <div className={style['ring-value']}>{formatMessage({ id: 'position.talentSkillReadinessPercent' }, { percent: pct })}</div>
-        <div className={style['ring-caption']}>{readinessLabel}</div>
+        <Tooltip
+          placement="top"
+          styles={{ root: { maxWidth: 440 } }}
+          title={<div style={{ textAlign: 'justify' }}>{hasValue ? formatMessage({ id: 'position.talentSkillReadinessValueTip' }, { name, value: pct }) : formatMessage({ id: 'position.talentSkillReadinessValueTipEmpty' })}</div>}
+        >
+          <div className={`${style['ring-value']} ${style['halo-value-tip']}`}>{formatMessage({ id: 'position.talentSkillReadinessPercent' }, { percent: pct })}</div>
+        </Tooltip>
+        <div className={style['ring-caption']}>
+          <Tooltip placement="bottom" styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line', textAlign: 'justify' }}>{formatMessage({ id: 'position.talentSkillReadinessTip' })}</div>}>
+            <span className={style['halo-label-tip']}>{readinessLabel}</span>
+          </Tooltip>
+        </div>
       </div>
     </div>
   );
@@ -342,7 +353,7 @@ const CapabilityStatusCard = withLocale(({ name, readiness, summary, metrics, th
   return (
     <Card className={style['halo-card']} theme="halo" color={cardColor} hover={false}>
       <div className={style['halo-body']}>
-        <ReadinessRing value={readiness} formatMessage={formatMessage} />
+        <ReadinessRing value={readiness} name={displayName} formatMessage={formatMessage} />
         <div className={style['halo-copy']}>
           <div className={style['halo-title-row']}>
             <div className={style['halo-title']}>

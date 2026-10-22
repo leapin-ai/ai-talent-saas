@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { Button, Drawer } from 'antd';
+import { Button, Drawer, Tooltip } from 'antd';
 import { useIsMobile } from '@kne/responsive-utils';
 import { Card } from '@kne/react-box';
 import '@kne/react-box/dist/index.css';
@@ -41,11 +41,21 @@ const CompletionRing = ({ value, formatMessage }) => {
         <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#5B6CFF" strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
       </svg>
       <div className={style['ph-ring-label']}>
-        <div className={style['ph-ring-value']}>
-          <span className={style['ph-ring-num']}>{pct}</span>
-          <span className={style['ph-ring-pct']}>%</span>
+        <Tooltip
+          placement="top"
+          styles={{ root: { maxWidth: 440 } }}
+          title={<div style={{ textAlign: 'justify' }}>{formatMessage({ id: pct >= 100 ? 'talentProfile.completionValueTipFull' : 'talentProfile.completionValueTip' }, { value: pct })}</div>}
+        >
+          <div className={`${style['ph-ring-value']} ${style['value-tip']}`}>
+            <span className={style['ph-ring-num']}>{pct}</span>
+            <span className={style['ph-ring-pct']}>%</span>
+          </div>
+        </Tooltip>
+        <div className={style['ph-ring-caption']}>
+          <Tooltip placement="bottom" styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line', textAlign: 'justify' }}>{formatMessage({ id: 'talentProfile.completionTip' })}</div>}>
+            <span className={style['head-tip']}>{formatMessage({ id: 'talentProfile.completionCaption' })}</span>
+          </Tooltip>
         </div>
-        <div className={style['ph-ring-caption']}>{formatMessage({ id: 'talentProfile.completionCaption' })}</div>
       </div>
     </div>
   );

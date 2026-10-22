@@ -907,8 +907,18 @@ const ProfileReadiness = createWithRemoteLoader({
                   groups={groups}
                   empty={<Empty description={formatMessage({ id: 'talentProfile.statusFilterEmpty' })} />}
                   columns={[
-                    formatMessage({ id: 'talentProfile.colActivityTask' }),
-                    formatMessage({ id: 'talentProfile.status' }),
+                    <span>
+                      <Tooltip title={formatMessage({ id: 'talentProfile.colActivityTip' })}>
+                        <span className={style['head-tip']}>{formatMessage({ id: 'talentProfile.colActivity' })}</span>
+                      </Tooltip>
+                      {' / '}
+                      <Tooltip title={formatMessage({ id: 'talentProfile.colTaskTip' })}>
+                        <span className={style['head-tip']}>{formatMessage({ id: 'talentProfile.colTask' })}</span>
+                      </Tooltip>
+                    </span>,
+                    <Tooltip styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line' }}>{formatMessage({ id: 'talentProfile.statusTip' })}</div>}>
+                      <span className={style['head-tip']}>{formatMessage({ id: 'talentProfile.status' })}</span>
+                    </Tooltip>,
                     <Tooltip styles={{ root: { maxWidth: 440 } }} title={<div style={{ whiteSpace: 'pre-line', textAlign: 'justify' }}>{formatMessage({ id: 'talentProfile.aiLevelColumnTip' })}</div>}>
                       <span className={style['head-tip']}>{formatMessage({ id: 'talentProfile.currentVsRequiredScale' })}</span>
                     </Tooltip>,

@@ -123,7 +123,15 @@ const SkillList = withLocale(({ skill, filter: controlledFilter, onFilterChange 
             maxBodyHeight={PINNED_SCROLL_MAX_HEIGHT}
             groups={groups}
             columns={[
-              formatMessage({ id: 'position.skillName' }),
+              <span>
+                <Tooltip title={formatMessage({ id: 'position.activityColumnTip' })}>
+                  <span className={style['head-tip']}>{formatMessage({ id: 'position.activityColumn' })}</span>
+                </Tooltip>
+                {' / '}
+                <Tooltip title={formatMessage({ id: 'position.taskColumnTip' })}>
+                  <span className={style['head-tip']}>{formatMessage({ id: 'position.taskColumn' })}</span>
+                </Tooltip>
+              </span>,
               <Tooltip title={formatMessage({ id: 'position.skillChangeColumnTip' })}>
                 <span className={style['head-tip']}>{formatMessage({ id: 'position.skillChangeColumn' })}</span>
               </Tooltip>,

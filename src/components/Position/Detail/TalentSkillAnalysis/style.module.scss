@@ -137,6 +137,11 @@
   border-bottom: 1px dashed currentColor;
 }
 
+.ring-label .halo-value-tip,
+.ring-label .halo-label-tip {
+  pointer-events: auto;
+}
+
 .halo-metric-critical {
   color: #be123c;
 }
