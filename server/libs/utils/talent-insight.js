@@ -1,5 +1,6 @@
 const { extractInterviewSignals } = require('./extract-interview-signals');
 const { requestTalentInsightFill, normalizeOutputLanguage } = require('./llm-runner');
+const { resolveEmployeeTargetTasks, alignSkillsToTargetTasks } = require('./employee-tasks');
 
 const normalizeConfidence = value => {
   const key = String(value || '')
@@ -246,15 +247,17 @@ const normalizeInsightAiSuggest = raw => {
 
 const runTalentInsightFill = async (fastify, { language, context, draft }) => {
   const outputLanguage = normalizeOutputLanguage(language || context?.outputLanguage || 'zh-CN');
+  const targetTasks = resolveEmployeeTargetTasks(context?.position?.skill);
   const raw = await requestTalentInsightFill(fastify, {
     schema: buildTalentInsightSchemaHint(),
-    context: Object.assign({}, context, { outputLanguage }),
+    context: Object.assign({}, context, { outputLanguage }, targetTasks.length ? { targetTasks } : {}),
     draft: draft || {},
     language: outputLanguage
   });
+  const readiness = normalizeInsightReadiness(raw?.readiness || raw);
   return {
     language: outputLanguage,
-    readiness: normalizeInsightReadiness(raw?.readiness || raw),
+    readiness: Object.assign({}, readiness, { skills: alignSkillsToTargetTasks(readiness.skills, targetTasks) }),
     aiSuggest: normalizeInsightAiSuggest(raw?.aiSuggest || raw)
   };
 };

@@ -121,7 +121,7 @@
 | `resumeParsed` | 简历解析结果（不含文件 id / oss 等附件字段） |
 | `submittedInfo` | 调研填写信息；**含 `projects[]` 项目经历** |
 | `profile` | 档案扩展（技能标签、意向岗位、工作偏好、linkedin 等） |
-| `skillAnalysis` | Workforce Readiness 草稿，见 §2.2；可回贴 [导入 §2](./clipboard-import-data-format.md) |
+| `skillAnalysis` | 人才队伍就绪度草稿，见 §2.2；可回贴 [导入 §2](./clipboard-import-data-format.md) |
 | `aiSuggest` | 成长建议 / 岗位匹配 |
 | `profileCompletionPercent` | 审核人手动设置（或导入）的档案完成度 0–100；**仅在已手动设置时导出**，自动计算时省略。回贴见 [导入 §2.5](./clipboard-import-data-format.md) |
 

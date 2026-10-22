@@ -1357,6 +1357,20 @@
   opacity: 0.6;
 }
 
+.head-tip {
+  cursor: help;
+  border-bottom: 1px dashed currentColor;
+}
+
+.value-tip {
+  cursor: help;
+}
+
+.ph-ring-label .value-tip,
+.ph-ring-label .head-tip {
+  pointer-events: auto;
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;

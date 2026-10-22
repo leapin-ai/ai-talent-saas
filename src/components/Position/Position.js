@@ -12,10 +12,6 @@ import InviteAssessment from './Detail/AnalyzeTalent/InviteAssessment';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
 import useTablePaginationSearchParams from '../../commons/useTablePaginationSearchParams';
 
-const mapFilterValue = (value, getFilterValue) => ({
-  filter: getFilterValue(value)
-});
-
 const Position = createWithRemoteLoader({
   modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter', 'components-core:Permissions@usePermissionsPass']
 })(
@@ -26,7 +22,21 @@ const Position = createWithRemoteLoader({
     const paginationSearchParams = useTablePaginationSearchParams();
     const { ajax } = usePreset();
     const [filterValue, setFilterValue] = useState([]);
+    const [activeKpi, setActiveKpi] = useState(null);
     const [listKey, setListKey] = useState(0);
+
+    const mapFilterValue = useCallback(
+      (value, getFilterValue) => ({
+        filter: Object.assign({}, getFilterValue(value), activeKpi ? { kpi: activeKpi } : {})
+      }),
+      [activeKpi]
+    );
+
+    const selectKpi = useCallback(key => {
+      setActiveKpi(prev => (prev === key ? null : key));
+      setFilterValue([]);
+      setListKey(value => value + 1);
+    }, []);
     const canCreate = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionCreate });
     const canEdit = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionEdit });
     const canPublish = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionPublish });
@@ -115,6 +125,7 @@ const Position = createWithRemoteLoader({
     };
 
     const applyHighChangeFilter = useCallback(() => {
+      setActiveKpi(null);
       setFilterValue([
         {
           name: 'changeMagnitude',
@@ -138,7 +149,7 @@ const Position = createWithRemoteLoader({
     });
 
     const insightBanner = withInsightBanner ? <InsightBanner apis={apis} onReview={applyHighChangeFilter} /> : null;
-    const workforceKpi = withInsightBanner ? <WorkforceKpi apis={apis} /> : null;
+    const workforceKpi = withInsightBanner ? <WorkforceKpi apis={apis} activeKey={activeKpi} onSelect={selectKpi} /> : null;
 
     const renderCard = useMemo(() => createPositionListCardsRender({ onDetail, formatMessage }), [onDetail, formatMessage]);
     const renderMobile = renderCard;

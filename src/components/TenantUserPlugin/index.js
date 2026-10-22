@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Button, Flex } from 'antd';
 import merge from 'lodash/merge';
 import { Actions } from '@components/Employee';
-import PositionFormInner, { createPaySalary } from '@components/Position/PositionForm';
+import PositionFormInner, { createPaySalary, toSavePayload } from '@components/Position/PositionForm';
 import withLocale, { FormatMessage } from './withLocale';
 import { useIntl } from '@kne/react-intl';
 
@@ -84,7 +84,7 @@ const TenantUserPlugin = createWithRemoteLoader({
   withLocale(({ remoteModules, list, apis, ...props }) => {
     const { formatMessage } = useIntl();
     const [FormInfo, useFormModal, usePreset] = remoteModules;
-    const { SuperSelect, DatePicker } = FormInfo.fields;
+    const { SuperSelect, DatePicker, Input } = FormInfo.fields;
     const { ajax } = usePreset();
     const formModal = useFormModal();
 
@@ -118,7 +118,7 @@ const TenantUserPlugin = createWithRemoteLoader({
                       onSubmit: async formData => {
                         const { data: resData } = await ajax(
                           Object.assign({}, apis.positionCreate, {
-                            data: Object.assign({ status: 'published' }, apis.positionCreate?.data || {}, formData)
+                            data: Object.assign({}, apis.positionCreate?.data || {}, toSavePayload(formData), { status: 'published' })
                           })
                         );
                         if (resData.code !== 0) {
@@ -128,7 +128,12 @@ const TenantUserPlugin = createWithRemoteLoader({
                         return resData.data;
                       }
                     },
-                    children: <PositionFormInner />
+                    children: (
+                      <>
+                        <FormInfo column={1} list={[<Input name="name" label={formatMessage({ id: 'tenantUser.positionName' })} rule="REQ LEN-0-200" />]} />
+                        <PositionFormInner apis={{ orgList: apis.orgList }} />
+                      </>
+                    )
                   });
                 }}
               >
@@ -140,7 +145,7 @@ const TenantUserPlugin = createWithRemoteLoader({
       );
       newList.splice(7, 0, <DatePicker name="options.joinDate" label={formatMessage({ id: 'tenantUser.joinDate' })} />, <DatePicker name="options.workStartDate" label={formatMessage({ id: 'tenantUser.workStartDate' })} />);
       return newList;
-    }, [ajax, list, formatMessage, apis.positionCreate, positionApi, formModal]);
+    }, [ajax, list, formatMessage, apis.positionCreate, apis.orgList, positionApi, formModal]);
     return <FormInfo {...props} list={formInnerList} />;
   })
 );

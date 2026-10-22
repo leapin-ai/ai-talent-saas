@@ -314,6 +314,10 @@ module.exports = fp(async (fastify, options) => {
       .map(row => {
         const plain = row.toJSON ? row.toJSON() : row;
         const task = plain.positionTask || {};
+        // 个人任务 = 岗位任务 − AI 新兴任务
+        if (task.changeTag === 'ai_emerging') {
+          return null;
+        }
         if (activityGroup && task.activityGroup !== activityGroup) {
           return null;
         }
@@ -427,7 +431,7 @@ module.exports = fp(async (fastify, options) => {
           return null;
         }
         const task = byTitle.get(title.toLowerCase());
-        if (!task) {
+        if (!task || task.changeTag === 'ai_emerging') {
           return null;
         }
         return {
