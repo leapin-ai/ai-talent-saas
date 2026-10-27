@@ -175,6 +175,10 @@ const getApis = options => {
             url: `${prefix}/tenant/position/workforce-summary`,
             method: 'GET'
           },
+          workforceAiMix: {
+            url: `${prefix}/tenant/position/workforce-ai-mix`,
+            method: 'GET'
+          },
           tasks: {
             url: `${prefix}/tenant/position/tasks`,
             method: 'GET'

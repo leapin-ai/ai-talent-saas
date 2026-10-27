@@ -26,6 +26,11 @@ module.exports = ({ DataTypes, options }) => {
         comment: '优先差距 [{ rank, title, description, current?, required? }]',
         defaultValue: []
       },
+      keySkillGaps: {
+        type: DataTypes.JSONB,
+        comment: '关键技能变化 [{ rank, category, name, skillNow[], skillFuture, evolution[], score, primaryTask, alsoOnTasks[] }]',
+        defaultValue: []
+      },
       developmentPlan: {
         type: DataTypes.JSONB,
         comment: '发展计划 { subtitle, horizons: [{ label, period, title, tone, items, target }] }',

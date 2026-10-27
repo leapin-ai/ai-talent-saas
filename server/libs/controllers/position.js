@@ -212,6 +212,26 @@ module.exports = fp(async (fastify, options) => {
   );
 
   fastify.get(
+    `${options.prefix}/tenant/position/workforce-ai-mix`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: 'Workforce Readiness 任务 AI 构成与产能释放统计',
+        query: {
+          type: 'object',
+          properties: {
+            tenantOrgIds: { type: 'string', description: '组织部门 id，逗号分隔，含下级部门' },
+            status: { type: 'string', description: '职位状态，逗号分隔，默认 published' }
+          }
+        }
+      }
+    },
+    async request => {
+      return services.workforce.workforceAiMix(request.tenantUserInfo, request.query);
+    }
+  );
+
+  fastify.get(
     `${options.prefix}/tenant/position/tasks`,
     {
       onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
@@ -559,6 +579,10 @@ module.exports = fp(async (fastify, options) => {
                   required: { type: 'number' }
                 }
               }
+            },
+            keySkillGaps: {
+              type: 'array',
+              items: { type: 'object' }
             },
             developmentPlan: {
               type: ['object', 'null'],

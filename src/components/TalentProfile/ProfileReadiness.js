@@ -10,7 +10,8 @@ import ActivityTaskTable from '@components/ActivityTaskTable';
 import { PINNED_SCROLL_MAX_HEIGHT } from '@components/PinnedScrollPanel';
 import withLocale from './withLocale';
 import ProfileEvidence from './ProfileEvidence';
-import { ReadinessFormInner, PriorityGapsFormInner, TaskReadinessFormInner } from './FormInner';
+import KeySkillChanges from './KeySkillChanges';
+import { ReadinessFormInner, PriorityGapsFormInner, KeySkillGapsFormInner, TaskReadinessFormInner } from './FormInner';
 import { CapabilityStatusCard } from '@components/Position/Detail/TalentSkillAnalysis';
 import style from './style.module.scss';
 import iconClipboard from './assets/icon-clipboard.svg';
@@ -243,6 +244,7 @@ const ProfileReadiness = createWithRemoteLoader({
     const metrics = effectiveAnalysis?.metrics || derived.metrics;
     const priorityGaps = Array.isArray(effectiveAnalysis?.priorityGaps) && effectiveAnalysis.priorityGaps.length ? effectiveAnalysis.priorityGaps : derived.priorityGaps;
     const summary = effectiveAnalysis?.summary || '';
+    const keySkillGaps = Array.isArray(effectiveAnalysis?.keySkillGaps) ? effectiveAnalysis.keySkillGaps : [];
 
     // 审核草稿 / 已落库 skillAnalysis.skills：接口 taskReadiness 为空时用 skills 预览未来任务表
     const overrideSkillRows = useMemo(() => {
@@ -628,6 +630,91 @@ const ProfileReadiness = createWithRemoteLoader({
       });
     };
 
+    const openEditKeySkillGaps = () => {
+      if (readOnly) {
+        return;
+      }
+      const useLocalSave = typeof onSaveAnalysis === 'function';
+      const isDraftEmployee = employeeId && String(employeeId).startsWith('draft-');
+      if (!useLocalSave && (!positionId || !employeeId || isDraftEmployee)) {
+        return;
+      }
+      const saveApi = apis?.talentSaas?.tenant?.position?.skillAnalysisSave;
+      if (!useLocalSave && !saveApi) {
+        message.error(formatMessage({ id: 'talentProfile.editKeySkillFailed' }));
+        return;
+      }
+      formModal({
+        title: formatMessage({ id: 'talentProfile.editKeySkillChanges' }),
+        size: 'small',
+        formProps: {
+          data: {
+            keySkillGaps: keySkillGaps.map((item, index) => ({
+              rank: item.rank || index + 1,
+              category: item.category || undefined,
+              skillNow: item.skillNow || [],
+              skillFuture: item.skillFuture || item.name || '',
+              primaryTask: item.primaryTask || '',
+              score: item.score ?? null,
+              alsoOnTasks: item.alsoOnTasks || []
+            }))
+          },
+          onSubmit: async formData => {
+            const nextKeySkillGaps = (formData.keySkillGaps || []).map((item, index) => {
+              const skillFuture = (item.skillFuture || '').trim();
+              const skillNow = (item.skillNow || []).map(skill => String(skill).trim()).filter(Boolean);
+              return {
+                rank: item.rank || index + 1,
+                category: item.category || '',
+                name: skillFuture,
+                skillNow,
+                skillFuture,
+                evolution: skillNow.length ? skillNow.map(skill => `${skill} → ${skillFuture}`) : [`（新增）→ ${skillFuture}`],
+                score: item.score ?? null,
+                primaryTask: item.primaryTask || '',
+                alsoOnTasks: (item.alsoOnTasks || []).map(task => String(task).trim()).filter(Boolean)
+              };
+            });
+            const nextAnalysis = Object.assign({}, effectiveAnalysis || analysis || {}, {
+              readiness,
+              summary,
+              metrics,
+              priorityGaps: priorityGaps || [],
+              keySkillGaps: nextKeySkillGaps,
+              skills: effectiveAnalysis?.skills || analysis?.skills || [],
+              developmentPlan: effectiveAnalysis?.developmentPlan || analysis?.developmentPlan || null
+            });
+            if (useLocalSave) {
+              await onSaveAnalysis(nextAnalysis);
+              message.success(formatMessage({ id: 'talentProfile.editKeySkillSuccess' }));
+              return;
+            }
+            const { data: resData } = await ajax(
+              Object.assign({}, saveApi, {
+                data: {
+                  positionId: String(positionId),
+                  employeeId: String(employeeId),
+                  readiness: nextAnalysis.readiness,
+                  summary: nextAnalysis.summary,
+                  metrics: nextAnalysis.metrics,
+                  priorityGaps: nextAnalysis.priorityGaps,
+                  keySkillGaps: nextKeySkillGaps,
+                  skills: nextAnalysis.skills,
+                  developmentPlan: nextAnalysis.developmentPlan
+                }
+              })
+            );
+            if (resData.code !== 0) {
+              throw new Error(resData.msg || formatMessage({ id: 'talentProfile.editKeySkillFailed' }));
+            }
+            message.success(formatMessage({ id: 'talentProfile.editKeySkillSuccess' }));
+            setReloadKey(key => key + 1);
+          }
+        },
+        children: <KeySkillGapsFormInner />
+      });
+    };
+
     const openEditFutureTasks = async () => {
       if (readOnly || !positionId || !employeeId || String(employeeId).startsWith('draft-')) {
         return;
@@ -858,6 +945,17 @@ const ProfileReadiness = createWithRemoteLoader({
             )}
           </Card>
         </div>
+
+        <KeySkillChanges
+          gaps={keySkillGaps}
+          extra={
+            canEditReadiness ? (
+              <Button type="text" className={style['edit-btn']} icon={<MdOutlineEdit />} onClick={openEditKeySkillGaps}>
+                {formatMessage({ id: 'talentProfile.editKeySkillChanges' })}
+              </Button>
+            ) : null
+          }
+        />
 
         <Card
           className={classnames(style['future-task-card'], !(displayRows || []).length && style['print-section-empty'])}

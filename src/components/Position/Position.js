@@ -7,6 +7,7 @@ import getColumns from './getColumns';
 import BaseFormInner from './PositionForm';
 import InsightBanner from './InsightBanner';
 import WorkforceKpi from './WorkforceKpi';
+import WorkforceAiMix from './WorkforceAiMix';
 import { createPositionListCardsRender } from './PositionListCards';
 import InviteAssessment from './Detail/AnalyzeTalent/InviteAssessment';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
@@ -150,6 +151,7 @@ const Position = createWithRemoteLoader({
 
     const insightBanner = withInsightBanner ? <InsightBanner apis={apis} onReview={applyHighChangeFilter} /> : null;
     const workforceKpi = withInsightBanner ? <WorkforceKpi apis={apis} activeKey={activeKpi} onSelect={selectKpi} /> : null;
+    const workforceAiMix = withInsightBanner ? <WorkforceAiMix apis={apis} /> : null;
 
     const renderCard = useMemo(() => createPositionListCardsRender({ onDetail, formatMessage }), [onDetail, formatMessage]);
     const renderMobile = renderCard;
@@ -237,7 +239,7 @@ const Position = createWithRemoteLoader({
           }
         }}
       >
-        {typeof children === 'function' ? renderProps => children({ ...renderProps, insightBanner, workforceKpi, listKey }) : children}
+        {typeof children === 'function' ? renderProps => children({ ...renderProps, insightBanner, workforceKpi, workforceAiMix, listKey }) : children}
       </BizUnit>
     );
   })

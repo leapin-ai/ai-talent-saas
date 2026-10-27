@@ -13,14 +13,13 @@ const ReadinessBar = ({ value }) => {
   }
 
   const pct = Math.min(100, Math.max(0, Number(value) || 0));
-  const tone = pct < 55 ? 'low' : 'high';
 
   return (
     <div className={style.readiness}>
       <div className={style['readiness-track']}>
-        <div className={`${style['readiness-fill']} ${style[`readiness-fill-${tone}`]}`} style={{ width: `${pct}%` }} />
+        <div className={style['readiness-fill']} style={{ width: `${pct}%` }} />
       </div>
-      <span className={`${style['readiness-value']} ${style[`readiness-value-${tone}`]}`}>{pct}%</span>
+      <span className={style['readiness-value']}>{pct}%</span>
     </div>
   );
 };
