@@ -1,3 +1,4 @@
+import classnames from 'classnames';
 import { Button, Flex, Tooltip } from 'antd';
 import { FileTextOutlined, ProfileOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
@@ -22,14 +23,13 @@ const InfoFields = createWithRemoteLoader({
   const req = rule => (disabled ? undefined : rule);
   const rangePlaceholder = [formatMessage({ id: 'startDatePlaceholder' }), formatMessage({ id: 'endDatePlaceholder' })];
   return (
-    <Flex vertical gap={16} className={style['info-form']}>
+    <Flex vertical gap={24} className={classnames(style['info-form'], style['info-flat'])}>
       <FormInfo
         title={<SectionTitle icon={<ProfileOutlined />}>{formatMessage({ id: 'projectBasicInfo' })}</SectionTitle>}
         column={2}
         list={[
           <Input name="name" label={formatMessage({ id: 'reviewName' })} rule={req('REQ LEN-0-100')} placeholder={formatMessage({ id: 'projectNamePlaceholder' })} disabled={disabled} block />,
           <DateRangePicker name="period" label={formatMessage({ id: 'reviewPeriod' })} rule={req('REQ')} placeholder={rangePlaceholder} disabled={disabled} block />,
-          <DateRangePicker name="plannedTime" label={formatMessage({ id: 'plannedTime' })} placeholder={rangePlaceholder} disabled={disabled} block />,
           <Select
             name="language"
             label={formatMessage({ id: 'language' })}

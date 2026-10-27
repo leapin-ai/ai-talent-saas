@@ -83,7 +83,6 @@ export const projectToValue = (project, { models = [], ungroupedLabel } = {}) =>
     info: {
       name: project.name,
       period: project.startTime && project.endTime ? [dayjs(project.startTime), dayjs(project.endTime)] : undefined,
-      plannedTime: Array.isArray(setting.plannedTime) && setting.plannedTime.length ? setting.plannedTime.map(item => dayjs(item)) : undefined,
       language: project.language,
       owner: setting.owner ? { value: setting.owner.id, label: setting.owner.name } : undefined,
       description: project.description
@@ -209,7 +208,6 @@ export const buildPayload = (value, { locale, questionnaireTitle, dimensionName 
     questions: questionList,
     setting: {
       owner: info.owner ? { id: info.owner.value, name: info.owner.label } : undefined,
-      plannedTime: info.plannedTime?.length ? info.plannedTime.map(item => dayjs(item).toISOString()) : undefined,
       dimensions: usedDimensions.map(item => ({ type: item.type, name: dimensionName(item.type), questionModelId: item.modelId, questionModelName: item.modelName })),
       dimensionWeight: types.reduce((result, type) => Object.assign(result, { [type]: equalWeight }), {}),
       enablePerformance: performance.enable,

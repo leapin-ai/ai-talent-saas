@@ -86,8 +86,8 @@ export const StatCard = ({ label, value, desc, icon, iconBg }) => (
   </div>
 );
 
-export const SectionCard = ({ icon, title, extra, children, className }) => (
-  <div className={classnames(style['card'], className)}>
+export const SectionCard = ({ icon, title, extra, children, className, flat }) => (
+  <div className={classnames(style['card'], { [style['card-flat']]: flat }, className)}>
     {title ? (
       <div className={style['card-title']} style={{ justifyContent: 'space-between' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>

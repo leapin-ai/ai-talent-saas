@@ -29,7 +29,6 @@ const InfoReadonly = createWithRemoteLoader({
       data={{
         name: project.name,
         period: project.startTime && project.endTime ? [dayjs(project.startTime), dayjs(project.endTime)] : undefined,
-        plannedTime: Array.isArray(setting.plannedTime) ? setting.plannedTime.map(item => dayjs(item)) : undefined,
         language: project.language,
         owner: setting.owner ? { value: setting.owner.id, label: setting.owner.name } : undefined,
         description: project.description
@@ -102,7 +101,11 @@ const Detail = ({ project, baseUrl, reload, usePreset, canInvite, canEdit }) => 
             { key: 'assessment', label: formatMessage({ id: 'stepAssessmentSetting' }) }
           ]}
         />
-        {tab === 'info' ? <InfoReadonly project={project} /> : null}
+        {tab === 'info' ? (
+          <div className={style['card']}>
+            <InfoReadonly project={project} />
+          </div>
+        ) : null}
         {tab === 'object' ? (
           <SectionCard title={formatMessage({ id: 'reviewObjectInfo' })}>
             <ObjectInfo setting={setting} />

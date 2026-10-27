@@ -101,7 +101,7 @@ const ProjectCreate = createWithRemoteLoader({
       return (
         <>
           {readonlyTip(dimensionEditable ? 'questionnaireReadonly' : 'adminProjectReadonly')}
-          <SectionCard title={formatMessage({ id: 'reviewObjectInfo' })}>
+          <SectionCard flat title={formatMessage({ id: 'reviewObjectInfo' })}>
             <ObjectInfo setting={project.setting} />
           </SectionCard>
         </>
@@ -115,7 +115,7 @@ const ProjectCreate = createWithRemoteLoader({
       return (
         <>
           {readonlyTip('adminProjectReadonly')}
-          <SectionCard title={formatMessage({ id: 'addReviewDimension' })}>
+          <SectionCard flat title={formatMessage({ id: 'addReviewDimension' })}>
             <DimensionInfo project={project} />
           </SectionCard>
         </>

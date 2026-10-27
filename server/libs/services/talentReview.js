@@ -137,7 +137,7 @@ module.exports = fp(async (fastify, options) => {
   };
 
   /** 「盘点信息」与「评估设置」可改的 setting 字段；其余（对象信息、盘点维度）仅客户端创建的项目可改 */
-  const ADMIN_EDITABLE_SETTING = ['owner', 'plannedTime', 'enableManualScore', 'scoreSourceWeight', 'manualRoleWeight', 'nineSquareGrid'];
+  const ADMIN_EDITABLE_SETTING = ['owner', 'enableManualScore', 'scoreSourceWeight', 'manualRoleWeight', 'nineSquareGrid'];
 
   /** 仅草稿（closed）可编辑；admin 创建的项目只改盘点信息与评估设置，不改对象信息、维度与题目 */
   const projectSave = async ({ tenantId, data }) => {

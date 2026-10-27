@@ -54,7 +54,6 @@ const enUS = {
   startDatePlaceholder: 'Start Date: MM/DD/YYYY',
   endDatePlaceholder: 'End Date: MM/DD/YYYY',
   to: 'To',
-  plannedTime: 'Planned Execution Time',
   projectOwner: 'Project Owner',
   reviewDescription: 'Review Description',
   oneClickGeneration: 'One-Click Generation',

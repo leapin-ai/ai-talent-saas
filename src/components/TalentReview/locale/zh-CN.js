@@ -54,7 +54,6 @@ const zhCN = {
   startDatePlaceholder: '开始日期',
   endDatePlaceholder: '结束日期',
   to: '至',
-  plannedTime: '计划执行时间',
   projectOwner: '项目负责人',
   reviewDescription: '盘点说明',
   oneClickGeneration: '一键生成',

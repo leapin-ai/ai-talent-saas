@@ -210,8 +210,9 @@ const StepDimension = ({ value, models, questionsApi, onChange }) => {
   const setPerformance = patch => onChange(Object.assign({}, value, { performance: Object.assign({}, performance, patch) }));
 
   return (
-    <Flex vertical gap={16}>
+    <Flex vertical gap={32}>
       <SectionCard
+        flat
         icon={<ApartmentOutlined />}
         title={formatMessage({ id: 'addReviewDimension' })}
         extra={
@@ -239,6 +240,7 @@ const StepDimension = ({ value, models, questionsApi, onChange }) => {
         </div>
       </SectionCard>
       <SectionCard
+        flat
         icon={<BarChartOutlined />}
         title={formatMessage({ id: 'performanceDimension' })}
         extra={
