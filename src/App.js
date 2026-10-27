@@ -219,7 +219,7 @@ const AppContent = withLocale(({ baseUrl, isOidcClient, appManagerEnabled, After
                     title: formatMessage({ id: 'app.AppCenter' }),
                     element: (
                       <UserSystemLayout>
-                        <RemoteLoader module="components-app-manager:Center" />
+                        <RemoteLoader module="components-app-manager:Center" bordered={false} />
                       </UserSystemLayout>
                     )
                   },
