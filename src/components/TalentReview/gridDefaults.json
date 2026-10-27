@@ -1,0 +1,618 @@
+{
+  "2": {
+    "competency": [
+      {
+        "index": 3,
+        "dimension_band": "high",
+        "performance_band": null,
+        "name": { "zh": "胜任突出", "en": "High Competency" },
+        "description": { "zh": "岗位关键能力扎实，能独立应对复杂场景", "en": "Strong in critical role competencies; handles complex scenarios independently" },
+        "recommendation": { "zh": "安排更高难度任务与知识传承，巩固能力优势", "en": "Assign harder work and knowledge transfer to consolidate strengths" }
+      },
+      {
+        "index": 4,
+        "dimension_band": "low",
+        "performance_band": null,
+        "name": { "zh": "胜任待发展", "en": "Competency Gap" },
+        "description": { "zh": "关键胜任力不足，影响履职质量与稳定性", "en": "Key competency gaps affect delivery quality and stability" },
+        "recommendation": { "zh": "制定能力补齐计划，匹配培训与实践机会", "en": "Build a competency catch-up plan with training and practice" }
+      }
+    ],
+    "potential": [
+      {
+        "index": 3,
+        "dimension_band": "high",
+        "performance_band": null,
+        "name": { "zh": "高潜人才", "en": "High Potential" },
+        "description": { "zh": "潜力突出，具备跨岗位成长与承担更大责任的基础", "en": "Outstanding potential with capacity for growth and greater responsibility" },
+        "recommendation": { "zh": "安排挑战性任务与导师辅导，制定加速发展路径", "en": "Assign stretch roles with mentoring and an accelerated development path" }
+      },
+      {
+        "index": 4,
+        "dimension_band": "low",
+        "performance_band": null,
+        "name": { "zh": "潜力有限", "en": "Limited Potential" },
+        "description": { "zh": "当前潜力评估偏低，短期内难以支撑显著跃迁", "en": "Current potential is limited; significant leap is unlikely in the short term" },
+        "recommendation": { "zh": "聚焦本岗胜任，设定可达成目标，必要时评估岗位匹配度", "en": "Focus on role fit, set achievable goals, and reassess job match if needed" }
+      }
+    ],
+    "values": [
+      {
+        "index": 3,
+        "dimension_band": "high",
+        "performance_band": null,
+        "name": { "zh": "价值契合", "en": "Values Aligned" },
+        "description": { "zh": "与组织文化与核心价值观高度一致，行为可预期、可信任", "en": "Strongly aligned with culture and core values; trusted and predictable" },
+        "recommendation": { "zh": "树立文化榜样，参与价值观宣导与新人带教", "en": "Position as culture role model; involve in onboarding and advocacy" }
+      },
+      {
+        "index": 4,
+        "dimension_band": "low",
+        "performance_band": null,
+        "name": { "zh": "价值偏离", "en": "Values Gap" },
+        "description": { "zh": "价值观匹配度偏低，协作方式或底线行为存在风险", "en": "Low values fit; collaboration style or integrity risks may exist" },
+        "recommendation": { "zh": "明确文化红线与行为期望，跟进改进；严重偏离须及时处理", "en": "Clarify cultural red lines and expectations; act promptly on severe gaps" }
+      }
+    ],
+    "custom": [
+      {
+        "index": 3,
+        "dimension_band": "high",
+        "performance_band": null,
+        "name": { "zh": "维度表现优", "en": "Strong on Dimension" },
+        "description": { "zh": "在该自定义考察维度上表现突出，达到或超过期望", "en": "Strong on this custom dimension; meets or exceeds expectations" },
+        "recommendation": { "zh": "保持并放大优势，作为该维度的示范与分享对象", "en": "Sustain and amplify strengths; use as a dimension exemplar" }
+      },
+      {
+        "index": 4,
+        "dimension_band": "low",
+        "performance_band": null,
+        "name": { "zh": "维度待提升", "en": "Needs Dimension Lift" },
+        "description": { "zh": "该自定义维度得分偏低，尚未达到岗位/项目期望", "en": "Low score on this custom dimension vs role/project expectations" },
+        "recommendation": { "zh": "明确该维度标准与改进动作，安排专项辅导与复盘", "en": "Clarify dimension standards and actions; add targeted coaching" }
+      }
+    ]
+  },
+  "3": {
+    "competency": [
+      {
+        "index": 6,
+        "dimension_band": "high",
+        "performance_band": null,
+        "name": { "zh": "能力标杆", "en": "Competency Benchmark" },
+        "description": { "zh": "关键能力达到高位，可作团队标准参考", "en": "Critical competencies at a high bar; usable as team benchmark" },
+        "recommendation": { "zh": "沉淀方法论并带教他人，扩大能力复用", "en": "Codify methods and coach others to scale capability" }
+      },
+      {
+        "index": 8,
+        "dimension_band": "medium",
+        "performance_band": null,
+        "name": { "zh": "能力成长中", "en": "Developing Competency" },
+        "description": { "zh": "能力基本达标，部分场景仍需辅导", "en": "Mostly meets the bar; some scenarios still need coaching" },
+        "recommendation": { "zh": "针对弱项设计练习与反馈循环", "en": "Design practice and feedback loops on weak spots" }
+      },
+      {
+        "index": 9,
+        "dimension_band": "low",
+        "performance_band": null,
+        "name": { "zh": "能力不足", "en": "Insufficient Competency" },
+        "description": { "zh": "关键能力明显低于岗位要求", "en": "Critical competencies clearly below role requirements" },
+        "recommendation": { "zh": "加速补齐或评估人岗匹配，必要时调整配置", "en": "Accelerate catch-up or reassess role fit / staffing" }
+      }
+    ],
+    "potential": [
+      {
+        "index": 6,
+        "dimension_band": "high",
+        "performance_band": null,
+        "name": { "zh": "潜力新星", "en": "Rising Potential" },
+        "description": { "zh": "高潜力画像清晰，学习与迁移能力强，适合重点培养", "en": "Clear high-potential profile with strong learning and transfer ability" },
+        "recommendation": { "zh": "纳入人才梯队，提供轮岗/项目历练与定期反馈", "en": "Add to talent pipeline with rotation/projects and regular feedback" }
+      },
+      {
+        "index": 8,
+        "dimension_band": "medium",
+        "performance_band": null,
+        "name": { "zh": "可发展潜力", "en": "Developable Potential" },
+        "description": { "zh": "具备一定成长空间，需通过辅导与实践进一步释放", "en": "Has room to grow; coaching and practice can unlock more potential" },
+        "recommendation": { "zh": "明确延伸目标，加强辅导与阶段性复盘", "en": "Set stretch goals, strengthen coaching, and review progress periodically" }
+      },
+      {
+        "index": 9,
+        "dimension_band": "low",
+        "performance_band": null,
+        "name": { "zh": "潜力不足", "en": "Low Potential" },
+        "description": { "zh": "潜力评估偏低，更适合在现有层级稳定贡献", "en": "Lower potential assessment; better suited to stable contribution at current level" },
+        "recommendation": { "zh": "强化现岗产出与技能补齐，审慎投入高成本培养资源", "en": "Strengthen current-role delivery; invest high-cost development cautiously" }
+      }
+    ],
+    "values": [
+      {
+        "index": 6,
+        "dimension_band": "high",
+        "performance_band": null,
+        "name": { "zh": "文化倡导者", "en": "Culture Champion" },
+        "description": { "zh": "高度认同并践行组织价值观，能带动周围人", "en": "Deeply embodies and promotes organizational values" },
+        "recommendation": { "zh": "赋予文化共建职责，作为价值观案例与传播节点", "en": "Give culture-building roles; use as values case and amplifier" }
+      },
+      {
+        "index": 8,
+        "dimension_band": "medium",
+        "performance_band": null,
+        "name": { "zh": "价值适应中", "en": "Values Adapting" },
+        "description": { "zh": "总体可接受，部分场景与文化期望仍有落差", "en": "Generally acceptable; some gaps vs cultural expectations remain" },
+        "recommendation": { "zh": "通过辅导、反馈与榜样学习缩小差距", "en": "Close gaps via coaching, feedback, and peer modeling" }
+      },
+      {
+        "index": 9,
+        "dimension_band": "low",
+        "performance_band": null,
+        "name": { "zh": "价值不合", "en": "Values Misaligned" },
+        "description": { "zh": "与组织价值观冲突明显，影响信任与协作氛围", "en": "Clear conflict with organizational values; hurts trust and teamwork" },
+        "recommendation": { "zh": "限期矫正行为；无法对齐则评估调离或退出", "en": "Correct behavior on a deadline; exit or reassign if unaligned" }
+      }
+    ],
+    "custom": [
+      {
+        "index": 6,
+        "dimension_band": "high",
+        "performance_band": null,
+        "name": { "zh": "维度优秀", "en": "Dimension Excellent" },
+        "description": { "zh": "该维度表现优秀，可作为标杆复制", "en": "Excellent on this dimension; suitable as a benchmark" },
+        "recommendation": { "zh": "沉淀最佳实践，带动同伴提升该维度能力", "en": "Codify best practices and help peers raise the same dimension" }
+      },
+      {
+        "index": 8,
+        "dimension_band": "medium",
+        "performance_band": null,
+        "name": { "zh": "维度达标", "en": "Dimension Adequate" },
+        "description": { "zh": "该维度处于中等水平，基本达标仍有提升空间", "en": "Mid-level on this dimension; adequate with room to improve" },
+        "recommendation": { "zh": "设定进阶目标与练习场景，持续跟踪进步", "en": "Set stretch targets and practice scenarios; track progress" }
+      },
+      {
+        "index": 9,
+        "dimension_band": "low",
+        "performance_band": null,
+        "name": { "zh": "维度不足", "en": "Dimension Insufficient" },
+        "description": { "zh": "该维度明显不足，可能影响整体评价与岗位匹配", "en": "Clear shortfall on this dimension; may affect fit and overall rating" },
+        "recommendation": { "zh": "制定补齐计划；长期无改善则调整职责或配置", "en": "Build a catch-up plan; adjust duties if no lasting improvement" }
+      }
+    ]
+  },
+  "4": {
+    "competency": [
+      {
+        "index": 4,
+        "dimension_band": "low",
+        "performance_band": "low",
+        "name": { "zh": "待发展", "en": "Under Development" },
+        "description": { "zh": "能力与绩效均偏弱，需重点关注与提升", "en": "Both competency and performance are weak; needs focused uplift" },
+        "recommendation": { "zh": "制定个人发展与绩效改进计划", "en": "Create personal development and performance improvement plans" }
+      },
+      {
+        "index": 3,
+        "dimension_band": "high",
+        "performance_band": "low",
+        "name": { "zh": "能强绩弱", "en": "Capable, Low Output" },
+        "description": { "zh": "能力具备但结果未兑现，可能方向或执行受阻", "en": "Has capability but results lag; direction or execution may be blocked" },
+        "recommendation": { "zh": "对齐目标与资源，辅导把能力转化为产出", "en": "Align goals/resources; coach conversion of capability into output" }
+      },
+      {
+        "index": 2,
+        "dimension_band": "low",
+        "performance_band": "high",
+        "name": { "zh": "绩稳能短", "en": "Stable, Skill Gap" },
+        "description": { "zh": "绩效稳定但关键能力存在短板，长期有天花板风险", "en": "Stable performance with competency gaps that may cap long-term growth" },
+        "recommendation": { "zh": "补齐关键能力短板，保持当前贡献路径", "en": "Close critical skill gaps while sustaining contribution" }
+      },
+      {
+        "index": 1,
+        "dimension_band": "high",
+        "performance_band": "high",
+        "name": { "zh": "明星型", "en": "Star" },
+        "description": { "zh": "能力与绩效均衡突出，是团队中坚", "en": "Balanced high competency and performance; a key team pillar" },
+        "recommendation": { "zh": "提供更具挑战的工作与更大责任", "en": "Offer more challenging work and greater responsibility" }
+      }
+    ],
+    "potential": [
+      {
+        "index": 4,
+        "dimension_band": "low",
+        "performance_band": "low",
+        "name": { "zh": "待观察", "en": "Under Watch" },
+        "description": { "zh": "绩效与潜力均偏弱，需尽快定位原因", "en": "Both performance and potential are weak; root causes need diagnosis" },
+        "recommendation": { "zh": "制定改进计划并限期跟踪；改善缓慢则启动替换准备", "en": "Set an improvement plan with deadlines; prepare succession if progress is slow" }
+      },
+      {
+        "index": 3,
+        "dimension_band": "high",
+        "performance_band": "low",
+        "name": { "zh": "潜力待发", "en": "Untapped Potential" },
+        "description": { "zh": "潜力高但绩效未跟上，可能处于适应期或方向未对齐", "en": "High potential but lagging performance; may be adapting or misaligned" },
+        "recommendation": { "zh": "厘清障碍、强化辅导与目标对齐，必要时评估调岗", "en": "Remove blockers, coach for goal alignment, consider role change if needed" }
+      },
+      {
+        "index": 2,
+        "dimension_band": "low",
+        "performance_band": "high",
+        "name": { "zh": "稳定贡献者", "en": "Steady Contributor" },
+        "description": { "zh": "绩效可靠但潜力空间有限，是团队稳定力量", "en": "Reliable performance with limited upside; a stabilizing force" },
+        "recommendation": { "zh": "保持激励与认可，深化专业贡献，避免过度拔高预期", "en": "Maintain recognition; deepen expertise without overstretching expectations" }
+      },
+      {
+        "index": 1,
+        "dimension_band": "high",
+        "performance_band": "high",
+        "name": { "zh": "高潜绩优", "en": "High Potential Performer" },
+        "description": { "zh": "高绩效且高潜力，具备成为关键骨干或领导者的基础", "en": "High performance and high potential; ready for key or leadership tracks" },
+        "recommendation": { "zh": "给予更大责任与可见平台，加速晋升与保留投入", "en": "Expand responsibility and visibility; accelerate promotion and retention" }
+      }
+    ],
+    "values": [
+      {
+        "index": 4,
+        "dimension_band": "low",
+        "performance_band": "low",
+        "name": { "zh": "双低风险", "en": "Dual Risk" },
+        "description": { "zh": "绩效弱且价值观匹配低，对团队伤害风险较高", "en": "Weak performance and poor values fit; high team-risk profile" },
+        "recommendation": { "zh": "优先处理文化与绩效问题，必要时果断退出", "en": "Address culture and performance first; exit when necessary" }
+      },
+      {
+        "index": 3,
+        "dimension_band": "high",
+        "performance_band": "low",
+        "name": { "zh": "文化契合待产", "en": "Culture Fit, Low Output" },
+        "description": { "zh": "价值观契合但产出不足，值得投入辅导而非放弃", "en": "Strong values fit but low output; worth coaching rather than giving up" },
+        "recommendation": { "zh": "强化绩效目标与技能支持，保护文化资产", "en": "Raise performance goals with skill support; protect cultural assets" }
+      },
+      {
+        "index": 2,
+        "dimension_band": "low",
+        "performance_band": "high",
+        "name": { "zh": "绩优偏轨", "en": "Results over Values" },
+        "description": { "zh": "结果好但价值观偏离，可能带来长期文化成本", "en": "Strong results with values drift; may incur long-term culture cost" },
+        "recommendation": { "zh": "明确行为底线与后果；价值观不改则限制晋升甚至淘汰", "en": "Set behavioral floors; block promotion or exit if values do not change" }
+      },
+      {
+        "index": 1,
+        "dimension_band": "high",
+        "performance_band": "high",
+        "name": { "zh": "文化标杆", "en": "Culture Star" },
+        "description": { "zh": "高绩效且高度价值观契合，是组织期望的标杆人才", "en": "High performance and strong values fit; the desired benchmark talent" },
+        "recommendation": { "zh": "重点保留与晋升，扩大影响力与带教范围", "en": "Prioritize retention/promotion; expand influence and mentoring" }
+      }
+    ],
+    "custom": [
+      {
+        "index": 4,
+        "dimension_band": "low",
+        "performance_band": "low",
+        "name": { "zh": "双弱关注", "en": "Dual Weak" },
+        "description": { "zh": "绩效与该维度均偏弱，需优先干预", "en": "Both performance and this dimension are weak; intervene first" },
+        "recommendation": { "zh": "合并制定绩效与维度改进计划，设定明确时限", "en": "Combined performance/dimension plan with clear deadlines" }
+      },
+      {
+        "index": 3,
+        "dimension_band": "high",
+        "performance_band": "low",
+        "name": { "zh": "维度优绩弱", "en": "Strong Dimension, Weak Output" },
+        "description": { "zh": "该维度表现好但整体绩效偏低，优势未转化为结果", "en": "Strong on dimension but low overall performance; strength not converted" },
+        "recommendation": { "zh": "打通维度优势到业务结果的路径，补齐执行短板", "en": "Connect dimension strength to business results; fix execution gaps" }
+      },
+      {
+        "index": 2,
+        "dimension_band": "low",
+        "performance_band": "high",
+        "name": { "zh": "绩优维弱", "en": "Strong Output, Weak Dimension" },
+        "description": { "zh": "绩效好但该维度不足，可能存在隐患或天花板", "en": "Strong performance with a weak custom dimension; hidden risk or ceiling" },
+        "recommendation": { "zh": "专项补齐该维度，作为继续晋升的前置条件", "en": "Targeted lift on this dimension as a promotion prerequisite" }
+      },
+      {
+        "index": 1,
+        "dimension_band": "high",
+        "performance_band": "high",
+        "name": { "zh": "绩维双优", "en": "Dual Strong" },
+        "description": { "zh": "绩效与该维度均表现优秀，综合竞争力强", "en": "Strong on both performance and this dimension" },
+        "recommendation": { "zh": "扩大职责与挑战，优先保留与发展投入", "en": "Expand scope and challenge; prioritize retention and development" }
+      }
+    ]
+  },
+  "9": {
+    "competency": [
+      {
+        "index": 9,
+        "dimension_band": "low",
+        "performance_band": "low",
+        "name": { "zh": "低能低绩", "en": "Low Competency / Low Performance" },
+        "description": { "zh": "能力与绩效均低于岗位要求", "en": "Both competency and performance below role requirements" },
+        "recommendation": { "zh": "加速培养继任者，尽快完成人员替换", "en": "Prepare successors and replace as soon as needed" }
+      },
+      {
+        "index": 8,
+        "dimension_band": "medium",
+        "performance_band": "low",
+        "name": { "zh": "能力不稳", "en": "Uneven Competency" },
+        "description": { "zh": "能力中等但绩效偏低，表现不稳定", "en": "Mid competency with low, inconsistent performance" },
+        "recommendation": { "zh": "剖析根因并辅导；改进缓慢则降级或淘汰", "en": "Diagnose and coach; demote or exit if improvement is slow" }
+      },
+      {
+        "index": 6,
+        "dimension_band": "high",
+        "performance_band": "low",
+        "name": { "zh": "高能待产", "en": "Capable, Not Yet Delivering" },
+        "description": { "zh": "能力评估高但绩效尚浅，可能适应期或目标未对齐", "en": "High competency with shallow performance; may be adapting or misaligned" },
+        "recommendation": { "zh": "明确改进要求，支持绩效提升，评估更合适平台", "en": "Clarify asks, support performance lift, evaluate better platforms" }
+      },
+      {
+        "index": 7,
+        "dimension_band": "low",
+        "performance_band": "medium",
+        "name": { "zh": "合格执行者", "en": "Effective Performer" },
+        "description": { "zh": "绩效合格但关键能力偏弱，发展空间受限", "en": "Effective performance with weak critical competencies; limited upside" },
+        "recommendation": { "zh": "稳住绩效并补齐能力短板，配套训练", "en": "Stabilize performance and close competency gaps with training" }
+      },
+      {
+        "index": 5,
+        "dimension_band": "medium",
+        "performance_band": "medium",
+        "name": { "zh": "核心骨干", "en": "Core Player" },
+        "description": { "zh": "能力与绩效均居中上，可同级扩展职责", "en": "Solid mid/upper competency and performance; scope can enlarge at level" },
+        "recommendation": { "zh": "深耕本岗、稳定激励，有序扩大权责", "en": "Deepen current role, steady incentives, expand duties orderly" }
+      },
+      {
+        "index": 3,
+        "dimension_band": "high",
+        "performance_band": "medium",
+        "name": { "zh": "高胜任者", "en": "High Competency" },
+        "description": { "zh": "中等绩效 / 高胜任力，具备加速兑现空间", "en": "Moderate performance / high competency; ready to convert faster" },
+        "recommendation": { "zh": "设定绩效挑战目标，匹配发展与激励", "en": "Set performance challenges with matching development and incentives" }
+      },
+      {
+        "index": 4,
+        "dimension_band": "low",
+        "performance_band": "high",
+        "name": { "zh": "资深贡献者", "en": "Solid Performer" },
+        "description": { "zh": "高绩效但能力短板明显，专业纵深或综合能力需补", "en": "High performance with clear competency gaps to close" },
+        "recommendation": { "zh": "补齐短板后再扩大职责，保持适度激励", "en": "Close gaps before expanding duties; keep measured incentives" }
+      },
+      {
+        "index": 2,
+        "dimension_band": "medium",
+        "performance_band": "high",
+        "name": { "zh": "高绩效者", "en": "High Performer" },
+        "description": { "zh": "高绩效、能力中上，当前角色仍有成长空间", "en": "High performance with mid-high competency; growth remains in role" },
+        "recommendation": { "zh": "扩大职责与历练，考虑晋升并做好保留", "en": "Expand responsibility; consider promotion and retention" }
+      },
+      {
+        "index": 1,
+        "dimension_band": "high",
+        "performance_band": "high",
+        "name": { "zh": "全能标杆", "en": "All-round Benchmark" },
+        "description": { "zh": "高能力且高绩效，综合表现顶尖，适合更大舞台", "en": "High competency and performance; top composite profile for bigger stages" },
+        "recommendation": { "zh": "委以更大责任，加速晋升通道，重点保留", "en": "Greater responsibility, accelerated promotion, key retention" }
+      }
+    ],
+    "potential": [
+      {
+        "index": 9,
+        "dimension_band": "low",
+        "performance_band": "low",
+        "name": { "zh": "低潜低绩", "en": "Low Potential / Low Performance" },
+        "description": { "zh": "绩效与潜力均不足，难以支撑当前岗位长期要求", "en": "Both performance and potential fall short of sustained role requirements" },
+        "recommendation": { "zh": "明确改进底线；限期未达则启动继任与退出", "en": "Set clear improvement floors; start succession/exit if unmet" }
+      },
+      {
+        "index": 8,
+        "dimension_band": "medium",
+        "performance_band": "low",
+        "name": { "zh": "潜力波动", "en": "Uneven Potential" },
+        "description": { "zh": "潜力中等但绩效偏低，表现不稳定，需找准制约点", "en": "Moderate potential with weak, inconsistent performance" },
+        "recommendation": { "zh": "剖析根因并实施绩效辅导；改进缓慢则降级或淘汰", "en": "Diagnose root causes and coach; demote or exit if slow to improve" }
+      },
+      {
+        "index": 6,
+        "dimension_band": "high",
+        "performance_band": "low",
+        "name": { "zh": "潜力新星", "en": "Potential Gems" },
+        "description": { "zh": "高潜力 / 低绩效；可能入职不久或职责理解有偏差", "en": "High potential / low performance; may be new or misaligned on role expectations" },
+        "recommendation": { "zh": "分析原因并明确改进要求；支持绩效提升，评估更合适平台", "en": "Analyze causes, set clear asks, support performance lift, evaluate better fit" }
+      },
+      {
+        "index": 7,
+        "dimension_band": "low",
+        "performance_band": "medium",
+        "name": { "zh": "合格执行者", "en": "Effective Performer" },
+        "description": { "zh": "绩效合格但潜力接近上限，适合横向深耕", "en": "Effective performer near potential ceiling; better for lateral depth" },
+        "recommendation": { "zh": "稳住现岗绩效，提供创新/横向思维训练", "en": "Stabilize performance; coach innovation and lateral thinking" }
+      },
+      {
+        "index": 5,
+        "dimension_band": "medium",
+        "performance_band": "medium",
+        "name": { "zh": "核心骨干", "en": "Core Player" },
+        "description": { "zh": "绩效与潜力均衡，可同级扩展职责，部分能力需辅导", "en": "Balanced profile; may enlarge scope at same level with coaching" },
+        "recommendation": { "zh": "深耕本岗、稳定激励，有序扩大权责并配套支持", "en": "Deepen current role, steady incentives, expand duties with support" }
+      },
+      {
+        "index": 3,
+        "dimension_band": "high",
+        "performance_band": "medium",
+        "name": { "zh": "高潜力者", "en": "High Potential" },
+        "description": { "zh": "中等绩效 / 高潜力，成长空间明显", "en": "Moderate performance / high potential with clear upside" },
+        "recommendation": { "zh": "设定绩效挑战目标，规划下一岗位并匹配激励", "en": "Set stretch performance goals; plan next role and motivators" }
+      },
+      {
+        "index": 4,
+        "dimension_band": "low",
+        "performance_band": "high",
+        "name": { "zh": "资深贡献者", "en": "Solid Performer" },
+        "description": { "zh": "高绩效但潜力平台期，经验丰富、价值稳定", "en": "High performer at potential plateau; experienced and valuable" },
+        "recommendation": { "zh": "适度激励、扩大专业影响力，发展辅导与授权能力", "en": "Moderate incentives, expand influence, build coaching/delegation" }
+      },
+      {
+        "index": 2,
+        "dimension_band": "medium",
+        "performance_band": "high",
+        "name": { "zh": "高绩效者", "en": "High Performer" },
+        "description": { "zh": "高绩效、中等潜力，当前角色仍有成长空间", "en": "High performance with moderate potential; current role still offers growth" },
+        "recommendation": { "zh": "扩大职责与历练，考虑晋升加薪并做好保留", "en": "Expand responsibility; consider promotion/raise and retention plan" }
+      },
+      {
+        "index": 1,
+        "dimension_band": "high",
+        "performance_band": "high",
+        "name": { "zh": "未来领导者", "en": "Future Leaders" },
+        "description": { "zh": "持续高绩效且高潜力，大局观强、自驱突出；缺挑战易流失", "en": "Consistent star: strategic, self-motivated; may leave without new challenges" },
+        "recommendation": { "zh": "委以更大责任，设计快速晋升/加薪通道，列为关键保留", "en": "Greater responsibility, fast promotion/pay paths, treat as key retention" }
+      }
+    ],
+    "values": [
+      {
+        "index": 9,
+        "dimension_band": "low",
+        "performance_band": "low",
+        "name": { "zh": "价值与绩效双低", "en": "Low Fit / Low Performance" },
+        "description": { "zh": "价值观不匹配且绩效不足，持续留任成本高", "en": "Poor values fit and weak performance; high cost to retain" },
+        "recommendation": { "zh": "快速改进或启动退出，避免负向示范", "en": "Improve quickly or exit to avoid negative modeling" }
+      },
+      {
+        "index": 8,
+        "dimension_band": "medium",
+        "performance_band": "low",
+        "name": { "zh": "匹配不稳", "en": "Unstable Fit" },
+        "description": { "zh": "价值观中等、绩效偏低，行为与产出都不稳定", "en": "Moderate values fit with low, unstable performance" },
+        "recommendation": { "zh": "双线辅导（行为+绩效）；改进慢则调整岗位或淘汰", "en": "Coach behavior and performance; reassign or exit if slow" }
+      },
+      {
+        "index": 6,
+        "dimension_band": "high",
+        "performance_band": "low",
+        "name": { "zh": "文化潜力股", "en": "Culture Potential" },
+        "description": { "zh": "高度文化契合但绩效尚浅，适合培养而非放弃", "en": "Strong culture fit with shallow performance; invest rather than drop" },
+        "recommendation": { "zh": "明确绩效要求并配套支持，发挥文化优势带动产出", "en": "Clarify performance asks with support; leverage culture fit for output" }
+      },
+      {
+        "index": 7,
+        "dimension_band": "low",
+        "performance_band": "medium",
+        "name": { "zh": "绩合价偏", "en": "OK Results, Weak Fit" },
+        "description": { "zh": "绩效尚可但价值观偏弱，需警惕隐性文化损耗", "en": "Acceptable performance with weak values; watch hidden culture cost" },
+        "recommendation": { "zh": "强化价值观反馈与行为契约，限制关键岗位授权", "en": "Strengthen values feedback and behavioral contracts; limit critical authority" }
+      },
+      {
+        "index": 5,
+        "dimension_band": "medium",
+        "performance_band": "medium",
+        "name": { "zh": "文化骨干", "en": "Culture Core" },
+        "description": { "zh": "价值观与绩效均居中上，是团队稳定文化力量", "en": "Solid mid/upper values and performance; a cultural stabilizer" },
+        "recommendation": { "zh": "鼓励参与团队规范建设，稳步扩大协作影响面", "en": "Involve in team norms; steadily expand collaborative influence" }
+      },
+      {
+        "index": 3,
+        "dimension_band": "high",
+        "performance_band": "medium",
+        "name": { "zh": "高契合成长者", "en": "High-Fit Grower" },
+        "description": { "zh": "价值观高度契合、绩效中等，成长与带动空间大", "en": "High values fit with moderate performance; strong growth leverage" },
+        "recommendation": { "zh": "加压绩效目标，安排带教与文化项目历练", "en": "Raise performance bar; give mentoring and culture-project exposure" }
+      },
+      {
+        "index": 4,
+        "dimension_band": "low",
+        "performance_band": "high",
+        "name": { "zh": "绩优价值风险", "en": "Top Results, Values Risk" },
+        "description": { "zh": "高绩效但价值观匹配偏低，易形成“结果掩盖问题”", "en": "High performance with low values fit; results may mask issues" },
+        "recommendation": { "zh": "价值观一票否决机制落地；不达标则限制晋升", "en": "Enforce values veto; block promotion if standards unmet" }
+      },
+      {
+        "index": 2,
+        "dimension_band": "medium",
+        "performance_band": "high",
+        "name": { "zh": "绩优可塑", "en": "High Performer, Moldable Fit" },
+        "description": { "zh": "高绩效、价值观中等，通过引导可进一步对齐文化", "en": "High performance with moderate fit; coaching can deepen alignment" },
+        "recommendation": { "zh": "持续价值观辅导，结合晋升条件绑定文化行为", "en": "Ongoing values coaching tied to promotion criteria" }
+      },
+      {
+        "index": 1,
+        "dimension_band": "high",
+        "performance_band": "high",
+        "name": { "zh": "文化领袖", "en": "Culture Leaders" },
+        "description": { "zh": "高绩效且价值观标杆，是组织文化传承的核心人选", "en": "High performance and values benchmark; key for culture succession" },
+        "recommendation": { "zh": "加速晋升与保留，委以更大文化与业务双重责任", "en": "Accelerate promotion/retention; dual culture and business ownership" }
+      }
+    ],
+    "custom": [
+      {
+        "index": 9,
+        "dimension_band": "low",
+        "performance_band": "low",
+        "name": { "zh": "双低待汰", "en": "Dual Low" },
+        "description": { "zh": "绩效与该维度均低，难以满足当前要求", "en": "Low performance and low dimension score; hard to meet current bar" },
+        "recommendation": { "zh": "限期改进；未达则启动替换", "en": "Deadline to improve; replace if unmet" }
+      },
+      {
+        "index": 8,
+        "dimension_band": "medium",
+        "performance_band": "low",
+        "name": { "zh": "表现不稳", "en": "Inconsistent" },
+        "description": { "zh": "该维度中等、绩效偏低，整体表现波动", "en": "Mid dimension with low, fluctuating performance" },
+        "recommendation": { "zh": "找准短板并辅导；改进慢则调整配置", "en": "Pinpoint gaps and coach; reconfigure if slow" }
+      },
+      {
+        "index": 6,
+        "dimension_band": "high",
+        "performance_band": "low",
+        "name": { "zh": "维度亮点待兑现", "en": "Dimension Gem" },
+        "description": { "zh": "该维度突出但绩效尚未兑现，潜力型配置", "en": "Dimension stands out while performance lags; convertible upside" },
+        "recommendation": { "zh": "把维度优势落到可衡量业务结果上", "en": "Translate dimension strength into measurable business outcomes" }
+      },
+      {
+        "index": 7,
+        "dimension_band": "low",
+        "performance_band": "medium",
+        "name": { "zh": "绩合维弱", "en": "OK Perf, Weak Dim" },
+        "description": { "zh": "绩效合格但该维度偏弱，可能限制后续发展", "en": "Adequate performance with a weak dimension that may cap growth" },
+        "recommendation": { "zh": "专项补维，防止成为晋升瓶颈", "en": "Targeted dimension lift so it does not block promotion" }
+      },
+      {
+        "index": 5,
+        "dimension_band": "medium",
+        "performance_band": "medium",
+        "name": { "zh": "均衡骨干", "en": "Balanced Core" },
+        "description": { "zh": "绩效与该维度均居中，表现稳健可扩展", "en": "Mid performance and dimension; steady and expandable" },
+        "recommendation": { "zh": "同级扩大职责，配套辅导与资源", "en": "Enlarge scope at same level with coaching and resources" }
+      },
+      {
+        "index": 3,
+        "dimension_band": "high",
+        "performance_band": "medium",
+        "name": { "zh": "维度领先", "en": "Dimension Ahead" },
+        "description": { "zh": "该维度领先、绩效中等，具备加速空间", "en": "Leads on dimension with moderate performance; room to accelerate" },
+        "recommendation": { "zh": "设定绩效挑战，将该维度优势产品化/可复制", "en": "Set performance stretch; productize/replicate dimension strength" }
+      },
+      {
+        "index": 4,
+        "dimension_band": "low",
+        "performance_band": "high",
+        "name": { "zh": "绩优维短", "en": "High Perf, Dim Gap" },
+        "description": { "zh": "高绩效但该维度明显短板，需补齐以免埋雷", "en": "High performance with a clear dimension gap to close" },
+        "recommendation": { "zh": "维度改进与晋升挂钩，补齐后再扩大权责", "en": "Tie dimension improvement to promotion before expanding authority" }
+      },
+      {
+        "index": 2,
+        "dimension_band": "medium",
+        "performance_band": "high",
+        "name": { "zh": "高绩可塑", "en": "High Perf, Moldable" },
+        "description": { "zh": "高绩效、该维度中等，仍有定向提升空间", "en": "High performance with mid dimension score; targeted upside remains" },
+        "recommendation": { "zh": "定向提升该维度，配套晋升与保留方案", "en": "Targeted dimension lift with promotion and retention plans" }
+      },
+      {
+        "index": 1,
+        "dimension_band": "high",
+        "performance_band": "high",
+        "name": { "zh": "顶尖综合", "en": "Top Composite" },
+        "description": { "zh": "绩效与该维度双高，综合表现顶尖", "en": "Top-tier on both performance and this dimension" },
+        "recommendation": { "zh": "承担更大责任，加速发展与重点保留", "en": "Greater responsibility; accelerate development and key retention" }
+      }
+    ]
+  }
+}

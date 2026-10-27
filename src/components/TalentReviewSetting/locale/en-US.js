@@ -1,0 +1,30 @@
+const enUS = {
+  title: 'Talent Review Setting',
+  description: 'Link an AI interview client. Talent review projects, participants and models are read and written through its open-api.',
+  url: 'Host URL',
+  appId: 'App ID',
+  secretKey: 'Secret Key',
+  urlPlaceholder: 'https://api.gw.leapin-ai.com/ai-interview/cn-staging/api/v1',
+  pasteTip: 'Paste the "Host URL / App ID / Secret Key" block copied from the AI interview client into any field to fill all of them.',
+  importClipboard: 'Import from clipboard',
+  clipboardEmpty: 'No Host URL / App ID / Secret Key found in clipboard',
+  clipboardFailed: 'Cannot read clipboard, please paste into the field',
+  parsed: 'Parsed and filled',
+  secretKeyKeepPlaceholder: 'Leave empty to keep unchanged',
+  secretKeyRequired: 'Please enter Secret Key',
+  save: 'Save',
+  cancel: 'Cancel',
+  edit: 'Edit',
+  saveSuccess: 'Saved, client connection verified',
+  unbind: 'Unlink',
+  unbindConfirm: 'The talent review menu will be hidden for this tenant. Unlink?',
+  unbindSuccess: 'Unlinked',
+  clientInfo: 'Linked Client',
+  clientName: 'Client Name',
+  clientId: 'Client ID',
+  host: 'Host',
+  origin: 'Report Site',
+  notConfigured: 'Not linked'
+};
+
+export default enUS;

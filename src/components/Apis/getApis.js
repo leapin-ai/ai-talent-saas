@@ -44,6 +44,24 @@ const getApis = options => {
             method: 'POST'
           }
         },
+        talentReviewSetting: {
+          detail: {
+            url: `${prefix}/tenant/admin/talent-review-setting`,
+            method: 'GET'
+          },
+          save: {
+            url: `${prefix}/tenant/admin/talent-review-setting-save`,
+            method: 'POST'
+          },
+          cancel: {
+            url: `${prefix}/tenant/admin/talent-review-setting-cancel`,
+            method: 'POST'
+          },
+          client: {
+            url: `${prefix}/tenant/admin/talent-review-setting/client`,
+            method: 'GET'
+          }
+        },
         position: {
           list: {
             url: `${prefix}/tenant/admin/position-list`,
@@ -73,6 +91,72 @@ const getApis = options => {
         userList: {
           url: `${prefix}/tenant-extra/user-list`,
           method: 'GET'
+        },
+        talentReview: {
+          setting: {
+            url: `${prefix}/tenant/talent-review-setting`,
+            method: 'GET'
+          },
+          projectList: {
+            url: `${prefix}/tenant/talent-review/project/list`,
+            method: 'GET'
+          },
+          projectDetail: {
+            url: `${prefix}/tenant/talent-review/project/detail`,
+            method: 'GET'
+          },
+          projectCreate: {
+            url: `${prefix}/tenant/talent-review/project/create`,
+            method: 'POST'
+          },
+          projectSave: {
+            url: `${prefix}/tenant/talent-review/project/save`,
+            method: 'POST'
+          },
+          projectStatus: {
+            url: `${prefix}/tenant/talent-review/project/status`,
+            method: 'POST'
+          },
+          projectOrg: {
+            url: `${prefix}/tenant/talent-review/project/org`,
+            method: 'GET'
+          },
+          projectReport: {
+            url: `${prefix}/tenant/talent-review/project/report`,
+            method: 'GET'
+          },
+          interviewReport: {
+            url: `${prefix}/tenant/talent-review/interview-report`,
+            method: 'GET'
+          },
+          projectInvite: {
+            url: `${prefix}/tenant/talent-review/project/invite`,
+            method: 'POST'
+          },
+          resendMember: {
+            url: `${prefix}/tenant/talent-review/project/resend-member`,
+            method: 'POST'
+          },
+          resendEvaluator: {
+            url: `${prefix}/tenant/talent-review/project/resend-evaluator`,
+            method: 'POST'
+          },
+          modelList: {
+            url: `${prefix}/tenant/talent-review/model/list`,
+            method: 'GET'
+          },
+          modelDetail: {
+            url: `${prefix}/tenant/talent-review/model/detail`,
+            method: 'GET'
+          },
+          modelQuestions: {
+            url: `${prefix}/tenant/talent-review/model/questions`,
+            method: 'GET'
+          },
+          orgSource: {
+            url: `${prefix}/tenant/talent-review/org-source`,
+            method: 'GET'
+          }
         },
         sendOrgMessage: {
           url: `${prefix}/tenant/send-org-message`,

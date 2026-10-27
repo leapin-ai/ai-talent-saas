@@ -292,6 +292,15 @@ const TenantAdmin = createWithRemoteLoader({
             loader: () => import('@components/TenantHiring')
           },
           {
+            path: 'talent-review/*',
+            title: 'TalentReview',
+            elementProps: {
+              baseUrl: `${baseUrl}/talent-review`,
+              permissions: TENANT_ADMIN_PERMISSIONS
+            },
+            loader: () => import('@components/TalentReview')
+          },
+          {
             path: 'setting/company',
             title: 'Setting/Company',
             element: <Setting.Company baseUrl={`${baseUrl}/setting`}>{({ title, children }) => <Page title={title}>{children}</Page>}</Setting.Company>

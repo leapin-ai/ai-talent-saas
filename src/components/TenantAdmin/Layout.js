@@ -9,7 +9,22 @@ import TenantThemeProvider from '../../commons/TenantThemeProvider';
 import { resolveTenantThemeColor } from '../../commons/themeColor';
 import { withPublicUrl } from '../../commons/publicUrl';
 import { getOidcClient } from '../../commons/oidcClient';
-import { WorkforceMenuIcon, TalentsMenuIcon, HomeMenuIcon, MarketMenuIcon, AppCenterMenuIcon, CompanyMenuIcon, OrgMenuIcon, UserMenuIcon, SwitchTenantMenuIcon, LogoutMenuIcon } from './MenuIcons';
+import { useFetch } from '@kne/react-fetch';
+import {
+  WorkforceMenuIcon,
+  TalentsMenuIcon,
+  HomeMenuIcon,
+  MarketMenuIcon,
+  AppCenterMenuIcon,
+  CompanyMenuIcon,
+  OrgMenuIcon,
+  UserMenuIcon,
+  SwitchTenantMenuIcon,
+  LogoutMenuIcon,
+  TalentReviewProjectsMenuIcon,
+  TalentReviewParticipantsMenuIcon,
+  TalentReviewModelsMenuIcon
+} from './MenuIcons';
 
 const Layout = createWithRemoteLoader({
   modules: [
@@ -24,7 +39,8 @@ const Layout = createWithRemoteLoader({
   withLocale(({ remoteModules, baseUrl, children }) => {
     const { formatMessage } = useIntl();
     const [Authenticate, Permissions, usePermissionsPass, Language, SetGlobal, usePreset] = remoteModules;
-    const { capabilities } = usePreset();
+    const { capabilities, apis } = usePreset();
+    const { data: talentReviewStatus } = useFetch(Object.assign({}, apis.talentSaas.tenant.talentReview.setting));
     const logout = () => getOidcClient().logout();
     return (
       <Authenticate>
@@ -37,6 +53,7 @@ const Layout = createWithRemoteLoader({
                 <TenantAdminMenu
                   baseUrl={baseUrl}
                   appManagerEnabled={!!capabilities?.appManager}
+                  talentReviewEnabled={!!talentReviewStatus?.configured}
                   tenant={tenant}
                   tenantUserInfo={tenantUserInfo}
                   logout={logout}
@@ -55,12 +72,18 @@ const Layout = createWithRemoteLoader({
   })
 );
 
-const TenantAdminMenu = ({ baseUrl, appManagerEnabled, tenant, tenantUserInfo, logout, formatMessage, usePermissionsPass, Language, children }) => {
+const TenantAdminMenu = ({ baseUrl, appManagerEnabled, talentReviewEnabled, tenant, tenantUserInfo, logout, formatMessage, usePermissionsPass, Language, children }) => {
   const allowHome = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.home });
   const allowTalentMarketplace = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.talentMarketplace });
   const allowPositionManagement = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionManagement });
   const allowEmployeeProfile = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeProfile });
   const allowAppCenter = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.appCenter });
+  const allowTalentReview = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.talentReview });
+  const showTalentReview = talentReviewEnabled && allowTalentReview;
+  const talentReviewGroup = {
+    group: 'talentIntelligence',
+    groupLabel: formatMessage({ id: 'tenantAdmin.talentIntelligence' })
+  };
   const allowCompanySetting = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.companySetting });
   const allowOrgSetting = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.orgSetting });
   const allowUserManagement = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.userManagement });
@@ -102,6 +125,27 @@ const TenantAdminMenu = ({ baseUrl, appManagerEnabled, tenant, tenantUserInfo, l
           path: '/apps',
           icon: <AppCenterMenuIcon />
         }
+      : null,
+    showTalentReview
+      ? Object.assign({}, talentReviewGroup, {
+          label: formatMessage({ id: 'tenantAdmin.talentReviewProjects' }),
+          path: '/talent-review/projects',
+          icon: <TalentReviewProjectsMenuIcon />
+        })
+      : null,
+    showTalentReview
+      ? Object.assign({}, talentReviewGroup, {
+          label: formatMessage({ id: 'tenantAdmin.talentReviewParticipants' }),
+          path: '/talent-review/participants',
+          icon: <TalentReviewParticipantsMenuIcon />
+        })
+      : null,
+    showTalentReview
+      ? Object.assign({}, talentReviewGroup, {
+          label: formatMessage({ id: 'tenantAdmin.talentReviewModels' }),
+          path: '/talent-review/models',
+          icon: <TalentReviewModelsMenuIcon />
+        })
       : null,
     allowCompanySetting
       ? {

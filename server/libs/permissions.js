@@ -121,6 +121,24 @@ module.exports = {
           ]
         },
         {
+          name: '人才盘点',
+          code: 'talent-review',
+          permissions: [
+            {
+              name: '查看',
+              code: 'view'
+            },
+            {
+              name: '创建项目',
+              code: 'create'
+            },
+            {
+              name: '发送邀请',
+              code: 'invite'
+            }
+          ]
+        },
+        {
           name: '员工档案',
           code: 'employee-archive',
           modules: [
