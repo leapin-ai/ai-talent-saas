@@ -53,8 +53,9 @@ const GridBoard = ({ gridType, dimension, dimensionLabel, nineSquareGrid, locale
             <span className={style['grid-badge']}>{formatMessage({ id: 'grid2D' })}</span>
           </div>
           <div className={style['grid-axis-wrap']}>
+            <span className={style['grid-axis-name']}>{dimensionLabel}</span>
+            <div />
             <div className={style['grid-axis-y']}>
-              <span className={style['grid-axis-name']}>{dimensionLabel}</span>
               {levels.map(key => (
                 <span key={key}>{formatMessage({ id: key })}</span>
               ))}
@@ -68,7 +69,7 @@ const GridBoard = ({ gridType, dimension, dimensionLabel, nineSquareGrid, locale
               )}
             </div>
             <div />
-            <div className={style['grid-axis-x']} style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 162px))` }}>
+            <div className={style['grid-axis-x']} style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 162px)) auto` }}>
               {[...levels].reverse().map(key => (
                 <span key={key}>{formatMessage({ id: key })}</span>
               ))}
@@ -84,8 +85,9 @@ const GridBoard = ({ gridType, dimension, dimensionLabel, nineSquareGrid, locale
             <span className={style['grid-badge']}>{formatMessage({ id: 'grid1D' })}</span>
           </div>
           <div className={style['grid-axis-wrap']}>
+            <span className={style['grid-axis-name']}>{dimensionLabel}</span>
+            <div />
             <div className={style['grid-axis-y']}>
-              <span className={style['grid-axis-name']}>{dimensionLabel}</span>
               {levels.map(key => (
                 <span key={key}>{formatMessage({ id: key })}</span>
               ))}
