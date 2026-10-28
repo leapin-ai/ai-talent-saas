@@ -212,8 +212,11 @@
       resize: vertical;
     }
 
-    textarea.ant-input:focus {
+    textarea.ant-input,
+    textarea.ant-input:focus,
+    textarea.ant-input:focus-visible {
       box-shadow: none !important;
+      outline: none !important;
     }
   }
 
@@ -222,6 +225,7 @@
     .ant-input,
     .ant-input-outlined,
     .ant-input:focus,
+    .ant-input:focus-visible,
     .ant-input-focused,
     .ant-input-affix-wrapper,
     .ant-input-affix-wrapper-focused {
