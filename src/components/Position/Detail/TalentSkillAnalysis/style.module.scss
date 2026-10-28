@@ -773,6 +773,18 @@
     min-width: 0;
   }
 
+  .halo-body {
+    gap: 16px;
+  }
+
+  .halo-metric {
+    flex: 1 1 0;
+  }
+
+  .halo-divider {
+    margin: 0 10px;
+  }
+
   .gaps-wrap {
     flex: 1 1 auto;
     width: 100%;

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Button, Empty, Flex, Tooltip } from 'antd';
+import { Button, Empty, Flex } from 'antd';
+import Tooltip from '../../../../commons/ResponsiveTooltip';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useNavigate, useParams } from 'react-router-dom';
