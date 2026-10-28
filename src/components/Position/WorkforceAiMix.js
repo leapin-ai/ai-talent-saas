@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Col, Empty, Flex, Row, Select, Spin, Tooltip, TreeSelect } from 'antd';
+import { Card, Col, Empty, Flex, Row, Spin, Tooltip } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
 import style from './workforceAiMix.module.scss';
 
-const MIX_KEYS = ['automated', 'augmented', 'humanLed', 'unassessed'];
+// 未评估只计数，不参与占比
+const ASSESSED_KEYS = ['automated', 'augmented', 'humanLed'];
+const sumAssessed = mix => ASSESSED_KEYS.reduce((sum, key) => sum + (mix?.[key] || 0), 0);
 // @kne/react-box 标准色板：主色 #4F46E5、辅色 #22d3ee、warning #f59e0b
 const MIX_COLORS = {
   automated: '#4F46E5',
@@ -20,41 +22,56 @@ const MIX_TEXT_COLORS = {
   unassessed: '#67658C'
 };
 const STATUS_LIST = ['published', 'draft', 'closed'];
+const DEFAULT_STATUS = ['published'];
 
 const toPercent = (count, total) => (total ? Math.round((count / total) * 1000) / 10 : 0);
 
-const buildOrgTree = list => {
-  const nodes = new Map(list.map(item => [String(item.id), { value: String(item.id), title: item.name, children: [] }]));
-  const roots = [];
-  list.forEach(item => {
-    const node = nodes.get(String(item.id));
-    const parent = item.parentId != null ? nodes.get(String(item.parentId)) : null;
-    (parent ? parent.children : roots).push(node);
-  });
-  return roots;
-};
-
-const MixLegend = ({ mix, formatMessage }) => (
+const MixLegend = ({ formatMessage }) => (
   <Flex wrap gap={12} className={style.legend}>
-    {MIX_KEYS.filter(key => key !== 'unassessed' || mix.unassessed > 0).map(key => (
+    {ASSESSED_KEYS.map(key => (
       <span key={key} className={style['legend-item']}>
         <i style={{ background: MIX_COLORS[key] }} />
-        {formatMessage({ id: `position.aiMix.${key}` })} {mix[key]}
+        {formatMessage({ id: `position.aiMix.${key}` })}
       </span>
     ))}
   </Flex>
 );
 
+// 段太窄放不下百分比文字时不显示
+const DONUT_LABEL_MIN_PERCENT = 5;
+// 标签落在环宽中线：外径 84px、环宽 28px
+const DONUT_LABEL_RADIUS = 70;
+
 const Donut = ({ mix, total, formatMessage }) => {
+  const assessed = sumAssessed(mix);
   let start = 0;
-  const stops = MIX_KEYS.map(key => {
-    const end = start + (total ? (mix[key] / total) * 100 : 0);
-    const stop = `${MIX_COLORS[key]} ${start}% ${end}%`;
-    start = end;
-    return stop;
+  const segments = ASSESSED_KEYS.map(key => {
+    const percent = assessed ? (mix[key] / assessed) * 100 : 0;
+    const segment = { key, start, end: start + percent, percent };
+    start += percent;
+    return segment;
   });
+  const stops = segments.map(({ key, start, end }) => `${MIX_COLORS[key]} ${start}% ${end}%`);
   return (
-    <div className={style.donut} style={{ background: total ? `conic-gradient(${stops.join(', ')})` : MIX_COLORS.unassessed }}>
+    <div className={style.donut} style={{ background: assessed ? `conic-gradient(${stops.join(', ')})` : MIX_COLORS.unassessed }}>
+      {segments
+        .filter(({ percent }) => percent >= DONUT_LABEL_MIN_PERCENT)
+        .map(({ key, start, end, percent }) => {
+          const angle = (((start + end) / 2) * 3.6 * Math.PI) / 180;
+          return (
+            <span
+              key={key}
+              className={style['donut-percent']}
+              style={{
+                left: `calc(50% + ${Math.sin(angle) * DONUT_LABEL_RADIUS}px)`,
+                top: `calc(50% - ${Math.cos(angle) * DONUT_LABEL_RADIUS}px)`,
+                color: MIX_TEXT_COLORS[key]
+              }}
+            >
+              {toPercent(mix[key], assessed)}%
+            </span>
+          );
+        })}
       <div className={style['donut-hole']}>
         <span className={style['donut-value']}>{total}</span>
         <span className={style['donut-label']}>{formatMessage({ id: 'position.aiMix.tasksUnit' })}</span>
@@ -65,8 +82,8 @@ const Donut = ({ mix, total, formatMessage }) => {
 
 const StackedBar = ({ role, formatMessage }) => (
   <div className={style['stack-bar']}>
-    {MIX_KEYS.map(key => {
-      const percent = toPercent(role[key], role.total);
+    {ASSESSED_KEYS.map(key => {
+      const percent = toPercent(role[key], sumAssessed(role));
       if (!percent) {
         return null;
       }
@@ -82,36 +99,19 @@ const StackedBar = ({ role, formatMessage }) => (
 );
 
 const WorkforceAiMix = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
+  modules: ['components-core:Global@usePreset', 'components-core:Common@SuperSelectField', 'components-core:Common@SuperSelectTreeField']
 })(
   withLocale(({ remoteModules, apis }) => {
-    const [usePreset] = remoteModules;
+    const [usePreset, SuperSelectField, SuperSelectTreeField] = remoteModules;
     const { ajax } = usePreset();
     const { formatMessage } = useIntl();
-    const [orgTree, setOrgTree] = useState([]);
-    const [orgIds, setOrgIds] = useState([]);
-    const [status, setStatus] = useState(['published']);
+    const [orgValue, setOrgValue] = useState([]);
+    const [status, setStatus] = useState(DEFAULT_STATUS);
+    const isDefaultStatus = status.length === 1 && status[0] === DEFAULT_STATUS[0];
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-      if (!apis?.orgList) {
-        return;
-      }
-      let cancelled = false;
-      ajax(Object.assign({}, apis.orgList))
-        .then(({ data: resData }) => {
-          if (cancelled || resData?.code !== 0) {
-            return;
-          }
-          const list = Array.isArray(resData.data) ? resData.data : resData.data?.pageData || [];
-          setOrgTree(buildOrgTree(list));
-        })
-        .catch(() => {});
-      return () => {
-        cancelled = true;
-      };
-    }, [ajax, apis?.orgList]);
+    const orgIds = useMemo(() => orgValue.map(item => item.id), [orgValue]);
+    const statusOptions = useMemo(() => STATUS_LIST.map(value => ({ value, label: formatMessage({ id: `positionStatus.${value}` }) })), [formatMessage]);
 
     useEffect(() => {
       if (!apis?.workforceAiMix) {
@@ -164,30 +164,22 @@ const WorkforceAiMix = createWithRemoteLoader({
             <div className={style.subtitle}>{formatMessage({ id: 'position.aiMix.subtitle' }, { count: data?.positionCount || 0 })}</div>
           </div>
           <Flex gap={8} wrap className={style.filters}>
-            <TreeSelect
+            <SuperSelectTreeField
               className={style['filter-org']}
-              variant="borderless"
-              treeData={orgTree}
-              value={orgIds}
-              onChange={setOrgIds}
-              treeCheckable
-              showCheckedStrategy={TreeSelect.SHOW_PARENT}
-              maxTagCount={1}
-              maxTagPlaceholder={omitted => `+${omitted.length}`}
+              api={apis.orgList}
+              valueKey="id"
+              labelKey="name"
+              value={orgValue}
+              onChange={next => setOrgValue(next || [])}
               allowClear
-              treeDefaultExpandAll
               placeholder={formatMessage({ id: 'position.aiMix.orgPlaceholder' })}
             />
-            <Select
-              className={style['filter-status']}
-              variant="borderless"
-              mode="multiple"
-              value={status}
-              onChange={setStatus}
-              maxTagCount={1}
-              maxTagPlaceholder={omitted => `+${omitted.length}`}
+            <SuperSelectField
+              className={`${style['filter-status']}${isDefaultStatus ? ` ${style['filter-status-default']}` : ''}`}
+              options={statusOptions}
+              value={statusOptions.filter(item => status.includes(item.value))}
+              onChange={next => setStatus(next?.length ? next.map(item => item.value) : DEFAULT_STATUS)}
               placeholder={formatMessage({ id: 'position.aiMix.statusPlaceholder' })}
-              options={STATUS_LIST.map(value => ({ value, label: formatMessage({ id: `positionStatus.${value}` }) }))}
             />
           </Flex>
         </Flex>
@@ -204,7 +196,7 @@ const WorkforceAiMix = createWithRemoteLoader({
                 </div>
                 {['automated', 'augmented', 'humanLed'].map(key => (
                   <div className={style.stat} key={key}>
-                    <div className={style['stat-value']}>{toPercent(mix[key], taskCount)}%</div>
+                    <div className={style['stat-value']}>{toPercent(mix[key], sumAssessed(mix))}%</div>
                     <div className={style['stat-label']}>
                       <i className={style['stat-dot']} style={{ background: MIX_COLORS[key] }} />
                       {formatMessage({ id: `position.aiMix.${key}` })}
@@ -226,7 +218,7 @@ const WorkforceAiMix = createWithRemoteLoader({
                 {taskCount ? (
                   <Flex vertical align="center" gap={16} className={style['donut-wrap']}>
                     <Donut mix={mix} total={taskCount} formatMessage={formatMessage} />
-                    <MixLegend mix={mix} formatMessage={formatMessage} />
+                    <MixLegend formatMessage={formatMessage} />
                   </Flex>
                 ) : (
                   empty
@@ -238,7 +230,6 @@ const WorkforceAiMix = createWithRemoteLoader({
                 <div className={style['panel-title']}>{formatMessage({ id: 'position.aiMix.byRole' })}</div>
                 {roles.length ? (
                   <>
-                    <MixLegend mix={mix} formatMessage={formatMessage} />
                     <div className={style['role-list']}>
                       {roles.map(role => (
                         <div className={style['role-row']} key={role.id}>
@@ -246,10 +237,10 @@ const WorkforceAiMix = createWithRemoteLoader({
                             {role.name}
                           </span>
                           <StackedBar role={role} formatMessage={formatMessage} />
-                          <span className={style['role-total']}>{role.total}</span>
                         </div>
                       ))}
                     </div>
+                    <MixLegend formatMessage={formatMessage} />
                   </>
                 ) : (
                   empty

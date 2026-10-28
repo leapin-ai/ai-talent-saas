@@ -124,8 +124,8 @@ module.exports = fp(async (fastify, options) => {
     return map;
   };
 
-  // 任务 AI 构成取员工报告中岗位要求 AI 等级（employeeTaskReadiness.required，A1-A5）按任务求平均后归类：
-  // A1=人主导，A2-A3=AI 增强，A4-A5=可自动化；0（无法判定）不参与统计
+  // 任务 = 岗位 skill[]；AI 等级取员工报告 skills 中同名任务的岗位要求等级（required，A1-A5）求平均后归类：
+  // A1=人主导，A2-A3=AI 增强，A4-A5=可自动化；无报告或等级 0（无法判定）计为未评估
   const aiMixKeyByLevel = level => (level >= 4 ? 'automated' : level >= 2 ? 'augmented' : 'humanLed');
   const POSITION_STATUS = ['draft', 'published', 'closed'];
 
@@ -139,32 +139,31 @@ module.exports = fp(async (fastify, options) => {
     }
     const positions = await models.position.findAll({
       where,
-      attributes: ['id', 'name', 'outlook', 'verdict'],
+      attributes: ['id', 'name', 'skill', 'outlook', 'verdict'],
       order: [['createdAt', 'DESC']]
     });
-    const employeeCountMap = await countEmployeesByPosition(
-      tenantId,
-      positions.map(item => String(item.id))
-    );
-    const readinessRows = positions.length
-      ? await models.employeeTaskReadiness.findAll({
-          where: {
-            tenantId,
-            positionId: { [Op.in]: positions.map(item => String(item.id)) },
-            required: { [Op.between]: [1, 5] }
-          },
-          attributes: ['positionId', 'taskId', 'required'],
+    const positionIds = positions.map(item => String(item.id));
+    const employeeCountMap = await countEmployeesByPosition(tenantId, positionIds);
+    const analyses = positionIds.length
+      ? await models.positionEmployeeSkillAnalysis.findAll({
+          where: { tenantId, positionId: { [Op.in]: positionIds } },
+          attributes: ['positionId', 'skills'],
           raw: true
         })
       : [];
     const requiredByPosition = new Map();
-    readinessRows.forEach(row => {
-      const positionKey = String(row.positionId);
-      const taskMap = requiredByPosition.get(positionKey) || new Map();
-      const levels = taskMap.get(String(row.taskId)) || [];
-      levels.push(Number(row.required));
-      taskMap.set(String(row.taskId), levels);
-      requiredByPosition.set(positionKey, taskMap);
+    analyses.forEach(analysis => {
+      const positionKey = String(analysis.positionId);
+      const levelMap = requiredByPosition.get(positionKey) || new Map();
+      (Array.isArray(analysis.skills) ? analysis.skills : []).forEach(skill => {
+        const name = String(skill?.name || '').trim();
+        const required = Number(skill?.required);
+        if (!name || !(required >= 1 && required <= 5)) {
+          return;
+        }
+        levelMap.set(name, (levelMap.get(name) || []).concat(required));
+      });
+      requiredByPosition.set(positionKey, levelMap);
     });
 
     const emptyMix = () => ({ automated: 0, augmented: 0, humanLed: 0, unassessed: 0 });
@@ -173,10 +172,11 @@ module.exports = fp(async (fastify, options) => {
     let gainWeight = 0;
     const roles = positions.map(position => {
       const roleMix = emptyMix();
-      const taskMap = requiredByPosition.get(String(position.id)) || new Map();
-      taskMap.forEach(levels => {
-        const average = Math.round(levels.reduce((sum, level) => sum + level, 0) / levels.length);
-        const key = aiMixKeyByLevel(average);
+      const skills = Array.isArray(position.skill) ? position.skill : [];
+      const levelMap = requiredByPosition.get(String(position.id)) || new Map();
+      skills.forEach(skill => {
+        const levels = levelMap.get(String(skill?.name || '').trim());
+        const key = levels ? aiMixKeyByLevel(Math.round(levels.reduce((sum, level) => sum + level, 0) / levels.length)) : 'unassessed';
         roleMix[key] += 1;
         mix[key] += 1;
       });
@@ -188,7 +188,7 @@ module.exports = fp(async (fastify, options) => {
         weightedGain += aiEfficiencyGain * weight;
         gainWeight += weight;
       }
-      return Object.assign({ id: position.id, name: position.name, total: taskMap.size, employeeCount, aiEfficiencyGain }, roleMix);
+      return Object.assign({ id: position.id, name: position.name, total: skills.length, employeeCount, aiEfficiencyGain }, roleMix);
     });
 
     return {
