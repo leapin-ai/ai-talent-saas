@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Tooltip } from 'antd';
+import Tooltip from '../../../commons/ResponsiveTooltip';
 import { useIntl } from '@kne/react-intl';
 import withLocale from '../withLocale';
 import SkillList from './SkillList';

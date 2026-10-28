@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { App, Button, Drawer, Empty, Flex, Input, Tooltip, Typography } from 'antd';
+import { App, Button, Drawer, Empty, Flex, Input, Typography } from 'antd';
+import Tooltip from '../../commons/ResponsiveTooltip';
 import { MdOutlineEdit } from 'react-icons/md';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';

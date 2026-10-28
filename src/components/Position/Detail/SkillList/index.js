@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Empty, Flex, Tooltip } from 'antd';
+import { Empty, Flex } from 'antd';
+import Tooltip from '../../../../commons/ResponsiveTooltip';
 import { useIntl } from '@kne/react-intl';
 import classnames from 'classnames';
 import withLocale from '../../withLocale';

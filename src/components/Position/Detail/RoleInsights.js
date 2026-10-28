@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Tooltip } from 'antd';
+import Tooltip from '../../../commons/ResponsiveTooltip';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import withLocale from '../withLocale';
