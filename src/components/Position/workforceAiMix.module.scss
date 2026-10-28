@@ -206,6 +206,11 @@ $track: rgba(79, 70, 229, 0.08);
   }
 }
 
+.role-list + .legend {
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
 .donut-wrap {
   flex: 1 1 auto;
   justify-content: center;

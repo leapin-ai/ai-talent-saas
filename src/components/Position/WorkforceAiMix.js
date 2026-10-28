@@ -230,7 +230,6 @@ const WorkforceAiMix = createWithRemoteLoader({
                 <div className={style['panel-title']}>{formatMessage({ id: 'position.aiMix.byRole' })}</div>
                 {roles.length ? (
                   <>
-                    <MixLegend formatMessage={formatMessage} />
                     <div className={style['role-list']}>
                       {roles.map(role => (
                         <div className={style['role-row']} key={role.id}>
@@ -241,6 +240,7 @@ const WorkforceAiMix = createWithRemoteLoader({
                         </div>
                       ))}
                     </div>
+                    <MixLegend formatMessage={formatMessage} />
                   </>
                 ) : (
                   empty
