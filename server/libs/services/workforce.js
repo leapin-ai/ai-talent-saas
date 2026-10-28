@@ -124,8 +124,9 @@ module.exports = fp(async (fastify, options) => {
     return map;
   };
 
-  // 任务 AI 构成按 skill[].aiExposure 归类：high=可自动化，medium=AI 增强，low=人主导，缺失=未评估
-  const AI_MIX_BY_EXPOSURE = { high: 'automated', medium: 'augmented', low: 'humanLed' };
+  // 任务 AI 构成取员工报告中岗位要求 AI 等级（employeeTaskReadiness.required，A1-A5）按任务求平均后归类：
+  // A1=人主导，A2-A3=AI 增强，A4-A5=可自动化；0（无法判定）不参与统计
+  const aiMixKeyByLevel = level => (level >= 4 ? 'automated' : level >= 2 ? 'augmented' : 'humanLed');
   const POSITION_STATUS = ['draft', 'published', 'closed'];
 
   const workforceAiMix = async (authenticatePayload, { tenantOrgIds, status } = {}) => {
@@ -138,13 +139,33 @@ module.exports = fp(async (fastify, options) => {
     }
     const positions = await models.position.findAll({
       where,
-      attributes: ['id', 'name', 'skill', 'outlook', 'verdict'],
+      attributes: ['id', 'name', 'outlook', 'verdict'],
       order: [['createdAt', 'DESC']]
     });
     const employeeCountMap = await countEmployeesByPosition(
       tenantId,
       positions.map(item => String(item.id))
     );
+    const readinessRows = positions.length
+      ? await models.employeeTaskReadiness.findAll({
+          where: {
+            tenantId,
+            positionId: { [Op.in]: positions.map(item => String(item.id)) },
+            required: { [Op.between]: [1, 5] }
+          },
+          attributes: ['positionId', 'taskId', 'required'],
+          raw: true
+        })
+      : [];
+    const requiredByPosition = new Map();
+    readinessRows.forEach(row => {
+      const positionKey = String(row.positionId);
+      const taskMap = requiredByPosition.get(positionKey) || new Map();
+      const levels = taskMap.get(String(row.taskId)) || [];
+      levels.push(Number(row.required));
+      taskMap.set(String(row.taskId), levels);
+      requiredByPosition.set(positionKey, taskMap);
+    });
 
     const emptyMix = () => ({ automated: 0, augmented: 0, humanLed: 0, unassessed: 0 });
     const mix = emptyMix();
@@ -152,9 +173,10 @@ module.exports = fp(async (fastify, options) => {
     let gainWeight = 0;
     const roles = positions.map(position => {
       const roleMix = emptyMix();
-      const skills = Array.isArray(position.skill) ? position.skill : [];
-      skills.forEach(skill => {
-        const key = AI_MIX_BY_EXPOSURE[skill?.aiExposure] || 'unassessed';
+      const taskMap = requiredByPosition.get(String(position.id)) || new Map();
+      taskMap.forEach(levels => {
+        const average = Math.round(levels.reduce((sum, level) => sum + level, 0) / levels.length);
+        const key = aiMixKeyByLevel(average);
         roleMix[key] += 1;
         mix[key] += 1;
       });
@@ -166,7 +188,7 @@ module.exports = fp(async (fastify, options) => {
         weightedGain += aiEfficiencyGain * weight;
         gainWeight += weight;
       }
-      return Object.assign({ id: position.id, name: position.name, total: skills.length, employeeCount, aiEfficiencyGain }, roleMix);
+      return Object.assign({ id: position.id, name: position.name, total: taskMap.size, employeeCount, aiEfficiencyGain }, roleMix);
     });
 
     return {
