@@ -150,9 +150,11 @@ const deriveFromRows = rows => {
 const ProfileReadiness = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-core:FormInfo@useFormModal', 'components-core:Global@useGlobalValue']
 })(
-  withLocale(({ remoteModules, positionId, employeeId, displayName, readOnly, analysisOverride, onSaveAnalysis, showLooksWrong = false }) => {
+  withLocale(({ remoteModules, positionId, employeeId, displayName, readOnly, analysisOverride, onSaveAnalysis, showLooksWrong = false, apis: apisProp }) => {
     const [usePreset, useFormModal, useGlobalValue] = remoteModules;
-    const { ajax, apis } = usePreset();
+    const { ajax, apis: presetApis } = usePreset();
+    // 免登录分享页传入公开接口，结构与 preset apis 一致
+    const apis = apisProp || presetApis;
     const formModal = useFormModal();
     const { message } = App.useApp();
     const { formatMessage } = useIntl();
@@ -1080,6 +1082,7 @@ const ProfileReadiness = createWithRemoteLoader({
               <div className={style['future-task-evidence']}>
                 <div className={style['future-task-evidence-screen']}>
                   <ProfileEvidence
+                    apis={apisProp}
                     employeeId={employeeId}
                     positionId={positionId}
                     variant="task"
@@ -1095,7 +1098,7 @@ const ProfileReadiness = createWithRemoteLoader({
                     <Flex vertical gap={16}>
                       {printTasks.map(task => (
                         <div key={task.id} className={style['print-evidence-block']}>
-                          <ProfileEvidence employeeId={employeeId} positionId={positionId} variant="task" selectedTask={task} readOnly showLooksWrong={false} />
+                          <ProfileEvidence apis={apisProp} employeeId={employeeId} positionId={positionId} variant="task" selectedTask={task} readOnly showLooksWrong={false} />
                         </div>
                       ))}
                     </Flex>
