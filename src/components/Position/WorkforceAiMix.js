@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Col, Empty, Flex, Row, Select, Spin, Tooltip, TreeSelect } from 'antd';
+import { Card, Col, Empty, Flex, Row, Spin, Tooltip } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
@@ -23,19 +23,9 @@ const MIX_TEXT_COLORS = {
   unassessed: '#67658C'
 };
 const STATUS_LIST = ['published', 'draft', 'closed'];
+const DEFAULT_STATUS = ['published'];
 
 const toPercent = (count, total) => (total ? Math.round((count / total) * 1000) / 10 : 0);
-
-const buildOrgTree = list => {
-  const nodes = new Map(list.map(item => [String(item.id), { value: String(item.id), title: item.name, children: [] }]));
-  const roots = [];
-  list.forEach(item => {
-    const node = nodes.get(String(item.id));
-    const parent = item.parentId != null ? nodes.get(String(item.parentId)) : null;
-    (parent ? parent.children : roots).push(node);
-  });
-  return roots;
-};
 
 const MixLegend = ({ mix, formatMessage }) => (
   <Flex wrap gap={12} className={style.legend}>
@@ -86,36 +76,19 @@ const StackedBar = ({ role, formatMessage }) => (
 );
 
 const WorkforceAiMix = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
+  modules: ['components-core:Global@usePreset', 'components-core:Common@SuperSelectField', 'components-core:Common@SuperSelectTreeField']
 })(
   withLocale(({ remoteModules, apis }) => {
-    const [usePreset] = remoteModules;
+    const [usePreset, SuperSelectField, SuperSelectTreeField] = remoteModules;
     const { ajax } = usePreset();
     const { formatMessage } = useIntl();
-    const [orgTree, setOrgTree] = useState([]);
-    const [orgIds, setOrgIds] = useState([]);
-    const [status, setStatus] = useState(['published']);
+    const [orgValue, setOrgValue] = useState([]);
+    const [status, setStatus] = useState(DEFAULT_STATUS);
+    const isDefaultStatus = status.length === 1 && status[0] === DEFAULT_STATUS[0];
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-      if (!apis?.orgList) {
-        return;
-      }
-      let cancelled = false;
-      ajax(Object.assign({}, apis.orgList))
-        .then(({ data: resData }) => {
-          if (cancelled || resData?.code !== 0) {
-            return;
-          }
-          const list = Array.isArray(resData.data) ? resData.data : resData.data?.pageData || [];
-          setOrgTree(buildOrgTree(list));
-        })
-        .catch(() => {});
-      return () => {
-        cancelled = true;
-      };
-    }, [ajax, apis?.orgList]);
+    const orgIds = useMemo(() => orgValue.map(item => item.id), [orgValue]);
+    const statusOptions = useMemo(() => STATUS_LIST.map(value => ({ value, label: formatMessage({ id: `positionStatus.${value}` }) })), [formatMessage]);
 
     useEffect(() => {
       if (!apis?.workforceAiMix) {
@@ -168,30 +141,22 @@ const WorkforceAiMix = createWithRemoteLoader({
             <div className={style.subtitle}>{formatMessage({ id: 'position.aiMix.subtitle' }, { count: data?.positionCount || 0 })}</div>
           </div>
           <Flex gap={8} wrap className={style.filters}>
-            <TreeSelect
+            <SuperSelectTreeField
               className={style['filter-org']}
-              variant="borderless"
-              treeData={orgTree}
-              value={orgIds}
-              onChange={setOrgIds}
-              treeCheckable
-              showCheckedStrategy={TreeSelect.SHOW_PARENT}
-              maxTagCount={1}
-              maxTagPlaceholder={omitted => `+${omitted.length}`}
+              api={apis.orgList}
+              valueKey="id"
+              labelKey="name"
+              value={orgValue}
+              onChange={next => setOrgValue(next || [])}
               allowClear
-              treeDefaultExpandAll
               placeholder={formatMessage({ id: 'position.aiMix.orgPlaceholder' })}
             />
-            <Select
-              className={style['filter-status']}
-              variant="borderless"
-              mode="multiple"
-              value={status}
-              onChange={setStatus}
-              maxTagCount={1}
-              maxTagPlaceholder={omitted => `+${omitted.length}`}
+            <SuperSelectField
+              className={`${style['filter-status']}${isDefaultStatus ? ` ${style['filter-status-default']}` : ''}`}
+              options={statusOptions}
+              value={statusOptions.filter(item => status.includes(item.value))}
+              onChange={next => setStatus(next?.length ? next.map(item => item.value) : DEFAULT_STATUS)}
               placeholder={formatMessage({ id: 'position.aiMix.statusPlaceholder' })}
-              options={STATUS_LIST.map(value => ({ value, label: formatMessage({ id: `positionStatus.${value}` }) }))}
             />
           </Flex>
         </Flex>
