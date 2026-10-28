@@ -405,10 +405,15 @@ $accent: var(--primary-color);
   grid-template-columns: auto auto;
   justify-content: start;
   column-gap: 8px;
+
+  > .grid-axis-name {
+    justify-self: end;
+    margin-bottom: 8px;
+    white-space: nowrap;
+  }
 }
 
 .grid-axis-y {
-  position: relative;
   display: grid;
   grid-auto-rows: 1fr;
   row-gap: 16px;
@@ -416,13 +421,6 @@ $accent: var(--primary-color);
   justify-items: end;
   font-size: 11px;
   color: $text-secondary;
-
-  .grid-axis-name {
-    position: absolute;
-    top: 0;
-    right: 0;
-    white-space: nowrap;
-  }
 }
 
 .grid-axis-name {
@@ -439,7 +437,6 @@ $accent: var(--primary-color);
 }
 
 .grid-axis-x {
-  position: relative;
   display: grid;
   column-gap: 16px;
   margin-top: 8px;
@@ -450,10 +447,6 @@ $accent: var(--primary-color);
   color: $text-secondary;
 
   .grid-axis-name {
-    position: absolute;
-    top: 8px;
-    left: 100%;
-    margin-left: 8px;
     white-space: nowrap;
   }
 }

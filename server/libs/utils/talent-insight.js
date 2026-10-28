@@ -1,6 +1,7 @@
 const { extractInterviewSignals } = require('./extract-interview-signals');
 const { requestTalentInsightFill, normalizeOutputLanguage } = require('./llm-runner');
 const { resolveEmployeeTargetTasks, alignSkillsToTargetTasks } = require('./employee-tasks');
+const { normalizeKeySkillGaps, keySkillGapsSchemaHint } = require('./key-skill-gaps');
 
 const normalizeConfidence = value => {
   const key = String(value || '')
@@ -98,6 +99,7 @@ const buildTalentInsightSchemaHint = () => ({
     summary: 'string',
     metrics: { criticalGaps: 'number', atOrAbove: 'number', monthsToClose: 'number|null' },
     priorityGaps: [{ rank: 'number', title: 'string', description: 'string', current: '0-5', required: '0-5' }],
+    keySkillGaps: keySkillGapsSchemaHint,
     skills: [
       {
         id: 'string',
@@ -200,6 +202,7 @@ const normalizeInsightReadiness = raw => {
       monthsToClose: metrics.monthsToClose == null || metrics.monthsToClose === '' ? null : Number.isFinite(Number(metrics.monthsToClose)) ? Math.round(Number(metrics.monthsToClose)) : null
     },
     priorityGaps,
+    keySkillGaps: normalizeKeySkillGaps(data.keySkillGaps),
     skills,
     developmentPlan: data.developmentPlan && typeof data.developmentPlan === 'object' ? data.developmentPlan : null
   };

@@ -175,6 +175,10 @@ const getApis = options => {
             url: `${prefix}/tenant/position/workforce-summary`,
             method: 'GET'
           },
+          workforceAiMix: {
+            url: `${prefix}/tenant/position/workforce-ai-mix`,
+            method: 'GET'
+          },
           tasks: {
             url: `${prefix}/tenant/position/tasks`,
             method: 'GET'
@@ -402,6 +406,16 @@ const getApis = options => {
             method: 'POST'
           }
         },
+        shareReport: {
+          sendPosition: {
+            url: `${prefix}/tenant/share-report/position/send`,
+            method: 'POST'
+          },
+          sendEmployee: {
+            url: `${prefix}/tenant/share-report/employee/send`,
+            method: 'POST'
+          }
+        },
         assessment: {
           saveProfile: {
             url: `${prefix}/tenant/assessment/save-profile`,
@@ -486,6 +500,32 @@ const getApis = options => {
           markDone: {
             url: `${prefix}/public/talent-collect-invite/mark-done`,
             method: 'POST'
+          }
+        },
+        shareReport: {
+          detail: {
+            url: `${prefix}/public/share-report`,
+            method: 'GET'
+          },
+          tasks: {
+            url: `${prefix}/public/share-report/tasks`,
+            method: 'GET'
+          },
+          talentMetrics: {
+            url: `${prefix}/public/share-report/talent-metrics`,
+            method: 'GET'
+          },
+          taskReadiness: {
+            url: `${prefix}/public/share-report/task-readiness`,
+            method: 'GET'
+          },
+          skillAnalysisDetail: {
+            url: `${prefix}/public/share-report/skill-analysis-detail`,
+            method: 'GET'
+          },
+          evidence: {
+            url: `${prefix}/public/share-report/evidence`,
+            method: 'GET'
           }
         }
       }

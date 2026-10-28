@@ -269,7 +269,7 @@ export const parseClipboardProfilePayload = text => {
   const skillAnalysis = normalizeClipboardSkillAnalysis(
     (root.skillAnalysis && typeof root.skillAnalysis === 'object' ? root.skillAnalysis : null) ||
       (root.skillAnalysisDraft && typeof root.skillAnalysisDraft === 'object' ? root.skillAnalysisDraft : null) ||
-      (root.readiness && typeof root.readiness === 'object' && (root.readiness.readiness != null || root.readiness.skills || root.readiness.priorityGaps) ? root.readiness : null)
+      (root.readiness && typeof root.readiness === 'object' && (root.readiness.readiness != null || root.readiness.skills || root.readiness.priorityGaps || root.readiness.keySkillGaps) ? root.readiness : null)
   );
 
   const aiSuggest = root.aiSuggest && typeof root.aiSuggest === 'object' ? root.aiSuggest : null;
@@ -336,13 +336,19 @@ export const applyAiFillToProfileDetail = (prev, payload, extras = {}) => {
   const base = prev && typeof prev === 'object' ? prev : {};
   const nextData = payload?.data && typeof payload.data === 'object' ? payload.data : {};
   const hasSkills = Array.isArray(base.skillAnalysisDraft?.skills) && base.skillAnalysisDraft.skills.length > 0;
+  const aiKeySkillGaps = payload?.readiness?.keySkillGaps;
+  const skillAnalysisDraft = hasSkills
+    ? isEmptyValue(base.skillAnalysisDraft.keySkillGaps) && !isEmptyValue(aiKeySkillGaps)
+      ? Object.assign({}, base.skillAnalysisDraft, { keySkillGaps: aiKeySkillGaps })
+      : base.skillAnalysisDraft
+    : payload?.readiness || base.skillAnalysisDraft || null;
   const next = Object.assign({}, base, nextData, pickNonEmpty(base), {
     id: base.id,
     orgEnums: base.orgEnums,
     positionEnums: base.positionEnums,
     performances: base.performances || [],
     aiSuggest: isEmptyValue(base.aiSuggest) ? payload?.aiSuggest || base.aiSuggest || null : base.aiSuggest,
-    skillAnalysisDraft: hasSkills ? base.skillAnalysisDraft : payload?.readiness || base.skillAnalysisDraft || null,
+    skillAnalysisDraft,
     profile: Object.assign({}, base.profile || {}, nextData.profile || {}, pickNonEmpty(base.profile), {
       options: Object.assign({}, base.profile?.options || {}, nextData.profile?.options || {}, pickNonEmpty(base.profile?.options))
     }),

@@ -2,6 +2,7 @@ const fp = require('fastify-plugin');
 const omit = require('lodash/omit');
 const { requestPositionAnalysisFill, repairDevelopmentPlanItems } = require('../utils/llm-runner');
 const { resolveEmployeeTargetTasks, alignSkillsToTargetTasks } = require('../utils/employee-tasks');
+const { normalizeKeySkillGaps } = require('../utils/key-skill-gaps');
 
 const ANALYSIS_TASK_TYPE = 'position-ai-analysis';
 /** 经理邀请触发：完善岗位分析（不改职位 assessmentStatus / analysisStatus） */
@@ -882,13 +883,14 @@ module.exports = fp(async (fastify, options) => {
             metrics: analysis.metrics || {},
             skills: analysis.skills || [],
             priorityGaps: analysis.priorityGaps || [],
+            keySkillGaps: analysis.keySkillGaps || [],
             developmentPlan: analysis.developmentPlan || null
           }
         : null
     };
   };
 
-  const skillAnalysisSave = async (authenticatePayload, { positionId, employeeId, readiness, summary, metrics, skills, priorityGaps, developmentPlan, replaceReadiness = false }) => {
+  const skillAnalysisSave = async (authenticatePayload, { positionId, employeeId, readiness, summary, metrics, skills, priorityGaps, keySkillGaps, developmentPlan, replaceReadiness = false }) => {
     const { tenantId } = authenticatePayload;
     if (!positionId || !employeeId) {
       throw new Error('岗位与员工不能为空');
@@ -908,6 +910,10 @@ module.exports = fp(async (fastify, options) => {
       priorityGaps: normalizePriorityGaps(priorityGaps),
       developmentPlan: await ensureDevelopmentPlan(developmentPlan)
     };
+    // 其他编辑入口不带该字段，未传时保留库内已有值
+    if (keySkillGaps !== undefined) {
+      payload.keySkillGaps = normalizeKeySkillGaps(keySkillGaps);
+    }
 
     let analysis = await models.positionEmployeeSkillAnalysis.findOne({
       where: {
@@ -949,6 +955,7 @@ module.exports = fp(async (fastify, options) => {
       metrics: analysis.metrics || {},
       skills: analysis.skills || [],
       priorityGaps: analysis.priorityGaps || [],
+      keySkillGaps: analysis.keySkillGaps || [],
       developmentPlan: analysis.developmentPlan || null
     };
   };

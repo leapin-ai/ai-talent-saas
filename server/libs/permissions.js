@@ -61,6 +61,10 @@ module.exports = {
               code: 'invite-status'
             },
             {
+              name: '分享报告',
+              code: 'share'
+            },
+            {
               name: '删除',
               code: 'remove'
             }
@@ -85,6 +89,10 @@ module.exports = {
             {
               name: '关联用户',
               code: 'link-user'
+            },
+            {
+              name: '分享报告',
+              code: 'share'
             },
             {
               name: '删除',
