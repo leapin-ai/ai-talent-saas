@@ -255,16 +255,18 @@ const InviteAssessmentForm = createWithRemoteLoader({
           </div>
         </InfoPage.Part>
         {showExisting ? <FormInfo title={formatMessage({ id: 'position.talentInviteExistingEmployees' })} column={1} list={[<ExistingNeverEmployeesField name="existingEmployees" positionId={positionId} block />]} /> : null}
-        <TableList
-          title={formatMessage({ id: 'position.talentInviteManualEntry' })}
-          name="participants"
-          minLength={0}
-          list={[
-            <Input name="name" label={formatMessage({ id: 'position.talentInviteName' })} placeholder={formatMessage({ id: 'position.talentInviteEnter' })} rule="LEN-0-100" />,
-            <Input name="email" label={formatMessage({ id: 'position.talentInviteEmail' })} placeholder={formatMessage({ id: 'position.talentInviteEnter' })} rule="EMAIL LEN-0-100" />,
-            <PhoneNumber name="phone" label={formatMessage({ id: 'position.talentInvitePhone' })} format="string" placeholder={formatMessage({ id: 'position.talentInviteEnter' })} />
-          ]}
-        />
+        <div className={style['invite-manual']}>
+          <TableList
+            title={formatMessage({ id: 'position.talentInviteManualEntry' })}
+            name="participants"
+            minLength={0}
+            list={[
+              <Input name="name" label={formatMessage({ id: 'position.talentInviteName' })} placeholder={formatMessage({ id: 'position.talentInviteEnter' })} rule="LEN-0-100" />,
+              <Input name="email" label={formatMessage({ id: 'position.talentInviteEmail' })} placeholder={formatMessage({ id: 'position.talentInviteEnter' })} rule="EMAIL LEN-0-100" />,
+              <PhoneNumber name="phone" label={formatMessage({ id: 'position.talentInvitePhone' })} format="string" placeholder={formatMessage({ id: 'position.talentInviteEnter' })} />
+            ]}
+          />
+        </div>
       </Flex>
     );
   })

@@ -47,53 +47,48 @@ $track: rgba(79, 70, 229, 0.08);
   width: 200px;
 }
 
-.filter-org,
-.filter-status {
-  &:global(.ant-select) {
-    min-height: 32px;
-    padding-inline: 12px 10px;
-    border-radius: 999px;
-    background: $track;
-    transition: background 0.2s;
-
-    &:hover,
-    &:global(.ant-select-focused) {
-      background: rgba(79, 70, 229, 0.12);
-    }
-  }
-
-  :global(.ant-select-placeholder) {
-    color: $muted;
-  }
-
-  :global(.ant-select-suffix) {
-    color: $muted;
-  }
-
-  :global(.ant-select-selection-item-remove) {
-    color: $muted;
-  }
-}
-
-// 去掉 antd 聚焦描边，保持无边框胶囊
-.filter-org.filter-org:global(.ant-select),
-.filter-status.filter-status:global(.ant-select) {
+// SuperSelect 根节点 .select-input：去掉默认白底描边，改为无边框胶囊
+// 需高于 super-select `.select-input:not(.disabled):hover`
+.filter-org.filter-org:global(.select-input),
+.filter-status.filter-status:global(.select-input) {
+  min-width: 0;
+  padding-inline: 12px 10px;
   border-color: transparent;
-  box-shadow: none;
+  border-radius: 999px;
+  background: $track;
+  transition: background 0.2s;
+
+  &:hover {
+    border-color: transparent;
+    background: rgba(79, 70, 229, 0.12);
+  }
+
+  :global(.select-input-placeholder),
+  :global(.select-input-icon) {
+    color: $muted;
+  }
+
+  :global(.ant-tag) {
+    height: 22px;
+    padding-inline: 10px 6px;
+    border-radius: 999px;
+    background: #ffffff;
+    color: $primary;
+    line-height: 22px;
+    box-shadow: 0 1px 2px rgba(79, 70, 229, 0.12);
+  }
+
+  :global(.ant-tag-close-icon) {
+    color: $muted;
+  }
 }
 
-// 需高于 antd `.ant-select-multiple .ant-select-content .ant-select-selection-item`
-.filter-org.filter-org :global(.ant-select-content .ant-select-selection-item),
-.filter-status.filter-status :global(.ant-select-content .ant-select-selection-item) {
-  height: 22px;
-  margin-block: 2px;
-  padding-inline: 10px 6px;
-  border: none;
-  border-radius: 999px;
-  background: #ffffff;
-  color: $primary;
-  line-height: 22px;
-  box-shadow: 0 1px 2px rgba(79, 70, 229, 0.12);
+.filter-status-default.filter-status-default :global(.ant-tag) {
+  padding-inline-end: 10px;
+}
+
+.filter-status-default.filter-status-default :global(.ant-tag-close-icon) {
+  display: none;
 }
 
 .stats {
@@ -314,10 +309,20 @@ $track: rgba(79, 70, 229, 0.08);
 }
 
 @include resp.mobile-container {
-  .filters,
+  .filters {
+    width: 100%;
+  }
+
+  // 需高于 antd `.ant-flex-wrap-wrap`
+  .filters.filters {
+    flex-wrap: nowrap;
+  }
+
   .filter-org,
   .filter-status {
-    width: 100%;
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
   }
 
   .stats {
