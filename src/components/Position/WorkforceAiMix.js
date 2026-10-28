@@ -6,6 +6,9 @@ import withLocale from './withLocale';
 import style from './workforceAiMix.module.scss';
 
 const MIX_KEYS = ['automated', 'augmented', 'humanLed', 'unassessed'];
+// 未评估只计数，不参与占比
+const ASSESSED_KEYS = ['automated', 'augmented', 'humanLed'];
+const sumAssessed = mix => ASSESSED_KEYS.reduce((sum, key) => sum + (mix?.[key] || 0), 0);
 // @kne/react-box 标准色板：主色 #4F46E5、辅色 #22d3ee、warning #f59e0b
 const MIX_COLORS = {
   automated: '#4F46E5',
@@ -46,15 +49,16 @@ const MixLegend = ({ mix, formatMessage }) => (
 );
 
 const Donut = ({ mix, total, formatMessage }) => {
+  const assessed = sumAssessed(mix);
   let start = 0;
-  const stops = MIX_KEYS.map(key => {
-    const end = start + (total ? (mix[key] / total) * 100 : 0);
+  const stops = ASSESSED_KEYS.map(key => {
+    const end = start + (assessed ? (mix[key] / assessed) * 100 : 0);
     const stop = `${MIX_COLORS[key]} ${start}% ${end}%`;
     start = end;
     return stop;
   });
   return (
-    <div className={style.donut} style={{ background: total ? `conic-gradient(${stops.join(', ')})` : MIX_COLORS.unassessed }}>
+    <div className={style.donut} style={{ background: assessed ? `conic-gradient(${stops.join(', ')})` : MIX_COLORS.unassessed }}>
       <div className={style['donut-hole']}>
         <span className={style['donut-value']}>{total}</span>
         <span className={style['donut-label']}>{formatMessage({ id: 'position.aiMix.tasksUnit' })}</span>
@@ -65,8 +69,8 @@ const Donut = ({ mix, total, formatMessage }) => {
 
 const StackedBar = ({ role, formatMessage }) => (
   <div className={style['stack-bar']}>
-    {MIX_KEYS.map(key => {
-      const percent = toPercent(role[key], role.total);
+    {ASSESSED_KEYS.map(key => {
+      const percent = toPercent(role[key], sumAssessed(role));
       if (!percent) {
         return null;
       }
@@ -204,7 +208,7 @@ const WorkforceAiMix = createWithRemoteLoader({
                 </div>
                 {['automated', 'augmented', 'humanLed'].map(key => (
                   <div className={style.stat} key={key}>
-                    <div className={style['stat-value']}>{toPercent(mix[key], taskCount)}%</div>
+                    <div className={style['stat-value']}>{toPercent(mix[key], sumAssessed(mix))}%</div>
                     <div className={style['stat-label']}>
                       <i className={style['stat-dot']} style={{ background: MIX_COLORS[key] }} />
                       {formatMessage({ id: `position.aiMix.${key}` })}
