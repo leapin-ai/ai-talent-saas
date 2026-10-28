@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tooltip } from 'antd';
+import Tooltip from '../../../../commons/ResponsiveTooltip';
 import { useIntl } from '@kne/react-intl';
 import classnames from 'classnames';
 import style from './style.module.scss';

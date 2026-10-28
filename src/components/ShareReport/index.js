@@ -19,10 +19,10 @@ const withCode = (api, code) => Object.assign({}, api, { url: `${api.url}?code=$
 
 /** 免登录分享报告：岗位只读展示岗位洞察，人才只读展示就绪度 */
 const ShareReport = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-admin:Account@Language', 'components-core:Global@SetGlobal']
+  modules: ['components-core:Global@usePreset', 'components-core:Global@SetGlobal']
 })(
   withLocale(({ remoteModules }) => {
-    const [usePreset, Language, SetGlobal] = remoteModules;
+    const [usePreset, SetGlobal] = remoteModules;
     const { apis, ajax } = usePreset();
     const { formatMessage } = useIntl();
     const navigate = useNavigate();
@@ -118,19 +118,14 @@ const ShareReport = createWithRemoteLoader({
     const department = isPosition ? (position.orgEnums || []).find(item => String(item.value) === String(position.tenantOrgId))?.description || '' : '';
     const title = isPosition ? position.name : [employee.name, employee.positionName].filter(Boolean).join(' · ');
 
-    return (
+    const content = (
       <TenantThemeProvider themeColor={resolveTenantThemeColor({ tenant })} SetGlobal={SetGlobal}>
         <SystemLayout
           background={BACKGROUND}
           logo={tenant.logo ? { id: tenant.logo } : undefined}
           userInfo={{
             name: companyName,
-            description: isPosition ? [position.name, department].filter(Boolean).join(' · ') : title,
-            extra: (
-              <div style={{ paddingTop: 8 }}>
-                <Language colorful={false} />
-              </div>
-            )
+            description: isPosition ? [position.name, department].filter(Boolean).join(' · ') : title
           }}
           menu={{
             base: '',
@@ -147,7 +142,7 @@ const ShareReport = createWithRemoteLoader({
             ]
           }}
         >
-          <Page title={title}>
+          <Page title={title} toolbar={false}>
             {isPosition ? (
               <RoleInsights apis={roleApis} position={position} />
             ) : (
@@ -156,6 +151,15 @@ const ShareReport = createWithRemoteLoader({
           </Page>
         </SystemLayout>
       </TenantThemeProvider>
+    );
+
+    // 页面语言以分享时选择的语言为准，不提供切换；旧链接未携带语言时沿用当前语言
+    return detail.language ? (
+      <SetGlobal globalKey="locale" value={detail.language}>
+        {content}
+      </SetGlobal>
+    ) : (
+      content
     );
   })
 );

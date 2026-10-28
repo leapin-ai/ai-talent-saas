@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { App, Button, Empty, Flex, Tooltip, Typography } from 'antd';
+import { App, Button, Empty, Flex, Typography } from 'antd';
+import Tooltip from '../../commons/ResponsiveTooltip';
 import { MdOutlineEdit } from 'react-icons/md';
 import { Card } from '@kne/react-box';
 import '@kne/react-box/dist/index.css';

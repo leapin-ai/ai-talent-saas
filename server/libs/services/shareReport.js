@@ -184,13 +184,13 @@ module.exports = fp(async (fastify, options) => {
     }
   };
 
-  const buildPositionItem = async ({ tenantId, id, expires }) => {
+  const buildPositionItem = async ({ tenantId, id, expires, language }) => {
     const position = await models.position.findOne({ where: { id, tenantId } });
     if (!position) {
       throw new Error('未找到岗位');
     }
     const [department = ''] = await getOrgNames(tenantId, [position.tenantOrgId]);
-    const code = await signShareCode({ kind: 'position', tenantId: String(tenantId), positionId: String(position.id) }, expires);
+    const code = await signShareCode({ kind: 'position', tenantId: String(tenantId), positionId: String(position.id), language }, expires);
     return {
       id: String(position.id),
       name: position.name || '',
@@ -199,7 +199,7 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
-  const buildEmployeeItem = async ({ tenantId, id, expires }) => {
+  const buildEmployeeItem = async ({ tenantId, id, expires, language }) => {
     const employee = await models.employee.findOne({ where: { id, tenantId } });
     if (!employee) {
       throw new Error('未找到员工');
@@ -211,7 +211,7 @@ module.exports = fp(async (fastify, options) => {
       positionName = position?.name || '';
     }
     const departments = await getOrgNames(tenantId, employee.tenantOrgIds);
-    const code = await signShareCode({ kind: 'employee', tenantId: String(tenantId), employeeId: String(employee.id), positionId }, expires);
+    const code = await signShareCode({ kind: 'employee', tenantId: String(tenantId), employeeId: String(employee.id), positionId, language }, expires);
     return {
       id: String(employee.id),
       name: employee.name || employee.nameEn || '',
@@ -276,7 +276,7 @@ module.exports = fp(async (fastify, options) => {
     assertEmails(emails);
     const expires = resolveExpires(body.deadline);
 
-    const { items, failed: itemFailed } = await collectItems(ids, id => buildPositionItem({ tenantId, id, expires }));
+    const { items, failed: itemFailed } = await collectItems(ids, id => buildPositionItem({ tenantId, id, expires, language }));
     if (!items.length) {
       throw new Error(itemFailed[0]?.reason || '未找到可分享的岗位');
     }
@@ -308,7 +308,7 @@ module.exports = fp(async (fastify, options) => {
     }
     const expires = resolveExpires(body.deadline);
 
-    const { items, failed: itemFailed } = await collectItems(ids, id => buildEmployeeItem({ tenantId, id, expires }));
+    const { items, failed: itemFailed } = await collectItems(ids, id => buildEmployeeItem({ tenantId, id, expires, language }));
     if (!items.length) {
       throw new Error(itemFailed[0]?.reason || '未找到可分享的人才');
     }
@@ -359,6 +359,7 @@ module.exports = fp(async (fastify, options) => {
     const tenant = await getTenant(payload.tenantId);
     const result = {
       kind: payload.kind,
+      language: payload.language || null,
       tenant: {
         id: tenant?.id,
         name: tenant?.name || '',
