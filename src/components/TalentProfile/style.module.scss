@@ -532,7 +532,8 @@
 .career-item {
   &:global(.ant-card) {
     border: none;
-    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.05);
+    background: transparent;
+    box-shadow: none;
   }
 }
 

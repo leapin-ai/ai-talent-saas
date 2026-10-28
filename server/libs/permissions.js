@@ -61,6 +61,10 @@ module.exports = {
               code: 'invite-status'
             },
             {
+              name: '分享报告',
+              code: 'share'
+            },
+            {
               name: '删除',
               code: 'remove'
             }
@@ -85,6 +89,10 @@ module.exports = {
             {
               name: '关联用户',
               code: 'link-user'
+            },
+            {
+              name: '分享报告',
+              code: 'share'
             },
             {
               name: '删除',
@@ -117,6 +125,24 @@ module.exports = {
             {
               name: '查看',
               code: 'view'
+            }
+          ]
+        },
+        {
+          name: '人才盘点',
+          code: 'talent-review',
+          permissions: [
+            {
+              name: '查看',
+              code: 'view'
+            },
+            {
+              name: '创建项目',
+              code: 'create'
+            },
+            {
+              name: '发送邀请',
+              code: 'invite'
             }
           ]
         },

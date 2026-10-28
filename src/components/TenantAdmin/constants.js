@@ -15,16 +15,23 @@ export const TENANT_ADMIN_PERMISSIONS = {
   positionInviteRecords: ['tenant-admin:position-management:invite-records'],
   /** 邀请记录：手动修改完成状态 */
   positionInviteStatus: ['tenant-admin:position-management:invite-status'],
+  /** 岗位列表：多选分享岗位洞察报告 */
+  positionShare: ['tenant-admin:position-management:share'],
   employeeProfile: ['tenant-admin:employee-profile', 'tenant-admin:employee-profile:view'],
   employeeCreate: ['tenant-admin:employee-profile:create'],
   employeeEdit: ['tenant-admin:employee-profile:edit'],
   employeeRemove: ['tenant-admin:employee-profile:remove'],
   employeeLinkUser: ['tenant-admin:employee-profile:link-user'],
+  /** 人才列表：多选分享就绪度报告 */
+  employeeShare: ['tenant-admin:employee-profile:share'],
   /** 完善档案申请（邀请评估提交后的审核列表） */
   completeProfileApplication: ['tenant-admin:complete-profile-application', 'tenant-admin:complete-profile-application:view'],
   completeProfileApplicationReview: ['tenant-admin:complete-profile-application:review'],
   completeProfileApplicationEdit: ['tenant-admin:complete-profile-application:edit'],
   appCenter: ['tenant-admin:app-center', 'tenant-admin:app-center:view'],
+  talentReview: ['tenant-admin:talent-review', 'tenant-admin:talent-review:view'],
+  talentReviewCreate: ['tenant-admin:talent-review:create'],
+  talentReviewInvite: ['tenant-admin:talent-review:invite'],
   companySetting: ['setting:company-setting', 'setting:company-setting:view'],
   orgSetting: ['setting:org', 'setting:org:view'],
   userManagement: ['setting:user-manager', 'setting:user-manager:view'],

@@ -1,0 +1,331 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+// @kne/react-box 标准色板
+$primary: #4f46e5;
+$glow: #22d3ee;
+$title: #161431;
+$item-title: #1f1d3f;
+$muted: #67658c;
+$item-bg: #fcfcfe;
+$item-border: rgba(79, 70, 229, 0.12);
+$panel-from: rgba(79, 70, 229, 0.1);
+$panel-to: rgba(79, 70, 229, 0.02);
+$track: rgba(79, 70, 229, 0.08);
+
+.root {
+  width: 100%;
+}
+
+// system-layout 给 .ant-col 设了 height: 100%，会让同行面板无法等高拉伸
+.root.root :global(.ant-col) {
+  height: auto;
+}
+
+.header {
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  color: $title;
+}
+
+.subtitle {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 18px;
+  color: $muted;
+}
+
+.filter-org {
+  width: 240px;
+}
+
+.filter-status {
+  width: 200px;
+}
+
+.filter-org,
+.filter-status {
+  &:global(.ant-select) {
+    min-height: 32px;
+    padding-inline: 12px 10px;
+    border-radius: 999px;
+    background: $track;
+    transition: background 0.2s;
+
+    &:hover,
+    &:global(.ant-select-focused) {
+      background: rgba(79, 70, 229, 0.12);
+    }
+  }
+
+  :global(.ant-select-placeholder) {
+    color: $muted;
+  }
+
+  :global(.ant-select-suffix) {
+    color: $muted;
+  }
+
+  :global(.ant-select-selection-item-remove) {
+    color: $muted;
+  }
+}
+
+// 去掉 antd 聚焦描边，保持无边框胶囊
+.filter-org.filter-org:global(.ant-select),
+.filter-status.filter-status:global(.ant-select) {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+// 需高于 antd `.ant-select-multiple .ant-select-content .ant-select-selection-item`
+.filter-org.filter-org :global(.ant-select-content .ant-select-selection-item),
+.filter-status.filter-status :global(.ant-select-content .ant-select-selection-item) {
+  height: 22px;
+  margin-block: 2px;
+  padding-inline: 10px 6px;
+  border: none;
+  border-radius: 999px;
+  background: #ffffff;
+  color: $primary;
+  line-height: 22px;
+  box-shadow: 0 1px 2px rgba(79, 70, 229, 0.12);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  height: 100%;
+}
+
+.stat,
+.capacity,
+.panel {
+  box-sizing: border-box;
+  border: 1px solid $item-border;
+  border-radius: 12px;
+  background: $item-bg;
+}
+
+.stat {
+  padding: 14px 16px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
+  color: $title;
+}
+
+.stat-label {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 18px;
+  color: $muted;
+}
+
+.stat-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 2px;
+  vertical-align: 0;
+}
+
+.stat-hint {
+  margin-left: 6px;
+  color: $muted;
+}
+
+.capacity {
+  height: 100%;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, $panel-from 0%, $panel-to 100%);
+}
+
+.capacity-label {
+  font-size: 12px;
+  line-height: 18px;
+  color: $muted;
+}
+
+.capacity-value {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
+  color: $primary;
+}
+
+.capacity-hint {
+  font-size: 12px;
+  line-height: 18px;
+  color: $muted;
+}
+
+.panel-col {
+  display: flex;
+
+  > * {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.panel-title {
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  color: $title;
+}
+
+.legend {
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: $muted;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  i {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+}
+
+.donut-wrap {
+  flex: 1 1 auto;
+  justify-content: center;
+
+  .legend {
+    justify-content: center;
+    margin-bottom: 0;
+  }
+}
+
+.donut {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+}
+
+.donut-hole {
+  position: absolute;
+  inset: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.donut-value {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 32px;
+  color: $title;
+}
+
+.donut-label {
+  font-size: 12px;
+  color: $muted;
+}
+
+.role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.role-row,
+.capacity-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 10px;
+}
+
+.role-name {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 18px;
+  color: $item-title;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-total {
+  font-size: 12px;
+  color: $muted;
+  text-align: right;
+}
+
+.stack-bar {
+  display: flex;
+  height: 18px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: $track;
+}
+
+.stack-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.capacity-track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.capacity-bar {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, $glow 0%, $primary 100%);
+}
+
+@include resp.mobile-container {
+  .filters,
+  .filter-org,
+  .filter-status {
+    width: 100%;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .role-row,
+  .capacity-row {
+    grid-template-columns: 96px minmax(0, 1fr) 36px;
+  }
+}

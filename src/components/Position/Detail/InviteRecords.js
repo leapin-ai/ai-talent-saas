@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { App, Button, Flex, Input, Select, Space, Typography } from 'antd';
+import { App, Button, Flex, Input, Select, Typography } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useParams } from 'react-router-dom';
@@ -141,8 +141,8 @@ const InviteRecords = createWithRemoteLoader({
             content: (
               <Flex vertical gap={12} style={{ marginTop: 4 }}>
                 <Typography.Text type="secondary">{formatMessage({ id: 'position.talentInviteLinkHint' })}</Typography.Text>
-                <Space.Compact style={{ width: '100%' }}>
-                  <Input value={inviteUrl} readOnly onFocus={e => e.target.select()} />
+                <Flex gap={8}>
+                  <Input value={inviteUrl} readOnly onFocus={e => e.target.select()} style={{ flex: 1 }} />
                   <Button
                     type="primary"
                     onClick={async () => {
@@ -156,7 +156,7 @@ const InviteRecords = createWithRemoteLoader({
                   >
                     {formatMessage({ id: 'position.talentInviteLinkCopy' })}
                   </Button>
-                </Space.Compact>
+                </Flex>
               </Flex>
             )
           });

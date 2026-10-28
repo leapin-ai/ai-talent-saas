@@ -182,11 +182,12 @@ const TenantAdmin = createWithRemoteLoader({
               onEdit: ({ data }) => {
                 navigate(`${baseUrl}/position/${data.id}/edit`);
               },
-              children: ({ insightBanner, workforceKpi, listKey, ...renderProps }) => (
+              children: ({ insightBanner, workforceKpi, workforceAiMix, listKey, ...renderProps }) => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.positionManagement} type="error">
                   <Page title={formatMessage({ id: 'tenantAdmin.positionManagement' })}>
                     <Flex vertical gap={16} style={{ width: '100%' }}>
                       {workforceKpi}
+                      {workforceAiMix}
                       {insightBanner}
                       <TablePageRender key={listKey} {...renderProps} withPage={false} />
                     </Flex>
@@ -290,6 +291,15 @@ const TenantAdmin = createWithRemoteLoader({
             path: 'hiring/*',
             title: 'Hiring',
             loader: () => import('@components/TenantHiring')
+          },
+          {
+            path: 'talent-review/*',
+            title: 'TalentReview',
+            elementProps: {
+              baseUrl: `${baseUrl}/talent-review`,
+              permissions: TENANT_ADMIN_PERMISSIONS
+            },
+            loader: () => import('@components/TalentReview')
           },
           {
             path: 'setting/company',

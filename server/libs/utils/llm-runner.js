@@ -232,7 +232,8 @@ const requestTalentInsightFill = async (fastify, { schema, context, draft, maxTo
     '根据 CONTEXT 生成人才洞察 JSON，用于写回就绪度分析与成长计划/岗位匹配。' +
     'CONTEXT 含：interviewSignals（问卷答案 questionnaireAnswers、题目作答 answers；视频题 answerText/transcript 来自语音转写 aiResult）、resumeParsed（简历解析）、submittedInfo（员工填写信息）、position（目标岗位，可空）、employee（基础信息）。' +
     '只返回 JSON，不要 markdown。结构必须为 { readiness: {...}, aiSuggest: {...} }。' +
-    'readiness 含 readiness(0-100)、summary、metrics、priorityGaps、skills、developmentPlan(含 short/mid/long 三个 horizons，每阶段 2-3 条 items)。' +
+    'readiness 含 readiness(0-100)、summary、metrics、priorityGaps、keySkillGaps、skills、developmentPlan(含 short/mid/long 三个 horizons，每阶段 2-3 条 items)。' +
+    'keySkillGaps 为 3-5 条关键技能变化（按 score 降序、rank 从 1 起）：skillNow 是员工当前已具备、将演变为 skillFuture 的技能（多条表示合并，空数组表示全新技能）；skillFuture 为 AI 重塑岗位后需要的技能，name 同 skillFuture；category 取 tool|action|knowledge；primaryTask/alsoOnTasks 取 position.skill 中的任务名。' +
     'skills 每项必须含 confidence(high|medium|low：基于所用来源的置信度) 与 evidence。' +
     'CONTEXT.targetTasks 存在时，skills 必须与其逐条一一对应：id 与 name 原样保留，禁止新增、改名、合并或拆分任务。' +
     'evidence 必须返回数组，且每一条都要自带 source、title、summary（禁止只给第一条填 title/source，其余条目同样必填）。' +

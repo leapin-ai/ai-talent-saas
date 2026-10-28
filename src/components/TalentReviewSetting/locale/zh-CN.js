@@ -1,0 +1,30 @@
+const zhCN = {
+  title: '人才盘点设置',
+  description: '关联 AI 面试中的客户，人才盘点的项目、参与人与模型均通过该客户的 open-api 读写。',
+  url: 'Host URL',
+  appId: 'App ID',
+  secretKey: 'Secret Key',
+  urlPlaceholder: 'https://api.gw.leapin-ai.com/ai-interview/cn-staging/api/v1',
+  pasteTip: '可直接把 AI 面试客户详情中复制的「Host URL / App ID / Secret Key」整段粘贴到任一输入框，自动解析填入。',
+  importClipboard: '从剪贴板导入',
+  clipboardEmpty: '剪贴板中未识别到 Host URL / App ID / Secret Key',
+  clipboardFailed: '无法读取剪贴板，请直接粘贴到输入框',
+  parsed: '已解析并填入',
+  secretKeyKeepPlaceholder: '留空则不修改',
+  secretKeyRequired: '请输入 Secret Key',
+  save: '保存',
+  cancel: '取消',
+  edit: '编辑',
+  saveSuccess: '保存成功，已校验客户连接',
+  unbind: '取消关联',
+  unbindConfirm: '取消后租户端将隐藏人才盘点菜单，确定取消关联吗？',
+  unbindSuccess: '已取消关联',
+  clientInfo: '关联客户',
+  clientName: '客户名称',
+  clientId: '客户ID',
+  host: 'Host',
+  origin: '报告站点',
+  notConfigured: '未关联'
+};
+
+export default zhCN;

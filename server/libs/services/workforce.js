@@ -71,6 +71,116 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
+  const toIdList = value => (Array.isArray(value) ? value : value == null || value === '' ? [] : String(value).split(',')).map(item => String(item).trim()).filter(Boolean);
+
+  const expandOrgSubtree = async (tenantId, orgIds) => {
+    const orgs = await fastify.tenant.services.org.list({ tenantId });
+    const childrenMap = new Map();
+    orgs.forEach(org => {
+      const parentKey = org.parentId == null ? '' : String(org.parentId);
+      childrenMap.set(parentKey, (childrenMap.get(parentKey) || []).concat(String(org.id)));
+    });
+    const scope = new Set();
+    const stack = [...orgIds];
+    while (stack.length) {
+      const id = stack.pop();
+      if (scope.has(id)) {
+        continue;
+      }
+      scope.add(id);
+      stack.push(...(childrenMap.get(id) || []));
+    }
+    return [...scope];
+  };
+
+  const countEmployeesByPosition = async (tenantId, positionIds) => {
+    const map = new Map();
+    if (!positionIds.length) {
+      return map;
+    }
+    const [rows] = await fastify.sequelize.instance.query(
+      `
+      SELECT CASE
+               WHEN jsonb_typeof("options"->'position') = 'string' THEN "options"->>'position'
+               ELSE COALESCE("options"->'position'->>'id', '')
+             END AS position_id,
+             COUNT(*)::int AS employee_count
+      FROM t_employee
+      WHERE deleted_at IS NULL
+        AND tenant_id = :tenantId
+        AND CASE
+              WHEN jsonb_typeof("options"->'position') = 'string' THEN "options"->>'position'
+              ELSE COALESCE("options"->'position'->>'id', '')
+            END IN (:positionIds)
+      GROUP BY 1
+      `,
+      { replacements: { tenantId, positionIds } }
+    );
+    (rows || []).forEach(row => {
+      if (row.position_id) {
+        map.set(String(row.position_id), Number(row.employee_count) || 0);
+      }
+    });
+    return map;
+  };
+
+  // 任务 AI 构成按 skill[].aiExposure 归类：high=可自动化，medium=AI 增强，low=人主导，缺失=未评估
+  const AI_MIX_BY_EXPOSURE = { high: 'automated', medium: 'augmented', low: 'humanLed' };
+  const POSITION_STATUS = ['draft', 'published', 'closed'];
+
+  const workforceAiMix = async (authenticatePayload, { tenantOrgIds, status } = {}) => {
+    const { tenantId } = authenticatePayload;
+    const statusList = toIdList(status).filter(item => POSITION_STATUS.includes(item));
+    const where = { tenantId, status: { [Op.in]: statusList.length ? statusList : ['published'] } };
+    const orgIds = toIdList(tenantOrgIds);
+    if (orgIds.length) {
+      where.tenantOrgId = { [Op.in]: await expandOrgSubtree(tenantId, orgIds) };
+    }
+    const positions = await models.position.findAll({
+      where,
+      attributes: ['id', 'name', 'skill', 'outlook', 'verdict'],
+      order: [['createdAt', 'DESC']]
+    });
+    const employeeCountMap = await countEmployeesByPosition(
+      tenantId,
+      positions.map(item => String(item.id))
+    );
+
+    const emptyMix = () => ({ automated: 0, augmented: 0, humanLed: 0, unassessed: 0 });
+    const mix = emptyMix();
+    let weightedGain = 0;
+    let gainWeight = 0;
+    const roles = positions.map(position => {
+      const roleMix = emptyMix();
+      const skills = Array.isArray(position.skill) ? position.skill : [];
+      skills.forEach(skill => {
+        const key = AI_MIX_BY_EXPOSURE[skill?.aiExposure] || 'unassessed';
+        roleMix[key] += 1;
+        mix[key] += 1;
+      });
+      const aiEfficiencyGain = normalizeAiEfficiencyGain(position.outlook?.aiEfficiencyGain ?? position.verdict?.aiEfficiencyGain);
+      const employeeCount = employeeCountMap.get(String(position.id)) || 0;
+      if (aiEfficiencyGain != null) {
+        // 无在岗员工的岗位按 1 人计，避免被完全忽略
+        const weight = Math.max(employeeCount, 1);
+        weightedGain += aiEfficiencyGain * weight;
+        gainWeight += weight;
+      }
+      return Object.assign({ id: position.id, name: position.name, total: skills.length, employeeCount, aiEfficiencyGain }, roleMix);
+    });
+
+    return {
+      positionCount: positions.length,
+      taskCount: roles.reduce((sum, item) => sum + item.total, 0),
+      mix,
+      roles,
+      capacity: {
+        percent: gainWeight ? Math.round(weightedGain / gainWeight) : null,
+        roleCount: roles.filter(item => item.aiEfficiencyGain != null).length
+      }
+    };
+  };
+
   const markInterviewsInProgress = async ({ tenantId, positionId }) => {
     if (!positionId) {
       return;
@@ -1094,6 +1204,7 @@ module.exports = fp(async (fastify, options) => {
   Object.assign(services, {
     workforce: {
       workforceSummary,
+      workforceAiMix,
       markInterviewsInProgress,
       markAnalysisCompleted,
       listTasks,

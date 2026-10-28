@@ -54,7 +54,7 @@ const WorkforceKpi = createWithRemoteLoader({
     ];
 
     return (
-      <Row gutter={12} className={style.row} align="stretch">
+      <Row gutter={[12, 12]} className={style.row} align="stretch">
         {items.map(({ key, labelId, hintId, valueClass }) => (
           <Col span={6} key={key} className={style.col}>
             <Card

@@ -280,9 +280,10 @@ const ChecklistPanel = ({ checklist, percent, formatMessage }) => (
 const ProfileEvidence = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-core:FormInfo@useFormModal']
 })(
-  withLocale(({ remoteModules, employeeId, positionId, percent, checklist, variant = 'all', selectedTask, readOnly, showLooksWrong = false, onSaveTaskEvidence }) => {
+  withLocale(({ remoteModules, employeeId, positionId, percent, checklist, variant = 'all', selectedTask, readOnly, showLooksWrong = false, onSaveTaskEvidence, apis: apisProp }) => {
     const [usePreset, useFormModal] = remoteModules;
-    const { ajax, apis } = usePreset();
+    const { ajax, apis: presetApis } = usePreset();
+    const apis = apisProp || presetApis;
     const formModal = useFormModal();
     const { message } = App.useApp();
     const { formatMessage } = useIntl();

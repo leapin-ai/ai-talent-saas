@@ -7,16 +7,19 @@ import getColumns from './getColumns';
 import BaseFormInner from './PositionForm';
 import InsightBanner from './InsightBanner';
 import WorkforceKpi from './WorkforceKpi';
+import WorkforceAiMix from './WorkforceAiMix';
 import { createPositionListCardsRender } from './PositionListCards';
 import InviteAssessment from './Detail/AnalyzeTalent/InviteAssessment';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
+import useShareReport from '@components/ShareReport/useShareReport';
+import { FormatMessage as ShareReportMessage } from '@components/ShareReport/withLocale';
 import useTablePaginationSearchParams from '../../commons/useTablePaginationSearchParams';
 
 const Position = createWithRemoteLoader({
-  modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter', 'components-core:Permissions@usePermissionsPass']
+  modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter', 'components-core:Permissions@usePermissionsPass', 'components-core:TablePage@Table', 'components-core:FormInfo@useFormModal']
 })(
   withLocale(({ remoteModules, apis, baseUrl = '', onDetail, onCreate, onEdit, withInsightBanner, children, ...props }) => {
-    const [BizUnit, usePreset, Filter, usePermissionsPass] = remoteModules;
+    const [BizUnit, usePreset, Filter, usePermissionsPass, Table, useFormModal] = remoteModules;
     const { SuperSelectFilterItem } = Filter.fields;
     const { formatMessage } = useIntl();
     const paginationSearchParams = useTablePaginationSearchParams();
@@ -42,6 +45,10 @@ const Position = createWithRemoteLoader({
     const canPublish = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionPublish });
     const canRemove = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionRemove });
     const canInvite = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInvite });
+    const canShare = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionShare });
+    const [pageList, setPageList] = useState([]);
+    const { selectedRows, getRowSelection } = Table.useSelectedRow({ rowKey: 'id' });
+    const openShareReport = useShareReport({ kind: 'position', useFormModal, usePreset, getName: item => item.name || '' });
 
     const handleSetStatus = (id, status, onSuccess) => {
       const isPublish = status === 'published';
@@ -150,6 +157,7 @@ const Position = createWithRemoteLoader({
 
     const insightBanner = withInsightBanner ? <InsightBanner apis={apis} onReview={applyHighChangeFilter} /> : null;
     const workforceKpi = withInsightBanner ? <WorkforceKpi apis={apis} activeKey={activeKpi} onSelect={selectKpi} /> : null;
+    const workforceAiMix = withInsightBanner ? <WorkforceAiMix apis={apis} /> : null;
 
     const renderCard = useMemo(() => createPositionListCardsRender({ onDetail, formatMessage }), [onDetail, formatMessage]);
     const renderMobile = renderCard;
@@ -194,16 +202,32 @@ const Position = createWithRemoteLoader({
           tableProps: {
             renderCard,
             renderMobile,
+            ...(canShare
+              ? {
+                  rowKey: 'id',
+                  rowSelection: getRowSelection(pageList),
+                  selectedRows,
+                  batchActions: [
+                    {
+                      key: 'share-report',
+                      label: <ShareReportMessage id="shareReport.action" />,
+                      onClick: () => openShareReport(selectedRows)
+                    }
+                  ]
+                }
+              : {}),
             dataFormat: data => {
               const orgEnums = Array.isArray(data?.orgEnums) ? data.orgEnums : [];
               const pageData = Array.isArray(data?.pageData) ? data.pageData : [];
+              const list = pageData.map(item => {
+                const org = orgEnums.find(target => String(target.value) === String(item.tenantOrgId));
+                return Object.assign({}, item, {
+                  departmentName: org?.description || '-'
+                });
+              });
+              queueMicrotask(() => setPageList(list));
               return {
-                list: pageData.map(item => {
-                  const org = orgEnums.find(target => String(target.value) === String(item.tenantOrgId));
-                  return Object.assign({}, item, {
-                    departmentName: org?.description || '-'
-                  });
-                }),
+                list,
                 total: data?.totalCount ?? data?.total ?? 0,
                 orgEnums
               };
@@ -237,7 +261,7 @@ const Position = createWithRemoteLoader({
           }
         }}
       >
-        {typeof children === 'function' ? renderProps => children({ ...renderProps, insightBanner, workforceKpi, listKey }) : children}
+        {typeof children === 'function' ? renderProps => children({ ...renderProps, insightBanner, workforceKpi, workforceAiMix, listKey }) : children}
       </BizUnit>
     );
   })

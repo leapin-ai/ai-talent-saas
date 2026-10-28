@@ -1181,6 +1181,7 @@ module.exports = fp(async (fastify, options) => {
               metrics: reviewSkillAnalysis.metrics,
               skills: reviewSkillAnalysis.skills,
               priorityGaps: reviewSkillAnalysis.priorityGaps,
+              keySkillGaps: reviewSkillAnalysis.keySkillGaps,
               developmentPlan: reviewSkillAnalysis.developmentPlan,
               replaceReadiness: true
             }
@@ -1438,6 +1439,7 @@ module.exports = fp(async (fastify, options) => {
             metrics: filled.readiness.metrics,
             skills: filled.readiness.skills,
             priorityGaps: filled.readiness.priorityGaps,
+            keySkillGaps: filled.readiness.keySkillGaps,
             developmentPlan: filled.readiness.developmentPlan
           });
         }
@@ -1592,6 +1594,7 @@ module.exports = fp(async (fastify, options) => {
           metrics: reviewSkillAnalysis.metrics,
           skills: reviewSkillAnalysis.skills,
           priorityGaps: reviewSkillAnalysis.priorityGaps,
+          keySkillGaps: reviewSkillAnalysis.keySkillGaps,
           developmentPlan: reviewSkillAnalysis.developmentPlan,
           replaceReadiness: true
         });

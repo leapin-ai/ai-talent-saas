@@ -102,7 +102,7 @@ export const globalInit = async () => {
         //url: 'http://localhost:3012',
         //tpl: '{{url}}',
         remote: 'components-app-manager',
-        defaultVersion: '0.1.0'
+        defaultVersion: '0.1.1'
       },
       // AI 面试远程组件：url/version 由租户设置在运行时 applyAiInterviewRemote 写入
       'ai-interview-flowup': {
@@ -229,6 +229,11 @@ export const globalInit = async () => {
               key: 'ai-interview',
               label: 'AI面试设置',
               component: loadable(() => import('@components/AIInterviewSetting'))
+            },
+            {
+              key: 'talent-review',
+              label: '人才盘点设置',
+              component: loadable(() => import('@components/TalentReviewSetting'))
             }
           ],
           appendTabDetails: [

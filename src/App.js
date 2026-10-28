@@ -9,6 +9,7 @@ import TenantPortal from '@components/TenantPortal';
 import Admin from '@components/Admin';
 import UserSystemLayout from '@components/UserSystemLayout';
 import PublicSystemLayout from '@components/PublicSystemLayout';
+import ShareReport from '@components/ShareReport';
 import { Page } from '@kne/system-layout';
 import { getManualTaskAction } from '@components/AssessmentGenerateTask';
 import withLocale from './withLocale';
@@ -200,6 +201,11 @@ const AppContent = withLocale(({ baseUrl, isOidcClient, appManagerEnabled, After
           )
         },
         {
+          path: 'share-report',
+          title: 'Share Report',
+          element: <ShareReport />
+        },
+        {
           path: 'tenant/*',
           element: (
             <Protected>
@@ -219,7 +225,7 @@ const AppContent = withLocale(({ baseUrl, isOidcClient, appManagerEnabled, After
                     title: formatMessage({ id: 'app.AppCenter' }),
                     element: (
                       <UserSystemLayout>
-                        <RemoteLoader module="components-app-manager:Center" />
+                        <RemoteLoader module="components-app-manager:Center" bordered={false} />
                       </UserSystemLayout>
                     )
                   },

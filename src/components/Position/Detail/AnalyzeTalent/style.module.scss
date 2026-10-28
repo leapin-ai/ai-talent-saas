@@ -215,15 +215,7 @@
 .readiness-fill {
   height: 100%;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--primary-color, #4183f0) 28%, #fff);
-}
-
-.readiness-fill-high {
   background: var(--primary-color, #4183f0);
-}
-
-.readiness-fill-low {
-  background: #f87171;
 }
 
 .readiness-value {
@@ -232,16 +224,8 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
-  color: #334155;
-  text-align: right;
-}
-
-.readiness-value-high {
   color: var(--primary-color, #4183f0);
-}
-
-.readiness-value-low {
-  color: #cc4b4b;
+  text-align: right;
 }
 
 .readiness-empty {

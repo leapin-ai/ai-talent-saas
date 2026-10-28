@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
@@ -5,6 +6,8 @@ import getColumns from './getColumns';
 import BaseFormInner from './EmployeeForm/BaseFormInner';
 import { LinkUserAction, UnlinkUserAction, ViewUserAction } from './Actions';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
+import useShareReport from '@components/ShareReport/useShareReport';
+import { FormatMessage as ShareReportMessage } from '@components/ShareReport/withLocale';
 import useTablePaginationSearchParams from '../../commons/useTablePaginationSearchParams';
 
 const mapFilterValue = (value, getFilterValue) => ({
@@ -12,10 +15,18 @@ const mapFilterValue = (value, getFilterValue) => ({
 });
 
 const Employee = createWithRemoteLoader({
-  modules: ['components-admin:BizUnit', 'components-core:Filter', 'components-core:Common@AddressEnum', 'components-core:Permissions@usePermissionsPass']
+  modules: [
+    'components-admin:BizUnit',
+    'components-core:Filter',
+    'components-core:Common@AddressEnum',
+    'components-core:Permissions@usePermissionsPass',
+    'components-core:TablePage@Table',
+    'components-core:FormInfo@useFormModal',
+    'components-core:Global@usePreset'
+  ]
 })(
   withLocale(({ remoteModules, baseUrl, apis, onDetail, onPositionDetail, ...props }) => {
-    const [BizUnit, Filter, AddressEnum, usePermissionsPass] = remoteModules;
+    const [BizUnit, Filter, AddressEnum, usePermissionsPass, Table, useFormModal, usePreset] = remoteModules;
     const { InputFilterItem, SuperSelectFilterItem } = Filter.fields;
     const { formatMessage } = useIntl();
     const paginationSearchParams = useTablePaginationSearchParams();
@@ -24,6 +35,10 @@ const Employee = createWithRemoteLoader({
     const canRemove = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeRemove });
     const canLinkUser = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeLinkUser });
     const canViewUser = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.userManagement });
+    const canShare = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.employeeShare });
+    const [pageList, setPageList] = useState([]);
+    const { selectedRows, getRowSelection } = Table.useSelectedRow({ rowKey: 'id' });
+    const openShareReport = useShareReport({ kind: 'employee', useFormModal, usePreset, getName: item => item.name || item.nameEn || '' });
 
     const listApis = Object.assign({}, apis, {
       create: canCreate ? apis.create : null,
@@ -121,7 +136,26 @@ const Employee = createWithRemoteLoader({
             pagination: {
               searchParams: paginationSearchParams.searchParams,
               setSearchParams: paginationSearchParams.setSearchParams
-            }
+            },
+            ...(canShare
+              ? {
+                  rowKey: 'id',
+                  rowSelection: getRowSelection(pageList),
+                  selectedRows,
+                  batchActions: [
+                    {
+                      key: 'share-report',
+                      label: <ShareReportMessage id="shareReport.action" />,
+                      onClick: () => openShareReport(selectedRows)
+                    }
+                  ],
+                  dataFormat: data => {
+                    const list = Array.isArray(data?.pageData) ? data.pageData : [];
+                    queueMicrotask(() => setPageList(list));
+                    return Object.assign({}, data, { list, total: data?.totalCount ?? data?.total ?? 0 });
+                  }
+                }
+              : {})
           },
           saveData: (data, { fetchOptions }) => {
             const position = (fetchOptions.data.positionEnums || []).find(item => item.value === data.options?.position);
