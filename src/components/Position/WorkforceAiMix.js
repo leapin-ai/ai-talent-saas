@@ -5,7 +5,6 @@ import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
 import style from './workforceAiMix.module.scss';
 
-const MIX_KEYS = ['automated', 'augmented', 'humanLed', 'unassessed'];
 // 未评估只计数，不参与占比
 const ASSESSED_KEYS = ['automated', 'augmented', 'humanLed'];
 const sumAssessed = mix => ASSESSED_KEYS.reduce((sum, key) => sum + (mix?.[key] || 0), 0);
@@ -27,28 +26,52 @@ const DEFAULT_STATUS = ['published'];
 
 const toPercent = (count, total) => (total ? Math.round((count / total) * 1000) / 10 : 0);
 
-const MixLegend = ({ mix, formatMessage }) => (
+const MixLegend = ({ formatMessage }) => (
   <Flex wrap gap={12} className={style.legend}>
-    {MIX_KEYS.filter(key => key !== 'unassessed' || mix.unassessed > 0).map(key => (
+    {ASSESSED_KEYS.map(key => (
       <span key={key} className={style['legend-item']}>
         <i style={{ background: MIX_COLORS[key] }} />
-        {formatMessage({ id: `position.aiMix.${key}` })} {mix[key]}
+        {formatMessage({ id: `position.aiMix.${key}` })}
       </span>
     ))}
   </Flex>
 );
 
+// 段太窄放不下百分比文字时不显示
+const DONUT_LABEL_MIN_PERCENT = 5;
+// 标签落在环宽中线：外径 84px、环宽 28px
+const DONUT_LABEL_RADIUS = 70;
+
 const Donut = ({ mix, total, formatMessage }) => {
   const assessed = sumAssessed(mix);
   let start = 0;
-  const stops = ASSESSED_KEYS.map(key => {
-    const end = start + (assessed ? (mix[key] / assessed) * 100 : 0);
-    const stop = `${MIX_COLORS[key]} ${start}% ${end}%`;
-    start = end;
-    return stop;
+  const segments = ASSESSED_KEYS.map(key => {
+    const percent = assessed ? (mix[key] / assessed) * 100 : 0;
+    const segment = { key, start, end: start + percent, percent };
+    start += percent;
+    return segment;
   });
+  const stops = segments.map(({ key, start, end }) => `${MIX_COLORS[key]} ${start}% ${end}%`);
   return (
     <div className={style.donut} style={{ background: assessed ? `conic-gradient(${stops.join(', ')})` : MIX_COLORS.unassessed }}>
+      {segments
+        .filter(({ percent }) => percent >= DONUT_LABEL_MIN_PERCENT)
+        .map(({ key, start, end, percent }) => {
+          const angle = (((start + end) / 2) * 3.6 * Math.PI) / 180;
+          return (
+            <span
+              key={key}
+              className={style['donut-percent']}
+              style={{
+                left: `calc(50% + ${Math.sin(angle) * DONUT_LABEL_RADIUS}px)`,
+                top: `calc(50% - ${Math.cos(angle) * DONUT_LABEL_RADIUS}px)`,
+                color: MIX_TEXT_COLORS[key]
+              }}
+            >
+              {toPercent(mix[key], assessed)}%
+            </span>
+          );
+        })}
       <div className={style['donut-hole']}>
         <span className={style['donut-value']}>{total}</span>
         <span className={style['donut-label']}>{formatMessage({ id: 'position.aiMix.tasksUnit' })}</span>
@@ -195,7 +218,7 @@ const WorkforceAiMix = createWithRemoteLoader({
                 {taskCount ? (
                   <Flex vertical align="center" gap={16} className={style['donut-wrap']}>
                     <Donut mix={mix} total={taskCount} formatMessage={formatMessage} />
-                    <MixLegend mix={mix} formatMessage={formatMessage} />
+                    <MixLegend formatMessage={formatMessage} />
                   </Flex>
                 ) : (
                   empty
@@ -207,7 +230,6 @@ const WorkforceAiMix = createWithRemoteLoader({
                 <div className={style['panel-title']}>{formatMessage({ id: 'position.aiMix.byRole' })}</div>
                 {roles.length ? (
                   <>
-                    <MixLegend mix={mix} formatMessage={formatMessage} />
                     <div className={style['role-list']}>
                       {roles.map(role => (
                         <div className={style['role-row']} key={role.id}>
@@ -215,10 +237,10 @@ const WorkforceAiMix = createWithRemoteLoader({
                             {role.name}
                           </span>
                           <StackedBar role={role} formatMessage={formatMessage} />
-                          <span className={style['role-total']}>{role.total}</span>
                         </div>
                       ))}
                     </div>
+                    <MixLegend formatMessage={formatMessage} />
                   </>
                 ) : (
                   empty
