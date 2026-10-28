@@ -15,12 +15,6 @@ const MIX_COLORS = {
   humanLed: '#f59e0b',
   unassessed: 'rgba(79, 70, 229, 0.1)'
 };
-const MIX_TEXT_COLORS = {
-  automated: '#ffffff',
-  augmented: '#161431',
-  humanLed: '#ffffff',
-  unassessed: '#67658C'
-};
 const STATUS_LIST = ['published', 'draft', 'closed'];
 const DEFAULT_STATUS = ['published'];
 
@@ -64,8 +58,7 @@ const Donut = ({ mix, total, formatMessage }) => {
               className={style['donut-percent']}
               style={{
                 left: `calc(50% + ${Math.sin(angle) * DONUT_LABEL_RADIUS}px)`,
-                top: `calc(50% - ${Math.cos(angle) * DONUT_LABEL_RADIUS}px)`,
-                color: MIX_TEXT_COLORS[key]
+                top: `calc(50% - ${Math.cos(angle) * DONUT_LABEL_RADIUS}px)`
               }}
             >
               {toPercent(mix[key], assessed)}%
@@ -89,8 +82,8 @@ const StackedBar = ({ role, formatMessage }) => (
       }
       return (
         <Tooltip key={key} title={`${formatMessage({ id: `position.aiMix.${key}` })} ${role[key]}（${percent}%）`}>
-          <span className={style['stack-seg']} style={{ width: `${percent}%`, background: MIX_COLORS[key], color: MIX_TEXT_COLORS[key] }}>
-            {percent >= 12 ? role[key] : ''}
+          <span className={style['stack-seg']} style={{ width: `${percent}%`, background: MIX_COLORS[key] }}>
+            {percent >= 12 ? `${percent}%` : ''}
           </span>
         </Tooltip>
       );
