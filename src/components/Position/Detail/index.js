@@ -8,6 +8,7 @@ import { useFetch } from '@kne/react-fetch';
 import { useLocation, useMatch, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Page } from '@kne/system-layout';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
+import ReportGuideLink from '../../../commons/ReportGuideLink';
 import AnalyzeTalent from './AnalyzeTalent';
 import RoleInsights from './RoleInsights';
 import PositionInfoPanel from './PositionInfoPanel';
@@ -177,6 +178,7 @@ const Detail = createWithRemoteLoader({
       <Tabs
         activeKey={activeTab}
         onChange={onTabChange}
+        tabBarExtraContent={activeTab === 'insights' ? <ReportGuideLink type="position" /> : null}
         items={[
           {
             key: 'insights',

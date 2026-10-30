@@ -10,6 +10,7 @@ import '@kne/react-box/dist/index.css';
 import RoleInsights from '@components/Position/Detail/RoleInsights';
 import ProfileReadiness from '@components/TalentProfile/ProfileReadiness';
 import TenantThemeProvider from '../../commons/TenantThemeProvider';
+import ReportGuideLink from '../../commons/ReportGuideLink';
 import { resolveTenantThemeColor } from '../../commons/themeColor';
 import withLocale from './withLocale';
 
@@ -142,7 +143,7 @@ const ShareReport = createWithRemoteLoader({
             ]
           }}
         >
-          <Page title={title} toolbar={false}>
+          <Page title={title} toolbar={false} extra={<ReportGuideLink type={isPosition ? 'position' : 'employee'} />}>
             {isPosition ? (
               <RoleInsights apis={roleApis} position={position} />
             ) : (
