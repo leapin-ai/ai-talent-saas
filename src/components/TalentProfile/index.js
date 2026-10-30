@@ -14,6 +14,7 @@ import MiddleColumn from './MiddleColumn';
 import RightColumn from './RightColumn';
 import ProfileReadiness from './ProfileReadiness';
 import CardGate from './CardGate';
+import ReportGuideLink from '../../commons/ReportGuideLink';
 import style from './style.module.scss';
 import { resolveIntentionDisplay } from './intentionPositionUtils';
 
@@ -454,6 +455,7 @@ const TalentProfile = createWithRemoteLoader({
               className={style['profile-tabs']}
               defaultActiveKey={defaultProfileTab}
               renderTabBar={showReadinessTab ? undefined : () => null}
+              tabBarExtraContent={showReadinessTab ? <ReportGuideLink type="employee" /> : null}
               items={[
                 showReadinessTab
                   ? {
