@@ -7,14 +7,7 @@ const servicePath = path.join(__dirname, '../../libs/services/talentReview.js');
 const source = fs.readFileSync(servicePath, 'utf8');
 
 test('talent-saas invite path calls the OpenAPI endpoints the UI depends on', () => {
-  const expected = [
-    'project/org/batch-add',
-    'project/org/batch-invite',
-    'project/manual-score-invite-preview-batch',
-    'project/manual-score-invite-send-batch',
-    'project/manual-score-invite-save-batch',
-    'project/manual-score-invite-resend'
-  ];
+  const expected = ['project/org/batch-add', 'project/org/batch-invite', 'project/manual-score-invite-preview-batch', 'project/manual-score-invite-send-batch', 'project/manual-score-invite-save-batch', 'project/manual-score-invite-resend'];
   expected.forEach(pathname => {
     assert.match(source, new RegExp(pathname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing call to ${pathname}`);
   });

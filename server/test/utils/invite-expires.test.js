@@ -1,11 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {
-  DEFAULT_PROJECT_TIMEZONE,
-  toProjectCalendarDay,
-  isExpiresAfterProjectEndDay,
-  assertInviteExpiresWithinProject
-} = require('../../libs/utils/invite-expires');
+const { DEFAULT_PROJECT_TIMEZONE, toProjectCalendarDay, isExpiresAfterProjectEndDay, assertInviteExpiresWithinProject } = require('../../libs/utils/invite-expires');
 
 test('default timezone is Asia/Shanghai', () => {
   assert.equal(DEFAULT_PROJECT_TIMEZONE, 'Asia/Shanghai');
