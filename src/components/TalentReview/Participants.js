@@ -10,7 +10,8 @@ import dayjs from 'dayjs';
 import get from 'lodash/get';
 import withLocale from './withLocale';
 import { StatusTag } from './common';
-import { BIZ_UNIT_FILTER, filterValueOf, formatDate, localPage, MANUAL_ROLES } from './constants';
+import { BIZ_UNIT_FILTER, filterValueOf, formatDate, localPage, MANUAL_ROLES, ROLE_MESSAGE_ID } from './constants';
+import { defaultInviteExpires, disableInviteExpiresDate, isInviteExpiresInvalid } from './inviteExpires';
 import { useApiAction } from './useApiAction';
 import style from './style.module.scss';
 
@@ -25,11 +26,13 @@ const STATUS_TONE = { memberSubmitted: 'success', notSubmitted: 'draft', notInvi
 
 const ResendModal = createWithRemoteLoader({
   modules: ['components-core:FormInfo']
-})(({ remoteModules, member, defaultExpires, onCancel, onOk }) => {
+})(({ remoteModules, member, project, onCancel, onOk }) => {
   const [FormInfo] = remoteModules;
   const { FormModal, fields } = FormInfo;
   const { Input, DatePicker } = fields;
   const { formatMessage } = useIntl();
+  const { message } = App.useApp();
+  const expiresValue = defaultInviteExpires(project?.endTime);
   return (
     <FormModal
       open
@@ -42,9 +45,15 @@ const ResendModal = createWithRemoteLoader({
           name: member.name,
           email: member.email || '-',
           phone: member.phone || '-',
-          expires: defaultExpires && dayjs(defaultExpires).isAfter(dayjs()) ? dayjs(defaultExpires) : dayjs().add(7, 'day')
+          expires: expiresValue ? dayjs(expiresValue) : undefined
         },
-        onSubmit: onOk
+        onSubmit: values => {
+          if (isInviteExpiresInvalid(values.expires, project)) {
+            message.error(formatMessage({ id: 'expiresAfterEnd' }));
+            return false;
+          }
+          return onOk(values);
+        }
       }}
     >
       <FormInfo
@@ -53,7 +62,7 @@ const ResendModal = createWithRemoteLoader({
           <Input name="name" label={formatMessage({ id: 'name' })} disabled block />,
           <Input name="email" label={formatMessage({ id: 'email' })} disabled />,
           <Input name="phone" label={formatMessage({ id: 'phone' })} disabled />,
-          <DatePicker name="expires" label={formatMessage({ id: 'modelingDeadline' })} rule="REQ" disabledDate={date => date.isBefore(dayjs().startOf('day'))} block />
+          <DatePicker name="expires" label={formatMessage({ id: 'modelingDeadline' })} rule="REQ" disabledDate={date => disableInviteExpiresDate(date, project)} block />
         ]}
       />
     </FormModal>
@@ -135,7 +144,7 @@ const MemberTable = ({ remoteModules, projects, usePreset, baseUrl, initialProje
 
   const roleColumn = role => ({
     name: role,
-    title: formatMessage({ id: role === 'superior' ? 'superior' : 'peers' }),
+    title: formatMessage({ id: ROLE_MESSAGE_ID[role] || role }),
     type: 'other',
     width: 170,
     getValueOf: item => (get(item, 'project.setting.enableManualScore') ? <EvaluatorCell member={item} role={role} onResend={resendEvaluator} /> : <span className={style['muted']}>-</span>)
@@ -161,18 +170,7 @@ const MemberTable = ({ remoteModules, projects, usePreset, baseUrl, initialProje
     { name: 'email', title: formatMessage({ id: 'email' }), width: 220, ellipsis: true, getValueOf: item => item.email || '-' },
     { name: 'phone', title: formatMessage({ id: 'phone' }), width: 140, getValueOf: item => item.phone || '-' },
     { name: 'status', title: formatMessage({ id: 'status' }), type: 'other', width: 120, getValueOf: item => <StatusTag tone={STATUS_TONE[item.viewStatus]}>{formatMessage({ id: item.viewStatus })}</StatusTag> },
-    ...MANUAL_ROLES.map(roleColumn),
-    {
-      name: 'hr',
-      title: formatMessage({ id: 'hr' }),
-      type: 'other',
-      width: 90,
-      getValueOf: () => (
-        <Tooltip title={formatMessage({ id: 'hrNotSupported' })}>
-          <span className={style['muted']}>-</span>
-        </Tooltip>
-      )
-    }
+    ...MANUAL_ROLES.map(roleColumn)
   ];
 
   return (
@@ -231,7 +229,7 @@ const MemberTable = ({ remoteModules, projects, usePreset, baseUrl, initialProje
       {resending ? (
         <ResendModal
           member={resending}
-          defaultExpires={resending.project.endTime}
+          project={resending.project}
           onCancel={() => setResending(null)}
           onOk={async values => {
             const result = await run(api.resendMember, { id: String(resending.project.id), memberId: String(resending.memberId), expires: dayjs(values.expires).endOf('day').toISOString() }, formatMessage({ id: 'resendSuccess' }));

@@ -185,6 +185,28 @@ module.exports = fp(async (fastify, options) => {
   });
 
   fastify.post(
+    `${base}/project/save-evaluators`,
+    {
+      onRequest,
+      schema: {
+        summary: '人才盘点-保存评价人配置（同步组织人员并保存，不发送邀请）',
+        body: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            employeeIds: { type: 'array', items: { type: 'string' } },
+            evaluators: { type: 'object', additionalProperties: true }
+          },
+          required: ['id', 'employeeIds']
+        }
+      }
+    },
+    async request => {
+      return services.talentReview.saveEvaluators(Object.assign({ tenantId: tenantIdOf(request) }, request.body));
+    }
+  );
+
+  fastify.post(
     `${base}/project/invite`,
     {
       onRequest,

@@ -133,6 +133,10 @@ const getApis = options => {
             url: `${prefix}/tenant/talent-review/project/invite`,
             method: 'POST'
           },
+          saveEvaluators: {
+            url: `${prefix}/tenant/talent-review/project/save-evaluators`,
+            method: 'POST'
+          },
           resendMember: {
             url: `${prefix}/tenant/talent-review/project/resend-member`,
             method: 'POST'

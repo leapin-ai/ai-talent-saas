@@ -1,10 +1,12 @@
 const fp = require('fastify-plugin');
 const pick = require('lodash/pick');
 const { getApiBase, openApiRequest } = require('../utils/aiInterviewOpenApi');
+const { assertInviteExpiresWithinProject } = require('../utils/invite-expires');
 
 const SCENE = 'talentReview';
 const PROJECT_FETCH_LIMIT = 200;
-const MANUAL_ROLES = ['superior', 'peer', 'subordinate'];
+// 与 OpenAPI MANUAL_ROLES 对齐：独立 hr，不把原下级改名为 HR。报告契约仍只有 superior/peer/hr 槽，本仓不编造下级槽或覆盖下级数据。
+const MANUAL_ROLES = ['superior', 'peer', 'subordinate', 'hr'];
 
 const toIdString = value => (value == null || value === '' ? '' : String(value));
 
@@ -256,11 +258,7 @@ module.exports = fp(async (fastify, options) => {
       return !!(employee.phone && member.phone && String(member.phone) === String(employee.phone));
     });
 
-  /**
-   * 发送邀请：把选中员工与评估人同步进盘点组织 → 邀请参与人 → 按需发送人工评估邀请
-   * evaluators: { [employeeId]: { superior, peer } }，值为员工 id
-   */
-  const invite = async ({ tenantId, id, employeeIds = [], evaluators = {}, expires, needNotice = true }) => {
+  const syncOrgMembers = async ({ tenantId, id, employeeIds = [], evaluators = {} }) => {
     const source = await orgSource({ tenantId });
     const employeeMap = new Map(source.employees.map(item => [item.id, item]));
     const orgMap = new Map(source.orgs.map(item => [item.id, item]));
@@ -314,41 +312,83 @@ module.exports = fp(async (fastify, options) => {
       const member = findMember(members, employeeMap.get(employeeId));
       return member ? toIdString(member.memberId) : '';
     };
+    return { participantIds, members, memberIdOf };
+  };
+
+  const buildScoreItems = ({ participantIds, memberIdOf, evaluators, preview, result }) => {
+    const scoreItems = [];
+    (preview?.items || []).forEach(previewItem => {
+      const employeeId = participantIds.find(item => memberIdOf(item) === toIdString(previewItem.memberId));
+      const chosen = evaluators[employeeId] || {};
+      const required = previewItem.requiredRoles || [];
+      const selections = {};
+      const roles = [...new Set([...required, ...['superior', 'peer', 'hr'].filter(role => chosen[role])])];
+      roles.forEach(role => {
+        const memberId = chosen[role] ? memberIdOf(String(chosen[role])) : '';
+        if (memberId) {
+          selections[role] = memberId;
+        } else if (role === 'superior' && required.includes('superior') && previewItem.defaultSuperiorId) {
+          selections[role] = toIdString(previewItem.defaultSuperiorId);
+        }
+      });
+      const missing = required.filter(role => !selections[role]);
+      if (missing.length) {
+        result.errors.push({ memberId: previewItem.memberId, name: previewItem.ratee?.name, missing });
+        return;
+      }
+      if (Object.keys(selections).length) {
+        scoreItems.push({ memberId: toIdString(previewItem.memberId), selections });
+      }
+    });
+    (preview?.errors || []).forEach(item => result.errors.push(item));
+    return scoreItems;
+  };
+
+  /**
+   * 仅保存评价人配置：同步组织人员后调用 OpenAPI manual-score-invite-save-batch，不发送参与人/评估邀请。
+   * evaluators: { [employeeId]: { superior, peer, hr } }，值为员工 id，服务端映射为组织 memberId。
+   */
+  const saveEvaluators = async ({ tenantId, id, employeeIds = [], evaluators = {} }) => {
+    const project = await projectDetail({ tenantId, id });
+    const { participantIds, memberIdOf } = await syncOrgMembers({ tenantId, id, employeeIds, evaluators });
+    const result = { saved: 0, errors: [] };
+    if (!project?.setting?.enableManualScore) {
+      return result;
+    }
+    const memberIds = participantIds.map(memberIdOf).filter(Boolean);
+    const preview = await request(tenantId, 'project/manual-score-invite-preview-batch', { method: 'POST', body: { memberIds } });
+    const scoreItems = buildScoreItems({ participantIds, memberIdOf, evaluators, preview, result });
+    if (scoreItems.length) {
+      await request(tenantId, 'project/manual-score-invite-save-batch', {
+        method: 'POST',
+        body: { items: scoreItems, scoredRolePolicy: 'ignore' }
+      });
+      result.saved = scoreItems.length;
+    }
+    return result;
+  };
+
+  /**
+   * 发送邀请：把选中员工与评估人同步进盘点组织 → 邀请参与人 → 按需发送人工评估邀请
+   * evaluators: { [employeeId]: { superior, peer, hr } }，值为员工 id
+   */
+  const invite = async ({ tenantId, id, employeeIds = [], evaluators = {}, expires, needNotice = true }) => {
+    const project = await projectDetail({ tenantId, id });
+    assertInviteExpiresWithinProject({ expires, project });
+
+    const { participantIds, memberIdOf } = await syncOrgMembers({ tenantId, id, employeeIds, evaluators });
     const memberIds = participantIds.map(memberIdOf).filter(Boolean);
     await request(tenantId, 'project/org/batch-invite', {
       method: 'POST',
       body: Object.assign({ id, memberIds, needNotice }, expires ? { expires } : {})
     });
 
-    const project = await projectDetail({ tenantId, id });
     const result = { invited: memberIds.length, scoreInvited: 0, errors: [] };
     if (!project?.setting?.enableManualScore) {
       return result;
     }
     const preview = await request(tenantId, 'project/manual-score-invite-preview-batch', { method: 'POST', body: { memberIds } });
-    const scoreItems = [];
-    (preview?.items || []).forEach(previewItem => {
-      const employeeId = participantIds.find(item => memberIdOf(item) === toIdString(previewItem.memberId));
-      const chosen = evaluators[employeeId] || {};
-      const selections = {};
-      (previewItem.requiredRoles || []).forEach(role => {
-        const memberId = chosen[role] ? memberIdOf(String(chosen[role])) : '';
-        if (memberId) {
-          selections[role] = memberId;
-        } else if (role === 'superior' && previewItem.defaultSuperiorId) {
-          selections[role] = toIdString(previewItem.defaultSuperiorId);
-        }
-      });
-      const missing = (previewItem.requiredRoles || []).filter(role => !selections[role]);
-      if (missing.length) {
-        result.errors.push({ memberId: previewItem.memberId, name: previewItem.ratee?.name, missing });
-        return;
-      }
-      if (previewItem.requiredRoles?.length) {
-        scoreItems.push({ memberId: toIdString(previewItem.memberId), selections });
-      }
-    });
-    (preview?.errors || []).forEach(item => result.errors.push(item));
+    const scoreItems = buildScoreItems({ participantIds, memberIdOf, evaluators, preview, result });
     if (scoreItems.length) {
       await request(tenantId, 'project/manual-score-invite-send-batch', {
         method: 'POST',
@@ -359,11 +399,14 @@ module.exports = fp(async (fastify, options) => {
     return result;
   };
 
-  const resendMember = ({ tenantId, id, memberId, expires }) =>
-    request(tenantId, 'project/org/batch-invite', {
+  const resendMember = async ({ tenantId, id, memberId, expires }) => {
+    const project = await projectDetail({ tenantId, id });
+    assertInviteExpiresWithinProject({ expires, project });
+    return request(tenantId, 'project/org/batch-invite', {
       method: 'POST',
       body: Object.assign({ id, memberIds: [memberId], needNotice: true }, expires ? { expires } : {})
     });
+  };
 
   /** 个人报告：面试详情 + flowup 远程组件地址（remote-module-config.json 在 AI 面试前端站点根下） */
   const interviewReport = async ({ tenantId, id }) => {
@@ -403,6 +446,7 @@ module.exports = fp(async (fastify, options) => {
       modelQuestions,
       orgSource,
       invite,
+      saveEvaluators,
       resendMember,
       resendEvaluator,
       interviewReport
