@@ -403,6 +403,24 @@ const createServer = () => {
           onAppRemoved: appOidc.onAppRemoved,
           getOpenApiToken: appOidc.getOpenApiToken,
           issueUserAccessToken: appOidc.issueUserAccessToken,
+          // linked 权限快照并入租户权限树；远程删码由快照 stale 保留，不自动清角色授予
+          onPermissionsSynced: async ({ tree, sourceKey }) => {
+            if (fastify.tenant?.setPermissionSource) {
+              fastify.tenant.setPermissionSource(sourceKey, tree, { defaultDisabled: true });
+            }
+          },
+          onPermissionsRemoved: async ({ sourceKey }) => {
+            if (fastify.tenant?.removePermissionSource) {
+              fastify.tenant.removePermissionSource(sourceKey);
+            }
+          },
+          getPermissionRootCodes: async () => {
+            const modules = fastify.tenant?.permissions?.modules || [];
+            return modules
+              .map(item => item && item.code)
+              .filter(Boolean)
+              .map(String);
+          },
           resolveVersionFile: async ({ fileId }) => {
             const { buffer } = await fastify.fileManager.services.fileRecord.getFileBlob({ id: fileId });
             return buffer;
