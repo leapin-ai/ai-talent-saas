@@ -57,7 +57,7 @@ export const globalInit = async () => {
     //url: 'http://localhost:3001',
     //tpl: '{{url}}',
     remote: 'components-core',
-    defaultVersion: '0.6.13'
+    defaultVersion: '0.7.6'
   };
   remoteLoaderPreset({
     fallback: (
@@ -78,31 +78,31 @@ export const globalInit = async () => {
       'components-iconfont': {
         ...registry,
         remote: 'components-iconfont',
-        defaultVersion: '0.2.1'
+        defaultVersion: '0.3.0'
       },
       'components-file-manager': {
         ...registry,
         remote: 'components-file-manager',
-        defaultVersion: '0.1.9'
+        defaultVersion: '0.1.13'
       },
       'components-admin': {
         ...registry,
         remote: 'components-admin',
-        defaultVersion: '1.1.118'
+        defaultVersion: '1.1.149'
       },
       'components-thirdparty': {
         ...registry,
         //url: 'http://localhost:3010',
         //tpl: '{{url}}',
         remote: 'components-thirdparty',
-        defaultVersion: '0.1.54'
+        defaultVersion: '0.1.61'
       },
       'components-app-manager': {
         ...registry,
         //url: 'http://localhost:3012',
         //tpl: '{{url}}',
         remote: 'components-app-manager',
-        defaultVersion: '0.1.1'
+        defaultVersion: '0.1.2'
       },
       // AI 面试远程组件：url/version 由租户设置在运行时 applyAiInterviewRemote 写入
       'ai-interview-flowup': {
