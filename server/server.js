@@ -338,8 +338,10 @@ const createServer = () => {
       });
 
       // @fastify/env 7 不再把 .env 写入 process.env，fastify-oidc 的环境变量默认值读不到，需显式传入
+      // 显式传入 tenant 开启应用中心宿主租户能力（tenantRole=host），否则无法向子应用同步/获取平台租户
       fastify.register(require('@kne/fastify-oidc'), {
         isMain: true,
+        tenant: () => fastify.tenant,
         selfClient: { clientName: 'LeapIn Talent SaaS' },
         dbTableNamePrefix: tablePrefix || 't_',
         origin: fastify.config.ORIGIN,
