@@ -391,6 +391,11 @@ const createServer = () => {
                 logging: false
               }
             : null,
+          // 外部关联：installKey.platformOrigin 须等于本平台 ORIGIN
+          origin: oidcOrigin,
+          signPlatformAssertion: appOidc.signPlatformAssertion,
+          ensureLinkedRegistration: appOidc.ensureLinkedRegistration,
+          getOpsServiceToken: appOidc.getServiceToken,
           systemEnvKeys: appOidc.systemEnvKeys,
           resolveSystemEnv: appOidc.resolveSystemEnv,
           onAppRemoved: appOidc.onAppRemoved,
