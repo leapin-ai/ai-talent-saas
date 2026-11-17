@@ -20,6 +20,7 @@ export const initialValue = () => ({
     manual: 50,
     superior: 50,
     peer: 50,
+    hr: 0,
     gridType: 9,
     nineSquareGrid: {}
   }
@@ -98,6 +99,7 @@ export const projectToValue = (project, { models = [], ungroupedLabel } = {}) =>
       manual: toPercent(setting.scoreSourceWeight?.manual, 0),
       superior: toPercent(setting.manualRoleWeight?.superior, 0.5),
       peer: toPercent(setting.manualRoleWeight?.peer, 0.5),
+      hr: toPercent(setting.manualRoleWeight?.hr, 0),
       gridType: Number(gridType) === 4 ? 4 : 9,
       nineSquareGrid: gridCells
     }
@@ -214,7 +216,7 @@ export const buildPayload = (value, { locale, questionnaireTitle, dimensionName 
       scoreScale: performance.scoreScale,
       enableManualScore: assessment.enableManualScore,
       scoreSourceWeight: assessment.enableManualScore ? { ai: fraction(assessment.ai), manual: fraction(assessment.manual) } : { ai: 1, manual: 0 },
-      manualRoleWeight: { superior: fraction(assessment.superior), peer: fraction(assessment.peer), subordinate: 0 },
+      manualRoleWeight: { superior: fraction(assessment.superior), peer: fraction(assessment.peer), subordinate: 0, hr: fraction(assessment.hr) },
       nineSquareGrid: buildNineSquareGrid(assessment, types, locale),
       questionnaire: buildQuestionnaire(questions, questionnaireTitle)
     }

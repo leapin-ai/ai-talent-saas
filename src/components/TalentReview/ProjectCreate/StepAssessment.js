@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Flex, Form, InputNumber, Radio, Segmented, Switch, Tooltip } from 'antd';
+import { Flex, Form, InputNumber, Radio, Segmented, Switch } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { SettingOutlined, TableOutlined } from '@ant-design/icons';
 import { useIntl } from '@kne/react-intl';
@@ -65,13 +65,28 @@ const StepAssessment = ({ value, dimensionTypes, enablePerformance, locale, read
               </Flex>
               <Flex gap={16}>
                 <Form.Item label={formatMessage({ id: 'superiorWeight' })} required style={{ flex: 1 }}>
-                  {percentInput({ value: value.superior, onChange: superior => set({ superior, peer: 100 - (superior || 0) }) })}
+                  {percentInput({
+                    value: value.superior,
+                    onChange: superior => set({ superior, peer: Math.max(0, 100 - (superior || 0) - (value.hr || 0)), hr: value.hr || 0 })
+                  })}
                 </Form.Item>
                 <Form.Item label={formatMessage({ id: 'peerWeight' })} required style={{ flex: 1 }}>
-                  {percentInput({ value: value.peer, onChange: peer => set({ peer, superior: 100 - (peer || 0) }) })}
+                  {percentInput({
+                    value: value.peer,
+                    onChange: peer => set({ peer, superior: Math.max(0, 100 - (peer || 0) - (value.hr || 0)), hr: value.hr || 0 })
+                  })}
                 </Form.Item>
-                <Form.Item label={formatMessage({ id: 'hr' })} style={{ flex: 1 }}>
-                  <Tooltip title={formatMessage({ id: 'hrNotSupported' })}>{percentInput({ value: 0, disabled: true })}</Tooltip>
+                <Form.Item label={formatMessage({ id: 'hrWeight' })} extra={formatMessage({ id: 'hrWeightTip' })} style={{ flex: 1 }}>
+                  {percentInput({
+                    value: value.hr || 0,
+                    onChange: hr => {
+                      const nextHr = hr || 0;
+                      const rest = Math.max(0, 100 - nextHr);
+                      const prev = (value.superior || 0) + (value.peer || 0);
+                      const superior = prev <= 0 ? rest : Math.round(((value.superior || 0) / prev) * rest);
+                      set({ hr: nextHr, superior, peer: Math.max(0, rest - superior) });
+                    }
+                  })}
                 </Form.Item>
               </Flex>
             </>

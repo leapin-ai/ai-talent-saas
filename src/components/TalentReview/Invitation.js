@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import classnames from 'classnames';
-import { App, Button, Empty, Flex, Spin, Table, Tooltip, Tree } from 'antd';
+import { App, Button, Empty, Flex, Modal, Spin, Table, Tree, TreeSelect } from 'antd';
 import { EditOutlined, UserAddOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
@@ -11,6 +11,7 @@ import dayjs from 'dayjs';
 import withLocale from './withLocale';
 import { StepBar } from './common';
 import { useApiAction } from './useApiAction';
+import { defaultInviteExpires, disableInviteExpiresDate, isInviteExpiresInvalid } from './inviteExpires';
 import style from './style.module.scss';
 
 const UNGROUPED = '__ungrouped__';
@@ -57,6 +58,42 @@ const buildTree = (orgs, employees, ungroupedLabel) => {
   return roots.map(decorate);
 };
 
+const buildEmployeeTreeSelect = (orgs, employees, ungroupedLabel) => {
+  const orgIds = new Set(orgs.map(item => item.id));
+  const children = new Map();
+  orgs.forEach(org => {
+    const parent = org.parentId && orgIds.has(org.parentId) ? org.parentId : null;
+    if (!children.has(parent)) children.set(parent, []);
+    children.get(parent).push(org);
+  });
+  const byOrg = new Map();
+  employees.forEach(emp => {
+    const key = emp.orgId && orgIds.has(emp.orgId) ? emp.orgId : UNGROUPED;
+    if (!byOrg.has(key)) byOrg.set(key, []);
+    byOrg.get(key).push(emp);
+  });
+  const toNode = org => {
+    const memberNodes = (byOrg.get(org.id) || []).map(emp => ({ value: emp.id, title: emp.name, isLeaf: true }));
+    return {
+      value: `org:${org.id}`,
+      title: org.name,
+      selectable: false,
+      children: [...(children.get(org.id) || []).map(toNode), ...memberNodes]
+    };
+  };
+  const roots = (children.get(null) || []).map(toNode);
+  const ungrouped = byOrg.get(UNGROUPED);
+  if (ungrouped?.length) {
+    roots.push({
+      value: `org:${UNGROUPED}`,
+      title: ungroupedLabel,
+      selectable: false,
+      children: ungrouped.map(emp => ({ value: emp.id, title: emp.name, isLeaf: true }))
+    });
+  }
+  return roots;
+};
+
 /** 默认上级：沿组织链找负责人（跳过本人）；默认同级：同组织第一位其他员工 */
 const defaultEvaluators = (employee, { orgMap, employees, byTenantUser }) => {
   let superior;
@@ -75,29 +112,32 @@ const defaultEvaluators = (employee, { orgMap, employees, byTenantUser }) => {
   return { superior, peer };
 };
 
-const EvaluatorModal = ({ FormInfo, employees, value, onCancel, onOk }) => {
+const EvaluatorTreeField = ({ value, onChange, treeData, placeholder }) => (
+  <TreeSelect value={value} onChange={onChange} treeData={treeData} allowClear showSearch treeDefaultExpandAll treeNodeFilterProp="title" placeholder={placeholder} style={{ width: '100%' }} />
+);
+
+const EvaluatorModal = ({ treeData, value, onCancel, onOk }) => {
   const { formatMessage } = useIntl();
-  const { FormModal, fields } = FormInfo;
-  const { Select } = fields;
-  const options = employees.map(item => ({ value: item.id, label: item.name }));
+  const [superior, setSuperior] = useState(value?.superior);
+  const [peer, setPeer] = useState(value?.peer);
+  const [hr, setHr] = useState(value?.hr);
   return (
-    <FormModal
-      open
-      title={formatMessage({ id: 'modifyEvaluator' })}
-      saveText={formatMessage({ id: 'save' })}
-      cancelText={formatMessage({ id: 'cancel' })}
-      onClose={onCancel}
-      formProps={{ data: value, onSubmit: data => onOk({ superior: data.superior, peer: data.peer }) }}
-    >
-      <FormInfo
-        column={1}
-        list={[
-          <Select name="superior" label={formatMessage({ id: 'superior' })} allowClear showSearch optionFilterProp="label" options={options} placeholder={formatMessage({ id: 'select' })} />,
-          <Select name="peer" label={formatMessage({ id: 'peers' })} allowClear showSearch optionFilterProp="label" options={options} placeholder={formatMessage({ id: 'select' })} />,
-          <Select name="hr" label={formatMessage({ id: 'hr' })} tips={formatMessage({ id: 'hrNotSupported' })} disabled placeholder="-" />
-        ]}
-      />
-    </FormModal>
+    <Modal open title={formatMessage({ id: 'modifyEvaluator' })} okText={formatMessage({ id: 'save' })} cancelText={formatMessage({ id: 'cancel' })} onCancel={onCancel} onOk={() => onOk({ superior, peer, hr })}>
+      <Flex vertical gap={16}>
+        <div>
+          <div style={{ marginBottom: 8 }}>{formatMessage({ id: 'superior' })}</div>
+          <EvaluatorTreeField value={superior} onChange={setSuperior} treeData={treeData} placeholder={formatMessage({ id: 'selectFromOrgTree' })} />
+        </div>
+        <div>
+          <div style={{ marginBottom: 8 }}>{formatMessage({ id: 'peers' })}</div>
+          <EvaluatorTreeField value={peer} onChange={setPeer} treeData={treeData} placeholder={formatMessage({ id: 'selectFromOrgTree' })} />
+        </div>
+        <div>
+          <div style={{ marginBottom: 8 }}>{formatMessage({ id: 'hr' })}</div>
+          <EvaluatorTreeField value={hr} onChange={setHr} treeData={treeData} placeholder={formatMessage({ id: 'selectFromOrgTree' })} />
+        </div>
+      </Flex>
+    </Modal>
   );
 };
 
@@ -126,6 +166,7 @@ const InvitationInner = ({ FormInfo, project, source, baseUrl, usePreset }) => {
   );
   const empMap = useMemo(() => new Map(employees.map(item => [item.id, item])), [employees]);
   const treeData = useMemo(() => buildTree(source.orgs || [], employees, formatMessage({ id: 'ungrouped' })), [source.orgs, employees, formatMessage]);
+  const evaluatorTreeData = useMemo(() => buildEmployeeTreeSelect(source.orgs || [], employees, formatMessage({ id: 'ungrouped' })), [source.orgs, employees, formatMessage]);
   const selected = checkedKeys
     .filter(key => String(key).startsWith('emp:'))
     .map(key => empMap.get(String(key).slice(4)))
@@ -139,23 +180,37 @@ const InvitationInner = ({ FormInfo, project, source, baseUrl, usePreset }) => {
     { title: formatMessage({ id: 'idCol' }), key: 'id', dataIndex: 'id', sorter: (a, b) => String(a.id).localeCompare(String(b.id)) },
     { title: formatMessage({ id: 'superior' }), key: 'superior', render: (_, item) => nameOf(evaluatorsOf(item).superior) },
     { title: formatMessage({ id: 'peers' }), key: 'peer', render: (_, item) => nameOf(evaluatorsOf(item).peer) },
-    {
-      title: formatMessage({ id: 'hr' }),
-      key: 'hr',
-      render: () => (
-        <Tooltip title={formatMessage({ id: 'hrNotSupported' })}>
-          <span className={style['muted']}>-</span>
-        </Tooltip>
-      )
-    }
+    { title: formatMessage({ id: 'hr' }), key: 'hr', render: (_, item) => nameOf(evaluatorsOf(item).hr) }
   ];
 
+  const evaluatorPayload = () => selected.reduce((result, emp) => Object.assign(result, { [emp.id]: evaluatorsOf(emp) }), {});
+
+  const saveEvaluators = async () => {
+    if (!selected.length) {
+      message.error(formatMessage({ id: 'participantsRequired' }));
+      return;
+    }
+    const result = await run(apis.talentSaas.tenant.talentReview.saveEvaluators, {
+      id: project.id,
+      employeeIds: selected.map(item => item.id),
+      evaluators: evaluatorPayload()
+    });
+    if (!result) return;
+    message.success(formatMessage({ id: 'saveEvaluatorsSuccess' }, { saved: result.saved || 0 }));
+    if (result.errors?.length) {
+      message.warning(formatMessage({ id: 'inviteScoreErrors' }, { count: result.errors.length }));
+    }
+  };
+
   const submit = async values => {
-    const evaluators = selected.reduce((result, emp) => Object.assign(result, { [emp.id]: evaluatorsOf(emp) }), {});
+    if (isInviteExpiresInvalid(values.expires, project)) {
+      message.error(formatMessage({ id: 'expiresAfterEnd' }));
+      return;
+    }
     const result = await run(apis.talentSaas.tenant.talentReview.projectInvite, {
       id: project.id,
       employeeIds: selected.map(item => item.id),
-      evaluators,
+      evaluators: evaluatorPayload(),
       expires: values.expires ? dayjs(values.expires).endOf('day').toISOString() : undefined,
       needNotice: true
     });
@@ -181,7 +236,7 @@ const InvitationInner = ({ FormInfo, project, source, baseUrl, usePreset }) => {
       }
       back
     >
-      <Form data={{ expires: project.endTime ? dayjs(project.endTime) : undefined, assessmentDeadline: project.endTime ? dayjs(project.endTime) : undefined }} onSubmit={submit}>
+      <Form data={{ expires: defaultInviteExpires(project.endTime) ? dayjs(defaultInviteExpires(project.endTime)) : undefined, assessmentDeadline: project.endTime ? dayjs(project.endTime) : undefined }} onSubmit={submit}>
         <div className={style['page']}>
           <StepBar items={[formatMessage({ id: 'selectParticipants' }), formatMessage({ id: 'invitationSetting' })]} current={step} />
           {step === 0 ? (
@@ -235,7 +290,7 @@ const InvitationInner = ({ FormInfo, project, source, baseUrl, usePreset }) => {
                 title={formatMessage({ id: 'invitationSetting' })}
                 column={2}
                 list={[
-                  <DatePicker name="expires" label={formatMessage({ id: 'reviewDeadline' })} rule="REQ" disabledDate={date => date.isBefore(dayjs().startOf('day'))} />,
+                  <DatePicker name="expires" label={formatMessage({ id: 'reviewDeadline' })} rule="REQ" disabledDate={date => disableInviteExpiresDate(date, project)} />,
                   <DatePicker name="assessmentDeadline" label={formatMessage({ id: 'assessmentDeadline' })} tips={formatMessage({ id: 'notSupported' })} disabled />,
                   <Input name="contact" label={formatMessage({ id: 'contact' })} tips={formatMessage({ id: 'notSupported' })} disabled placeholder={formatMessage({ id: 'contactName' })} />,
                   <Input name="contactDetails" label={formatMessage({ id: 'contactDetails' })} tips={formatMessage({ id: 'notSupported' })} disabled placeholder={formatMessage({ id: 'contactPlaceholder' })} />
@@ -249,18 +304,23 @@ const InvitationInner = ({ FormInfo, project, source, baseUrl, usePreset }) => {
             {formatMessage({ id: step === 0 ? 'cancel' : 'back' })}
           </Button>
           {step === 0 ? (
-            <Button
-              type="primary"
-              onClick={() => {
-                if (!selected.length) {
-                  message.error(formatMessage({ id: 'participantsRequired' }));
-                  return;
-                }
-                setStep(1);
-              }}
-            >
-              {formatMessage({ id: 'next' })}
-            </Button>
+            <>
+              <Button onClick={saveEvaluators} loading={submitting} disabled={!selected.length}>
+                {formatMessage({ id: 'saveEvaluators' })}
+              </Button>
+              <Button
+                type="primary"
+                onClick={() => {
+                  if (!selected.length) {
+                    message.error(formatMessage({ id: 'participantsRequired' }));
+                    return;
+                  }
+                  setStep(1);
+                }}
+              >
+                {formatMessage({ id: 'next' })}
+              </Button>
+            </>
           ) : (
             <SubmitButton type="primary" loading={submitting}>
               {formatMessage({ id: 'invite' })} <UserAddOutlined />
@@ -269,8 +329,7 @@ const InvitationInner = ({ FormInfo, project, source, baseUrl, usePreset }) => {
         </Page.Footer>
         {editing ? (
           <EvaluatorModal
-            FormInfo={FormInfo}
-            employees={employees}
+            treeData={evaluatorTreeData}
             value={editing}
             onCancel={() => setEditing(null)}
             onOk={values => {

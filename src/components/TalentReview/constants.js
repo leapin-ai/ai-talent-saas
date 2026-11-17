@@ -3,7 +3,8 @@ import gridDefaults from './gridDefaults.json';
 
 export const DIMENSION_TYPES = ['potential', 'competency', 'values', 'custom'];
 
-export const MANUAL_ROLES = ['superior', 'peer'];
+export const MANUAL_ROLES = ['superior', 'peer', 'hr'];
+export const ROLE_MESSAGE_ID = { superior: 'superior', peer: 'peers', hr: 'hr' };
 
 /** open-api 只有 open/closed，列表状态按时间与邀请情况推导 */
 export const getProjectStatus = project => {

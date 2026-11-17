@@ -128,6 +128,7 @@ const Detail = ({ project, baseUrl, reload, usePreset, canInvite, canEdit }) => 
               manual: toPercent(get(setting, 'scoreSourceWeight.manual', 0)),
               superior: toPercent(get(setting, 'manualRoleWeight.superior')),
               peer: toPercent(get(setting, 'manualRoleWeight.peer')),
+              hr: toPercent(get(setting, 'manualRoleWeight.hr'), 0),
               gridType: Number(nineSquareGrid.type) === 4 ? 4 : 9,
               nineSquareGrid
             }}

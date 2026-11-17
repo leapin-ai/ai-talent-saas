@@ -26,9 +26,10 @@ export const resolveCapacityCode = value => {
 };
 
 export const CapacityLabel = createWithRemoteLoader({
-  modules: ['components-core:Common@FunctionEnum']
+  modules: ['components-core:FormInfo@fields.FunctionSelect']
 })(({ remoteModules, value }) => {
-  const [FunctionEnum] = remoteModules;
+  const [FunctionSelect] = remoteModules;
+  const FunctionEnum = FunctionSelect?.Enum;
   const code = resolveCapacityCode(value);
   if (!code) {
     return '-';

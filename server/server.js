@@ -338,8 +338,10 @@ const createServer = () => {
       });
 
       // @fastify/env 7 不再把 .env 写入 process.env，fastify-oidc 的环境变量默认值读不到，需显式传入
+      // 显式传入 tenant 开启应用中心宿主租户能力（tenantRole=host），否则无法向子应用同步/获取平台租户
       fastify.register(require('@kne/fastify-oidc'), {
         isMain: true,
+        tenant: () => fastify.tenant,
         selfClient: { clientName: 'LeapIn Talent SaaS' },
         dbTableNamePrefix: tablePrefix || 't_',
         origin: fastify.config.ORIGIN,
@@ -391,11 +393,34 @@ const createServer = () => {
                 logging: false
               }
             : null,
+          // 外部关联：installKey.platformOrigin 须等于本平台 ORIGIN
+          origin: oidcOrigin,
+          signPlatformAssertion: appOidc.signPlatformAssertion,
+          ensureLinkedRegistration: appOidc.ensureLinkedRegistration,
+          getOpsServiceToken: appOidc.getServiceToken,
           systemEnvKeys: appOidc.systemEnvKeys,
           resolveSystemEnv: appOidc.resolveSystemEnv,
           onAppRemoved: appOidc.onAppRemoved,
           getOpenApiToken: appOidc.getOpenApiToken,
           issueUserAccessToken: appOidc.issueUserAccessToken,
+          // linked 权限快照并入租户权限树；远程删码由快照 stale 保留，不自动清角色授予
+          onPermissionsSynced: async ({ tree, sourceKey }) => {
+            if (fastify.tenant?.setPermissionSource) {
+              fastify.tenant.setPermissionSource(sourceKey, tree, { defaultDisabled: true });
+            }
+          },
+          onPermissionsRemoved: async ({ sourceKey }) => {
+            if (fastify.tenant?.removePermissionSource) {
+              fastify.tenant.removePermissionSource(sourceKey);
+            }
+          },
+          getPermissionRootCodes: async () => {
+            const modules = fastify.tenant?.permissions?.modules || [];
+            return modules
+              .map(item => item && item.code)
+              .filter(Boolean)
+              .map(String);
+          },
           resolveVersionFile: async ({ fileId }) => {
             const { buffer } = await fastify.fileManager.services.fileRecord.getFileBlob({ id: fileId });
             return buffer;

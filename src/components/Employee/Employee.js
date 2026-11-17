@@ -18,7 +18,7 @@ const Employee = createWithRemoteLoader({
   modules: [
     'components-admin:BizUnit',
     'components-core:Filter',
-    'components-core:Common@AddressEnum',
+    'components-core:FormInfo@fields.AddressSelect',
     'components-core:Permissions@usePermissionsPass',
     'components-core:TablePage@Table',
     'components-core:FormInfo@useFormModal',
@@ -26,7 +26,8 @@ const Employee = createWithRemoteLoader({
   ]
 })(
   withLocale(({ remoteModules, baseUrl, apis, onDetail, onPositionDetail, ...props }) => {
-    const [BizUnit, Filter, AddressEnum, usePermissionsPass, Table, useFormModal, usePreset] = remoteModules;
+    const [BizUnit, Filter, AddressSelect, usePermissionsPass, Table, useFormModal, usePreset] = remoteModules;
+    const AddressEnum = AddressSelect.AddressEnum || AddressSelect.Enum;
     const { InputFilterItem, SuperSelectFilterItem } = Filter.fields;
     const { formatMessage } = useIntl();
     const paginationSearchParams = useTablePaginationSearchParams();
