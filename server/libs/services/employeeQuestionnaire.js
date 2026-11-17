@@ -64,8 +64,14 @@ module.exports = fp(async (fastify, options) => {
     return app;
   };
 
-  /** 问卷应用对外地址：绑定域名优先，否则走应用中心路径 */
+  /** 问卷应用对外地址：linked 用远程 baseUrl；否则绑定域名优先，再走应用中心路径 */
   const getAppBaseUrl = app => {
+    if (app.kind === 'linked' || app.options?.kind === 'linked') {
+      const base = String(app.options?.baseUrl || app.openUrl || '').replace(/\/+$/, '');
+      if (base) {
+        return base;
+      }
+    }
     const origin = new URL(fastify.config.ORIGIN).origin;
     if (app.domain) {
       return `${new URL(origin).protocol}//${app.domain}`;
@@ -73,11 +79,23 @@ module.exports = fp(async (fastify, options) => {
     return `${origin}${fastify.appManager.options.pathPrefix || '/app'}/${app.name}`;
   };
 
+  /** linked 用远程 baseUrl；managed 走本机 upstream */
+  const appApiOrigin = app => {
+    if (app.kind === 'linked' || app.options?.kind === 'linked') {
+      const base = String(app.options?.baseUrl || '').replace(/\/+$/, '');
+      if (!base) {
+        throw new Error(`问卷应用 ${APP_NAME} 缺少 options.baseUrl`);
+      }
+      return base;
+    }
+    return `http://${fastify.appManager.options.upstreamHost}:${app.port}`;
+  };
+
   /** 以当前登录用户身份调用问卷应用接口，返回 data */
   const callApp = async ({ userInfo, tenantId }, { method = 'GET', path, query, body }) => {
     const app = await getRunningApp();
     const { token } = await fastify.appManager.services.openApi.issueUserToken({ name: APP_NAME, userId: userInfo?.id, tenantId });
-    const url = new URL(`http://${fastify.appManager.options.upstreamHost}:${app.port}/api/v1${path}`);
+    const url = new URL(`${appApiOrigin(app)}/api/v1${path}`);
     if (query) {
       url.search = require('qs').stringify(query);
     }
