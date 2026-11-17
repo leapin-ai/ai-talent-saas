@@ -102,7 +102,7 @@ export const globalInit = async () => {
         //url: 'http://localhost:3012',
         //tpl: '{{url}}',
         remote: 'components-app-manager',
-        defaultVersion: '0.1.4'
+        defaultVersion: '0.1.5'
       },
       // AI 面试远程组件：url/version 由租户设置在运行时 applyAiInterviewRemote 写入
       'ai-interview-flowup': {
