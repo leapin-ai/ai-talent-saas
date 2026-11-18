@@ -414,6 +414,28 @@ const createServer = () => {
               fastify.tenant.removePermissionSource(sourceKey);
             }
           },
+          // 应用中心只展示当前租户已开通的应用：应用 name 是租户权限树顶层码时，租户权限里没有 name 或 name:* 即视为已关闭；
+          // 没有权限树的应用（托管应用）、取不到租户的请求不裁剪
+          filterCenterApps: async ({ apps, request }) => {
+            const tenant = fastify.tenant;
+            const roots = new Set((tenant?.permissions?.modules || []).map(item => item && String(item.code)));
+            if (!apps.some(app => roots.has(app.name))) {
+              return apps;
+            }
+            let tenantId;
+            try {
+              await tenant.authenticate.tenantUser(request);
+              tenantId = request.tenantUserInfo?.tenantId;
+            } catch (e) {
+              return apps;
+            }
+            if (!tenantId) {
+              return apps;
+            }
+            const { codes } = await tenant.services.permission.tenantLevelList({ tenantId });
+            const enabled = new Set(codes.map(code => String(code).split(':')[0]));
+            return apps.filter(app => !roots.has(app.name) || enabled.has(app.name));
+          },
           getPermissionRootCodes: async () => {
             const modules = fastify.tenant?.permissions?.modules || [];
             return modules
