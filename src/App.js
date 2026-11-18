@@ -1,12 +1,10 @@
 import { useEffect } from 'react';
 import RemoteLoader, { createWithRemoteLoader } from '@kne/remote-loader';
 import AppChildrenRouter from '@kne/app-children-router';
-import { Navigate } from 'react-router-dom';
 import TenantAdmin from '@components/TenantAdmin';
 import CompleteProfile from '@components/TenantAdmin/CompleteProfile';
 import RootHomeRedirect from '@components/TenantAdmin/RootHomeRedirect';
 import TenantPortal from '@components/TenantPortal';
-import Admin from '@components/Admin';
 import UserSystemLayout from '@components/UserSystemLayout';
 import PublicSystemLayout from '@components/PublicSystemLayout';
 import ShareReport from '@components/ShareReport';
@@ -30,7 +28,7 @@ const AccountLoginRedirect = () => {
   return null;
 };
 
-const AppContent = withLocale(({ baseUrl, isOidcClient, appManagerEnabled, AfterUserLoginLayout, AfterAdminUserLoginLayout }) => {
+const AppContent = withLocale(({ baseUrl, appManagerEnabled, AfterUserLoginLayout, AdminLayout }) => {
   const { formatMessage } = useIntl();
   return (
     <AppChildrenRouter
@@ -88,94 +86,48 @@ const AppContent = withLocale(({ baseUrl, isOidcClient, appManagerEnabled, After
           title: 'Admin',
           element: (
             <Protected>
-              <AppChildrenRouter
-                errorPage
-                notFoundPage
-                baseUrl={baseUrl + '/admin'}
-                element={
-                  <AfterAdminUserLoginLayout
-                    navigation={{
-                      base: `${baseUrl}/admin`,
-                      showIndex: false,
-                      defaultTitle: 'AI Talent SaaS',
-                      list: [
-                        {
-                          key: 'task',
-                          title: formatMessage({ id: 'app.TaskManagement' }),
-                          path: `${baseUrl}/admin/task`
-                        },
-                        {
-                          key: 'tenant',
-                          title: formatMessage({ id: 'app.TenantManagement' }),
-                          path: `${baseUrl}/admin/tenant`
-                        },
-                        {
-                          key: 'user',
-                          title: formatMessage({ id: 'app.UserManagement' }),
-                          path: '/admin/user'
-                        },
-                        {
-                          key: 'file',
-                          title: formatMessage({ id: 'app.FileManagement' }),
-                          path: `${baseUrl}/admin/file`
-                        },
-                        {
-                          key: 'signature',
-                          title: formatMessage({ id: 'app.SignatureManagement' }),
-                          path: '/admin/signature'
-                        },
-                        !isOidcClient && {
-                          key: 'oidc',
-                          title: formatMessage({ id: 'app.OidcManagement' }),
-                          path: `${baseUrl}/admin/oidc`
-                        },
-                        {
-                          key: 'message',
-                          title: formatMessage({ id: 'app.MessageManagement' }),
-                          path: '/admin/message'
-                        },
-                        appManagerEnabled && {
-                          key: 'app-manager',
-                          title: formatMessage({ id: 'app.AppManagement' }),
-                          path: `${baseUrl}/admin/app-manager`
-                        }
-                      ].filter(Boolean)
-                    }}
-                  />
-                }
+              <AdminLayout
+                baseUrl={`${baseUrl}/admin`}
+                defaultTitle="AI Talent SaaS"
+                indexPath="tenant"
+                navigation={{
+                  list: [
+                    {
+                      key: 'task',
+                      title: formatMessage({ id: 'app.TaskManagement' }),
+                      path: `${baseUrl}/admin/task`
+                    },
+                    {
+                      key: 'tenant',
+                      title: formatMessage({ id: 'app.TenantManagement' }),
+                      path: `${baseUrl}/admin/tenant`
+                    },
+                    {
+                      key: 'signature',
+                      title: formatMessage({ id: 'app.SignatureManagement' }),
+                      path: `${baseUrl}/admin/signature`
+                    },
+                    appManagerEnabled && {
+                      key: 'app-manager',
+                      title: formatMessage({ id: 'app.AppManagement' }),
+                      path: `${baseUrl}/admin/app-manager`
+                    }
+                  ].filter(Boolean)
+                }}
                 list={[
-                  {
-                    index: true,
-                    element: <Navigate to={`${baseUrl}/admin/tenant`} replace />
-                  },
                   {
                     path: 'tenant/*',
                     title: formatMessage({ id: 'app.TenantManagement' }),
-                    element: <RemoteLoader module="components-admin:TenantAdmin" baseUrl={baseUrl + '/admin'} />
+                    element: <RemoteLoader module="components-admin:TenantAdmin" baseUrl={`${baseUrl}/admin`} />
                   },
                   {
                     path: 'task/*',
-                    element: <RemoteLoader module="components-admin:Task" baseUrl={baseUrl + '/admin'} getManualTaskAction={getManualTaskAction} />
-                  },
-                  {
-                    path: 'file/*',
-                    title: formatMessage({ id: 'app.FileManagement' }),
-                    element: <RemoteLoader module="components-file-manager:FileListPage" baseUrl={`${baseUrl}/admin/file`} />
+                    element: <RemoteLoader module="components-admin:Task" baseUrl={`${baseUrl}/admin`} getManualTaskAction={getManualTaskAction} />
                   },
                   {
                     path: 'signature',
                     title: formatMessage({ id: 'app.SignatureManagement' }),
                     element: <RemoteLoader module="components-admin:Signature" />
-                  },
-                  {
-                    path: 'message/*',
-                    title: formatMessage({ id: 'app.MessageManagement' }),
-                    element: <RemoteLoader module="components-admin:MessageManger" baseUrl={`${baseUrl}/admin/message`} />
-                  },
-                  !isOidcClient && {
-                    path: 'oidc/*',
-                    title: formatMessage({ id: 'app.OidcManagement' }),
-                    element: <RemoteLoader module="components-admin:OidcAdmin" baseUrl={`${baseUrl}/admin/oidc`} />
                   },
                   appManagerEnabled && {
                     path: 'app-manager/*',
@@ -183,11 +135,7 @@ const AppContent = withLocale(({ baseUrl, isOidcClient, appManagerEnabled, After
                     element: <RemoteLoader module="components-app-manager:Manager" baseUrl={`${baseUrl}/admin`} />
                   }
                 ].filter(Boolean)}
-              >
-                <Admin baseUrl={baseUrl + '/admin'}>
-                  <RemoteLoader module="components-admin:Admin" baseUrl={baseUrl + '/admin'} />
-                </Admin>
-              </AppChildrenRouter>
+              />
             </Protected>
           )
         },
@@ -264,19 +212,13 @@ const AppContent = withLocale(({ baseUrl, isOidcClient, appManagerEnabled, After
 });
 
 const App = createWithRemoteLoader({
-  modules: ['components-core:Global', 'components-admin:Authenticate@AfterUserLoginLayout', 'components-admin:Authenticate@AfterAdminUserLoginLayout']
+  modules: ['components-core:Global', 'components-admin:Authenticate@AfterUserLoginLayout', 'components-admin:Admin@AdminLayout']
 })(({ remoteModules, globalPreset }) => {
-  const [Global, AfterUserLoginLayout, AfterAdminUserLoginLayout] = remoteModules;
+  const [Global, AfterUserLoginLayout, AdminLayout] = remoteModules;
   const baseUrl = '';
   return (
     <Global preset={globalPreset} themeToken={globalPreset.themeToken}>
-      <AppContent
-        baseUrl={baseUrl}
-        isOidcClient={globalPreset.oidcMode === 'central'}
-        appManagerEnabled={!!globalPreset.capabilities?.appManager}
-        AfterUserLoginLayout={AfterUserLoginLayout}
-        AfterAdminUserLoginLayout={AfterAdminUserLoginLayout}
-      />
+      <AppContent baseUrl={baseUrl} appManagerEnabled={!!globalPreset.capabilities?.appManager} AfterUserLoginLayout={AfterUserLoginLayout} AdminLayout={AdminLayout} />
     </Global>
   );
 });
