@@ -424,6 +424,13 @@ const createServer = () => {
           resolveVersionFile: async ({ fileId }) => {
             const { buffer } = await fastify.fileManager.services.fileRecord.getFileBlob({ id: fileId });
             return buffer;
+          },
+          // 关联外部应用时从远程站点抓到的图标，存入本机文件系统，返回文件 id 作为应用 icon
+          saveIconFile: async ({ buffer, filename, mimetype }) => {
+            const record = await fastify.fileManager.services.fileRecord.uploadToFileSystem({
+              file: { filename, encoding: '7bit', mimetype, buffer }
+            });
+            return record.id;
           }
         });
       }
