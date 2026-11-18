@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import classnames from 'classnames';
-import { App, Button, Empty, Flex, Modal, Spin, Table, Tree, TreeSelect } from 'antd';
+import { App, Button, Empty, Flex, Modal, Spin, Tree, TreeSelect } from 'antd';
 import { EditOutlined, UserAddOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
@@ -141,7 +141,7 @@ const EvaluatorModal = ({ treeData, value, onCancel, onOk }) => {
   );
 };
 
-const InvitationInner = ({ FormInfo, project, source, baseUrl, usePreset }) => {
+const InvitationInner = ({ FormInfo, Table, project, source, baseUrl, usePreset }) => {
   const { Form, SubmitButton, fields } = FormInfo;
   const { Input, DatePicker } = fields;
   const { formatMessage } = useIntl();
@@ -176,12 +176,14 @@ const InvitationInner = ({ FormInfo, project, source, baseUrl, usePreset }) => {
   const allEmpKeys = employees.map(item => empKey(item.id));
 
   const columns = [
-    { title: formatMessage({ id: 'participantCol' }), key: 'name', render: (_, item) => item.name },
-    { title: formatMessage({ id: 'idCol' }), key: 'id', dataIndex: 'id', sorter: (a, b) => String(a.id).localeCompare(String(b.id)) },
-    { title: formatMessage({ id: 'superior' }), key: 'superior', render: (_, item) => nameOf(evaluatorsOf(item).superior) },
-    { title: formatMessage({ id: 'peers' }), key: 'peer', render: (_, item) => nameOf(evaluatorsOf(item).peer) },
-    { title: formatMessage({ id: 'hr' }), key: 'hr', render: (_, item) => nameOf(evaluatorsOf(item).hr) }
+    { name: 'name', title: formatMessage({ id: 'participantCol' }) },
+    { name: 'id', title: formatMessage({ id: 'idCol' }), sort: true },
+    { name: 'superior', title: formatMessage({ id: 'superior' }), render: (_, { dataSource: item }) => nameOf(evaluatorsOf(item).superior) },
+    { name: 'peer', title: formatMessage({ id: 'peers' }), render: (_, { dataSource: item }) => nameOf(evaluatorsOf(item).peer) },
+    { name: 'hr', title: formatMessage({ id: 'hr' }), render: (_, { dataSource: item }) => nameOf(evaluatorsOf(item).hr) }
   ];
+  const { sort, sortRender } = Table.useSort();
+  const sortedSelected = Table.sortDataSource(selected, sort, columns);
 
   const evaluatorPayload = () => selected.reduce((result, emp) => Object.assign(result, { [emp.id]: evaluatorsOf(emp) }), {});
 
@@ -263,24 +265,22 @@ const InvitationInner = ({ FormInfo, project, source, baseUrl, usePreset }) => {
                 <Table
                   className={classnames(style['table'])}
                   rowKey="id"
-                  size="middle"
                   columns={columns}
-                  dataSource={selected}
-                  rowSelection={{ selectedRowKeys: rowKeys, onChange: setRowKeys }}
+                  dataSource={sortedSelected}
+                  sortRender={sortRender}
+                  rowSelection={{ type: 'checkbox', allowSelectedAll: true, selectedRowKeys: rowKeys, onChange: setRowKeys }}
                   pagination={selected.length > 20 ? { pageSize: 20 } : false}
-                  locale={{
-                    emptyText: (
-                      <Empty
-                        description={
-                          <span>
-                            {formatMessage({ id: 'noParticipants' })}
-                            <br />
-                            <span className={style['muted']}>{formatMessage({ id: 'noParticipantsDesc' })}</span>
-                          </span>
-                        }
-                      />
-                    )
-                  }}
+                  empty={
+                    <Empty
+                      description={
+                        <span>
+                          {formatMessage({ id: 'noParticipants' })}
+                          <br />
+                          <span className={style['muted']}>{formatMessage({ id: 'noParticipantsDesc' })}</span>
+                        </span>
+                      }
+                    />
+                  }
                 />
               </Flex>
             </div>
@@ -345,10 +345,10 @@ const InvitationInner = ({ FormInfo, project, source, baseUrl, usePreset }) => {
 };
 
 const Invitation = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:FormInfo']
+  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:TablePage@Table']
 })(
   withLocale(({ remoteModules, baseUrl, guard }) => {
-    const [usePreset, FormInfo] = remoteModules;
+    const [usePreset, FormInfo, Table] = remoteModules;
     const { apis } = usePreset();
     const { id } = useParams();
     const api = apis.talentSaas.tenant.talentReview;
@@ -357,7 +357,7 @@ const Invitation = createWithRemoteLoader({
     if (!project || !source) {
       return guard(<Spin style={{ display: 'block', padding: 80 }} />);
     }
-    return guard(<InvitationInner FormInfo={FormInfo} project={project} source={source} baseUrl={baseUrl} usePreset={usePreset} />);
+    return guard(<InvitationInner FormInfo={FormInfo} Table={Table} project={project} source={source} baseUrl={baseUrl} usePreset={usePreset} />);
   })
 );
 

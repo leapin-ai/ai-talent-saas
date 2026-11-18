@@ -63,8 +63,8 @@ const PersonCell = ({ Avatar, item, onOpen }) => {
 
 const AnalyzeTalent = createWithRemoteLoader({
   modules: [
-    'components-core:Table@TablePage',
-    'components-core:Table',
+    'components-core:TablePage',
+    'components-core:TablePage@Table',
     'components-core:Filter',
     'components-core:Image.Avatar',
     'components-core:FormInfo',
