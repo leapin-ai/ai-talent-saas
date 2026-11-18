@@ -71,12 +71,11 @@ const AnalyzeTalent = createWithRemoteLoader({
     'components-core:FormInfo@useFormModal',
     'components-core:Global@usePreset',
     'components-core:Permissions@usePermissionsPass',
-    'components-core:Modal@useModal',
-    'components-core:ButtonGroup'
+    'components-core:Modal@useModal'
   ]
 })(
   withLocale(({ remoteModules, baseUrl = '', positionId, employeeListApi }) => {
-    const [TablePage, Table, Filter, Avatar, FormInfo, useFormModal, usePreset, usePermissionsPass, useModal, ButtonGroup] = remoteModules;
+    const [TablePage, Table, Filter, Avatar, FormInfo, useFormModal, usePreset, usePermissionsPass, useModal] = remoteModules;
     const { capabilities } = usePreset();
     const canInvite = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInvite });
     const inviteQuestionnaire = useInviteQuestionnaire({ useFormModal, FormInfo, usePreset, positionId });
@@ -150,51 +149,41 @@ const AnalyzeTalent = createWithRemoteLoader({
         name: 'person',
         title: formatMessage({ id: 'position.talentPerson' }),
         type: 'other',
-        valueOf: item => <PersonCell Avatar={Avatar} item={item} onOpen={goEmployeeProfile} />
+        getValueOf: item => <PersonCell Avatar={Avatar} item={item} onOpen={goEmployeeProfile} />
       },
       {
         name: 'readiness',
         title: formatMessage({ id: 'position.talentReadiness' }),
         type: 'other',
-        valueOf: item => <ReadinessBar value={item.readiness} />
+        getValueOf: item => <ReadinessBar value={item.readiness} />
       },
       {
         name: 'completion',
         title: formatMessage({ id: 'position.profileCompletion' }),
         type: 'other',
-        valueOf: item => <CompletionRing value={item.profileCompletionPercent} />
+        getValueOf: item => <CompletionRing value={item.profileCompletionPercent} />
       },
       {
         name: 'lastAssessment',
         title: formatMessage({ id: 'position.talentLastAssessment' }),
         type: 'other',
-        valueOf: item => <AssessmentTag status={item.lastAssessment} />
+        getValueOf: item => <AssessmentTag status={item.lastAssessment} />
       },
       capabilities?.appManager && canInvite
         ? {
             name: 'options',
             title: formatMessage({ id: 'position.talentInviteActions' }),
-            type: 'options',
-            fixed: 'right',
-            valueOf: item => ({
-              children: ({ itemClassName, moreType, buttonProps }) => (
-                <ButtonGroup
-                  showLength={0}
-                  itemClassName={itemClassName}
-                  moreType={moreType}
-                  list={[
-                    {
-                      children: formatMessage({ id: 'position.questionnaireInviteAction' }),
-                      onClick: () => inviteQuestionnaire(item)
-                    },
-                    {
-                      children: formatMessage({ id: 'position.questionnaireRecordAction' }),
-                      onClick: () => showQuestionnaireRecords(item)
-                    }
-                  ].map(action => Object.assign({}, action, buttonProps))}
-                />
-              )
-            })
+            renderType: 'options',
+            getValueOf: item => [
+              {
+                children: formatMessage({ id: 'position.questionnaireInviteAction' }),
+                onClick: () => inviteQuestionnaire(item)
+              },
+              {
+                children: formatMessage({ id: 'position.questionnaireRecordAction' }),
+                onClick: () => showQuestionnaireRecords(item)
+              }
+            ]
           }
         : null
     ].filter(Boolean);
