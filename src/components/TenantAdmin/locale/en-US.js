@@ -199,6 +199,7 @@ const enUS = {
   'tenantAdmin.internalTalentMarket': 'AI Talent Market',
   'tenantAdmin.positionManagement': 'Workforce Readiness',
   'tenantAdmin.appCenter': 'App Center',
+  'tenantAdmin.subAppNotFound': 'This app menu was not found. It may have been turned off, or you have no access',
   'tenantAdmin.talentIntelligence': 'TALENT INTELLIGENCE',
   'tenantAdmin.talentReviewProjects': 'Projects',
   'tenantAdmin.talentReviewParticipants': 'Participants',

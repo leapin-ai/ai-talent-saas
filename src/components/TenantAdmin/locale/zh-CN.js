@@ -199,6 +199,7 @@ const zhCN = {
   'tenantAdmin.internalTalentMarket': '内部人才市场',
   'tenantAdmin.positionManagement': '人才队伍就绪度',
   'tenantAdmin.appCenter': '应用中心',
+  'tenantAdmin.subAppNotFound': '没有找到该应用菜单，可能已被关闭或你没有访问权限',
   'tenantAdmin.talentIntelligence': '人才盘点',
   'tenantAdmin.talentReviewProjects': '盘点项目',
   'tenantAdmin.talentReviewParticipants': '参与人',

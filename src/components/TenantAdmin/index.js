@@ -9,6 +9,7 @@ import TalentMarket from '@components/TalentMarket';
 import TalentProfile from '@components/TalentProfile';
 import PositionDetail from '@components/Position/Detail';
 import Home from './Home';
+import SubAppPage from './SubAppPage';
 import TenantHomeRedirect from './TenantHomeRedirect';
 import CompleteProfileApplicationEntry from './CompleteProfileApplicationEntry';
 import CompleteProfileApplications from './CompleteProfileApplications';
@@ -286,6 +287,12 @@ const TenantAdmin = createWithRemoteLoader({
                 </Page>
               </Permissions>
             )
+          },
+          // 左菜单展示的子应用页面：/ext/{应用}/{菜单}[/子路径]，菜单与权限由应用中心 centerMenus 裁剪
+          capabilities?.appManager && {
+            path: 'ext/:appName/*',
+            title: 'SubApp',
+            element: <SubAppPage baseUrl={baseUrl} />
           },
           {
             path: 'hiring/*',

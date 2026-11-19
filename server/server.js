@@ -374,6 +374,48 @@ const createServer = () => {
           issuer: `${oidcOrigin}/oidc`,
           serviceAudience: `${oidcOrigin}/api/oidc`
         });
+        // 租户上下文：同请求内缓存；取不到租户（非租户登录）返回 null
+        const tenantContextCache = new WeakMap();
+        const resolveTenantContext = async request => {
+          if (tenantContextCache.has(request)) {
+            return tenantContextCache.get(request);
+          }
+          let ctx = null;
+          try {
+            await fastify.tenant.authenticate.tenantUser(request);
+            const info = request.tenantUserInfo;
+            const read = key => (typeof info?.getDataValue === 'function' ? info.getDataValue(key) : info?.[key]);
+            if (info?.tenantId) {
+              ctx = {
+                tenantId: String(info.tenantId),
+                permissions: new Set((read('permissions') || []).map(String)),
+                isAdmin: await fastify.tenant.services.user.resolveIsTenantAdmin({
+                  tenantId: info.tenantId,
+                  roleDetails: read('roleDetails'),
+                  roles: read('roles'),
+                  currentTenantUserId: info.id
+                })
+              };
+            }
+          } catch (e) {
+            ctx = null;
+          }
+          tenantContextCache.set(request, ctx);
+          return ctx;
+        };
+        // 超级管理员判定：与 fastify-account 的 admin 服务一致（request.userInfo.isSuperAdmin）
+        const isSuperAdminRequest = async request => {
+          try {
+            if (!request.userInfo) {
+              await fastify.account.authenticate.user(request);
+            }
+            return !!request.userInfo && (await fastify.account.services.admin.checkIsSuperAdmin(request.userInfo));
+          } catch (e) {
+            return false;
+          }
+        };
+        // 应用 name 是租户权限树顶层码时，该应用有权限树，需按租户开通与用户权限码判断
+        const isPermissionRoot = name => (fastify.tenant?.permissions?.modules || []).some(item => item && String(item.code) === name);
         fastify.register(require('@kne/fastify-app-manager'), {
           prefix: `${options.prefix}/app-manager`,
           dbTableNamePrefix: tablePrefix ? `${tablePrefix}app_manager_` : 't_app_manager_',
@@ -435,6 +477,52 @@ const createServer = () => {
             const { codes } = await tenant.services.permission.tenantLevelList({ tenantId });
             const enabled = new Set(codes.map(code => String(code).split(':')[0]));
             return apps.filter(app => !roots.has(app.name) || enabled.has(app.name));
+          },
+          // 租户上下文：当前请求所属租户与用户权限码（权限树里没有的应用没有权限码，按租户开通规则单独判断）
+          getTenantId: async ({ request }) => {
+            const ctx = await resolveTenantContext(request);
+            return ctx ? ctx.tenantId : null;
+          },
+          // 应用展示方式只由超级管理员在「租户详情 → 设置」里配置：须是超级管理员，且 tenantId 必须是存在的租户
+          canManageDisplay: async ({ request, tenantId }) => {
+            if (!(await isSuperAdminRequest(request))) {
+              return false;
+            }
+            if (tenantId) {
+              return !!(await fastify.tenant.models.tenant.count({ where: { id: tenantId } }));
+            }
+            return true;
+          },
+          // 签发子应用令牌前把关：应用对当前租户已开通，且用户拥有该应用的任一权限；没有权限树的应用（托管应用）租户成员即可使用
+          canUseApp: async ({ app, request }) => {
+            const ctx = await resolveTenantContext(request);
+            if (!ctx) {
+              return false;
+            }
+            if (!isPermissionRoot(app.name)) {
+              return { tenantId: ctx.tenantId };
+            }
+            const { codes } = await fastify.tenant.services.permission.tenantLevelList({ tenantId: ctx.tenantId });
+            if (!codes.some(code => String(code).split(':')[0] === app.name)) {
+              return false;
+            }
+            const owned = ctx.isAdmin || [...ctx.permissions].some(code => String(code).split(':')[0] === app.name);
+            return owned ? { tenantId: ctx.tenantId } : false;
+          },
+          // 菜单的用户级裁剪：带 permission 的菜单需要用户拥有完整权限码；没有 permission 的菜单开通应用即可见，父菜单没有可见子菜单时一并隐藏
+          filterCenterMenus: async ({ menus, app, request }) => {
+            const ctx = await resolveTenantContext(request);
+            if (!ctx) {
+              return [];
+            }
+            const checkPermission = isPermissionRoot(app.name);
+            const visible = node => !node.permissionCode || !checkPermission || ctx.isAdmin || ctx.permissions.has(node.permissionCode);
+            const filter = list =>
+              list
+                .filter(visible)
+                .map(node => (node.children ? Object.assign({}, node, { children: filter(node.children) }) : node))
+                .filter(node => !node.children || node.children.length);
+            return filter(menus);
           },
           getPermissionRootCodes: async () => {
             const modules = fastify.tenant?.permissions?.modules || [];

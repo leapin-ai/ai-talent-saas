@@ -234,6 +234,12 @@ export const globalInit = async () => {
               key: 'talent-review',
               label: '人才盘点设置',
               component: loadable(() => import('@components/TalentReviewSetting'))
+            },
+            // 超级管理员配置各租户的应用展示方式（左菜单 / 应用中心），追加在设置菜单末尾
+            {
+              key: 'app-display',
+              label: '应用展示方式',
+              component: loadable(() => import('@components/Admin/AppDisplaySetting'))
             }
           ],
           appendTabDetails: [

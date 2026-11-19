@@ -10,12 +10,14 @@ import { resolveTenantThemeColor } from '../../commons/themeColor';
 import { withPublicUrl } from '../../commons/publicUrl';
 import { getOidcClient } from '../../commons/oidcClient';
 import { useFetch } from '@kne/react-fetch';
+import { SubAppMenusProvider, flattenMenus } from './SubAppMenus';
 import {
   WorkforceMenuIcon,
   TalentsMenuIcon,
   HomeMenuIcon,
   MarketMenuIcon,
   AppCenterMenuIcon,
+  resolveSubAppMenuIcon,
   CompanyMenuIcon,
   OrgMenuIcon,
   UserMenuIcon,
@@ -37,10 +39,12 @@ const Layout = createWithRemoteLoader({
   ]
 })(
   withLocale(({ remoteModules, baseUrl, children }) => {
-    const { formatMessage } = useIntl();
+    const { formatMessage, locale } = useIntl();
     const [Authenticate, Permissions, usePermissionsPass, Language, SetGlobal, usePreset] = remoteModules;
     const { capabilities, apis } = usePreset();
     const { data: talentReviewStatus } = useFetch(Object.assign({}, apis.talentSaas.tenant.talentReview.setting));
+    // 应用中心版本不含 centerMenus（旧版 components-app-manager）或未启用应用中心时，不请求也不展示子应用菜单
+    const subAppMenusApi = capabilities?.appManager ? apis.appManager?.centerMenus : null;
     const logout = () => getOidcClient().logout();
     return (
       <Authenticate>
@@ -50,19 +54,25 @@ const Layout = createWithRemoteLoader({
           return (
             <TenantThemeProvider themeColor={themeColor} SetGlobal={SetGlobal}>
               <Permissions request={['tenant-admin']} type="error">
-                <TenantAdminMenu
-                  baseUrl={baseUrl}
-                  appManagerEnabled={!!capabilities?.appManager}
-                  talentReviewEnabled={!!talentReviewStatus?.configured}
-                  tenant={tenant}
-                  tenantUserInfo={tenantUserInfo}
-                  logout={logout}
-                  formatMessage={formatMessage}
-                  usePermissionsPass={usePermissionsPass}
-                  Language={Language}
-                >
-                  {children || <Outlet />}
-                </TenantAdminMenu>
+                <SubAppMenusProvider api={subAppMenusApi} tenantId={tenant?.id}>
+                  {subApps => (
+                    <TenantAdminMenu
+                      baseUrl={baseUrl}
+                      appManagerEnabled={!!capabilities?.appManager}
+                      subApps={subApps}
+                      locale={locale}
+                      talentReviewEnabled={!!talentReviewStatus?.configured}
+                      tenant={tenant}
+                      tenantUserInfo={tenantUserInfo}
+                      logout={logout}
+                      formatMessage={formatMessage}
+                      usePermissionsPass={usePermissionsPass}
+                      Language={Language}
+                    >
+                      {children || <Outlet />}
+                    </TenantAdminMenu>
+                  )}
+                </SubAppMenusProvider>
               </Permissions>
             </TenantThemeProvider>
           );
@@ -72,7 +82,7 @@ const Layout = createWithRemoteLoader({
   })
 );
 
-const TenantAdminMenu = ({ baseUrl, appManagerEnabled, talentReviewEnabled, tenant, tenantUserInfo, logout, formatMessage, usePermissionsPass, Language, children }) => {
+const TenantAdminMenu = ({ baseUrl, appManagerEnabled, subApps, locale, talentReviewEnabled, tenant, tenantUserInfo, logout, formatMessage, usePermissionsPass, Language, children }) => {
   const allowHome = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.home });
   const allowTalentMarketplace = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.talentMarketplace });
   const allowPositionManagement = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionManagement });
@@ -147,6 +157,19 @@ const TenantAdminMenu = ({ baseUrl, appManagerEnabled, talentReviewEnabled, tena
           icon: <TalentReviewModelsMenuIcon />
         })
       : null,
+    // 展示方式为「左菜单」的应用：每个应用一组，菜单项指向 /ext/{应用}/{菜单}，由 AppEmbed 渲染
+    ...(allowAppCenter
+      ? subApps.flatMap(app =>
+          flattenMenus(app.menus, locale).map(({ menu, parent, label }) => ({
+            group: `ext:${app.name}`,
+            // 应用名称按当前语言取（租户、应用中心、子应用声明合并后的 labelI18n），没有则用默认名称
+            groupLabel: app.labelI18n?.[locale] || app.label || app.name,
+            label,
+            path: `/ext/${app.name}/${menu.fullKey}`,
+            icon: resolveSubAppMenuIcon(menu.icon || parent?.icon, app.remote?.url || app.baseUrl)
+          }))
+        )
+      : []),
     allowCompanySetting
       ? {
           group: 'tenantSetting',
