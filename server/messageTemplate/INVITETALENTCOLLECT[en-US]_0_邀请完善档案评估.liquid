@@ -1,0 +1,118 @@
+<!-- subject -->
+{{ subjectText }}
+<!-- html -->
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{% if isManager %}Manager Role Interview{% else %}Employee Role Interview{% endif %}</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            font-family: Arial, sans-serif;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: {{ themeColor }};
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 28px 24px;
+            background: #f9f9f9;
+        }
+
+        .content p {
+            margin: 0 0 14px;
+        }
+
+        .cta {
+            margin: 24px 0;
+        }
+
+        .cta a {
+            display: inline-block;
+            padding: 12px 20px;
+            background: {{ themeColor }};
+            color: #fff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .link {
+            word-break: break-all;
+            margin-top: 12px;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .footer {
+            margin-top: 20px;
+            color: #64748b;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1 style="margin:0;font-size:20px;">{% if isManager %}Manager Role Interview{% else %}Employee Role Interview{% endif %}</h1>
+    </div>
+    <div class="content">
+        <p>Dear {{ name }},</p>
+        {% if isManager %}
+        <p>As part of {{ orgName }}'s Workforce Readiness initiative, we invite you to complete a brief role assessment.</p>
+        <p>Your input will help us understand how the role may evolve, the business and technology changes affecting it, and what will be needed from the role in the future.</p>
+        <p>Please complete the assessment{% if deadlineText != blank %} by <strong>{{ deadlineText }}</strong>{% endif %}.</p>
+        <div class="cta">
+            <a href="{{ inviteUrl }}" target="_blank">Start Assessment</a>
+        </div>
+        {% else %}
+        <p>As part of {{ orgName }}'s Workforce Readiness initiative, we invite you to take part in a brief role interview.</p>
+        <p>Your input will help us understand how your work is changing, where AI could support the role, and where human judgment remains important.</p>
+        <p>Please complete the interview{% if deadlineText != blank %} by <strong>{{ deadlineText }}</strong>{% endif %}.</p>
+        <div class="cta">
+            <a href="{{ inviteUrl }}" target="_blank">Start Interview</a>
+        </div>
+        {% endif %}
+        <div class="link">If the button does not work, open this link:<br/><a href="{{ inviteUrl }}" target="_blank" style="color: {{ themeColor }};">{{ inviteUrl }}</a></div>
+        {% if contactEmail != blank %}
+        <p class="footer">For questions or support, please contact <a href="mailto:{{ contactEmail }}" style="color: {{ themeColor }};">{{ contactEmail }}</a>.</p>
+        {% endif %}
+        <p class="footer">Thank you{% if isManager %} for your time and insights{% else %} for your input{% endif %}.</p>
+        <p class="footer" style="margin-bottom:0;">{{ teamDisplay }}</p>
+    </div>
+</div>
+</body>
+</html>
+<!-- signature -->
+LeapIn
+<!-- text -->
+Dear {{ name }},
+
+{% if isManager %}As part of {{ orgName }}'s Workforce Readiness initiative, we invite you to complete a brief role assessment.
+
+Your input will help us understand how the role may evolve, the business and technology changes affecting it, and what will be needed from the role in the future.
+
+Please complete the assessment{% if deadlineText != blank %} by {{ deadlineText }}{% endif %}.
+
+Start Assessment: {{ inviteUrl }}
+{% else %}As part of {{ orgName }}'s Workforce Readiness initiative, we invite you to take part in a brief role interview.
+
+Your input will help us understand how your work is changing, where AI could support the role, and where human judgment remains important.
+
+Please complete the interview{% if deadlineText != blank %} by {{ deadlineText }}{% endif %}.
+
+Start Interview: {{ inviteUrl }}
+{% endif %}
+{% if contactEmail != blank %}
+For questions or support, please contact {{ contactEmail }}.
+{% endif %}
+Thank you{% if isManager %} for your time and insights{% else %} for your input{% endif %}.
+
+{{ teamDisplay }}

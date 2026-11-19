@@ -7,6 +7,7 @@ const fastifyEnv = require('@fastify/env');
 const packageJson = require('./package.json');
 const path = require('node:path');
 const ensureSlash = require('@kne/ensure-slash');
+const { prepareMessageProps } = require('./libs/utils/messageProps');
 
 const version = `v${packageJson.version.split('.')[0]}`;
 
@@ -252,6 +253,8 @@ const createServer = () => {
 
       // 兼容 @kne/fastify-tenant 硬编码 code=INVITETENANT：映射为 INVITETENANT[locale]
       // 仅 zh-CN 用中文，其余默认英文（与采集邀请一致）
+      // 另外：fastify-message 2.x 的模板不支持 JS 表达式/循环，发送前用 prepareMessageProps 预算派生变量；
+      // 2.x 发送失败不再抛错（只写失败记录），这里还原为抛错，业务侧沿用 try/catch 判断失败
       fastify.register(
         require('fastify-plugin')(async fastify => {
           const originalSendMessage = fastify.message.services.sendMessage.bind(fastify.message.services);
@@ -264,7 +267,11 @@ const createServer = () => {
                 title: language === 'zh-CN' ? '加入租户邀请' : 'Tenant Invitation'
               });
             }
-            return originalSendMessage(Object.assign({}, params, { code, options: targetOptions }));
+            const record = await originalSendMessage(Object.assign({}, params, { code, props: prepareMessageProps({ code, props: params.props }), options: targetOptions }));
+            if (!record || Number(record.status) === 1) {
+              throw new Error(record?.error || '消息发送失败');
+            }
+            return record;
           };
         })
       );

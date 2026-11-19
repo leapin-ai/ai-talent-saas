@@ -1,5 +1,5 @@
 <!-- subject -->
-<%= subject || ((companyName || tenantName) + ' | Questionnaire: ' + projectName) %>
+{{ subjectText }}
 <!-- html -->
 <html>
 <head>
@@ -15,7 +15,7 @@
         }
 
         .header {
-            background: <%= themeColor %>;
+            background: {{ themeColor }};
             color: white;
             padding: 20px;
             text-align: center;
@@ -37,7 +37,7 @@
         .cta a {
             display: inline-block;
             padding: 12px 20px;
-            background: <%= themeColor %>;
+            background: {{ themeColor }};
             color: #fff !important;
             text-decoration: none;
             border-radius: 6px;
@@ -61,22 +61,22 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1 style="margin:0;font-size:20px;"><%= projectName %></h1>
+        <h1 style="margin:0;font-size:20px;">{{ projectName }}</h1>
     </div>
     <div class="content">
-        <p>Dear <%= name %>,</p>
-        <p>As part of the <%= companyName || tenantName %> Workforce Readiness program, we invite you to complete the questionnaire "<%= projectName %>".</p>
+        <p>Dear {{ name }},</p>
+        <p>As part of the {{ orgName }} Workforce Readiness program, we invite you to complete the questionnaire "{{ projectName }}".</p>
         <p>Your answers will help complete your talent profile and role readiness analysis.</p>
-        <p>Please complete it<% if (deadlineText) { %> by <strong><%= deadlineText %></strong><% } %>.</p>
+        <p>Please complete it{% if deadlineText != blank %} by <strong>{{ deadlineText }}</strong>{% endif %}.</p>
         <div class="cta">
-            <a href="<%= inviteUrl %>" target="_blank">Start Questionnaire</a>
+            <a href="{{ inviteUrl }}" target="_blank">Start Questionnaire</a>
         </div>
-        <div class="link">If the button does not work, copy this link into your browser:<br/><a href="<%= inviteUrl %>" target="_blank" style="color: <%= themeColor %>;"><%= inviteUrl %></a></div>
-        <% if (contactEmail) { %>
-        <p class="footer">If you have any questions, please contact <a href="mailto:<%= contactEmail %>" style="color: <%= themeColor %>;"><%= contactEmail %></a>.</p>
-        <% } %>
+        <div class="link">If the button does not work, copy this link into your browser:<br/><a href="{{ inviteUrl }}" target="_blank" style="color: {{ themeColor }};">{{ inviteUrl }}</a></div>
+        {% if contactEmail != blank %}
+        <p class="footer">If you have any questions, please contact <a href="mailto:{{ contactEmail }}" style="color: {{ themeColor }};">{{ contactEmail }}</a>.</p>
+        {% endif %}
         <p class="footer">Thank you for your participation.</p>
-        <p class="footer" style="margin-bottom:0;"><%= teamName || companyName || tenantName %></p>
+        <p class="footer" style="margin-bottom:0;">{{ teamDisplay }}</p>
     </div>
 </div>
 </body>
@@ -84,18 +84,18 @@
 <!-- signature -->
 LeapIn
 <!-- text -->
-Dear <%= name %>,
+Dear {{ name }},
 
-As part of the <%= companyName || tenantName %> Workforce Readiness program, we invite you to complete the questionnaire "<%= projectName %>".
+As part of the {{ orgName }} Workforce Readiness program, we invite you to complete the questionnaire "{{ projectName }}".
 
 Your answers will help complete your talent profile and role readiness analysis.
 
-Please complete it<% if (deadlineText) { %> by <%= deadlineText %><% } %>.
+Please complete it{% if deadlineText != blank %} by {{ deadlineText }}{% endif %}.
 
-Start: <%= inviteUrl %>
-<% if (contactEmail) { %>
-If you have any questions, please contact <%= contactEmail %>.
-<% } %>
+Start: {{ inviteUrl }}
+{% if contactEmail != blank %}
+If you have any questions, please contact {{ contactEmail }}.
+{% endif %}
 Thank you for your participation.
 
-<%= teamName || companyName || tenantName %>
+{{ teamDisplay }}

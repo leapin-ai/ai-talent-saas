@@ -1,10 +1,10 @@
 <!-- subject -->
-LeapIn Talent SaaS Verification Code
+LeapIn Talent SaaS 注册验证码
 <!-- html -->
 <html>
 <head>
     <meta charset="utf-8">
-    <title>LeapIn Talent SaaS Verification Code</title>
+    <title>LeapIn Talent SaaS 注册验证码</title>
     <style>
         .container {
             max-width: 600px;
@@ -13,7 +13,7 @@ LeapIn Talent SaaS Verification Code
         }
 
         .header {
-            background: <%= themeColor || '#2A5CAA' %>;
+            background: #2A5CAA;
             color: white;
             padding: 20px;
             text-align: center;
@@ -31,8 +31,8 @@ LeapIn Talent SaaS Verification Code
             padding: 15px;
             text-align: center;
             margin: 20px 0;
-            border: 1px dashed <%= themeColor || '#2A5CAA' %>;
-            color: <%= themeColor || '#2A5CAA' %>;
+            border: 1px dashed #2A5CAA;
+            color: #2A5CAA;
         }
 
         .footer {
@@ -49,11 +49,11 @@ LeapIn Talent SaaS Verification Code
         <h1>LeapIn Talent SaaS</h1>
     </div>
     <div class="content">
-        <p>Dear User,</p>
-        <p>Thank you for using LeapIn Talent SaaS. Please use the following verification code to complete your authentication:</p>
-        <div class="code"><%= code %></div>
-        <p><strong>This verification code will expire in 10 minutes</strong>. Do not share it with others.</p>
-        <p>If you did not perform this action, please ignore this email.</p>
+        <p>尊敬的用户，您好！</p>
+        <p>感谢您注册 LeapIn Talent SaaS。请使用以下验证码完成注册：</p>
+        <div class="code">{{ code }}</div>
+        <p><strong>此验证码将在 10 分钟后失效</strong>，请勿向他人泄露。</p>
+        <p>如非本人操作，请忽略此邮件。</p>
     </div>
     <div class="footer">
         <p>© 2025 LeapIn. All rights reserved.</p>

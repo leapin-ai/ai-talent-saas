@@ -1,10 +1,10 @@
 <!-- subject -->
-邀请加入租户
+LeapIn Talent SaaS Registration Code
 <!-- html -->
 <html>
 <head>
     <meta charset="utf-8">
-    <title>邀请加入租户</title>
+    <title>LeapIn Talent SaaS Registration Code</title>
     <style>
         .container {
             max-width: 600px;
@@ -13,7 +13,7 @@
         }
 
         .header {
-            background: <%=themeColor%>;
+            background: #2A5CAA;
             color: white;
             padding: 20px;
             text-align: center;
@@ -31,8 +31,8 @@
             padding: 15px;
             text-align: center;
             margin: 20px 0;
-            border: 1px dashed<%=themeColor%>;
-            color: <%=themeColor%>;
+            border: 1px dashed #2A5CAA;
+            color: #2A5CAA;
         }
 
         .footer {
@@ -46,20 +46,14 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>邀请加入租户</h1>
+        <h1>LeapIn Talent SaaS</h1>
     </div>
     <div class="content">
-        <p>尊敬的<%= username %>，您好！</p>
-        <p>【<%= companyName || tenantName %>】邀请您加入租户，请点击下面按钮或复制链接完成加入：</p>
-        <div class="link">
-            <a href="<%= inviteUrl %>" target="_blank" style="color: <%= themeColor %>; text-decoration: underline;">点击加入租户</a>
-        </div>
-        <p>如果无法点击链接，请将以下地址复制到浏览器打开：</p>
-        <div class="link" style="color: <%= themeColor %>; text-decoration: underline;"><%= inviteUrl %></div>
-
-        <p>如果已有系统账号，请登录后完成租户认证，如果没有系统账号，请先注册系统账号后完成租户认证。</p>
-
-        <p>如有任何问题，请联系管理员。</p>
+        <p>Dear User,</p>
+        <p>Thank you for registering with LeapIn Talent SaaS. Please use the following verification code to complete your registration:</p>
+        <div class="code">{{ code }}</div>
+        <p><strong>This verification code will expire in 10 minutes</strong>. Do not share it with others.</p>
+        <p>If you did not perform this action, please ignore this email.</p>
     </div>
     <div class="footer">
         <p>© 2025 LeapIn. All rights reserved.</p>

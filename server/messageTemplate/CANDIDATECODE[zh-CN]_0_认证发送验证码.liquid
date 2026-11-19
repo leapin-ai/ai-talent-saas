@@ -13,7 +13,7 @@ LeapIn Talent SaaS 认证验证码
         }
 
         .header {
-            background: <%= themeColor || '#2A5CAA' %>;
+            background: {{ themeColor }};
             color: white;
             padding: 20px;
             text-align: center;
@@ -31,8 +31,8 @@ LeapIn Talent SaaS 认证验证码
             padding: 15px;
             text-align: center;
             margin: 20px 0;
-            border: 1px dashed <%= themeColor || '#2A5CAA' %>;
-            color: <%= themeColor || '#2A5CAA' %>;
+            border: 1px dashed {{ themeColor }};
+            color: {{ themeColor }};
         }
 
         .footer {
@@ -51,7 +51,7 @@ LeapIn Talent SaaS 认证验证码
     <div class="content">
         <p>尊敬的用户，您好！</p>
         <p>感谢您使用 LeapIn Talent SaaS。请使用以下验证码完成认证：</p>
-        <div class="code"><%= code %></div>
+        <div class="code">{{ code }}</div>
         <p><strong>此验证码将在 10 分钟后失效</strong>，请勿向他人泄露。</p>
         <p>如非本人操作，请忽略此邮件。</p>
     </div>
