@@ -1,0 +1,118 @@
+<!-- subject -->
+{{ subjectText }}
+<!-- html -->
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{% if isManager %}经理岗位访谈{% else %}员工岗位访谈{% endif %}</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            font-family: Arial, sans-serif;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: {{ themeColor }};
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 28px 24px;
+            background: #f9f9f9;
+        }
+
+        .content p {
+            margin: 0 0 14px;
+        }
+
+        .cta {
+            margin: 24px 0;
+        }
+
+        .cta a {
+            display: inline-block;
+            padding: 12px 20px;
+            background: {{ themeColor }};
+            color: #fff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .link {
+            word-break: break-all;
+            margin-top: 12px;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .footer {
+            margin-top: 20px;
+            color: #64748b;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1 style="margin:0;font-size:20px;">{% if isManager %}经理岗位访谈{% else %}员工岗位访谈{% endif %}</h1>
+    </div>
+    <div class="content">
+        <p>您好，{{ name }}：</p>
+        {% if isManager %}
+        <p>作为 {{ orgName }} 人才队伍就绪度项目的一部分，我们诚邀您参加一次简短的岗位访谈。</p>
+        <p>您的反馈将帮助我们了解该岗位未来可能如何演变、影响岗位的业务与技术变化，以及未来业务对该岗位将提出哪些新的或更高要求。</p>
+        <p>请{% if deadlineText != blank %}于 <strong>{{ deadlineText }}</strong> 前{% endif %}完成访谈。</p>
+        <div class="cta">
+            <a href="{{ inviteUrl }}" target="_blank">开始访谈</a>
+        </div>
+        {% else %}
+        <p>作为 {{ orgName }} 人才队伍就绪度项目的一部分，我们诚邀您参加一次简短的岗位访谈。</p>
+        <p>您的反馈将帮助我们了解您的工作正在如何变化、AI 可以在哪些方面支持该岗位，以及哪些方面仍需要保留人的判断与决策。</p>
+        <p>请{% if deadlineText != blank %}于 <strong>{{ deadlineText }}</strong> 前{% endif %}完成访谈。</p>
+        <div class="cta">
+            <a href="{{ inviteUrl }}" target="_blank">开始访谈</a>
+        </div>
+        {% endif %}
+        <div class="link">若按钮无法打开，请复制以下链接到浏览器访问：<br/><a href="{{ inviteUrl }}" target="_blank" style="color: {{ themeColor }};">{{ inviteUrl }}</a></div>
+        {% if contactEmail != blank %}
+        <p class="footer">如有任何问题或需要支持，请联系 <a href="mailto:{{ contactEmail }}" style="color: {{ themeColor }};">{{ contactEmail }}</a>。</p>
+        {% endif %}
+        <p class="footer">{% if isManager %}感谢您的时间与宝贵意见。{% else %}感谢您的参与和反馈。{% endif %}</p>
+        <p class="footer" style="margin-bottom:0;">{{ teamDisplay }}</p>
+    </div>
+</div>
+</body>
+</html>
+<!-- signature -->
+LeapIn
+<!-- text -->
+您好，{{ name }}：
+
+{% if isManager %}作为 {{ orgName }} 人才队伍就绪度项目的一部分，我们诚邀您参加一次简短的岗位访谈。
+
+您的反馈将帮助我们了解该岗位未来可能如何演变、影响岗位的业务与技术变化，以及未来业务对该岗位将提出哪些新的或更高要求。
+
+请{% if deadlineText != blank %}于 {{ deadlineText }} 前{% endif %}完成访谈。
+
+开始访谈：{{ inviteUrl }}
+{% else %}作为 {{ orgName }} 人才队伍就绪度项目的一部分，我们诚邀您参加一次简短的岗位访谈。
+
+您的反馈将帮助我们了解您的工作正在如何变化、AI 可以在哪些方面支持该岗位，以及哪些方面仍需要保留人的判断与决策。
+
+请{% if deadlineText != blank %}于 {{ deadlineText }} 前{% endif %}完成访谈。
+
+开始访谈：{{ inviteUrl }}
+{% endif %}
+{% if contactEmail != blank %}
+如有任何问题或需要支持，请联系 {{ contactEmail }}。
+{% endif %}
+{% if isManager %}感谢您的时间与宝贵意见。{% else %}感谢您的参与和反馈。{% endif %}
+
+{{ teamDisplay }}

@@ -1,10 +1,10 @@
 <!-- subject -->
-LeapIn Talent SaaS 注册验证码
+邀请加入租户
 <!-- html -->
 <html>
 <head>
     <meta charset="utf-8">
-    <title>LeapIn Talent SaaS 注册验证码</title>
+    <title>邀请加入租户</title>
     <style>
         .container {
             max-width: 600px;
@@ -13,7 +13,7 @@ LeapIn Talent SaaS 注册验证码
         }
 
         .header {
-            background: #2A5CAA;
+            background: {{ themeColor }};
             color: white;
             padding: 20px;
             text-align: center;
@@ -31,8 +31,8 @@ LeapIn Talent SaaS 注册验证码
             padding: 15px;
             text-align: center;
             margin: 20px 0;
-            border: 1px dashed #2A5CAA;
-            color: #2A5CAA;
+            border: 1px dashed{{ themeColor }};
+            color: {{ themeColor }};
         }
 
         .footer {
@@ -46,14 +46,20 @@ LeapIn Talent SaaS 注册验证码
 <body>
 <div class="container">
     <div class="header">
-        <h1>LeapIn Talent SaaS</h1>
+        <h1>邀请加入租户</h1>
     </div>
     <div class="content">
-        <p>尊敬的用户，您好！</p>
-        <p>感谢您注册 LeapIn Talent SaaS。请使用以下验证码完成注册：</p>
-        <div class="code"><%= code %></div>
-        <p><strong>此验证码将在 10 分钟后失效</strong>，请勿向他人泄露。</p>
-        <p>如非本人操作，请忽略此邮件。</p>
+        <p>尊敬的{{ username }}，您好！</p>
+        <p>【{{ orgName }}】邀请您加入租户，请点击下面按钮或复制链接完成加入：</p>
+        <div class="link">
+            <a href="{{ inviteUrl }}" target="_blank" style="color: {{ themeColor }}; text-decoration: underline;">点击加入租户</a>
+        </div>
+        <p>如果无法点击链接，请将以下地址复制到浏览器打开：</p>
+        <div class="link" style="color: {{ themeColor }}; text-decoration: underline;">{{ inviteUrl }}</div>
+
+        <p>如果已有系统账号，请登录后完成租户认证，如果没有系统账号，请先注册系统账号后完成租户认证。</p>
+
+        <p>如有任何问题，请联系管理员。</p>
     </div>
     <div class="footer">
         <p>© 2025 LeapIn. All rights reserved.</p>
