@@ -150,3 +150,33 @@ export const LogoutMenuIcon = props => (
     <path d="M9.6 10h7.4M14.8 7.8 17 10l-2.2 2.2" {...strokeProps} />
   </NavIcon>
 );
+
+const maskIconStyle = src => ({
+  display: 'block',
+  width: 20,
+  height: 20,
+  backgroundColor: 'currentColor',
+  WebkitMask: `url("${src}") center / contain no-repeat`,
+  mask: `url("${src}") center / contain no-repeat`
+});
+
+/**
+ * 子应用菜单图标（清单 menus[].icon）：
+ * - 图片地址（含 / 或 .）：相对地址按子应用前端地址解析，用 mask 着色以跟随菜单激活态（跨域时子应用需 CORS 放行）
+ * - 其他字符串：iconfont type，交给 SystemLayout 渲染
+ * - 未声明：应用中心图标
+ */
+export const resolveSubAppMenuIcon = (icon, base) => {
+  if (!icon) {
+    return <AppCenterMenuIcon />;
+  }
+  if (!/[/.]/.test(icon)) {
+    return icon;
+  }
+  const src = /^(https?:)?\/\//i.test(icon) || icon.startsWith('/') ? icon : `${String(base || '').replace(/\/+$/, '')}/${icon}`;
+  return (
+    <span className="anticon" style={iconStyle}>
+      <span style={maskIconStyle(src)} />
+    </span>
+  );
+};

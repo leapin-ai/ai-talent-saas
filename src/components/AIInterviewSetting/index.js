@@ -10,7 +10,7 @@ import FeatureBindingPanel from './FeatureBindingPanel';
 const SECRET_MASK = '******';
 
 const AIInterviewSetting = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:InfoPage', 'components-core:Table@TablePage']
+  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:InfoPage', 'components-core:TablePage']
 })(
   withLocale(({ remoteModules, tenant, reload }) => {
     const [usePreset, FormInfo, InfoPage, TablePage] = remoteModules;
