@@ -46,6 +46,8 @@ const createServer = () => {
         RESUME_PARSE_KEY: { type: 'string' },
         SEARCH_API_URL: { type: 'string' },
 
+        IS_TEST: { type: 'boolean', default: false },
+
         ORIGIN: { type: 'string', default: '' },
         OIDC_KEY_SECRET: { type: 'string' },
         TASK_CRON: { type: 'string', default: '' },
@@ -224,7 +226,7 @@ const createServer = () => {
       });
 
       fastify.register(require('@kne/fastify-message'), {
-        //isTest: fastify.config.IS_TEST,
+        isTest: fastify.config.IS_TEST,
         dbTableNamePrefix: tablePrefix ? `${tablePrefix}message_` : 't_message_',
         emailConfig: {
           host: fastify.config.ALISMTP_ENDPOINT,
