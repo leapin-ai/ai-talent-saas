@@ -1,5 +1,6 @@
 import React from 'react';
 import ChangeMagnitude from './ChangeMagnitude';
+import AssessmentStatusTag from './AssessmentStatusTag';
 
 const getColumns = ({ onDetail, formatMessage }) => {
   return [
@@ -38,7 +39,7 @@ const getColumns = ({ onDetail, formatMessage }) => {
       name: 'assessmentStatus',
       title: formatMessage({ id: 'position.assessmentStatus' }),
       type: 'other',
-      getValueOf: item => formatMessage({ id: `position.assessmentStatus.${item.assessmentStatus || 'pending'}` })
+      getValueOf: item => <AssessmentStatusTag status={item.assessmentStatus} formatMessage={formatMessage} />
     },
     {
       name: 'status',

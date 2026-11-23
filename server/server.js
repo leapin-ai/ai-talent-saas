@@ -47,6 +47,10 @@ const createServer = () => {
         SEARCH_API_URL: { type: 'string' },
 
         IS_TEST: { type: 'boolean', default: false },
+        READINESS_API_URL: { type: 'string', default: '' },
+        READINESS_COMPLETION_THRESHOLD: { type: 'number', default: 80 },
+        READINESS_ANSWER_SYNC_CRON: { type: 'string', default: '*/5 * * * *' },
+        AI_INTERVIEW_INVITE_ORIGIN: { type: 'string', default: '' },
 
         ORIGIN: { type: 'string', default: '' },
         OIDC_KEY_SECRET: { type: 'string' },
@@ -307,8 +311,45 @@ const createServer = () => {
           'position-analysis-review': ({ result }) => {
             return result;
           },
-          'invite-video-asr': ({ result }) => {
-            return result;
+          // invite-video-asr 只做转写；结果按发起方（task.targetType）在这里分发处理
+          'invite-video-asr': {
+            handler: ({ task, result }) => {
+              const services = fastify[options.name].services;
+              if (task.targetType === 'talentCollectInvite') {
+                return services.talentCollectInvite.onVideoAsrSuccess({ task, result });
+              }
+              if (task.targetType === 'readiness-stage') {
+                return services.readinessSend.onVideoAsrSuccess({ task, result });
+              }
+              return result;
+            },
+            errorHandler: ({ task, error }) => {
+              const services = fastify[options.name].services;
+              if (task.targetType === 'talentCollectInvite') {
+                return services.talentCollectInvite.onVideoAsrFailed({ task, error });
+              }
+              if (task.targetType === 'readiness-stage') {
+                return services.readinessSend.onVideoAsrFailed({ task, error });
+              }
+            }
+          },
+          // Readiness：上游服务调用统一走该类型，input={path,params}；结果与错误由 readiness 服务落到阶段数据
+          Readiness: {
+            handler: ({ task, result }) => fastify[options.name].services.readiness.onTaskSuccess({ task, result }),
+            errorHandler: ({ task, error }) => fastify[options.name].services.readiness.onTaskFailed({ task, error }),
+            cancelHandler: ({ task }) => fastify[options.name].services.readiness.onTaskCanceled({ task })
+          },
+          // ReadinessPublish：问卷确认后写入 AI 面试（建题、转数字人、建项目并开启），结果同样落到阶段数据
+          ReadinessPublish: {
+            handler: ({ task, result }) => fastify[options.name].services.readiness.onTaskSuccess({ task, result }),
+            errorHandler: ({ task, error }) => fastify[options.name].services.readiness.onTaskFailed({ task, error }),
+            cancelHandler: ({ task }) => fastify[options.name].services.readiness.onTaskCanceled({ task })
+          },
+          // ReadinessRoleApply：报告完成后写回岗位任务 / outlook / 策略与个人就绪度
+          ReadinessRoleApply: {
+            handler: ({ task, result }) => fastify[options.name].services.readiness.onTaskSuccess({ task, result }),
+            errorHandler: ({ task, error }) => fastify[options.name].services.readiness.onTaskFailed({ task, error }),
+            cancelHandler: ({ task }) => fastify[options.name].services.readiness.onTaskCanceled({ task })
           }
         }
       });
@@ -575,6 +616,26 @@ const createServer = () => {
   fastify.register(
     require('fastify-plugin')(async fastify => {
       await fastify.sequelize.sync();
+    })
+  );
+
+  // Readiness 问卷答卷周期同步（AI 面试未就绪时仅记 debug 日志）
+  fastify.register(
+    require('fastify-plugin')(async fastify => {
+      if (!fastify.config.READINESS_ANSWER_SYNC_CRON) {
+        return;
+      }
+      fastify.cron.createJob({
+        cronTime: fastify.config.READINESS_ANSWER_SYNC_CRON,
+        onTick: async () => {
+          try {
+            await fastify[options.name].services.readinessSend.syncAllAnswers();
+          } catch (e) {
+            fastify.log.warn(`readiness answer sync failed: ${e.message}`);
+          }
+        },
+        start: true
+      });
     })
   );
 

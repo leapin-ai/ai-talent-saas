@@ -222,7 +222,7 @@ const enUS = {
   modelDescription: 'Description',
   modelReadonlyTip: 'Create, train, enable or delete models in the AI interview system',
 
-  reportTitle: 'Talent Review Report',
+  reportTitle: 'AI Interview Report',
   export: 'Export',
   overview: 'Overview',
   reviewProjectName: 'Review Project',
@@ -246,7 +246,7 @@ const enUS = {
   personCount: '{count}',
   personalReport: 'Personal Report',
   reportNotReady: 'The report is not ready yet',
-  reportRemoteNotReady: 'AI Interview report component is not ready. Please check the Talent Review setting.'
+  reportRemoteNotReady: 'AI Interview report component is not ready. Please check the AI Interview setting.'
 };
 
 export default enUS;

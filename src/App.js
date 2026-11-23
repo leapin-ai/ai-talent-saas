@@ -8,6 +8,7 @@ import TenantPortal from '@components/TenantPortal';
 import UserSystemLayout from '@components/UserSystemLayout';
 import PublicSystemLayout from '@components/PublicSystemLayout';
 import ShareReport from '@components/ShareReport';
+import ReadinessConfirm from '@components/ReadinessConfirm';
 import { Page } from '@kne/system-layout';
 import { getManualTaskAction } from '@components/AssessmentGenerateTask';
 import withLocale from './withLocale';
@@ -144,7 +145,7 @@ const AppContent = withLocale(({ baseUrl, appManagerEnabled, AfterUserLoginLayou
           title: 'Collect Profile',
           element: (
             <PublicSystemLayout>
-              <CompleteProfile mode="collect" />
+              <CompleteProfile />
             </PublicSystemLayout>
           )
         },
@@ -152,6 +153,11 @@ const AppContent = withLocale(({ baseUrl, appManagerEnabled, AfterUserLoginLayou
           path: 'share-report',
           title: 'Share Report',
           element: <ShareReport />
+        },
+        {
+          path: 'readiness-confirm',
+          title: 'Confirm Questionnaire',
+          element: <ReadinessConfirm />
         },
         {
           path: 'tenant/*',

@@ -11,9 +11,6 @@ import PositionDetail from '@components/Position/Detail';
 import Home from './Home';
 import SubAppPage from './SubAppPage';
 import TenantHomeRedirect from './TenantHomeRedirect';
-import CompleteProfileApplicationEntry from './CompleteProfileApplicationEntry';
-import CompleteProfileApplications from './CompleteProfileApplications';
-import CompleteProfileApplicationDetail from './CompleteProfileApplicationDetail';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
 import { TENANT_ADMIN_PERMISSIONS, TALENT_PROFILE_CARD_PERMISSIONS } from './constants';
@@ -79,24 +76,6 @@ const TenantAdmin = createWithRemoteLoader({
             element: <Home baseUrl={baseUrl} />
           },
           {
-            path: 'complete-profile-applications',
-            title: formatMessage({ id: 'tenantAdmin.completeProfileApplications' }),
-            element: (
-              <Permissions request={TENANT_ADMIN_PERMISSIONS.completeProfileApplication} type="error">
-                <CompleteProfileApplications baseUrl={baseUrl} />
-              </Permissions>
-            )
-          },
-          {
-            path: 'complete-profile-applications/:id',
-            title: formatMessage({ id: 'tenantAdmin.completeProfileApplicationDetail' }),
-            element: (
-              <Permissions request={TENANT_ADMIN_PERMISSIONS.completeProfileApplication} type="error">
-                <CompleteProfileApplicationDetail baseUrl={baseUrl} />
-              </Permissions>
-            )
-          },
-          {
             path: 'market',
             title: formatMessage({ id: 'tenantAdmin.internalTalentMarket' }),
             element: (
@@ -157,7 +136,7 @@ const TenantAdmin = createWithRemoteLoader({
               },
               children: renderProps => (
                 <Permissions request={TENANT_ADMIN_PERMISSIONS.employeeProfile} type="error">
-                  <Page title={formatMessage({ id: 'tenantAdmin.employeeProfile' })} extra={<CompleteProfileApplicationEntry baseUrl={baseUrl} />}>
+                  <Page title={formatMessage({ id: 'tenantAdmin.employeeProfile' })}>
                     <TablePageRender {...renderProps} withPage={false} />
                   </Page>
                 </Permissions>
@@ -170,7 +149,12 @@ const TenantAdmin = createWithRemoteLoader({
             title: 'Position',
             elementProps: {
               apis: Object.assign({}, apis.talentSaas.tenant.position, {
-                orgList: apis.tenant.orgList
+                orgList: apis.tenant.orgList,
+                userList: Object.assign({}, apis.talentSaas.tenant.userList, {
+                  params: {
+                    filter: { status: 'open' }
+                  }
+                })
               }),
               baseUrl,
               withInsightBanner: true,

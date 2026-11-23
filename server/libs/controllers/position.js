@@ -619,6 +619,63 @@ module.exports = fp(async (fastify, options) => {
   );
 
   fastify.post(
+    `${options.prefix}/tenant/position/start-readiness`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '启动 / 重建岗位就绪度流程（选定经理与员工）',
+        body: {
+          type: 'object',
+          properties: {
+            positionId: { type: 'string' },
+            roleName: { type: 'string' },
+            jd: { type: 'string' },
+            language: { type: 'string', enum: ['zh-CN', 'en-US'] },
+            hasStaffQuestionnaire: { type: 'boolean' },
+            managers: {
+              type: 'array',
+              items: { type: 'object', properties: { name: { type: 'string' }, tenantUserId: { type: 'string' }, email: { type: 'string' } } }
+            },
+            employees: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: { name: { type: 'string' }, tenantUserId: { type: 'string' }, email: { type: 'string' }, employeeId: { type: 'string' } }
+              }
+            }
+          },
+          required: ['positionId']
+        }
+      }
+    },
+    async request => {
+      const { tenantId, userId } = request.tenantUserInfo || {};
+      return services.readiness.createRun({ tenantId, userId }, Object.assign({}, request.body, { positionId: String(request.body.positionId) }));
+    }
+  );
+
+  fastify.post(
+    `${options.prefix}/tenant/position/cancel-readiness`,
+    {
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
+      schema: {
+        summary: '取消岗位就绪度分析（访谈进行中 → 待启动）',
+        body: {
+          type: 'object',
+          properties: {
+            positionId: { type: 'string' }
+          },
+          required: ['positionId']
+        }
+      }
+    },
+    async request => {
+      const { tenantId } = request.tenantUserInfo || {};
+      return services.readiness.cancelByPosition({ tenantId }, { positionId: String(request.body.positionId) });
+    }
+  );
+
+  fastify.post(
     `${options.prefix}/tenant/position/lock-analysis`,
     {
       onRequest: [authenticate.user, tenantAuthenticate.tenantUser],

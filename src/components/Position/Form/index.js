@@ -145,9 +145,24 @@ const FormPageInner = ({ FormInfo, useFormModal, ajax, apis, action, baseUrl, da
         return false;
       }
       message.success(formatMessage({ id: 'position.createSuccess' }));
-      const positionId = resData.data?.id;
+      const created = resData.data;
+      const positionId = created?.id;
       if (positionId) {
-        navigate(baseUrl ? `${baseUrl}/position/${positionId}` : `/position/${positionId}`, { replace: true });
+        // 回到列表并自动打开「启动」就绪度表单（选经理 / 员工）；带上岗位快照避免等列表刷新
+        navigate(baseUrl ? `${baseUrl}/position` : '/position', {
+          replace: true,
+          state: {
+            startReadinessId: String(positionId),
+            startReadinessPosition: {
+              id: String(positionId),
+              name: created.name || payload.name || '',
+              language: created.language || payload.language || 'zh-CN',
+              description: created.description || payload.description || '',
+              requirement: created.requirement || payload.requirement || '',
+              assessmentStatus: created.assessmentStatus || 'pending'
+            }
+          }
+        });
         return;
       }
     }

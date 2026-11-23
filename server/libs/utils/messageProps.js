@@ -17,15 +17,19 @@ const firstChar = (value, fallback, upper) => {
 
 const SHARE_ITEM_VARIANTS = {
   SHARETALENTREPORT: { avatarRadius: 22, tagFields: ['positionName', 'department'], tagMargin: 'margin:0 6px 4px 0;' },
-  SHAREPOSITIONREPORT: { avatarRadius: 12, tagFields: ['department'], tagMargin: '' }
+  SHAREPOSITIONREPORT: { avatarRadius: 12, tagFields: ['department'], tagMargin: '' },
+  READINESSQUESTIONNAIRE: { avatarRadius: 12, tagFields: [], tagMargin: '', viewLabel: { 'zh-CN': '填写问卷', 'en-US': 'Fill in questionnaire' } },
+  READINESSCONFIRM: { avatarRadius: 12, tagFields: [], tagMargin: '', viewLabel: { 'zh-CN': '确认问卷', 'en-US': 'Confirm questionnaire' } }
 };
 
-const buildShareItemsHtml = ({ family, items, props, isEn }) => {
+const getViewLabel = ({ family, isEn }) => SHARE_ITEM_VARIANTS[family].viewLabel?.[isEn ? 'en-US' : 'zh-CN'] || (isEn ? 'View report' : '查看报告');
+
+const buildShareItemsHtml = ({ family, items, props, isEn, hideButtons = false }) => {
   const { avatarRadius, tagFields, tagMargin } = SHARE_ITEM_VARIANTS[family];
   const themeColor = escapeHtml(props.themeColor);
   const themeTint = escapeHtml(props.themeTint);
   const themeBorder = escapeHtml(props.themeBorder);
-  const viewLabel = isEn ? 'View report' : '查看报告';
+  const viewLabel = getViewLabel({ family, isEn });
 
   return items
     .map((item, index) => {
@@ -38,20 +42,39 @@ const buildShareItemsHtml = ({ family, items, props, isEn }) => {
             )
             .join('')}</div>`
         : '';
-      return `${index > 0 ? '<tr><td height="12" style="height:12px;font-size:0;line-height:0;">&nbsp;</td></tr>' : ''}<tr><td bgcolor="${themeTint}" style="background-color:${themeTint};border:1px solid ${themeBorder};border-radius:12px;padding:16px;"><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="44" valign="middle"><div style="width:44px;height:44px;line-height:44px;border-radius:${avatarRadius}px;background-color:${themeColor};color:#FFFFFF;text-align:center;font-size:18px;font-weight:600;">${escapeHtml(firstChar(item.name, '-', isEn))}</div></td><td valign="middle" style="padding:0 0 0 12px;"><div style="font-size:16px;font-weight:600;line-height:24px;color:#1F1F1F;">${escapeHtml(item.name)}</div>${tagsHtml}</td></tr><tr><td colspan="2" style="padding:12px 0 0 56px;"><table cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="${themeColor}" style="background-color:${themeColor};border-radius:999px;"><a href="${escapeHtml(item.url)}" target="_blank" style="display:inline-block;padding:8px 18px;color:#FFFFFF;font-size:13px;font-weight:600;line-height:20px;text-decoration:none;white-space:nowrap;">${viewLabel}</a></td></tr></table></td></tr></table></td></tr>`;
+      const buttonHtml = hideButtons
+        ? ''
+        : `<tr><td colspan="2" style="padding:12px 0 0 56px;"><table cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="${themeColor}" style="background-color:${themeColor};border-radius:999px;"><a href="${escapeHtml(item.url)}" target="_blank" style="display:inline-block;padding:8px 18px;color:#FFFFFF;font-size:13px;font-weight:600;line-height:20px;text-decoration:none;white-space:nowrap;">${viewLabel}</a></td></tr></table></td></tr>`;
+      return `${index > 0 ? '<tr><td height="12" style="height:12px;font-size:0;line-height:0;">&nbsp;</td></tr>' : ''}<tr><td bgcolor="${themeTint}" style="background-color:${themeTint};border:1px solid ${themeBorder};border-radius:12px;padding:16px;"><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="44" valign="middle"><div style="width:44px;height:44px;line-height:44px;border-radius:${avatarRadius}px;background-color:${themeColor};color:#FFFFFF;text-align:center;font-size:18px;font-weight:600;">${escapeHtml(firstChar(item.name, '-', isEn))}</div></td><td valign="middle" style="padding:0 0 0 12px;"><div style="font-size:16px;font-weight:600;line-height:24px;color:#1F1F1F;">${escapeHtml(item.name)}</div>${tagsHtml}</td></tr>${buttonHtml}</table></td></tr>`;
     })
     .join('');
 };
 
-const buildShareItemsText = ({ family, items, isEn }) => {
+const buildShareItemsText = ({ family, items, isEn, sharedUrl }) => {
   const { tagFields } = SHARE_ITEM_VARIANTS[family];
-  return items
+  const list = items
     .map(item => {
       const tags = tagFields.map(field => item[field]).filter(Boolean);
       const tagText = tags.length ? (isEn ? ` (${tags.join(' · ')})` : `（${tags.join(' · ')}）`) : '';
-      return `\n${item.name}${tagText}\n${isEn ? 'View report: ' : '查看报告：'}${item.url}\n`;
+      if (sharedUrl) {
+        return `\n${item.name}${tagText}`;
+      }
+      return `\n${item.name}${tagText}\n${getViewLabel({ family, isEn })}${isEn ? ': ' : '：'}${item.url}\n`;
     })
     .join('');
+  if (sharedUrl) {
+    return `${list}\n${getViewLabel({ family, isEn })}${isEn ? ': ' : '：'}${sharedUrl}\n`;
+  }
+  return list;
+};
+
+const buildConfirmCtaHtml = ({ props, isEn, url }) => {
+  if (!url) {
+    return '';
+  }
+  const themeColor = escapeHtml(props.themeColor);
+  const viewLabel = getViewLabel({ family: 'READINESSCONFIRM', isEn });
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;"><tr><td align="center"><table cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="${themeColor}" style="background-color:${themeColor};border-radius:999px;"><a href="${escapeHtml(url)}" target="_blank" style="display:inline-block;padding:12px 28px;color:#FFFFFF;font-size:14px;font-weight:600;line-height:22px;text-decoration:none;white-space:nowrap;">${viewLabel}</a></td></tr></table></td></tr></table>`;
 };
 
 const SHARE_SUBJECTS = {
@@ -62,6 +85,14 @@ const SHARE_SUBJECTS = {
   SHAREPOSITIONREPORT: {
     'zh-CN': () => '岗位洞察报告分享',
     'en-US': () => 'Role Insights Report'
+  },
+  READINESSQUESTIONNAIRE: {
+    'zh-CN': () => '岗位就绪度问卷',
+    'en-US': () => 'Role Readiness Questionnaire'
+  },
+  READINESSCONFIRM: {
+    'zh-CN': () => '请确认岗位就绪度问卷',
+    'en-US': () => 'Please confirm the Role Readiness Questionnaire'
   }
 };
 
@@ -88,13 +119,17 @@ const derivers = {
     };
   },
   SHARETALENTREPORT: context => deriveShareReport(context),
-  SHAREPOSITIONREPORT: context => deriveShareReport(context)
+  SHAREPOSITIONREPORT: context => deriveShareReport(context),
+  READINESSQUESTIONNAIRE: context => deriveShareReport(context),
+  READINESSCONFIRM: context => deriveShareReport(context)
 };
 
 function deriveShareReport({ family, language, props, isEn }) {
   const items = Array.isArray(props.items) ? props.items : [];
   const companyName = props.companyName || '';
   const companyPrefix = companyName ? `${companyName} ` : '';
+  const sharedConfirmUrl = family === 'READINESSCONFIRM' ? props.sharedConfirmUrl || '' : '';
+  const withSharedConfirm = !!sharedConfirmUrl;
   return {
     companyOrWe: companyName || (isEn ? 'we' : '我们'),
     companyOrBrand: companyName || 'LeapIn',
@@ -103,8 +138,9 @@ function deriveShareReport({ family, language, props, isEn }) {
     itemsPlural: items.length > 1 ? 's' : '',
     peopleWord: items.length > 1 ? 'people' : 'person',
     subjectText: props.subject || `${companyPrefix}${SHARE_SUBJECTS[family][language](props.isSelf)}`,
-    itemsHtml: buildShareItemsHtml({ family, items, props, isEn }),
-    itemsText: buildShareItemsText({ family, items, isEn })
+    itemsHtml: buildShareItemsHtml({ family, items, props, isEn, hideButtons: withSharedConfirm }),
+    itemsText: buildShareItemsText({ family, items, isEn, sharedUrl: sharedConfirmUrl || null }),
+    confirmCtaHtml: withSharedConfirm ? buildConfirmCtaHtml({ props, isEn, url: sharedConfirmUrl }) : ''
   };
 }
 

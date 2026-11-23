@@ -222,7 +222,7 @@ const zhCN = {
   modelDescription: '模型说明',
   modelReadonlyTip: '模型的创建、训练、启停与删除请在 AI 面试系统中操作',
 
-  reportTitle: '人才盘点报告',
+  reportTitle: 'AI面试报告',
   export: '导出',
   overview: '盘点概况',
   reviewProjectName: '盘点项目',
@@ -246,7 +246,7 @@ const zhCN = {
   personCount: '{count} 人',
   personalReport: '个人报告',
   reportNotReady: '报告尚未生成',
-  reportRemoteNotReady: 'AI 面试报告组件未就绪，请检查人才盘点设置'
+  reportRemoteNotReady: 'AI 面试报告组件未就绪，请检查AI面试设置'
 };
 
 export default zhCN;

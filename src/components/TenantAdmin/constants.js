@@ -24,10 +24,6 @@ export const TENANT_ADMIN_PERMISSIONS = {
   employeeLinkUser: ['tenant-admin:employee-profile:link-user'],
   /** 人才列表：多选分享就绪度报告 */
   employeeShare: ['tenant-admin:employee-profile:share'],
-  /** 完善档案申请（邀请评估提交后的审核列表） */
-  completeProfileApplication: ['tenant-admin:complete-profile-application', 'tenant-admin:complete-profile-application:view'],
-  completeProfileApplicationReview: ['tenant-admin:complete-profile-application:review'],
-  completeProfileApplicationEdit: ['tenant-admin:complete-profile-application:edit'],
   appCenter: ['tenant-admin:app-center', 'tenant-admin:app-center:view'],
   talentReview: ['tenant-admin:talent-review', 'tenant-admin:talent-review:view'],
   talentReviewCreate: ['tenant-admin:talent-review:create'],

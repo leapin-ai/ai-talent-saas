@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Flex, Spin } from 'antd';
-import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { applyAiInterviewRemote } from '../../../preset';
 import AIInterviewRoom from './AIInterviewRoom';
-import InterviewHistoryChoice from './InterviewHistoryChoice';
 import style from './style.module.scss';
+
+/** 与 style.complete-profile-interview / footer-spacer 保持一致 */
+const LAYOUT_CHROME_PX = 114;
+const STEPPER_CHROME_PX = 45;
+/** 与 .footer-spacer 同高（12*2 + 按钮约 32 ≈ 56） */
+const HOST_FOOTER_CHROME_PX = 56;
+const sessionHeightOf = ({ withStepper = false, withHostFooter = false } = {}) => `calc(100dvh - ${LAYOUT_CHROME_PX + (withStepper ? STEPPER_CHROME_PX : 0) + (withHostFooter ? HOST_FOOTER_CHROME_PX : 0)}px)`;
 
 const setupRemote = data => {
   if (!data?.cdnUrl || !data?.version) {
@@ -14,42 +19,12 @@ const setupRemote = data => {
   return applyAiInterviewRemote({ cdnUrl: data.cdnUrl, version: data.version });
 };
 
-/** 取外层滚动视口内、自房间顶起的最大可用高度，传给 InterviewSession */
-const measureContainerMaxHeight = el => {
-  if (!el || typeof window === 'undefined') {
-    return 0;
-  }
-  const pageChildren = el.closest('.page-children');
-  const viewport = pageChildren?.querySelector('.simplebar-content-wrapper') || el.closest('.simplebar-content-wrapper') || el.closest('.kne-responsive-scroll') || pageChildren;
-  if (!viewport) {
-    const top = el.getBoundingClientRect().top;
-    return Math.max(0, Math.floor(window.innerHeight - top));
-  }
-  const portRect = viewport.getBoundingClientRect();
-  const roomRect = el.getBoundingClientRect();
-  const roomOffset = roomRect.top - portRect.top + (viewport.scrollTop || 0);
-  return Math.max(0, Math.floor(viewport.clientHeight - roomOffset));
-};
-
-const InterviewStep = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset'],
-  remoteFallback: (
-    <Flex justify="center" align="center" className={style['generating-panel']}>
-      <Spin size="large" />
-    </Flex>
-  )
-})(({ remoteModules, profilePayload, onInterviewComplete, onPhaseChange, onInterviewLockChange, apisAdapter }) => {
-  const [usePreset] = remoteModules;
-  const { apis, ajax } = usePreset();
+const InterviewStep = ({ profilePayload, onInterviewComplete, onPhaseChange, onInterviewLockChange, apisAdapter, withStepper = false, withHostFooter = false }) => {
+  const sessionHeight = sessionHeightOf({ withStepper, withHostFooter });
   const { formatMessage } = useIntl();
   const [phase, setPhase] = useState('loading');
   const [error, setError] = useState('');
   const [invite, setInvite] = useState(null);
-  const [previousInterview, setPreviousInterview] = useState(null);
-  const [actionLoading, setActionLoading] = useState('');
-  // 测量 page-children 等外层容器可视高度，原样传给 InterviewSession（不用 vh/% 猜测）
-  const [sessionHeight, setSessionHeight] = useState(0);
-  const roomRef = useRef(null);
   const choiceResolvedRef = useRef(false);
   const bootOnceRef = useRef(false);
   const profilePayloadRef = useRef(profilePayload);
@@ -72,33 +47,6 @@ const InterviewStep = createWithRemoteLoader({
     if (phase !== 'room') {
       onInterviewLockChangeRef.current?.(false);
     }
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase !== 'room') {
-      return undefined;
-    }
-    const el = roomRef.current;
-    if (!el) {
-      return undefined;
-    }
-    const update = () => {
-      const next = measureContainerMaxHeight(el);
-      setSessionHeight(prev => (prev === next ? prev : next));
-    };
-    update();
-    const pageChildren = el.closest('.page-children');
-    const viewport = pageChildren?.querySelector('.simplebar-content-wrapper') || el.closest('.simplebar-content-wrapper') || pageChildren || el;
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
-    ro?.observe(viewport);
-    if (viewport !== el) {
-      ro?.observe(el);
-    }
-    window.addEventListener('resize', update);
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener('resize', update);
-    };
   }, [phase]);
 
   const finishDirectly = useCallback((extra = {}) => {
@@ -129,54 +77,17 @@ const InterviewStep = createWithRemoteLoader({
     [formatMessage, finishDirectly]
   );
 
-  const saveProfile = useCallback(
-    async payload => {
-      if (apisAdapterRef.current?.saveProfile) {
-        return apisAdapterRef.current.saveProfile(payload);
-      }
-      const { data: saveRes } = await ajax(
-        Object.assign({}, apis.talentSaas.tenant.assessment.saveProfile, {
-          data: { profileData: payload }
-        })
-      );
-      if (saveRes.code !== 0) {
-        throw new Error(saveRes.msg || formatMessage({ id: 'tenantAdmin.completeInterviewSaveFailed' }));
-      }
-      return saveRes.data;
-    },
-    [ajax, apis, formatMessage]
-  );
+  const saveProfile = useCallback(payload => apisAdapterRef.current.saveProfile(payload), []);
 
-  const loadDetail = useCallback(async () => {
-    if (apisAdapterRef.current?.detail) {
-      return apisAdapterRef.current.detail();
-    }
-    const { data: detailRes } = await ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail));
-    if (detailRes.code !== 0) {
-      throw new Error(detailRes.msg || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
-    }
-    return detailRes.data;
-  }, [ajax, apis, formatMessage]);
+  const loadDetail = useCallback(() => apisAdapterRef.current.detail(), []);
 
   const loadEnsureInvite = useCallback(
     async (options = {}) => {
-      if (apisAdapterRef.current?.ensureInvite) {
-        const data = await apisAdapterRef.current.ensureInvite(options);
-        openInterviewRoom(data);
-        return data;
-      }
-      const { data: inviteRes } = await ajax(
-        Object.assign({}, apis.talentSaas.tenant.assessment.ensureInvite, {
-          data: options
-        })
-      );
-      if (inviteRes.code !== 0) {
-        throw new Error(inviteRes.msg || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
-      }
-      openInterviewRoom(inviteRes.data);
-      return inviteRes.data;
+      const data = await apisAdapterRef.current.ensureInvite(options);
+      openInterviewRoom(data);
+      return data;
     },
-    [ajax, apis, formatMessage, openInterviewRoom]
+    [openInterviewRoom]
   );
 
   // 只 boot 一次；卸载时若未进入 room/choice/done，重置以便 StrictMode / 返回重进可再 boot
@@ -192,7 +103,6 @@ const InterviewStep = createWithRemoteLoader({
       setPhase('loading');
       setError('');
       setInvite(null);
-      setPreviousInterview(null);
       try {
         const payload = profilePayloadRef.current;
         if (payload) {
@@ -202,18 +112,11 @@ const InterviewStep = createWithRemoteLoader({
           return;
         }
 
-        const detail = await loadDetail();
+        await loadDetail();
         if (cancelled) {
           return;
         }
         if (choiceResolvedRef.current) {
-          return;
-        }
-
-        if (detail?.previousInterview && !apisAdapterRef.current?.skipPreviousInterview) {
-          setPreviousInterview(detail.previousInterview);
-          setPhase('choice');
-          settled = true;
           return;
         }
 
@@ -240,15 +143,11 @@ const InterviewStep = createWithRemoteLoader({
   // 面试作答完成：只同步后端，勿卸房间——InterviewSession 会先 emit interview/complete 再切到 feedback
   const syncInterviewComplete = useCallback(async () => {
     try {
-      if (apisAdapterRef.current?.markDone) {
-        await apisAdapterRef.current.markDone({ interviewId: invite?.interviewId || invite?.clientUserId });
-      } else {
-        await ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail));
-      }
+      await apisAdapterRef.current.markDone({ interviewId: invite?.interviewId || invite?.clientUserId });
     } catch (e) {
       // ignore sync error
     }
-  }, [ajax, apis, invite]);
+  }, [invite]);
 
   // 评价提交完成：通知宿主，但保持 room，让 InterviewSession 渲染内置 Completed 完成页
   const handleFeedbackComplete = useCallback(() => {
@@ -260,60 +159,6 @@ const InterviewStep = createWithRemoteLoader({
       interviewId: invite?.interviewId || invite?.clientUserId
     });
   }, [invite]);
-
-  const handleUsePrevious = async () => {
-    setActionLoading('previous');
-    setError('');
-    try {
-      const { data: resData } = await ajax(
-        Object.assign({}, apis.talentSaas.tenant.assessment.acceptPrevious, {
-          data: { forceCompleted: true }
-        })
-      );
-      if (resData.code !== 0) {
-        throw new Error(resData.msg || formatMessage({ id: 'tenantAdmin.assessmentAcceptPreviousFailed' }));
-      }
-      finishDirectly();
-    } catch (e) {
-      choiceResolvedRef.current = false;
-      setError(e.message || formatMessage({ id: 'tenantAdmin.assessmentAcceptPreviousFailed' }));
-      setPhase('error');
-    } finally {
-      setActionLoading('');
-    }
-  };
-
-  const handleContinueInterview = async () => {
-    setActionLoading('continue');
-    setError('');
-    try {
-      choiceResolvedRef.current = true;
-      bootOnceRef.current = true;
-      await loadEnsureInvite();
-    } catch (e) {
-      choiceResolvedRef.current = false;
-      setError(e.message || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
-      setPhase('error');
-    } finally {
-      setActionLoading('');
-    }
-  };
-
-  const handleRetakeInterview = async () => {
-    setActionLoading('new');
-    setError('');
-    try {
-      choiceResolvedRef.current = true;
-      bootOnceRef.current = true;
-      await loadEnsureInvite({ forceNew: true });
-    } catch (e) {
-      choiceResolvedRef.current = false;
-      setError(e.message || formatMessage({ id: 'tenantAdmin.completeInterviewInviteFailed' }));
-      setPhase('error');
-    } finally {
-      setActionLoading('');
-    }
-  };
 
   if (phase === 'loading') {
     return (
@@ -331,23 +176,19 @@ const InterviewStep = createWithRemoteLoader({
     return <Alert type="error" showIcon message={error} />;
   }
 
-  if (phase === 'choice') {
-    return <InterviewHistoryChoice previousInterview={previousInterview} loading={actionLoading} onUsePrevious={handleUsePrevious} onContinueInterview={handleContinueInterview} onRetakeInterview={handleRetakeInterview} />;
-  }
-
   if (!invite?.shorten) {
     return <Alert type="warning" showIcon message={formatMessage({ id: 'tenantAdmin.completeInterviewNotReady' })} />;
   }
 
   return (
     <div className={style['interview-panel']}>
-      <div ref={roomRef} className={style['interview-room']}>
+      <div className={style['interview-room']}>
         <AIInterviewRoom
           key={`${invite.cdnUrl}|${invite.version}|${invite.shorten}`}
           apiUrl={invite.apiUrl}
           ajaxBaseUrl={invite.ajaxBaseUrl || invite.apiUrl}
           shorten={invite.shorten}
-          height={sessionHeight > 0 ? sessionHeight : undefined}
+          height={sessionHeight}
           onStageChange={event => {
             const { stage, status } = event || {};
             // 问卷 / 设备检测完成 / 作答结束 / 评价：隐藏宿主「上一步」，避免与会话内提交条重叠
@@ -378,6 +219,6 @@ const InterviewStep = createWithRemoteLoader({
       </div>
     </div>
   );
-});
+};
 
 export default InterviewStep;

@@ -8,6 +8,10 @@ const getApis = options => {
           url: `${prefix}/tenant-extra/admin/user-list`,
           method: 'GET'
         },
+        orgList: {
+          url: `${prefix}/tenant/admin/org-list`,
+          method: 'GET'
+        },
         sendOrgMessage: {
           url: `${prefix}/tenant/admin/send-org-message`,
           method: 'POST'
@@ -19,28 +23,6 @@ const getApis = options => {
           },
           save: {
             url: `${prefix}/tenant/admin/home-setting-save`,
-            method: 'POST'
-          }
-        },
-        aiInterview: {
-          detail: {
-            url: `${prefix}/tenant/admin/ai-interview-setting`,
-            method: 'GET'
-          },
-          save: {
-            url: `${prefix}/tenant/admin/ai-interview-setting-save`,
-            method: 'POST'
-          },
-          projects: {
-            url: `${prefix}/tenant/admin/ai-interview-projects`,
-            method: 'GET'
-          },
-          saveFeatureBinding: {
-            url: `${prefix}/tenant/admin/ai-interview-feature-binding-save`,
-            method: 'POST'
-          },
-          removeFeatureBinding: {
-            url: `${prefix}/tenant/admin/ai-interview-feature-binding-remove`,
             method: 'POST'
           }
         },
@@ -85,6 +67,30 @@ const getApis = options => {
             url: `${prefix}/tenant/admin/readiness-issue/resolve`,
             method: 'POST'
           }
+        },
+        readiness: {
+          list: { url: `${prefix}/tenant/admin/readiness/list`, method: 'POST' },
+          detail: { url: `${prefix}/tenant/admin/readiness/detail`, method: 'POST' },
+          stageDetail: { url: `${prefix}/tenant/admin/readiness/stage/detail`, method: 'POST' },
+          create: { url: `${prefix}/tenant/admin/readiness/create`, method: 'POST' },
+          cancel: { url: `${prefix}/tenant/admin/readiness/cancel`, method: 'POST' },
+          confirm: { url: `${prefix}/tenant/admin/readiness/manual/confirm`, method: 'POST' },
+          projectPreview: { url: `${prefix}/tenant/admin/readiness/manual/project-preview`, method: 'POST' },
+          confirmDigitals: { url: `${prefix}/tenant/admin/readiness/manual/digitals`, method: 'POST' },
+          confirmMailSend: { url: `${prefix}/tenant/admin/readiness/manual/confirm-mail/send`, method: 'POST' },
+          submitAnswers: { url: `${prefix}/tenant/admin/readiness/manual/submit-answers`, method: 'POST' },
+          advanceAnswers: { url: `${prefix}/tenant/admin/readiness/manual/advance-answers`, method: 'POST' },
+          skipReassessConfirm: { url: `${prefix}/tenant/admin/readiness/manual/skip-reassess-confirm`, method: 'POST' },
+          triggerReport: { url: `${prefix}/tenant/admin/readiness/trigger-report`, method: 'POST' },
+          rollback: { url: `${prefix}/tenant/admin/readiness/rollback`, method: 'POST' },
+          retry: { url: `${prefix}/tenant/admin/readiness/retry`, method: 'POST' },
+          sendPreview: { url: `${prefix}/tenant/admin/readiness/send/preview`, method: 'POST' },
+          sendDefaults: { url: `${prefix}/tenant/admin/readiness/send/defaults`, method: 'POST' },
+          sendBatch: { url: `${prefix}/tenant/admin/readiness/send/batch`, method: 'POST' },
+          resendInvite: { url: `${prefix}/tenant/admin/readiness/invite/resend`, method: 'POST' },
+          deleteInvite: { url: `${prefix}/tenant/admin/readiness/invite/delete`, method: 'POST' },
+          syncAnswers: { url: `${prefix}/tenant/admin/readiness/answers/sync`, method: 'POST' },
+          employeeOptions: { url: `${prefix}/tenant/admin/readiness/employee-options`, method: 'POST' }
         }
       },
       tenant: {
@@ -229,6 +235,14 @@ const getApis = options => {
           },
           startAnalysis: {
             url: `${prefix}/tenant/position/start-analysis`,
+            method: 'POST'
+          },
+          startReadiness: {
+            url: `${prefix}/tenant/position/start-readiness`,
+            method: 'POST'
+          },
+          cancelReadiness: {
+            url: `${prefix}/tenant/position/cancel-readiness`,
             method: 'POST'
           },
           lockAnalysis: {
@@ -421,50 +435,6 @@ const getApis = options => {
           }
         },
         assessment: {
-          saveProfile: {
-            url: `${prefix}/tenant/assessment/save-profile`,
-            method: 'POST'
-          },
-          detail: {
-            url: `${prefix}/tenant/assessment/detail`,
-            method: 'GET'
-          },
-          ensureInvite: {
-            url: `${prefix}/tenant/assessment/ensure-invite`,
-            method: 'POST'
-          },
-          restart: {
-            url: `${prefix}/tenant/assessment/restart`,
-            method: 'POST'
-          },
-          acceptPrevious: {
-            url: `${prefix}/tenant/assessment/accept-previous`,
-            method: 'POST'
-          },
-          list: {
-            url: `${prefix}/tenant/assessment/list`,
-            method: 'GET'
-          },
-          getDetail: {
-            url: `${prefix}/tenant/assessment/get-detail`,
-            method: 'GET'
-          },
-          markSubmitted: {
-            url: `${prefix}/tenant/assessment/mark-submitted`,
-            method: 'POST'
-          },
-          saveReviewData: {
-            url: `${prefix}/tenant/assessment/save-review-data`,
-            method: 'POST'
-          },
-          approve: {
-            url: `${prefix}/tenant/assessment/approve`,
-            method: 'POST'
-          },
-          reject: {
-            url: `${prefix}/tenant/assessment/reject`,
-            method: 'POST'
-          },
           generateTaskContext: {
             url: `${prefix}/tenant/assessment/generate-task-context`,
             method: 'GET'
@@ -503,6 +473,16 @@ const getApis = options => {
           },
           markDone: {
             url: `${prefix}/public/talent-collect-invite/mark-done`,
+            method: 'POST'
+          }
+        },
+        readinessConfirm: {
+          detail: {
+            url: `${prefix}/public/readiness-confirm`,
+            method: 'GET'
+          },
+          confirm: {
+            url: `${prefix}/public/readiness-confirm`,
             method: 'POST'
           }
         },

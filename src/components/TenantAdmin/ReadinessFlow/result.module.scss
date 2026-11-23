@@ -1,0 +1,483 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.muted {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ant-color-text-tertiary);
+}
+
+// 顶部计数：一行排开的数字 + 标签
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  padding: 12px 16px;
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-layout);
+}
+
+.stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.statValue {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ant-color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+}
+
+// 重要度 1–5 刻度
+.importance {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+
+  i {
+    width: 14px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--ant-color-fill-secondary);
+  }
+
+  .importanceOn {
+    background: var(--ant-color-primary);
+  }
+}
+
+.importanceValue {
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.questionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  & + & {
+    margin-top: 16px;
+  }
+}
+
+.groupTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--ant-color-text);
+}
+
+.question {
+  padding: 12px 14px;
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-fill-quaternary);
+}
+
+.questionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+
+  :global(.ant-tag) {
+    margin: 0;
+  }
+}
+
+.questionNo {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ant-color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.questionText {
+  margin-top: 6px;
+  color: var(--ant-color-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.questionHead .questionText {
+  margin-top: 0;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 4px 16px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--ant-color-text-secondary);
+
+  li {
+    display: flex;
+    gap: 6px;
+  }
+}
+
+.optionKey {
+  flex: none;
+  font-weight: 600;
+  color: var(--ant-color-text);
+}
+
+.answerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.answer {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-fill-quaternary);
+}
+
+.answerValue {
+  overflow: hidden;
+  font-weight: 600;
+  color: var(--ant-color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transcript {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--ant-color-text-secondary);
+  white-space: pre-wrap;
+}
+
+.video {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.videoPlayer {
+  overflow: hidden;
+  max-width: 480px;
+  border-radius: var(--ant-border-radius);
+  background: #000;
+
+  video {
+    display: block;
+    width: 100%;
+    max-height: 320px;
+  }
+}
+
+.transcriptBox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-bg-container);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ant-color-text-secondary);
+  white-space: pre-wrap;
+}
+
+.transcriptLabel {
+  font-size: 12px;
+  color: var(--ant-color-text-tertiary);
+}
+
+.collapseLabel {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+
+  :global(.ant-tag) {
+    margin: 0;
+  }
+}
+
+.evidenceList,
+.skillList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.evidence,
+.skill {
+  padding: 10px 12px;
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-fill-quaternary);
+}
+
+.evidenceTitle {
+  font-weight: 500;
+  color: var(--ant-color-text);
+}
+
+.evidenceSummary {
+  display: -webkit-box;
+  margin-top: 4px;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ant-color-text-secondary);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ant-color-text);
+}
+
+.profileBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-bg-container);
+}
+
+.profileBlockTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ant-color-text-secondary);
+}
+
+.resumeList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resumeItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.resumeName {
+  font-size: 13px;
+  color: var(--ant-color-text);
+}
+
+.projectList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.projectCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius);
+}
+
+.projectTitle {
+  margin: 0 !important;
+}
+
+.projectDesc {
+  margin: 0 !important;
+  font-size: 13px;
+  color: var(--ant-color-text-secondary);
+}
+
+.projectTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 24px;
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  dt {
+    font-size: 12px;
+    color: var(--ant-color-text-tertiary);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--ant-color-text);
+    word-break: break-word;
+  }
+}
+
+// 页面内的阶段结果：时间线下方，浅底分层
+// 左右底用 padding（勿用子元素 margin-bottom，会与父级塌陷导致底部灰边消失）
+.panel {
+  margin-top: 16px;
+  padding: 0 16px 16px;
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-layout);
+}
+
+// 收起时去掉底部多余 padding，标题行上下对称居中
+.panelCollapsed {
+  padding: 12px 16px;
+}
+
+.panelCollapsed .panelHead {
+  padding: 0;
+  min-height: 32px;
+}
+
+.panelHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 0;
+}
+
+.panelToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  line-height: 1.4;
+}
+
+.panelToggleIcon {
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+  transition: transform 0.2s;
+  transform: rotate(-90deg);
+}
+
+.panelToggleIconOpen {
+  transform: rotate(0deg);
+}
+
+.panelTitle {
+  font-weight: 600;
+  color: var(--ant-color-text);
+}
+
+.panelBody {
+  margin: 0;
+  padding: 16px;
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-bg-container);
+}
+
+.panelLoading {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.questionnaire {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.talentDetailHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.talentDetailName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talentReadinessCell {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 280px;
+  min-width: 0;
+}
+
+.talentTable {
+  :global {
+    .ant-table-tbody > tr > td:has([class*='readiness']) {
+      vertical-align: middle !important;
+
+      [class*='col-item'] {
+        width: 100%;
+        max-width: none;
+      }
+
+      > *,
+      > * > *,
+      .ant-typography {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+      }
+    }
+  }
+}
+
+@include resp.mobile-container {
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

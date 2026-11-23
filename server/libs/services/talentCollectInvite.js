@@ -5,6 +5,7 @@ const timezone = require('dayjs/plugin/timezone');
 const get = require('lodash/get');
 const ensureSlash = require('@kne/ensure-slash');
 const { mergeVideoTranscriptsIntoInterview } = require('../utils/merge-video-transcripts');
+const { collectVideoJobs, isNoInterviewError } = require('../utils/video-asr');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -149,6 +150,8 @@ module.exports = fp(async (fastify, options) => {
       phone: plain.phone || '',
       projectId: plain.projectId || '',
       projectName: plain.projectName || '',
+      // 语言存在 interviewData.language，避免依赖未迁移的 language 列
+      language: normalizeMessageLanguage(plain.interviewData?.language || plain.language),
       deadline: plain.deadline || null,
       status: plain.status,
       profileData: plain.profileData || {},
@@ -381,7 +384,8 @@ module.exports = fp(async (fastify, options) => {
           projectName: project.projectName,
           deadline,
           status: 'invited',
-          profileData: {}
+          profileData: {},
+          interviewData: { language }
         });
         await ensureInviteCode(row);
 
@@ -519,7 +523,9 @@ module.exports = fp(async (fastify, options) => {
     if (row.status === 'invited') {
       row.status = 'opened';
       await row.save();
-      await syncEmployeeAssessmentFromInvite(row, { stage: 'opened' });
+      if (!isReadinessCollect(row)) {
+        await syncEmployeeAssessmentFromInvite(row, { stage: 'opened' });
+      }
     }
     const position = await models.position.findByPk(row.positionId);
     let employee = null;
@@ -599,6 +605,87 @@ module.exports = fp(async (fastify, options) => {
     return dayjs(row.shortenExpiresAt).isAfter(dayjs());
   };
 
+  /** 就绪度流程创建的采集邀请：把 AI 面试 shorten / inviteId 回写到 readinessInvite */
+  const syncReadinessInviteFromCollect = async row => {
+    const readinessInviteId = row?.interviewData?.readinessInviteId;
+    if (!readinessInviteId || !models.readinessInvite) {
+      return;
+    }
+    const patch = {
+      inviteId: row.inviteId ? String(row.inviteId) : null,
+      shorten: row.shorten || null
+    };
+    await models.readinessInvite.update(patch, { where: { id: String(readinessInviteId), tenantId: row.tenantId } });
+  };
+
+  const isReadinessCollect = row => row?.interviewData?.source === 'readiness';
+
+  /**
+   * 就绪度经理/员工问卷发送：建采集邀请并返回 /collect-profile 链接，不立刻调 AI 面试 invite。
+   * 员工会走简历/项目经历；经理仅面试步。AI shorten 在采集页 ensureInvite 时创建并回写 readinessInvite。
+   */
+  const createForReadiness = async ({ tenantId, inviteType, positionId = null, name, email, projectId, projectName = '', language: languageInput, expiresAt, readinessInviteId = null } = {}) => {
+    if (!tenantId || !projectId) {
+      throw new Error('缺少租户或评估项目');
+    }
+    const type = inviteType === 'manager' ? 'manager' : 'employee';
+    const language = normalizeMessageLanguage(languageInput);
+    const displayName = String(name || '').trim();
+    const mail = pickContact(email);
+    if (!displayName) {
+      throw new Error('姓名不能为空');
+    }
+    if (!mail) {
+      throw new Error('邮箱不能为空');
+    }
+    if (!expiresAt || !dayjs(expiresAt).isAfter(dayjs())) {
+      throw new Error('邀请有效期无效或已过期');
+    }
+    const row = await models.talentCollectInvite.create({
+      tenantId,
+      inviteType: type,
+      positionId: positionId ? String(positionId) : null,
+      employeeId: null,
+      name: displayName,
+      email: mail,
+      phone: '',
+      projectId: String(projectId),
+      projectName: String(projectName || '').trim(),
+      deadline: dayjs(expiresAt).toDate(),
+      status: 'invited',
+      profileData: {},
+      interviewData: {
+        source: 'readiness',
+        language,
+        readinessInviteId: readinessInviteId ? String(readinessInviteId) : null,
+        inviteExpires: dayjs(expiresAt).toISOString()
+      }
+    });
+    await ensureInviteCode(row);
+    return {
+      invite: toPublic(row),
+      inviteUrl: buildInviteUrl(row),
+      code: row.code
+    };
+  };
+
+  const bindReadinessInvite = async ({ collectInviteId, readinessInviteId, tenantId }) => {
+    if (!collectInviteId || !readinessInviteId) {
+      return null;
+    }
+    const row = await models.talentCollectInvite.findOne({ where: { id: String(collectInviteId), tenantId } });
+    if (!row) {
+      return null;
+    }
+    row.interviewData = Object.assign({}, row.interviewData || {}, {
+      source: 'readiness',
+      readinessInviteId: String(readinessInviteId)
+    });
+    row.changed('interviewData', true);
+    await row.save();
+    return toPublic(row);
+  };
+
   const ensureInvite = async ({ code, forceNew = false } = {}) => {
     const row = await findByCode(code);
     const setting = await services.aiInterview.detail({ tenantId: row.tenantId });
@@ -608,7 +695,10 @@ module.exports = fp(async (fastify, options) => {
         row.status = 'interviewing';
         await row.save();
       }
-      await syncEmployeeAssessmentFromInvite(row, { stage: 'opened' });
+      if (!isReadinessCollect(row)) {
+        await syncEmployeeAssessmentFromInvite(row, { stage: 'opened' });
+      }
+      await syncReadinessInviteFromCollect(row);
       return Object.assign({}, toPublic(row), {
         cdnUrl: setting?.cdnUrl || '',
         version: setting?.version || '',
@@ -626,14 +716,16 @@ module.exports = fp(async (fastify, options) => {
       throw new Error('邀请联系方式缺失，无法发起面试');
     }
 
-    const expires = dayjs().add(SHORTEN_TTL_HOURS, 'hour').toISOString();
+    // 就绪度沿用发送时写入的项目截止；其它采集仍默认 24h
+    const readinessExpires = row.interviewData?.inviteExpires;
+    const expires = readinessExpires && dayjs(readinessExpires).isAfter(dayjs()) ? dayjs(readinessExpires).toISOString() : dayjs().add(SHORTEN_TTL_HOURS, 'hour').toISOString();
     const invite = await services.aiInterview.inviteCandidate({
       tenantId: row.tenantId,
       projectId: row.projectId,
       name: row.name,
       email,
       phone,
-      description: `TalentCollect / ${row.inviteType} / position:${row.positionId}`,
+      description: isReadinessCollect(row) ? `Readiness / ${row.inviteType} / collect:${row.id}` : `TalentCollect / ${row.inviteType} / position:${row.positionId}`,
       expires,
       needLoginShorten: true,
       // open-api 后续支持：不发送面试提醒邮件
@@ -657,7 +749,10 @@ module.exports = fp(async (fastify, options) => {
     });
     row.changed('interviewData', true);
     await row.save();
-    await syncEmployeeAssessmentFromInvite(row, { stage: 'opened' });
+    if (!isReadinessCollect(row)) {
+      await syncEmployeeAssessmentFromInvite(row, { stage: 'opened' });
+    }
+    await syncReadinessInviteFromCollect(row);
 
     return Object.assign({}, toPublic(row), {
       cdnUrl: setting?.cdnUrl || '',
@@ -679,7 +774,10 @@ module.exports = fp(async (fastify, options) => {
     });
     row.changed('interviewData', true);
     await row.save();
-    await syncEmployeeAssessmentFromInvite(row, { stage: 'done' });
+    if (!isReadinessCollect(row)) {
+      await syncEmployeeAssessmentFromInvite(row, { stage: 'done' });
+    }
+    await syncReadinessInviteFromCollect(row);
     return toPublic(row);
   };
 
@@ -919,6 +1017,33 @@ module.exports = fp(async (fastify, options) => {
       throw new Error('未配置阿里云录音文件识别（ALI_ASR_APP_KEY / ALI_ASR_ACCESS_KEY_ID / ALI_ASR_ACCESS_KEY_SECRET）');
     }
 
+    // 取面试详情挑出要转写的录像；无面试数据 / 无视频题：跳过转写视为成功空转写，直接进入完善任务
+    const clientUserId = await resolveClientUserId(tenantId, row);
+    let interview = null;
+    if (clientUserId) {
+      try {
+        interview = await services.aiInterview.getInterviewDetail({ tenantId: String(tenantId), id: String(clientUserId) });
+      } catch (e) {
+        if (!isNoInterviewError(e)) {
+          throw e;
+        }
+      }
+    }
+    const jobs = interview ? collectVideoJobs(interview) : [];
+    if (!jobs.length) {
+      row.interviewData = Object.assign({}, interviewData, {
+        videoAsrStatus: 'succeeded',
+        videoTranscripts: {},
+        videoAsrSkipReason: interview ? 'no-video' : 'no-interview',
+        videoAsrCompletedAt: new Date().toISOString(),
+        videoAsrError: null
+      });
+      row.changed('interviewData', true);
+      await row.save();
+      return createRefineOrGenerateTask(authenticatePayload, { id: String(row.id) });
+    }
+
+    // 转写由 invite-video-asr 任务完成（只转写），结果在 onVideoAsrSuccess / onVideoAsrFailed 里落库并触发完善任务
     const asrTask = await fastify.task.services.create({
       type: VIDEO_ASR_TASK_TYPE,
       targetId: String(row.id),
@@ -927,7 +1052,8 @@ module.exports = fp(async (fastify, options) => {
       input: {
         name: `video-asr:${row.id}`,
         inviteId: String(row.id),
-        tenantId: String(tenantId)
+        tenantId: String(tenantId),
+        jobs
       }
     });
 
@@ -955,6 +1081,44 @@ module.exports = fp(async (fastify, options) => {
       asrStatus: 'running',
       asrTaskId: asrTask.id
     };
+  };
+
+  /** invite-video-asr 转写成功（targetType=talentCollectInvite）：写入转写结果，再创建完善任务 */
+  const onVideoAsrSuccess = async ({ task, result }) => {
+    const { inviteId, tenantId } = task.input || {};
+    const row = await models.talentCollectInvite.findOne({ where: { id: String(inviteId), tenantId: String(tenantId) } });
+    if (!row) {
+      return result;
+    }
+    const { videoTranscripts, errors } = result || {};
+    row.interviewData = Object.assign({}, row.interviewData || {}, {
+      videoAsrStatus: 'succeeded',
+      videoTranscripts: videoTranscripts || {},
+      videoAsrErrors: errors?.length ? errors : null,
+      videoAsrSkipReason: null,
+      videoAsrCompletedAt: new Date().toISOString(),
+      videoAsrError: null
+    });
+    row.changed('interviewData', true);
+    await row.save();
+    const analysis = await createRefineOrGenerateTask({ tenantId: String(tenantId) }, { id: String(row.id) });
+    return Object.assign({}, result, analysis || {});
+  };
+
+  /** invite-video-asr 转写失败（targetType=talentCollectInvite） */
+  const onVideoAsrFailed = async ({ task, error }) => {
+    const { inviteId, tenantId } = task.input || {};
+    const row = await models.talentCollectInvite.findOne({ where: { id: String(inviteId), tenantId: String(tenantId) } });
+    if (!row) {
+      return;
+    }
+    row.interviewData = Object.assign({}, row.interviewData || {}, {
+      videoAsrStatus: 'failed',
+      videoAsrError: error?.message || String(error),
+      videoAsrCompletedAt: new Date().toISOString()
+    });
+    row.changed('interviewData', true);
+    await row.save();
   };
 
   /** 未结束邀请：取消后短链不可再进入 */
@@ -1231,7 +1395,8 @@ module.exports = fp(async (fastify, options) => {
       projectName,
       deadline,
       status: 'invited',
-      profileData: {}
+      profileData: {},
+      interviewData: { language }
     });
     await ensureInviteCode(row);
 
@@ -1290,7 +1455,11 @@ module.exports = fp(async (fastify, options) => {
       parseResume,
       ensureInvite,
       markInterviewDone,
+      createForReadiness,
+      bindReadinessInvite,
       startAnalysis,
+      onVideoAsrSuccess,
+      onVideoAsrFailed,
       createRefineOrGenerateTask,
       resolveClientUserId,
       cancel,

@@ -1,0 +1,12 @@
+// draft 423：评估失败行（与取消类似：降透明度 + 浅红底，不可操作）
+.assessmentErrorRow {
+  opacity: 0.62;
+
+  :global(> td.ant-table-cell) {
+    background: var(--ant-color-error-bg, #fff2f0) !important;
+  }
+
+  &:global(:hover > td.ant-table-cell) {
+    background: var(--ant-color-error-bg-hover, #ffece8) !important;
+  }
+}

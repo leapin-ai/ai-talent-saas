@@ -87,7 +87,7 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
         type: DataTypes.STRING(32),
         allowNull: false,
         defaultValue: 'pending',
-        comment: '访谈分析进度 pending|interviews_in_progress|completed'
+        comment: '访谈分析进度 pending|interviews_in_progress|completed|error'
       }
     },
     associate: ({ position }) => {

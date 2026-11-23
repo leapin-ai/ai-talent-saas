@@ -228,11 +228,6 @@ export const globalInit = async () => {
             {
               key: 'ai-interview',
               label: 'AI面试设置',
-              component: loadable(() => import('@components/AIInterviewSetting'))
-            },
-            {
-              key: 'talent-review',
-              label: '人才盘点设置',
               component: loadable(() => import('@components/TalentReviewSetting'))
             },
             // 超级管理员配置各租户的应用展示方式（左菜单 / 应用中心），追加在设置菜单末尾
@@ -249,6 +244,13 @@ export const globalInit = async () => {
               // 插在「用户列表」之后、「设置」之前
               index: 4,
               component: loadable(() => import('@components/Admin/ReadinessIssues'))
+            },
+            {
+              key: 'readiness-flow',
+              tab: '就绪度流程',
+              // 紧跟「就绪纠错反馈」之后、「设置」之前
+              index: 5,
+              component: loadable(() => import('@components/Admin/ReadinessFlowTab'))
             }
           ]
         }
