@@ -14,10 +14,32 @@ $surface: #fafafe;
   height: 100%;
 }
 
-// 面试步：勿锁死 height:100%，否则房间高于可视区时被裁切且 page-children SimpleBar 不出现
+// 面试步：100dvh 减去 layout 上下留白 12*2 + page-children padding 24*2 + 标题行约 40 ≈ 114
+// 实测 localhost collect-profile 窗口高 889 时 ideal=775 → 889-775=114，刚好贴底不空滚
+// 员工问卷有 Stepper（约 45px）与 .content 并列：content 不能再 height:100%，否则叠高出滚动条
 .complete-profile-interview {
-  height: auto;
-  min-height: var(--container-height, 100%);
+  height: calc(100dvh - 114px);
+  max-height: calc(100dvh - 114px);
+  min-height: 0;
+  overflow: hidden;
+
+  .content {
+    padding: 0;
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .step-body,
+  .step-panel,
+  .content-inner,
+  .interview-panel,
+  .interview-room {
+    height: 100%;
+    min-height: 0;
+  }
 }
 
 .steps {
@@ -668,29 +690,29 @@ $surface: #fafafe;
   min-height: 0;
 }
 
-// 高度交给 InterviewSession 的 height；宿主只负责全宽与不裁切，不深层改 flex
 .interview-room {
   width: 100%;
   max-width: 100%;
-  height: auto;
   margin-inline: auto;
   align-self: stretch;
-  flex: 0 0 auto;
+  flex: 1;
+  min-height: 0;
   box-sizing: border-box;
-  overflow: visible;
 }
 
-// 有宿主「上一步」时：底栏 fixed
+// 有宿主「上一步」时：底栏 fixed；会话高度已在 InterviewStep 扣掉 footer-spacer，面板按剩余高度铺满
 .step-panel-interview-prestart {
   .step-body {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     min-height: 0;
     padding-bottom: 0;
+    overflow: hidden;
   }
 
   .interview-panel {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     min-height: 0;
   }
 

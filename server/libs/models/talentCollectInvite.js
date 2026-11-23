@@ -7,8 +7,8 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
         allowNull: false
       },
       positionId: definePrimaryType('positionId', {
-        comment: '岗位ID',
-        allowNull: false
+        comment: '岗位ID（就绪度无关联岗位时可空）',
+        allowNull: true
       }),
       employeeId: definePrimaryType('employeeId', {
         comment: '员工ID（经理邀请可空）',
@@ -95,7 +95,7 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
       });
       talentCollectInvite.belongsTo(position, {
         foreignKey: 'positionId',
-        allowNull: false
+        allowNull: true
       });
       talentCollectInvite.belongsTo(employee, {
         foreignKey: 'employeeId',

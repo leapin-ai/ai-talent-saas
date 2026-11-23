@@ -1,157 +1,25 @@
 const fp = require('fastify-plugin');
 const { getApiBase, createSignedHeaders, openApiRequest } = require('../utils/aiInterviewOpenApi');
 
-const SECRET_KEY = 'AI_INTERVIEW_SECRET_KEY';
-
-const normalizeFeatureBindings = list => {
-  if (!Array.isArray(list)) {
-    return [];
-  }
-  return list
-    .map(item => ({
-      key: item?.key ? String(item.key).trim() : '',
-      projectId: item?.projectId ? String(item.projectId).trim() : '',
-      projectName: item?.projectName ? String(item.projectName).trim() : '',
-      clientId: item?.clientId ? String(item.clientId).trim() : ''
-    }))
-    .filter(item => item.key && item.projectId);
-};
-
-const toPublic = ({ cdnUrl, version, apiUrl, appId, hasSecretKey, featureBindings }) => ({
-  cdnUrl: cdnUrl ? String(cdnUrl).trim() : '',
-  version: version ? String(version).trim() : '',
-  apiUrl: apiUrl ? String(apiUrl).trim() : '',
-  appId: appId ? String(appId).trim() : '',
-  hasSecretKey: !!hasSecretKey,
-  featureBindings: normalizeFeatureBindings(featureBindings)
-});
-
+/** 租户 AI 面试连接统一取自「AI 面试设置」（talentReviewSetting），本服务只负责 open-api 调用 */
 module.exports = fp(async (fastify, options) => {
-  const tenantServices = fastify.tenant.services;
-  const tenantModels = fastify.tenant.models;
+  const getSettingService = () => fastify[options.name].services.talentReviewSetting;
 
-  const getSettingRow = async tenantId => {
-    await tenantServices.setting.detail({ tenantId });
-    return tenantModels.setting.findOne({ where: { tenantId } });
-  };
-
-  const readSecretValue = async tenantId => {
-    return tenantServices.setting.getSecrets({ tenantId, key: SECRET_KEY });
-  };
-
-  const upsertSecret = async ({ secretKey, settingRow }) => {
-    const secrets = Array.isArray(settingRow.secrets) ? settingRow.secrets.slice(0) : [];
-    const index = secrets.findIndex(item => item.key === SECRET_KEY);
-    const nextItem = { key: SECRET_KEY, value: secretKey };
-    if (index === -1) {
-      secrets.push(nextItem);
-    } else {
-      secrets.splice(index, 1, nextItem);
-    }
-    settingRow.set('secrets', secrets);
-    settingRow.changed('secrets', true);
-  };
-
-  const writePublicOptions = ({ settingRow, publicData }) => {
-    const prev = settingRow.options?.aiInterview || {};
-    const nextOptions = Object.assign({}, settingRow.options || {}, {
-      aiInterview: {
-        cdnUrl: publicData.cdnUrl,
-        version: publicData.version,
-        apiUrl: publicData.apiUrl,
-        appId: publicData.appId,
-        hasSecretKey: publicData.hasSecretKey,
-        featureBindings: Array.isArray(publicData.featureBindings) ? normalizeFeatureBindings(publicData.featureBindings) : normalizeFeatureBindings(prev.featureBindings)
-      }
-    });
-    settingRow.set('options', nextOptions);
-    settingRow.changed('options', true);
-  };
-
-  /** 把 options 里遗留的 secretKey 迁到 secrets，并清洗 options */
-  const migrateLegacySecret = async settingRow => {
-    const raw = settingRow.options?.aiInterview || {};
-    if (!raw.secretKey) {
-      return false;
-    }
-    const legacySecret = String(raw.secretKey).trim();
-    const existingSecret = (settingRow.secrets || []).find(item => item.key === SECRET_KEY)?.value;
-    if (legacySecret && !existingSecret) {
-      await upsertSecret({ secretKey: legacySecret, settingRow });
-    }
-    const publicData = toPublic({
-      cdnUrl: raw.cdnUrl,
-      version: raw.version,
-      apiUrl: raw.apiUrl,
-      appId: raw.appId,
-      hasSecretKey: !!(legacySecret || existingSecret),
-      featureBindings: raw.featureBindings
-    });
-    writePublicOptions({ settingRow, publicData });
-    await settingRow.save();
-    return true;
-  };
-
+  /** 对外保持 { apiUrl, appId, hasSecretKey, cdnUrl, version }；远程组件地址取自 AI 面试站点的 remote-module-config.json */
   const detail = async ({ tenantId }) => {
-    const settingRow = await getSettingRow(tenantId);
-    await migrateLegacySecret(settingRow);
-    await settingRow.reload();
-    const raw = settingRow.options?.aiInterview || {};
-    const secretValue = (settingRow.secrets || []).find(item => item.key === SECRET_KEY)?.value;
-    return toPublic({
-      cdnUrl: raw.cdnUrl,
-      version: raw.version,
-      apiUrl: raw.apiUrl,
-      appId: raw.appId,
-      hasSecretKey: !!(secretValue || raw.hasSecretKey),
-      featureBindings: raw.featureBindings
-    });
-  };
-
-  const save = async ({ tenantId, cdnUrl, version, apiUrl, appId, secretKey }) => {
-    const settingRow = await getSettingRow(tenantId);
-    await migrateLegacySecret(settingRow);
-    await settingRow.reload();
-
-    const existingSecret = (settingRow.secrets || []).find(item => item.key === SECRET_KEY)?.value;
-    const nextSecret = secretKey ? String(secretKey).trim() : existingSecret;
-    const prevBindings = settingRow.options?.aiInterview?.featureBindings;
-
-    const publicData = toPublic({
-      cdnUrl,
-      version,
-      apiUrl,
-      appId,
-      hasSecretKey: !!nextSecret,
-      featureBindings: prevBindings
-    });
-
-    if (!publicData.cdnUrl || !publicData.version || !publicData.apiUrl || !publicData.appId || !nextSecret) {
-      throw new Error('AI面试设置字段不完整');
-    }
-
-    await upsertSecret({ secretKey: nextSecret, settingRow });
-    writePublicOptions({ settingRow, publicData });
-    await settingRow.save();
-
-    return publicData;
-  };
-
-  const getCredentials = async tenantId => {
-    const publicData = await detail({ tenantId });
-    if (!(publicData.apiUrl && publicData.appId && publicData.hasSecretKey)) {
-      throw new Error('请先完成 AI 面试基础设置');
-    }
-    const secretKey = await readSecretValue(tenantId);
-    if (!secretKey) {
-      throw new Error('请先完成 AI 面试基础设置');
-    }
+    const publicData = await getSettingService().detail({ tenantId });
+    const configured = !!(publicData.url && publicData.appId && publicData.hasSecretKey);
+    const remote = configured ? await getSettingService().getRemote({ origin: publicData.origin }) : null;
     return {
-      apiUrl: publicData.apiUrl,
+      cdnUrl: remote?.url || '',
+      version: remote?.version || '',
+      apiUrl: publicData.url,
       appId: publicData.appId,
-      secretKey
+      hasSecretKey: publicData.hasSecretKey
     };
   };
+
+  const getCredentials = async tenantId => getSettingService().getCredentials(tenantId);
 
   const getProjects = async ({ tenantId, currentPage = 1, perPage = 20, filter }) => {
     const credentials = await getCredentials(tenantId);
@@ -169,94 +37,77 @@ module.exports = fp(async (fastify, options) => {
     });
   };
 
-  const saveFeatureBinding = async ({ tenantId, key, projectId, projectName, clientId }) => {
-    const featureKey = key ? String(key).trim() : '';
-    const nextProjectId = projectId ? String(projectId).trim() : '';
-    if (!featureKey || !nextProjectId) {
-      throw new Error('功能项与项目不能为空');
+  const requireFileId = id => {
+    const fileId = String(id || '').trim();
+    if (!fileId) {
+      throw new Error('缺少文件 ID');
     }
-
-    const settingRow = await getSettingRow(tenantId);
-    await migrateLegacySecret(settingRow);
-    await settingRow.reload();
-
-    const raw = settingRow.options?.aiInterview || {};
-    const secretValue = (settingRow.secrets || []).find(item => item.key === SECRET_KEY)?.value;
-    if (!(raw.apiUrl && raw.appId && secretValue)) {
-      throw new Error('请先完成 AI 面试基础设置');
-    }
-
-    const nextBinding = {
-      key: featureKey,
-      projectId: nextProjectId,
-      projectName: projectName ? String(projectName).trim() : '',
-      clientId: clientId ? String(clientId).trim() : ''
-    };
-    const prevBindings = normalizeFeatureBindings(raw.featureBindings);
-    const index = prevBindings.findIndex(item => item.key === featureKey);
-    const featureBindings = prevBindings.slice(0);
-    if (index === -1) {
-      featureBindings.push(nextBinding);
-    } else {
-      featureBindings.splice(index, 1, nextBinding);
-    }
-
-    const publicData = toPublic({
-      cdnUrl: raw.cdnUrl,
-      version: raw.version,
-      apiUrl: raw.apiUrl,
-      appId: raw.appId,
-      hasSecretKey: true,
-      featureBindings
-    });
-    writePublicOptions({ settingRow, publicData });
-    await settingRow.save();
-    return publicData;
+    return fileId;
   };
 
-  const removeFeatureBinding = async ({ tenantId, key }) => {
-    const featureKey = key ? String(key).trim() : '';
-    if (!featureKey) {
-      throw new Error('功能项不能为空');
+  const parseUrlPayload = data => {
+    if (!data) {
+      return null;
     }
+    if (typeof data === 'string' && /^https?:\/\//i.test(data)) {
+      return data;
+    }
+    if (typeof data === 'object') {
+      const candidate = data.url || data.fileUrl || data.link || data.data;
+      if (typeof candidate === 'string' && /^https?:\/\//i.test(candidate)) {
+        return candidate;
+      }
+      if (candidate && typeof candidate === 'object' && typeof candidate.url === 'string') {
+        return candidate.url;
+      }
+    }
+    return null;
+  };
 
-    const settingRow = await getSettingRow(tenantId);
-    await migrateLegacySecret(settingRow);
-    await settingRow.reload();
+  /** AI 面试域 static/file-url：取文件真实可访问地址，取不到返回 null */
+  const resolveRemoteUrl = async (credentials, fileId) => {
+    try {
+      const urlRes = await fetch(`${getApiBase(credentials.apiUrl)}/static/file-url/${encodeURIComponent(fileId)}`, { method: 'GET', headers: createSignedHeaders(credentials) });
+      const text = await urlRes.text();
+      let data = text;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (e) {
+        // plain url string
+      }
+      if (data && typeof data === 'object' && Object.prototype.hasOwnProperty.call(data, 'code') && data.code !== 0) {
+        throw new Error(data.msg || data.message || 'file-url 失败');
+      }
+      return parseUrlPayload(data && Object.prototype.hasOwnProperty.call(data, 'data') ? data.data : data);
+    } catch (e) {
+      return null;
+    }
+  };
 
-    const raw = settingRow.options?.aiInterview || {};
-    const secretValue = (settingRow.secrets || []).find(item => item.key === SECRET_KEY)?.value;
-    const featureBindings = normalizeFeatureBindings(raw.featureBindings).filter(item => item.key !== featureKey);
-    const publicData = toPublic({
-      cdnUrl: raw.cdnUrl,
-      version: raw.version,
-      apiUrl: raw.apiUrl,
-      appId: raw.appId,
-      hasSecretKey: !!(secretValue || raw.hasSecretKey),
-      featureBindings
+  /** 下载 AI 面试域文件并上传到本仓文件系统，返回本仓文件 ID */
+  const transferToLocal = async (credentials, fileId) => {
+    const remoteUrl = await resolveRemoteUrl(credentials, fileId);
+    const fileRes = remoteUrl ? await fetch(remoteUrl, { method: 'GET' }) : await fetch(`${getApiBase(credentials.apiUrl)}/static/file-id/${encodeURIComponent(fileId)}`, { method: 'GET', headers: createSignedHeaders(credentials) });
+    if (!fileRes.ok) {
+      throw new Error(`下载面试录像失败: ${fileRes.status}`);
+    }
+    const buffer = Buffer.from(await fileRes.arrayBuffer());
+    const contentType = fileRes.headers.get('content-type') || 'video/mp4';
+    const ext = contentType.includes('webm') ? 'webm' : contentType.includes('wav') ? 'wav' : contentType.includes('mp3') ? 'mp3' : 'mp4';
+    const uploaded = await fastify.fileManager.services.uploadToFileSystem({
+      file: {
+        toBuffer: () => buffer,
+        filename: `interview-${fileId}.${ext}`,
+        mimetype: contentType
+      }
     });
-    writePublicOptions({ settingRow, publicData });
-    await settingRow.save();
-    return publicData;
+    return uploaded?.id || uploaded;
   };
 
   Object.assign(fastify[options.name].services, {
     aiInterview: {
       detail,
-      save,
       getProjects,
-      saveFeatureBinding,
-      removeFeatureBinding,
-      getSecretKey: async ({ tenantId }) => readSecretValue(tenantId),
-      getFeatureBinding: async ({ tenantId, key }) => {
-        const publicData = await detail({ tenantId });
-        const featureKey = key ? String(key).trim() : '';
-        const binding = (publicData.featureBindings || []).find(item => item.key === featureKey);
-        if (!binding?.projectId) {
-          throw new Error(`未配置功能项「${featureKey}」对应的项目`);
-        }
-        return { binding, setting: publicData };
-      },
       inviteCandidate: async ({ tenantId, projectId, name, email, phone, description, expires, needLoginShorten = true, needNotice = true }) => {
         const credentials = await getCredentials(tenantId);
         return openApiRequest(credentials, 'project/invite-candidate', {
@@ -273,6 +124,33 @@ module.exports = fp(async (fastify, options) => {
             needNotice
           }
         });
+      },
+      /**
+       * 开放接口（超级管理员）：建题 / 转数字人 / 建项目。需要 AI 面试设置里的密钥所属用户是平台超级管理员。
+       * 对应 ai-interview-flowup 的 /open-api/admin/*
+       */
+      getProjectDetail: async ({ tenantId, id }) => {
+        const credentials = await getCredentials(tenantId);
+        return openApiRequest(credentials, 'project/detail', { query: { id } });
+      },
+      adminListDigitals: async ({ tenantId, clientId, perPage = 100, currentPage = 1 }) => {
+        const credentials = await getCredentials(tenantId);
+        return openApiRequest(credentials, 'admin/client/digital/list', { query: { clientId, perPage, currentPage } });
+      },
+      adminCreateQuestion: async ({ tenantId, body }) => {
+        const credentials = await getCredentials(tenantId);
+        return openApiRequest(credentials, 'admin/question/create', { method: 'POST', body });
+      },
+      adminGenerateDigital: async ({ tenantId, digitalIds, questionIds, forceRetry = false }) => {
+        const credentials = await getCredentials(tenantId);
+        return openApiRequest(credentials, 'admin/question/generate-digital', {
+          method: 'POST',
+          body: { digitalIds, questionIds, forceRetry: !!forceRetry }
+        });
+      },
+      adminCreateProject: async ({ tenantId, body }) => {
+        const credentials = await getCredentials(tenantId);
+        return openApiRequest(credentials, 'admin/project/create', { method: 'POST', body });
       },
       getInterviewList: async ({ tenantId, projectId, currentPage = 1, perPage = 10, filter }) => {
         const credentials = await getCredentials(tenantId);
@@ -296,69 +174,23 @@ module.exports = fp(async (fastify, options) => {
        * 优先 static/file-url；失败则下载后转存本仓 OSS 再取链接
        */
       getFileUrl: async ({ tenantId, id }) => {
-        const fileId = String(id || '').trim();
-        if (!fileId) {
-          throw new Error('缺少文件 ID');
-        }
+        const fileId = requireFileId(id);
         const credentials = await getCredentials(tenantId);
-        const apiBase = getApiBase(credentials.apiUrl);
-        const headers = createSignedHeaders(credentials);
-
-        const parseUrlPayload = data => {
-          if (!data) {
-            return null;
-          }
-          if (typeof data === 'string' && /^https?:\/\//i.test(data)) {
-            return data;
-          }
-          if (typeof data === 'object') {
-            const candidate = data.url || data.fileUrl || data.link || data.data;
-            if (typeof candidate === 'string' && /^https?:\/\//i.test(candidate)) {
-              return candidate;
-            }
-            if (candidate && typeof candidate === 'object' && typeof candidate.url === 'string') {
-              return candidate.url;
-            }
-          }
-          return null;
-        };
-
-        try {
-          const urlRes = await fetch(`${apiBase}/static/file-url/${encodeURIComponent(fileId)}`, { method: 'GET', headers });
-          const text = await urlRes.text();
-          let data = text;
-          try {
-            data = text ? JSON.parse(text) : null;
-          } catch (e) {
-            // plain url string
-          }
-          if (data && typeof data === 'object' && Object.prototype.hasOwnProperty.call(data, 'code') && data.code !== 0) {
-            throw new Error(data.msg || data.message || 'file-url 失败');
-          }
-          const direct = parseUrlPayload(data && Object.prototype.hasOwnProperty.call(data, 'data') ? data.data : data);
-          if (direct) {
-            return direct;
-          }
-        } catch (e) {
-          // fallback below
+        const direct = await resolveRemoteUrl(credentials, fileId);
+        if (direct) {
+          return direct;
         }
-
-        const fileRes = await fetch(`${apiBase}/static/file-id/${encodeURIComponent(fileId)}`, { method: 'GET', headers });
-        if (!fileRes.ok) {
-          throw new Error(`下载面试录像失败: ${fileRes.status}`);
-        }
-        const buffer = Buffer.from(await fileRes.arrayBuffer());
-        const contentType = fileRes.headers.get('content-type') || 'video/mp4';
-        const ext = contentType.includes('webm') ? 'webm' : contentType.includes('wav') ? 'wav' : contentType.includes('mp3') ? 'mp3' : 'mp4';
-        const uploaded = await fastify.fileManager.services.uploadToFileSystem({
-          file: {
-            toBuffer: () => buffer,
-            filename: `interview-${fileId}.${ext}`,
-            mimetype: contentType
-          }
-        });
-        const localId = uploaded?.id || uploaded;
+        const localId = await transferToLocal(credentials, fileId);
         return fastify.fileManager.services.getFileUrl({ id: localId });
+      },
+      /**
+       * 把 AI 面试域的文件（如面试录像）转存到本仓文件系统，返回本仓文件 ID
+       * 先取 static/file-url 的真实地址下载，取不到再走 static/file-id
+       */
+      transferFile: async ({ tenantId, id }) => {
+        const fileId = requireFileId(id);
+        const credentials = await getCredentials(tenantId);
+        return transferToLocal(credentials, fileId);
       },
       /** ajax 根地址：去掉末尾 /api/v1，供前端直连面试接口 */
       getAjaxBaseUrl: apiUrl => {

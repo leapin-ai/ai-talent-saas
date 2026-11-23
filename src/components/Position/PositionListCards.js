@@ -2,6 +2,7 @@ import classnames from 'classnames';
 import dayjs from 'dayjs';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import ChangeMagnitude from './ChangeMagnitude';
+import AssessmentStatusTag from './AssessmentStatusTag';
 import style from './positionListCards.module.scss';
 
 // 与 ai-interview-flowup 项目列表 DEFAULT_CARD_COLUMNS 一致
@@ -53,9 +54,11 @@ const PositionListCard = ({ item, columns, orgEnums, onDetail, formatMessage }) 
   const updatedAt = formatUpdatedAt(item.updatedAt || item.publishAt);
   const extra = getItemExtra(columns, item);
 
+  const isAssessmentError = assessmentStatus === 'error';
+
   return (
     <article
-      className={classnames(style.card, onDetail && style['card-clickable'])}
+      className={classnames(style.card, onDetail && style['card-clickable'], isAssessmentError && style['card-assessment-error'])}
       onClick={
         onDetail
           ? () => {
@@ -76,7 +79,7 @@ const PositionListCard = ({ item, columns, orgEnums, onDetail, formatMessage }) 
               <span className={style.dot} aria-hidden>
                 ·
               </span>
-              <span>{formatMessage({ id: `position.assessmentStatus.${assessmentStatus}` })}</span>
+              <AssessmentStatusTag status={assessmentStatus} formatMessage={formatMessage} />
               {updatedAt ? (
                 <>
                   <span className={style.dot} aria-hidden>

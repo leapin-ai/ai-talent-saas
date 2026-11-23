@@ -166,6 +166,18 @@ module.exports = fp(async (fastify, options) => {
         nextData.verdict = normalizePositionVerdict(nextData.verdict);
       }
     }
+    // draft 423 评估失败：补充岗位信息保存后回到待启动，并清掉失败中的就绪度流程
+    if (position.assessmentStatus === 'error') {
+      nextData.assessmentStatus = 'pending';
+      const readiness = fastify[options.name].services.readiness;
+      if (typeof readiness?.cancelByPosition === 'function') {
+        try {
+          await readiness.cancelByPosition({ tenantId }, { positionId: String(position.id) });
+        } catch (e) {
+          fastify.log.warn({ err: e, positionId: position.id }, 'clear failed readiness after position save');
+        }
+      }
+    }
     await position.update(nextData);
     return position;
   };

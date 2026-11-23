@@ -30,7 +30,10 @@ const enUS = {
   'enumLoader.taskTypeAssessmentProfileReview': 'Profile Generate Review',
   'enumLoader.taskTypePositionAiAnalysis': 'AI Role Analysis',
   'enumLoader.taskTypePositionAnalysisReview': 'Complete Role Analysis',
-  'enumLoader.taskTypeInviteVideoAsr': 'Aliyun ASR'
+  'enumLoader.taskTypeInviteVideoAsr': 'Aliyun ASR',
+  'enumLoader.taskTypeReadiness': 'Readiness Flow',
+  'enumLoader.taskTypeReadinessPublish': 'Readiness Questionnaire Publish',
+  'enumLoader.taskTypeReadinessRoleApply': 'Readiness Role Writeback'
 };
 
 export default enUS;

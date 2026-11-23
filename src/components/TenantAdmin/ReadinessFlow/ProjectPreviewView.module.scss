@@ -1,0 +1,29 @@
+// 与弹窗标题文字左边对齐（modal-title 左内边距 24px）
+$gutter: 24px;
+
+.body {
+  height: 68vh;
+}
+
+// 弹窗 noPadding 后，ProjectPreview 顶部的分段标签与问卷说明贴边，这里补回头部边距（问卷背景仍铺满弹窗）
+.preview {
+  > :global(.ant-segmented) {
+    margin: 12px $gutter 0;
+  }
+
+  // 问卷 / 题目区域的第一块内容（问卷填写时机说明）；排除分段标签，避免命中其内部 .ant-segmented-group
+  > div:not(:global(.ant-segmented)) > div:first-child {
+    padding: 0 $gutter;
+  }
+
+  // 「面试题目」页：底部操作栏（翻页 / 开始）不要贴着弹窗下沿
+  > [class*='_questions__'] {
+    box-sizing: border-box;
+    padding-bottom: $gutter;
+  }
+
+  // 只有一个标签页时没有分段标签，说明文字顶部也要留白
+  > div:first-child:not(:global(.ant-segmented)) > div:first-child {
+    padding-top: 12px;
+  }
+}

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Flex, Spin } from 'antd';
+import { ConfigProvider, Flex, Spin } from 'antd';
+import enUS from 'antd/locale/en_US';
+import zhCN from 'antd/locale/zh_CN';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useIntl } from '@kne/react-intl';
@@ -13,17 +15,70 @@ import { resolveTenantThemeColor } from '../commons/themeColor';
 
 const BACKGROUND = 'linear-gradient(180deg, #E8DCDF, #E1D1E3, #DED7EF, #D5E0F1)';
 
+const normalizeLocale = language => (language === 'en-US' ? 'en-US' : 'zh-CN');
+
+/** 锁定语言后的壳层：文案走 SetGlobal 的 locale，不提供语言切换 */
+const CollectShell = withLocale(({ invite, children, background, SetGlobal }) => {
+  const { formatMessage } = useIntl();
+  const navigate = useNavigate();
+  const code = invite?.code || '';
+  const assessmentPath = useMemo(() => {
+    if (!code) {
+      return '/collect-profile';
+    }
+    return `/collect-profile?code=${encodeURIComponent(code)}`;
+  }, [code]);
+
+  const tenant = invite?.tenant || {};
+  const logoId = tenant.logo || null;
+  const themeColor = resolveTenantThemeColor({ tenant });
+
+  return (
+    <TenantThemeProvider themeColor={themeColor} SetGlobal={SetGlobal}>
+      <SystemLayout
+        background={background}
+        logo={logoId ? { id: logoId } : undefined}
+        userInfo={{
+          name: invite?.name || '',
+          email: invite?.email || '',
+          phone: invite?.phone || '',
+          description: [tenant.companyName || tenant.name, invite?.position?.name].filter(Boolean).join(' · ')
+        }}
+        menu={{
+          base: '',
+          // path 带 query 时无法按 pathname 匹配，固定选中 Assessment
+          activeKey: 'assessment',
+          items: [
+            {
+              key: 'assessment',
+              path: '/collect-profile',
+              label: formatMessage({ id: 'app.collectAssessment' }),
+              toolbar: true,
+              icon: 'icon-assignment',
+              onClick: () => {
+                navigate(assessmentPath);
+              }
+            }
+          ]
+        }}
+      >
+        {children}
+      </SystemLayout>
+    </TenantThemeProvider>
+  );
+});
+
 /**
- * 免登录采集壳：SystemLayout + 租户 logo/主题色 + 被邀请人信息 + 语言切换 + Assessment 菜单。
+ * 免登录采集壳：SystemLayout + 租户 logo/主题色 + 被邀请人信息。
+ * 页面语言取自邀请记录，锁定后不提供切换。
  */
 const PublicSystemLayout = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-admin:Account@Language', 'components-core:Global@SetGlobal']
+  modules: ['components-core:Global@usePreset', 'components-core:Global@SetGlobal']
 })(
   withLocale(({ remoteModules, children, background = BACKGROUND }) => {
-    const [usePreset, Language, SetGlobal] = remoteModules;
+    const [usePreset, SetGlobal] = remoteModules;
     const { apis, ajax } = usePreset();
     const { formatMessage } = useIntl();
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const code = searchParams.get('code') || '';
     const [invite, setInvite] = useState(null);
@@ -69,13 +124,6 @@ const PublicSystemLayout = createWithRemoteLoader({
       };
     }, [ajax, apis, code, formatMessage]);
 
-    const assessmentPath = useMemo(() => {
-      if (!code) {
-        return '/collect-profile';
-      }
-      return `/collect-profile?code=${encodeURIComponent(code)}`;
-    }, [code]);
-
     if (loading) {
       return (
         <Flex align="center" justify="center" style={{ minHeight: '100vh', background }}>
@@ -92,47 +140,16 @@ const PublicSystemLayout = createWithRemoteLoader({
       );
     }
 
-    const tenant = invite?.tenant || {};
-    const logoId = tenant.logo || null;
-    const themeColor = resolveTenantThemeColor({ tenant });
+    const locale = normalizeLocale(invite?.language);
 
     return (
-      <TenantThemeProvider themeColor={themeColor} SetGlobal={SetGlobal}>
-        <SystemLayout
-          background={background}
-          logo={logoId ? { id: logoId } : undefined}
-          userInfo={{
-            name: invite?.name || '',
-            email: invite?.email || '',
-            phone: invite?.phone || '',
-            description: [tenant.companyName || tenant.name, invite?.position?.name].filter(Boolean).join(' · '),
-            extra: (
-              <div style={{ paddingTop: 8 }}>
-                <Language colorful={false} />
-              </div>
-            )
-          }}
-          menu={{
-            base: '',
-            // path 带 query 时无法按 pathname 匹配，固定选中 Assessment
-            activeKey: 'assessment',
-            items: [
-              {
-                key: 'assessment',
-                path: '/collect-profile',
-                label: formatMessage({ id: 'app.collectAssessment' }),
-                toolbar: true,
-                icon: 'icon-assignment',
-                onClick: () => {
-                  navigate(assessmentPath);
-                }
-              }
-            ]
-          }}
-        >
-          {children}
-        </SystemLayout>
-      </TenantThemeProvider>
+      <SetGlobal globalKey="locale" value={locale}>
+        <ConfigProvider locale={locale === 'en-US' ? enUS : zhCN}>
+          <CollectShell invite={invite} background={background} SetGlobal={SetGlobal}>
+            {children}
+          </CollectShell>
+        </ConfigProvider>
+      </SetGlobal>
     );
   })
 );

@@ -30,7 +30,10 @@ const zhCN = {
   'enumLoader.taskTypeAssessmentProfileReview': '完善档案生成审核',
   'enumLoader.taskTypePositionAiAnalysis': 'AI岗位分析',
   'enumLoader.taskTypePositionAnalysisReview': '完善岗位分析',
-  'enumLoader.taskTypeInviteVideoAsr': '阿里ASR转写'
+  'enumLoader.taskTypeInviteVideoAsr': '阿里ASR转写',
+  'enumLoader.taskTypeReadiness': '就绪度流程',
+  'enumLoader.taskTypeReadinessPublish': '就绪度问卷发布',
+  'enumLoader.taskTypeReadinessRoleApply': '就绪度岗位写回'
 };
 
 export default zhCN;

@@ -101,24 +101,6 @@ module.exports = {
           ]
         },
         {
-          name: '完善档案申请',
-          code: 'complete-profile-application',
-          permissions: [
-            {
-              name: '查看',
-              code: 'view'
-            },
-            {
-              name: '审核',
-              code: 'review'
-            },
-            {
-              name: '编辑',
-              code: 'edit'
-            }
-          ]
-        },
-        {
           name: '应用中心',
           code: 'app-center',
           permissions: [
@@ -129,7 +111,7 @@ module.exports = {
           ]
         },
         {
-          name: '人才盘点',
+          name: 'AI面试',
           code: 'talent-review',
           permissions: [
             {

@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Modal, message } from 'antd';
 import withLocale from './withLocale';
 import getColumns from './getColumns';
@@ -9,11 +10,12 @@ import InsightBanner from './InsightBanner';
 import WorkforceKpi from './WorkforceKpi';
 import WorkforceAiMix from './WorkforceAiMix';
 import { createPositionListCardsRender } from './PositionListCards';
-import InviteAssessment from './Detail/AnalyzeTalent/InviteAssessment';
+import useStartReadiness from './useStartReadiness';
 import { TENANT_ADMIN_PERMISSIONS } from '@components/TenantAdmin/constants';
 import useShareReport from '@components/ShareReport/useShareReport';
 import { FormatMessage as ShareReportMessage } from '@components/ShareReport/withLocale';
 import useTablePaginationSearchParams from '../../commons/useTablePaginationSearchParams';
+import style from './style.module.scss';
 
 const Position = createWithRemoteLoader({
   modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter', 'components-core:Permissions@usePermissionsPass', 'components-core:TablePage@Table', 'components-core:FormInfo@useFormModal']
@@ -23,10 +25,14 @@ const Position = createWithRemoteLoader({
     const { SuperSelectFilterItem } = Filter.fields;
     const { formatMessage } = useIntl();
     const paginationSearchParams = useTablePaginationSearchParams();
-    const { ajax } = usePreset();
+    const { ajax, apis: presetApis } = usePreset();
+    const formModal = useFormModal();
+    const location = useLocation();
+    const navigate = useNavigate();
     const [filterValue, setFilterValue] = useState([]);
     const [activeKpi, setActiveKpi] = useState(null);
     const [listKey, setListKey] = useState(0);
+    const autoStartHandled = useRef(false);
 
     const mapFilterValue = useCallback(
       (value, getFilterValue) => ({
@@ -49,6 +55,34 @@ const Position = createWithRemoteLoader({
     const [pageList, setPageList] = useState([]);
     const { selectedRows, getRowSelection } = Table.useSelectedRow({ rowKey: 'id' });
     const openShareReport = useShareReport({ kind: 'position', useFormModal, usePreset, getName: item => item.name || '' });
+    const openStartReadiness = useStartReadiness({
+      formModal,
+      ajax,
+      apis,
+      orgListApi: apis.orgList || presetApis?.tenant?.orgList,
+      userListApi: apis.userList || presetApis?.talentSaas?.tenant?.userList
+    });
+
+    // 添加岗位成功后带 state 回列表，自动打开启动表单
+    useEffect(() => {
+      const startId = location.state?.startReadinessId;
+      if (!startId || autoStartHandled.current || !canInvite) {
+        return;
+      }
+      const fromState = location.state?.startReadinessPosition;
+      const fromList = pageList.find(item => String(item.id) === String(startId));
+      const position = fromState?.id ? fromState : fromList;
+      if (!position) {
+        return;
+      }
+      autoStartHandled.current = true;
+      openStartReadiness({
+        position,
+        mode: 'start',
+        onSuccess: () => setListKey(key => key + 1)
+      });
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: {} });
+    }, [canInvite, location.pathname, location.search, location.state, navigate, openStartReadiness, pageList]);
 
     const handleSetStatus = (id, status, onSuccess) => {
       const isPublish = status === 'published';
@@ -103,26 +137,70 @@ const Position = createWithRemoteLoader({
           });
         }
       }
-      // 邀请评估员工 / 经理共用 positionInvite，可同时控制
+      // 启动 / 岗位重建：共用 positionInvite；表单同 Admin 新建流程（锁定当前岗位）
       if (canInvite) {
-        actions.push({
-          ...actionProps,
-          data,
-          onSuccess,
-          baseUrl,
-          inviteType: 'employee',
-          buttonComponent: InviteAssessment,
-          children: formatMessage({ id: 'position.talentInviteEmployeesAction' })
-        });
-        actions.push({
-          ...actionProps,
-          data,
-          onSuccess,
-          baseUrl,
-          inviteType: 'manager',
-          buttonComponent: InviteAssessment,
-          children: formatMessage({ id: 'position.talentInviteManagersAction' })
-        });
+        const assessmentStatus = data.assessmentStatus || 'pending';
+        if (assessmentStatus === 'pending') {
+          actions.push({
+            ...actionProps,
+            data,
+            onSuccess,
+            children: formatMessage({ id: 'position.readinessStart' }),
+            onClick: () =>
+              openStartReadiness({
+                position: data,
+                mode: 'start',
+                onSuccess: () => {
+                  onSuccess?.();
+                  setListKey(key => key + 1);
+                }
+              })
+          });
+        }
+        if (assessmentStatus === 'interviews_in_progress') {
+          actions.push({
+            ...actionProps,
+            data,
+            onSuccess,
+            children: formatMessage({ id: 'position.readinessCancel' }),
+            onClick: () => {
+              Modal.confirm({
+                title: formatMessage({ id: 'position.readinessCancelConfirm' }, { name: data.name || '' }),
+                onOk: async () => {
+                  const { data: res } = await ajax(
+                    Object.assign({}, apis.cancelReadiness, {
+                      data: { positionId: String(data.id) }
+                    })
+                  );
+                  if (res.code !== 0) {
+                    return Promise.reject(new Error(res.msg || 'cancel failed'));
+                  }
+                  message.success(formatMessage({ id: 'position.readinessCancelSuccess' }));
+                  onSuccess?.();
+                  setListKey(key => key + 1);
+                }
+              });
+            }
+          });
+        }
+        // 已完成 / 失败：岗位重建（失败流程已 canceled，可直接新建）
+        if (assessmentStatus === 'completed' || assessmentStatus === 'error') {
+          actions.push({
+            ...actionProps,
+            data,
+            onSuccess,
+            children: formatMessage({ id: 'position.readinessRebuild' }),
+            onClick: () =>
+              openStartReadiness({
+                position: data,
+                mode: 'rebuild',
+                onSuccess: () => {
+                  onSuccess?.();
+                  setListKey(key => key + 1);
+                }
+              })
+          });
+        }
       }
       // 删除必须在操作列最后
       if (canRemove) {
@@ -202,6 +280,7 @@ const Position = createWithRemoteLoader({
           tableProps: {
             renderCard,
             renderMobile,
+            rowClassName: record => (record?.assessmentStatus === 'error' ? style.assessmentErrorRow : undefined),
             ...(canShare
               ? {
                   rowKey: 'id',

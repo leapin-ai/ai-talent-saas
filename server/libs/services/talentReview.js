@@ -412,16 +412,7 @@ module.exports = fp(async (fastify, options) => {
   const interviewReport = async ({ tenantId, id }) => {
     const credentials = await services.talentReviewSetting.getCredentials(tenantId);
     const interview = await openApiRequest(credentials, 'project/interview-detail', { query: { id } });
-    let remote = null;
-    if (credentials.origin) {
-      try {
-        const response = await fetch(`${credentials.origin.replace(/\/+$/, '')}/remote-module-config.json`);
-        const config = response.ok ? await response.json() : null;
-        remote = config?.url && config?.version ? { url: config.url, version: config.version } : null;
-      } catch (e) {
-        fastify.log.warn(`remote-module-config failed: ${e.message}`);
-      }
-    }
+    const remote = await services.talentReviewSetting.getRemote({ origin: credentials.origin });
     return { interview, remote, apiHost: getApiBase(credentials.apiUrl) };
   };
 

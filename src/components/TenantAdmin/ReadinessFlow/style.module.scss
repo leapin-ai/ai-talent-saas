@@ -1,0 +1,820 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+// 所有分区共用同一套左右内边距，内容沿同一条左边线对齐
+$gutter: 24px;
+$node: 22px;
+$stage-pad: 10px;
+// 顶栏 ant-layout-header 高度；sticky 避开导航条，并据此限制最大高度
+$layout-header-height: 48px;
+$sticky-nav-gap: 16px;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-layout);
+}
+
+.section {
+  // 不用 overflow:hidden，否则内部 sticky 导航/标题无法相对页面滚动吸顶
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px $gutter 0;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ant-color-text);
+}
+
+.sectionSubtitle {
+  font-size: 12px;
+  color: var(--ant-color-text-tertiary);
+}
+
+.sectionExtra {
+  flex: none;
+}
+
+.sectionBody {
+  padding: 16px $gutter 20px;
+
+  .sectionHeader + & {
+    padding-top: 12px;
+  }
+}
+
+// 表格通栏：去掉表格自身的外框，首尾列对齐分区标题的左右边线
+.sectionBodyFlush {
+  padding: 4px 0 8px;
+
+  .sectionHeader + & {
+    padding-top: 12px;
+  }
+
+  :global(.info-page-table) {
+    border: 0;
+    border-radius: 0;
+  }
+
+  :global(.ant-table-thead > tr > th:first-child),
+  :global(.ant-table-tbody > tr:not(.ant-table-expanded-row) > td:first-child) {
+    padding-left: $gutter;
+  }
+
+  :global(.ant-table-thead > tr > th:last-child),
+  :global(.ant-table-tbody > tr:not(.ant-table-expanded-row) > td:last-child) {
+    padding-right: $gutter;
+  }
+
+  :global(.ant-table-tbody > tr.ant-table-expanded-row > td) {
+    padding-top: 4px;
+    padding-bottom: 16px;
+    background: var(--ant-color-bg-container);
+  }
+
+  :global(.ant-table-tbody > tr:last-child > td) {
+    border-bottom: 0;
+  }
+}
+
+// 概要区：岗位名与操作
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.headline {
+  min-width: 0;
+}
+
+.title {
+  &:global(.ant-typography) {
+    margin: 0;
+    font-size: 18px;
+    line-height: 26px;
+  }
+}
+
+.meta {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--ant-color-text-tertiary);
+}
+
+// 关键指标一行排开，右侧是当前待办操作
+.summaryBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 32px;
+  margin-top: 14px;
+  padding: 10px 16px;
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-layout);
+}
+
+.summaryItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.summaryLabel {
+  font-size: 12px;
+  color: var(--ant-color-text-tertiary);
+}
+
+.summaryValue {
+  font-weight: 600;
+  color: var(--ant-color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryTotal {
+  font-weight: 400;
+  color: var(--ant-color-text-tertiary);
+}
+
+.summaryHint {
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+}
+
+.summaryProgress {
+  &:global(.ant-progress) {
+    width: 120px;
+    margin: 0;
+  }
+}
+
+.summaryActions {
+  margin-left: auto;
+}
+
+// 下一步：概要区底部的重点提示，左侧色条之外全部保持中性
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 8px 16px;
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-layout);
+}
+
+.noticeIcon {
+  flex: none;
+  font-size: 14px;
+}
+
+.notice-success {
+  background: var(--ant-color-success-bg);
+
+  .noticeIcon {
+    color: var(--ant-color-success);
+  }
+}
+
+.notice-error {
+  background: var(--ant-color-error-bg);
+
+  .noticeIcon {
+    color: var(--ant-color-error);
+  }
+}
+
+.notice-warning {
+  background: var(--ant-color-warning-bg);
+
+  .noticeIcon {
+    color: var(--ant-color-warning);
+  }
+}
+
+.notice-info {
+  background: var(--ant-color-primary-bg);
+
+  .noticeIcon {
+    color: var(--ant-color-primary);
+  }
+}
+
+.noticeText {
+  flex: 1;
+  min-width: 0;
+}
+
+.noticeMessage {
+  font-weight: 500;
+  color: var(--ant-color-text);
+}
+
+.noticeDescription {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+}
+
+// 左右分栏：左侧浅灰导航列表，右侧白底明细
+.split {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+// 分区标题 + 左侧导航同一块吸顶（避开顶栏；超高时列表内滚动）
+.navSticky {
+  position: sticky;
+  top: $layout-header-height;
+  z-index: 2;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - #{$layout-header-height} - #{$sticky-nav-gap});
+  overflow: hidden;
+  background: var(--ant-color-bg-container);
+}
+
+.navStickyHead {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 0 12px;
+  background: var(--ant-color-bg-container);
+}
+
+.navStickyTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ant-color-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navStickyExtra {
+  flex: none;
+}
+
+.nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-layout);
+  list-style: none;
+}
+
+.navItem {
+  position: relative;
+}
+
+// 里程碑之间用连线串起来
+.navLinked .navItem:not(:last-child)::after {
+  position: absolute;
+  top: 12px + $node + 2px;
+  bottom: -(12px - 2px);
+  left: 14px + $node * 0.5;
+  width: 1px;
+  background: var(--ant-color-border);
+  content: '';
+}
+
+.navLinked .nav-done:not(:last-child)::after,
+.navLinked .nav-skipped:not(:last-child)::after {
+  background: var(--ant-color-primary-border);
+}
+
+.navButton {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--ant-border-radius);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease-out,
+    box-shadow 0.2s ease-out;
+
+  &:hover {
+    background: var(--ant-color-fill-tertiary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ant-color-primary-border);
+    outline-offset: -2px;
+  }
+}
+
+.navSelected,
+.navSelected:hover {
+  background: var(--ant-color-bg-container);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.navText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 1px;
+  min-width: 0;
+}
+
+.navTitle {
+  overflow: hidden;
+  color: var(--ant-color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navSelected .navTitle {
+  font-weight: 600;
+}
+
+.nav-todo .navTitle {
+  color: var(--ant-color-text-tertiary);
+}
+
+.navNote {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--ant-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-failed .navNote {
+  color: var(--ant-color-error);
+}
+
+.nav-running .navNote,
+.nav-current .navNote {
+  color: var(--ant-color-primary);
+}
+
+.detail {
+  min-width: 0;
+  padding-top: 10px;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  scroll-margin-top: $layout-header-height;
+}
+
+.detailHeadline {
+  min-width: 0;
+}
+
+.detailHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  scroll-margin-top: $layout-header-height;
+}
+
+.detail > .detailHeading {
+  margin-bottom: 8px;
+}
+
+.detailTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ant-color-text);
+}
+
+.detailMeta {
+  font-size: 12px;
+  color: var(--ant-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.timelineGroup {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 0 2px ($stage-pad + $node + 12px);
+
+  &::after {
+    position: absolute;
+    top: 0;
+    bottom: -10px;
+    left: $stage-pad + $node * 0.5;
+    width: 1px;
+    background: var(--ant-color-border);
+    content: '';
+  }
+}
+
+.groupTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ant-color-text-secondary);
+}
+
+// 阶段时间线：节点 + 连线，已走过的连线用主色浅色
+
+.timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 10px $stage-pad;
+  border-radius: var(--ant-border-radius-lg);
+  transition: background-color 0.2s ease-out;
+
+  &:hover {
+    background: var(--ant-color-fill-quaternary);
+  }
+
+  &:not(:last-child)::after {
+    position: absolute;
+    top: 10px + $node + 2px;
+    bottom: -(10px - 2px);
+    left: $stage-pad + $node * 0.5;
+    width: 1px;
+    background: var(--ant-color-border);
+    content: '';
+  }
+}
+
+.stage-done::after,
+.stage-skipped::after,
+.stage-done + .timelineGroup::after,
+.stage-skipped + .timelineGroup::after {
+  background: var(--ant-color-primary-border) !important;
+}
+
+.node {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: $node;
+  height: $node;
+  margin-top: 0;
+  border-radius: 50%;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.node-done,
+.node-running {
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary);
+}
+
+.node-failed {
+  background: var(--ant-color-error);
+  color: var(--ant-color-white);
+}
+
+.node-current {
+  border: 1.5px solid var(--ant-color-primary);
+  background: var(--ant-color-bg-container);
+}
+
+.nodeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ant-color-primary);
+}
+
+.node-todo {
+  border: 1px solid var(--ant-color-border);
+  background: var(--ant-color-bg-container);
+  color: var(--ant-color-text-tertiary);
+}
+
+.node-skipped {
+  background: var(--ant-color-fill-secondary);
+  color: var(--ant-color-text-tertiary);
+}
+
+.stageBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.stageRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 22px;
+}
+
+.stageHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.stageLabel {
+  color: var(--ant-color-text);
+}
+
+.stage-todo,
+.stage-skipped {
+  .stageLabel {
+    color: var(--ant-color-text-tertiary);
+  }
+}
+
+.stage-failed,
+.stage-running,
+.stage-current {
+  .stageLabel {
+    font-weight: 600;
+  }
+}
+
+.stageTag {
+  &:global(.ant-tag) {
+    margin: 0;
+  }
+}
+
+.stageTime {
+  font-size: 12px;
+  color: var(--ant-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.stageStatus {
+  font-size: 12px;
+  color: var(--ant-color-text-tertiary);
+}
+
+.stage-failed .stageStatus {
+  color: var(--ant-color-error);
+}
+
+.stage-running .stageStatus {
+  color: var(--ant-color-primary);
+}
+
+.stage-current .stageStatus {
+  color: var(--ant-color-warning);
+}
+
+.stageFacts {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ant-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-todo .stageFacts,
+.stage-skipped .stageFacts {
+  color: var(--ant-color-text-tertiary);
+}
+
+.stageError {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-error-bg);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ant-color-error);
+  word-break: break-word;
+}
+
+.actionsOnHover {
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+
+  .stage:hover &,
+  &:focus-within {
+    opacity: 1;
+  }
+}
+
+// 参与人总览（等待参与人完成）
+.overview {
+  margin-top: 16px;
+  padding: 12px 16px 8px;
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-layout);
+}
+
+.overviewHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+
+.overviewCounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.overviewCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+
+  b {
+    font-size: 14px;
+    color: var(--ant-color-text);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.overviewDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ant-color-text-quaternary);
+}
+
+.overview-done .overviewDot {
+  background: var(--ant-color-success);
+}
+
+.overview-todo .overviewDot {
+  background: var(--ant-color-warning);
+}
+
+.overview-active .overviewDot {
+  background: var(--ant-color-primary);
+}
+
+.overview-failed .overviewDot {
+  background: var(--ant-color-error);
+}
+
+.overviewRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.3fr) minmax(140px, 1fr) 160px 90px minmax(120px, auto);
+  align-items: center;
+  gap: 16px;
+  padding: 10px 8px;
+  border-radius: var(--ant-border-radius);
+
+  &:not(.overviewHeader) {
+    background: var(--ant-color-bg-container);
+  }
+
+  & + & {
+    margin-top: 4px;
+  }
+}
+
+.overviewHeader {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  font-size: 12px;
+  color: var(--ant-color-text-tertiary);
+}
+
+.overviewPerson {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.overviewStage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  color: var(--ant-color-text);
+}
+
+.overviewProgress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  :global(.ant-progress) {
+    flex: 1;
+    margin: 0;
+  }
+}
+
+.overviewActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.overviewInviteRow {
+  grid-template-columns: minmax(180px, 1.4fr) minmax(100px, 0.8fr) 160px minmax(120px, auto);
+}
+
+@include resp.mobile-container {
+  .sectionHeader {
+    padding: 0 16px;
+  }
+
+  .sectionBody {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .page {
+    padding: 8px;
+  }
+
+  .summaryActions {
+    margin-left: 0;
+  }
+
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .navSticky {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .nav {
+    overflow: visible;
+  }
+
+  .detailHeader {
+    flex-direction: column;
+  }
+
+  // 触屏没有悬停，操作常驻
+  .actionsOnHover {
+    opacity: 1;
+  }
+
+  .overviewHeader {
+    display: none;
+  }
+
+  .overviewRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+  }
+}
