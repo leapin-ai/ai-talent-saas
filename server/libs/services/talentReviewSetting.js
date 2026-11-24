@@ -60,7 +60,7 @@ module.exports = fp(async (fastify, options) => {
     const nextAppId = trim(appId);
     const nextSecret = trim(secretKey) || readSecret(settingRow);
     if (!nextUrl || !nextAppId || !nextSecret) {
-      throw new Error('人才盘点设置字段不完整');
+      throw new Error('AI面试设置字段不完整');
     }
     // 保存前用新凭据调一次 open-api，凭据无效时直接报错
     const client = await fetchClient({ apiUrl: nextUrl, appId: nextAppId, secretKey: nextSecret });
@@ -92,9 +92,37 @@ module.exports = fp(async (fastify, options) => {
     const raw = settingRow.options?.talentReview || {};
     const secretKey = readSecret(settingRow);
     if (!(raw.url && raw.appId && secretKey)) {
-      throw new Error('请先在平台管理中完成人才盘点设置');
+      throw new Error('请先在平台管理中完成 AI 面试设置');
     }
     return { apiUrl: raw.url, appId: raw.appId, secretKey, origin: raw.origin || '' };
+  };
+
+  const REMOTE_CACHE_TTL = 5 * 60 * 1000;
+  const remoteCache = new Map();
+
+  /** flowup 远程组件地址：remote-module-config.json 在 AI 面试前端站点根（origin）下，成功结果缓存 5 分钟 */
+  const getRemote = async ({ origin }) => {
+    const root = trim(origin).replace(/\/+$/, '');
+    if (!root) {
+      return null;
+    }
+    const cached = remoteCache.get(root);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.remote;
+    }
+    try {
+      const response = await fetch(`${root}/remote-module-config.json`);
+      const config = response.ok ? await response.json() : null;
+      // 本地开发的 remote-module-config.json 只有 version、没有 url（远程组件就在该站点根下），此时用站点根作为 url
+      const remote = config?.version ? { url: config.url || root, version: config.version } : null;
+      if (remote) {
+        remoteCache.set(root, { remote, expiresAt: Date.now() + REMOTE_CACHE_TTL });
+      }
+      return remote;
+    } catch (e) {
+      fastify.log.warn(`remote-module-config failed: ${e.message}`);
+      return null;
+    }
   };
 
   const getClient = async ({ tenantId }) => {
@@ -121,6 +149,7 @@ module.exports = fp(async (fastify, options) => {
       cancel,
       getClient,
       getCredentials,
+      getRemote,
       status
     }
   });

@@ -1,10 +1,8 @@
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { Alert, Button, Flex, message, Spin } from 'antd';
 import { Page } from '@kne/system-layout';
-import { ButtonFooter } from '@kne/button-group';
-import '@kne/button-group/dist/index.css';
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { ResultCard } from '@kne/react-box';
 import '@kne/react-box/dist/index.css';
 import withLocale from '../withLocale';
@@ -13,17 +11,7 @@ import Stepper from './Stepper';
 import UploadStep from './UploadStep';
 import ProjectsStep from './ProjectsStep';
 import InterviewStep from './InterviewStep';
-import {
-  hasPrefilledReviewData,
-  hasSavedProfileData,
-  hasSavedProjectsData,
-  joinLinkedinUrl,
-  mapEmployeeToCompleteProfileData,
-  mergeCompleteProfilePrefill,
-  normalizeReviewProfileData,
-  splitAssessmentProfileData,
-  stripLinkedinPrefix
-} from './profileDataUtils';
+import { hasPrefilledReviewData, hasSavedProfileData, hasSavedProjectsData, joinLinkedinUrl, normalizeReviewProfileData, splitAssessmentProfileData, stripLinkedinPrefix } from './profileDataUtils';
 import style from './style.module.scss';
 
 const stripInviteContact = data => {
@@ -40,7 +28,7 @@ const stripInviteContact = data => {
 const CompleteProfile = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:FileList@DragAreaOuter', 'components-core:FileList@UploadTips', 'components-core:FileList@UploadButton', 'components-core:File@List']
 })(
-  withLocale(({ remoteModules, baseUrl = '/tenant', mode = 'assessment', code: codeProp }) => {
+  withLocale(({ remoteModules, code: codeProp }) => {
     const { formatMessage } = useIntl();
     if (!Array.isArray(remoteModules) || remoteModules.length < 6) {
       return null;
@@ -50,10 +38,8 @@ const CompleteProfile = createWithRemoteLoader({
       return null;
     }
     const { apis, ajax } = usePreset();
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const code = codeProp || searchParams.get('code') || '';
-    const isCollect = mode === 'collect';
     const [current, setCurrent] = useState(() => (searchParams.get('step') === 'interview' ? 2 : 0));
     const [uploadState, setUploadState] = useState({ resumes: [], parsed: null, linkedin: '' });
     const [reviewData, setReviewData] = useState(null);
@@ -66,15 +52,13 @@ const CompleteProfile = createWithRemoteLoader({
     const [initialLoading, setInitialLoading] = useState(true);
     const [inviteMeta, setInviteMeta] = useState(null);
     const [bootError, setBootError] = useState('');
-    const prefillAppliedRef = useRef(false);
 
     const collectApis = useMemo(() => {
-      if (!isCollect || !code) {
+      if (!code) {
         return null;
       }
       const publicApis = apis.talentSaas.public.talentCollectInvite;
       return {
-        skipPreviousInterview: true,
         detail: async () => {
           const { data } = await ajax(
             Object.assign({}, publicApis.detail, {
@@ -123,7 +107,7 @@ const CompleteProfile = createWithRemoteLoader({
           return data.data;
         }
       };
-    }, [ajax, apis, formatMessage, isCollect, code]);
+    }, [ajax, apis, formatMessage, code]);
 
     const handleInterviewComplete = useCallback(
       event => {
@@ -133,137 +117,73 @@ const CompleteProfile = createWithRemoteLoader({
           setInterviewLocked(true);
           return;
         }
-        if (isCollect) {
-          setInterviewFinished(true);
-          setInterviewLocked(true);
-          message.success(formatMessage({ id: 'tenantAdmin.completeFinishTip' }));
-          return;
-        }
-        if (event?.directFinish) {
-          message.success(formatMessage({ id: 'tenantAdmin.completeFinishTip' }));
-          navigate(baseUrl || '/tenant');
-          return;
-        }
         setInterviewFinished(true);
         setInterviewLocked(true);
+        message.success(formatMessage({ id: 'tenantAdmin.completeFinishTip' }));
       },
-      [baseUrl, formatMessage, isCollect, navigate]
+      [formatMessage]
     );
 
     useEffect(() => {
       let cancelled = false;
-      const isRestart = searchParams.get('restart') === '1';
-
       (async () => {
         try {
-          if (isCollect) {
-            if (!code) {
-              setBootError(formatMessage({ id: 'tenantAdmin.collectInviteInvalid' }));
-              return;
-            }
-            const detail = await collectApis.detail();
-            if (cancelled) {
-              return;
-            }
-            setInviteMeta(detail);
-            // 邀请已完成：刷新后仍隐藏「上一步」，留在完成页
-            if (detail?.status === 'done') {
-              setInterviewFinished(true);
-              setInterviewLocked(true);
-            }
-            if (detail?.inviteType === 'manager') {
-              setCurrent(0);
-              return;
-            }
-            const savedProfileData = detail?.profileData;
-            const inviteContact = {
-              name: detail?.name || '',
-              email: detail?.email || '',
-              phone: detail?.phone || ''
-            };
-            const assessmentMapped = savedProfileData && hasSavedProfileData(savedProfileData) ? splitAssessmentProfileData(savedProfileData) : null;
-            const reviewBase = Object.assign({}, assessmentMapped?.review || {}, inviteContact);
-            const projects = assessmentMapped?.projects || { projects: [] };
-            const savedResumes = Array.isArray(savedProfileData?.resumes) ? savedProfileData.resumes : [];
-            const savedResumeParsed = savedProfileData?.resumeParsed && typeof savedProfileData.resumeParsed === 'object' ? savedProfileData.resumeParsed : null;
-            const hasPrefill = hasPrefilledReviewData(reviewBase) || hasSavedProjectsData(projects?.projects) || savedResumes.length > 0 || !!savedResumeParsed;
-
-            setUploadState(prev => {
-              if (Array.isArray(prev.resumes) && prev.resumes.length > 0) {
-                return {
-                  ...prev,
-                  linkedin: stripLinkedinPrefix(reviewBase.linkedin || '')
-                };
-              }
-              return {
-                resumes: savedResumes,
-                parsed: savedResumeParsed || reviewBase,
-                linkedin: stripLinkedinPrefix(reviewBase.linkedin || '')
-              };
-            });
-            setReviewData(prev => prev || normalizeReviewProfileData(reviewBase));
-            setProjectsData(prev => prev || projects);
-            if (hasPrefill) {
-              setPrefillLoaded(true);
-            }
-            if (detail?.status === 'interviewing' || detail?.status === 'done' || detail?.shorten) {
-              setCurrent(2);
-            }
+          if (!code) {
+            setBootError(formatMessage({ id: 'tenantAdmin.collectInviteInvalid' }));
             return;
           }
-
-          const [assessmentResult, employeeResult] = await Promise.all([ajax(Object.assign({}, apis.talentSaas.tenant.assessment.detail)), ajax(Object.assign({}, apis.talentSaas.tenant.employee.myDetail))]);
+          const detail = await collectApis.detail();
           if (cancelled) {
             return;
           }
-
-          const assessmentRes = assessmentResult?.data;
-          const employeeRes = employeeResult?.data;
-          const employeeMapped = employeeRes?.code === 0 && employeeRes.data ? mapEmployeeToCompleteProfileData(employeeRes.data) : null;
-          const savedProfileData = assessmentRes?.code === 0 ? assessmentRes.data?.profileData : null;
+          setInviteMeta(detail);
+          // 邀请已完成：刷新后仍隐藏「上一步」，留在完成页
+          if (detail?.status === 'done') {
+            setInterviewFinished(true);
+            setInterviewLocked(true);
+          }
+          if (detail?.inviteType === 'manager') {
+            setCurrent(0);
+            return;
+          }
+          const savedProfileData = detail?.profileData;
+          const inviteContact = {
+            name: detail?.name || '',
+            email: detail?.email || '',
+            phone: detail?.phone || ''
+          };
           const assessmentMapped = savedProfileData && hasSavedProfileData(savedProfileData) ? splitAssessmentProfileData(savedProfileData) : null;
-
-          const { review, projects } = mergeCompleteProfilePrefill(employeeMapped, assessmentMapped);
+          const reviewBase = Object.assign({}, assessmentMapped?.review || {}, inviteContact);
+          const projects = assessmentMapped?.projects || { projects: [] };
           const savedResumes = Array.isArray(savedProfileData?.resumes) ? savedProfileData.resumes : [];
           const savedResumeParsed = savedProfileData?.resumeParsed && typeof savedProfileData.resumeParsed === 'object' ? savedProfileData.resumeParsed : null;
-          const hasPrefill = hasPrefilledReviewData(review) || hasSavedProjectsData(projects?.projects) || savedResumes.length > 0 || !!savedResumeParsed;
-          if (!hasPrefill) {
-            return;
-          }
-          if (prefillAppliedRef.current && !isRestart) {
-            return;
-          }
-          prefillAppliedRef.current = true;
+          const hasPrefill = hasPrefilledReviewData(reviewBase) || hasSavedProjectsData(projects?.projects) || savedResumes.length > 0 || !!savedResumeParsed;
 
           setUploadState(prev => {
             if (Array.isArray(prev.resumes) && prev.resumes.length > 0) {
               return {
                 ...prev,
-                linkedin: stripLinkedinPrefix(review.linkedin || '')
+                linkedin: stripLinkedinPrefix(reviewBase.linkedin || '')
               };
             }
             return {
               resumes: savedResumes,
-              parsed: savedResumeParsed || review,
-              linkedin: stripLinkedinPrefix(review.linkedin || '')
+              parsed: savedResumeParsed || reviewBase,
+              linkedin: stripLinkedinPrefix(reviewBase.linkedin || '')
             };
           });
-          setReviewData(prev => prev || review);
+          setReviewData(prev => prev || normalizeReviewProfileData(reviewBase));
           setProjectsData(prev => prev || projects);
-          setPrefillLoaded(true);
-
-          if (isRestart) {
-            setInterviewFinished(false);
-            setCurrent(0);
-            message.success(formatMessage({ id: 'tenantAdmin.assessmentRestartPrefilled' }));
+          if (hasPrefill) {
+            setPrefillLoaded(true);
           }
+          if (detail?.status === 'interviewing' || detail?.status === 'done' || detail?.shorten) {
+            setCurrent(2);
+          }
+          return;
         } catch (e) {
           if (!cancelled) {
-            if (isCollect) {
-              setBootError(e.message || formatMessage({ id: 'tenantAdmin.collectInviteInvalid' }));
-            } else {
-              message.error(e.message || formatMessage({ id: 'tenantAdmin.assessmentRestartFailed' }));
-            }
+            setBootError(e.message || formatMessage({ id: 'tenantAdmin.collectInviteInvalid' }));
           }
         } finally {
           if (!cancelled) {
@@ -275,26 +195,20 @@ const CompleteProfile = createWithRemoteLoader({
       return () => {
         cancelled = true;
       };
-    }, [ajax, apis, collectApis, formatMessage, isCollect, searchParams, code]);
+    }, [collectApis, formatMessage, code]);
 
-    const employeeApis = useMemo(() => {
-      if (isCollect) {
-        return {
-          parseResume: Object.assign({}, apis.talentSaas.public.talentCollectInvite.parseResume, {
-            data: { code }
-          }),
-          positionList: null,
-          orgList: null
-        };
-      }
-      return Object.assign({}, apis.talentSaas.tenant.employee, {
-        positionList: apis.talentSaas.tenant.position.list,
-        parseResume: apis.talentSaas.tenant.resume.parseFileId,
-        orgList: apis.tenant.orgList
-      });
-    }, [apis, isCollect, code]);
+    const employeeApis = useMemo(
+      () => ({
+        parseResume: Object.assign({}, apis.talentSaas.public.talentCollectInvite.parseResume, {
+          data: { code }
+        }),
+        positionList: null,
+        orgList: null
+      }),
+      [apis, code]
+    );
 
-    const isManagerCollect = isCollect && inviteMeta?.inviteType === 'manager';
+    const isManagerCollect = inviteMeta?.inviteType === 'manager';
 
     const stepTitles = isManagerCollect
       ? [formatMessage({ id: 'tenantAdmin.completeStepInterview' })]
@@ -305,24 +219,18 @@ const CompleteProfile = createWithRemoteLoader({
       : [formatMessage({ id: 'tenantAdmin.completeTitleUpload' }), formatMessage({ id: 'tenantAdmin.completeTitleProjects' }), formatMessage({ id: 'tenantAdmin.completeTitleInterview' })][current];
 
     const goHome = () => {
-      if (isCollect) {
-        message.success(formatMessage({ id: 'tenantAdmin.collectInviteDone' }));
-        return;
-      }
-      navigate(`${baseUrl}/home`);
+      message.success(formatMessage({ id: 'tenantAdmin.collectInviteDone' }));
     };
 
     const mergeLinkedinIntoReview = () => {
       const linkedinUrl = joinLinkedinUrl(uploadState.linkedin);
       setReviewData(prev => {
         const base = prev ? Object.assign({}, prev) : Object.assign({}, uploadState.parsed || {});
-        if (isCollect) {
-          Object.assign(base, {
-            name: inviteMeta?.name || base.name || '',
-            email: inviteMeta?.email || base.email || '',
-            phone: inviteMeta?.phone || base.phone || ''
-          });
-        }
+        Object.assign(base, {
+          name: inviteMeta?.name || base.name || '',
+          email: inviteMeta?.email || base.email || '',
+          phone: inviteMeta?.phone || base.phone || ''
+        });
         base.linkedin = linkedinUrl;
         return normalizeReviewProfileData(base);
       });
@@ -377,58 +285,40 @@ const CompleteProfile = createWithRemoteLoader({
           {primary}
         </Flex>
       );
-      // 面试嵌入阶段不用 ButtonFooter（移动端会 fixed 全页底栏，与会话内提交条冲突）
+      // 面试嵌入阶段不用 Page.Footer（与会话内提交条叠两层）；仍用 fixed + spacer
       if (variant === 'interview-prestart') {
         return (
           <>
-            {/* fixed 脱流，占位避免内容被底栏挡住且无法继续滚动 */}
             <div className={style['footer-spacer']} aria-hidden="true" />
             <div className={`${style.footer} ${style['footer-interview-prestart']}`}>{actions}</div>
           </>
         );
       }
-      return (
-        <ButtonFooter className={style.footer} placement="bottomEnd">
-          {actions}
-        </ButtonFooter>
-      );
+      return <Page.Footer>{actions}</Page.Footer>;
     };
 
     const activeReviewData = normalizeReviewProfileData(
-      Object.assign(
-        {},
-        reviewData || uploadState.parsed || {},
-        isCollect
-          ? {
-              name: inviteMeta?.name || reviewData?.name || '',
-              email: inviteMeta?.email || reviewData?.email || '',
-              phone: inviteMeta?.phone || reviewData?.phone || ''
-            }
-          : {}
-      )
+      Object.assign({}, reviewData || uploadState.parsed || {}, {
+        name: inviteMeta?.name || reviewData?.name || '',
+        email: inviteMeta?.email || reviewData?.email || '',
+        phone: inviteMeta?.phone || reviewData?.phone || ''
+      })
     );
     const activeProjectsData = projectsData || splitAssessmentProfileData(uploadState.parsed || {}).projects;
     // CV 必填：仅有预填档案不够，必须实际上传简历文件
     const canContinueUpload = Array.isArray(uploadState.resumes) && uploadState.resumes.length > 0;
     // 设备检测(deviceTesting)期间仍可返回；设备检测完成进入面试间后再锁定
     const canLeaveInterviewStep = !interviewFinished && !interviewLocked;
-    const interviewProfilePayload = isCollect
-      ? stripInviteContact({
-          ...activeReviewData,
-          projects: activeProjectsData?.projects || [],
-          resumes: Array.isArray(uploadState.resumes) ? uploadState.resumes : [],
-          resumeParsed: uploadState.parsed && typeof uploadState.parsed === 'object' && (uploadState.parsed.fileId || Array.isArray(uploadState.parsed.educationList) || Array.isArray(uploadState.parsed.workList)) ? uploadState.parsed : null
-        })
-      : {
-          ...activeReviewData,
-          projects: activeProjectsData?.projects || [],
-          resumes: Array.isArray(uploadState.resumes) ? uploadState.resumes : [],
-          resumeParsed: uploadState.parsed && typeof uploadState.parsed === 'object' && (uploadState.parsed.fileId || Array.isArray(uploadState.parsed.educationList) || Array.isArray(uploadState.parsed.workList)) ? uploadState.parsed : null
-        };
+    const interviewProfilePayload = stripInviteContact({
+      ...activeReviewData,
+      projects: activeProjectsData?.projects || [],
+      resumes: Array.isArray(uploadState.resumes) ? uploadState.resumes : [],
+      resumeParsed: uploadState.parsed && typeof uploadState.parsed === 'object' && (uploadState.parsed.fileId || Array.isArray(uploadState.parsed.educationList) || Array.isArray(uploadState.parsed.workList)) ? uploadState.parsed : null
+    });
 
     if (initialLoading) {
       return (
-        <Page title={pageTitle} back={!isCollect} toolbar={false}>
+        <Page title={pageTitle} back={false} toolbar={false}>
           <Flex align="center" justify="center" className={style['initial-loading']}>
             <Spin size="large" />
           </Flex>
@@ -454,7 +344,7 @@ const CompleteProfile = createWithRemoteLoader({
               <div className={style['content-inner']}>
                 <div className={style['step-panel']}>
                   <div className={style['step-body']}>
-                    <InterviewStep profilePayload={null} onInterviewComplete={handleInterviewComplete} apisAdapter={collectApis || undefined} />
+                    <InterviewStep profilePayload={null} onInterviewComplete={handleInterviewComplete} apisAdapter={collectApis} />
                   </div>
                 </div>
               </div>
@@ -465,7 +355,7 @@ const CompleteProfile = createWithRemoteLoader({
     }
 
     return (
-      <Page title={pageTitle} back={!isCollect} toolbar={false}>
+      <Page title={pageTitle} back={false} toolbar={false}>
         <div className={`${style['complete-profile']}${current === 2 ? ` ${style['complete-profile-interview']}` : ''}`}>
           <Stepper items={stepTitles} current={current} />
 
@@ -542,7 +432,9 @@ const CompleteProfile = createWithRemoteLoader({
                       onInterviewComplete={handleInterviewComplete}
                       onPhaseChange={setInterviewPhase}
                       onInterviewLockChange={setInterviewLocked}
-                      apisAdapter={collectApis || undefined}
+                      apisAdapter={collectApis}
+                      withStepper
+                      withHostFooter={!interviewFinished && canLeaveInterviewStep}
                     />
                   </div>
                   {!interviewFinished && canLeaveInterviewStep ? <Footer showSkip={false} showPrevious primary={null} variant={interviewPhase === 'room' ? 'interview-prestart' : undefined} /> : null}

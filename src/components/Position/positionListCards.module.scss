@@ -84,6 +84,16 @@
   }
 }
 
+// draft 423 评估失败：降透明度 + 浅红底（与列表行一致）
+.card-assessment-error {
+  opacity: 0.62;
+  background: var(--ant-color-error-bg, #fff2f0);
+
+  &:hover {
+    box-shadow: none;
+  }
+}
+
 .card-body {
   flex: 1 1 auto;
   min-width: 0;

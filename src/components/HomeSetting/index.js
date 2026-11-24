@@ -5,10 +5,13 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import { DEFAULT_HOME_PATH, normalizeHomePath } from '@components/TenantAdmin/constants';
 
+const TENANT_PREFIX = '/tenant';
+const HINT = `访问站点根路径 / 时自动跳转到该页面，未设置时为 ${TENANT_PREFIX}${DEFAULT_HOME_PATH}`;
+
 const HomeSetting = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:InfoPage']
+  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:InfoPage', 'components-core:InfoPage@Descriptions']
 })(({ remoteModules, tenant, reload }) => {
-  const [usePreset, FormInfo, InfoPage] = remoteModules;
+  const [usePreset, FormInfo, InfoPage, Descriptions] = remoteModules;
   const { apis, ajax } = usePreset();
   const { Form, SubmitButton, CancelButton } = FormInfo;
   const { Input } = FormInfo.fields;
@@ -29,7 +32,6 @@ const HomeSetting = createWithRemoteLoader({
         if (isEdit) {
           return (
             <Form
-              type="default"
               data={{ homePath }}
               onSubmit={async formData => {
                 const { data: resData } = await ajax(
@@ -49,18 +51,18 @@ const HomeSetting = createWithRemoteLoader({
                 reload && reload();
               }}
             >
-              <FormInfo title="首页路径" list={[<Input name="homePath" label="默认路径" rule="REQ LEN-1-200" block placeholder={DEFAULT_HOME_PATH} key="homePath" />]} />
-              <Typography.Paragraph type="secondary">访问站点根路径 / 时，将跳转到 /tenant + 该路径，默认为 /home（即 /tenant/home）</Typography.Paragraph>
-              <Flex justify="center" gap={12}>
-                <SubmitButton>保存</SubmitButton>
-                <CancelButton
-                  onClick={() => {
-                    setIsEdit(false);
-                  }}
-                >
-                  取消
-                </CancelButton>
-              </Flex>
+              <InfoPage>
+                <InfoPage.Part title="默认首页">
+                  <Flex vertical gap={20}>
+                    <Typography.Text type="secondary">{HINT}</Typography.Text>
+                    <FormInfo column={1} list={[<Input name="homePath" label="首页路径" rule="REQ LEN-1-200" block addonBefore={TENANT_PREFIX} placeholder={DEFAULT_HOME_PATH} key="homePath" />]} />
+                    <Flex gap={12}>
+                      <SubmitButton>保存</SubmitButton>
+                      <CancelButton onClick={() => setIsEdit(false)}>取消</CancelButton>
+                    </Flex>
+                  </Flex>
+                </InfoPage.Part>
+              </InfoPage>
             </Form>
           );
         }
@@ -68,21 +70,31 @@ const HomeSetting = createWithRemoteLoader({
         return (
           <InfoPage>
             <InfoPage.Part
-              title="首页路径"
+              title="默认首页"
               extra={
-                <Button
-                  type="link"
-                  icon={<FormOutlined />}
-                  onClick={() => {
-                    setIsEdit(true);
-                  }}
-                >
+                <Button type="link" icon={<FormOutlined />} onClick={() => setIsEdit(true)}>
                   编辑
                 </Button>
               }
             >
-              <Typography.Paragraph>默认路径：{homePath}</Typography.Paragraph>
-              <Typography.Paragraph type="secondary">访问站点根路径 / 时，将跳转到 /tenant + 该路径，默认为 /home（即 /tenant/home）</Typography.Paragraph>
+              <Flex vertical gap={16}>
+                <Typography.Text type="secondary">{HINT}</Typography.Text>
+                <Descriptions
+                  dataSource={[
+                    [
+                      {
+                        label: '首页路径',
+                        content: (
+                          <Typography.Text copyable={{ text: `${TENANT_PREFIX}${homePath}` }}>
+                            {TENANT_PREFIX}
+                            {homePath}
+                          </Typography.Text>
+                        )
+                      }
+                    ]
+                  ]}
+                />
+              </Flex>
             </InfoPage.Part>
           </InfoPage>
         );

@@ -599,140 +599,59 @@ module.exports = fp(async (fastify, options) => {
   );
 
   fastify.post(
-    `${options.prefix}/tenant/position/start-analysis`,
+    `${options.prefix}/tenant/position/start-readiness`,
     {
       onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
       schema: {
-        summary: '启动 AI 岗位分析（创建手动任务）',
+        summary: '启动 / 重建岗位就绪度流程（选定经理与员工）',
         body: {
           type: 'object',
           properties: {
-            id: { type: 'string' }
-          },
-          required: ['id']
-        }
-      }
-    },
-    async request => {
-      return services.position.startAnalysis(request.tenantUserInfo, request.body);
-    }
-  );
-
-  fastify.post(
-    `${options.prefix}/tenant/position/lock-analysis`,
-    {
-      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
-      schema: {
-        summary: '岗位分析动画结束，锁定完成卡片',
-        body: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' }
-          },
-          required: ['id']
-        }
-      }
-    },
-    async request => {
-      return services.position.lockAnalysis(request.tenantUserInfo, request.body);
-    }
-  );
-
-  fastify.get(
-    `${options.prefix}/tenant/position/analysis-task-context`,
-    {
-      onRequest: [authenticate.user, authenticate.admin],
-      schema: {
-        summary: 'AI岗位分析任务上下文',
-        query: {
-          type: 'object',
-          properties: {
-            taskId: { type: 'string' }
-          },
-          required: ['taskId']
-        }
-      }
-    },
-    async request => {
-      return services.position.getAnalysisTaskContext(request.userInfo, request.query);
-    }
-  );
-
-  fastify.post(
-    `${options.prefix}/tenant/position/complete-analysis`,
-    {
-      onRequest: [authenticate.user, authenticate.admin],
-      schema: {
-        summary: '完成 AI 岗位分析任务',
-        body: {
-          type: 'object',
-          properties: {
-            taskId: { type: 'string' },
-            org: {
-              type: 'object',
-              default: {},
-              properties: {
-                tenantOrgId: { type: ['string', 'null'] }
-              }
-            },
-            position: {
-              type: 'object',
-              default: {},
-              properties: {
-                description: { type: 'string' },
-                requirement: { type: 'string' },
-                developmentGoal: { type: 'string' },
-                skill: positionSkillSchema,
-                verdict: positionVerdictSchema
-              }
+            positionId: { type: 'string' },
+            roleName: { type: 'string' },
+            jd: { type: 'string' },
+            language: { type: 'string', enum: ['zh-CN', 'en-US'] },
+            hasStaffQuestionnaire: { type: 'boolean' },
+            managers: {
+              type: 'array',
+              items: { type: 'object', properties: { name: { type: 'string' }, tenantUserId: { type: 'string' }, email: { type: 'string' } } }
             },
             employees: {
               type: 'array',
-              default: [],
               items: {
                 type: 'object',
-                properties: {
-                  employeeId: { type: 'string' },
-                  readiness: { type: ['number', 'null'] },
-                  summary: { type: 'string' },
-                  metrics: { type: 'object' },
-                  skills: { type: 'array' },
-                  priorityGaps: { type: 'array' },
-                  developmentPlan: { type: ['object', 'null'] }
-                },
-                required: ['employeeId']
+                properties: { name: { type: 'string' }, tenantUserId: { type: 'string' }, email: { type: 'string' }, employeeId: { type: 'string' } }
               }
             }
           },
-          required: ['taskId']
+          required: ['positionId']
         }
       }
     },
     async request => {
-      return services.position.completeAnalysis(request.userInfo, request.body);
+      const { tenantId, userId } = request.tenantUserInfo || {};
+      return services.readiness.createRun({ tenantId, userId }, Object.assign({}, request.body, { positionId: String(request.body.positionId) }));
     }
   );
 
   fastify.post(
-    `${options.prefix}/tenant/position/analysis-ai-fill`,
+    `${options.prefix}/tenant/position/cancel-readiness`,
     {
-      onRequest: [authenticate.user, authenticate.admin],
+      onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
       schema: {
-        summary: 'AI 填充岗位分析完成表单（按步骤）',
+        summary: '取消岗位就绪度分析（访谈进行中 → 待启动）',
         body: {
           type: 'object',
           properties: {
-            taskId: { type: 'string' },
-            step: { type: 'string', enum: ['org', 'position', 'person'] },
-            language: { type: 'string', enum: ['zh-CN', 'en-US'] },
-            draft: { type: 'object', default: {} }
+            positionId: { type: 'string' }
           },
-          required: ['taskId', 'step']
+          required: ['positionId']
         }
       }
     },
     async request => {
-      return services.position.aiFillAnalysis(request.userInfo, request.body);
+      const { tenantId } = request.tenantUserInfo || {};
+      return services.readiness.cancelByPosition({ tenantId }, { positionId: String(request.body.positionId) });
     }
   );
 });

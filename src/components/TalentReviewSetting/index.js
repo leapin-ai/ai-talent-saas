@@ -1,10 +1,11 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { Alert, App, Avatar, Button, Flex, Tag, Tooltip, Typography } from 'antd';
+import { Alert, App, Avatar, Button, Divider, Flex, Tag, Typography } from 'antd';
 import { ApiOutlined, CheckCircleFilled, CloseCircleFilled, DeleteOutlined, FormOutlined, ImportOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { useIntl } from '@kne/react-intl';
 import Fetch from '@kne/react-fetch';
 import withLocale from './withLocale';
+import style from './style.module.scss';
 
 const SECRET_MASK = '******';
 
@@ -17,11 +18,32 @@ export const parseSiteCredentials = text => {
   return url && appId && secretKey ? { url, appId, secretKey } : null;
 };
 
-const CredentialFields = createWithRemoteLoader({
-  modules: ['components-core:FormInfo', 'components-core:FormInfo@useFormContext']
+const StatusTag = withLocale(({ linked }) => {
+  const { formatMessage } = useIntl();
+  return linked ? (
+    <Tag color="success" bordered={false} icon={<CheckCircleFilled />}>
+      {formatMessage({ id: 'linked' })}
+    </Tag>
+  ) : (
+    <Tag bordered={false}>{formatMessage({ id: 'notConfigured' })}</Tag>
+  );
+});
+
+const PartTitle = withLocale(({ linked }) => {
+  const { formatMessage } = useIntl();
+  return (
+    <span className={style['part-title']}>
+      {formatMessage({ id: 'title' })}
+      <StatusTag linked={linked} />
+    </span>
+  );
+});
+
+const CredentialForm = createWithRemoteLoader({
+  modules: ['components-core:FormInfo', 'components-core:FormInfo@useFormContext', 'components-core:InfoPage']
 })(
-  withLocale(({ remoteModules, hasSecretKey }) => {
-    const [FormInfo, useFormContext] = remoteModules;
+  withLocale(({ remoteModules, hasSecretKey, linked, footer }) => {
+    const [FormInfo, useFormContext, InfoPage] = remoteModules;
     const { Input, Password } = FormInfo.fields;
     const { openApi } = useFormContext();
     const { message } = App.useApp();
@@ -59,34 +81,50 @@ const CredentialFields = createWithRemoteLoader({
           fill(credentials);
         }}
       >
-        <FormInfo
-          title={formatMessage({ id: 'title' })}
-          extra={
-            <Tooltip title={formatMessage({ id: 'pasteTip' })}>
-              <Button type="link" icon={<ImportOutlined />} onClick={importFromClipboard}>
-                {formatMessage({ id: 'importClipboard' })}
-              </Button>
-            </Tooltip>
-          }
-          column={1}
-          list={[
-            <Input name="url" label={formatMessage({ id: 'url' })} rule="REQ LEN-0-500" placeholder={formatMessage({ id: 'urlPlaceholder' })} />,
-            <Input name="appId" label={formatMessage({ id: 'appId' })} rule="REQ LEN-0-200" />,
-            <Password
-              name="secretKey"
-              type="password"
-              label={formatMessage({ id: 'secretKey' })}
-              rule={hasSecretKey ? 'LEN-0-200' : 'REQ LEN-0-200'}
-              placeholder={hasSecretKey ? formatMessage({ id: 'secretKeyKeepPlaceholder' }) : undefined}
-            />
-          ]}
-        />
+        <InfoPage>
+          <InfoPage.Part title={<PartTitle linked={linked} />}>
+            <Flex vertical gap={20}>
+              <Typography.Text type="secondary">{formatMessage({ id: 'description' })}</Typography.Text>
+              <div className={style['paste-zone']} tabIndex={0}>
+                <span className={style['paste-icon']}>
+                  <ImportOutlined />
+                </span>
+                <div className={style['paste-body']}>
+                  <div className={style['paste-title']}>{formatMessage({ id: 'pasteTitle' })}</div>
+                  <div className={style['paste-hint']}>{formatMessage({ id: 'pasteHint' })}</div>
+                </div>
+                <Button icon={<ImportOutlined />} onClick={importFromClipboard}>
+                  {formatMessage({ id: 'importClipboard' })}
+                </Button>
+              </div>
+              <Divider plain orientation="left" style={{ margin: 0 }}>
+                <Typography.Text type="secondary">{formatMessage({ id: 'manualFill' })}</Typography.Text>
+              </Divider>
+              <FormInfo
+                column={1}
+                list={[
+                  <Input name="url" label={formatMessage({ id: 'url' })} rule="REQ LEN-0-500" block placeholder={formatMessage({ id: 'urlPlaceholder' })} />,
+                  <Input name="appId" label={formatMessage({ id: 'appId' })} rule="REQ LEN-0-200" block />,
+                  <Password
+                    name="secretKey"
+                    type="password"
+                    label={formatMessage({ id: 'secretKey' })}
+                    rule={hasSecretKey ? 'LEN-0-200' : 'REQ LEN-0-200'}
+                    block
+                    placeholder={hasSecretKey ? formatMessage({ id: 'secretKeyKeepPlaceholder' }) : undefined}
+                  />
+                ]}
+              />
+              {footer}
+            </Flex>
+          </InfoPage.Part>
+        </InfoPage>
       </div>
     );
   })
 );
 
-const ClientCard = createWithRemoteLoader({
+const ClientSummary = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']
 })(
   withLocale(({ remoteModules, tenantId }) => {
@@ -100,24 +138,19 @@ const ClientCard = createWithRemoteLoader({
         })}
         error={error => <Alert type="error" showIcon icon={<CloseCircleFilled />} message={formatMessage({ id: 'clientInfo' })} description={typeof error === 'string' ? error : error?.message} />}
         render={({ data: client }) => (
-          <Flex gap={16} align="center">
-            <Avatar shape="square" size={56} src={client?.logoUrl} icon={!client?.name && <ApiOutlined />}>
+          <div className={style.client}>
+            <Avatar shape="square" size={48} src={client?.logoUrl} icon={!client?.name && <ApiOutlined />}>
               {client?.name ? client.name.slice(0, 1) : null}
             </Avatar>
-            <Flex vertical gap={4}>
-              <Flex align="center" gap={8}>
-                <Typography.Text strong>{client?.name || '-'}</Typography.Text>
-                <Tag color="success" bordered={false} icon={<CheckCircleFilled />}>
-                  {formatMessage({ id: 'clientInfo' })}
-                </Tag>
-              </Flex>
+            <div>
+              <div className={style['client-name']}>{client?.name || '-'}</div>
               {client?.description ? (
-                <Typography.Paragraph type="secondary" ellipsis={{ rows: 2 }} style={{ margin: 0 }}>
+                <Typography.Paragraph className={style['client-desc']} ellipsis={{ rows: 2 }}>
                   {client.description}
                 </Typography.Paragraph>
               ) : null}
-            </Flex>
-          </Flex>
+            </div>
+          </div>
         )}
       />
     );
@@ -125,10 +158,10 @@ const ClientCard = createWithRemoteLoader({
 );
 
 const TalentReviewSetting = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:InfoPage']
+  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:InfoPage', 'components-core:InfoPage@Descriptions']
 })(
   withLocale(({ remoteModules, tenant, reload }) => {
-    const [usePreset, FormInfo, InfoPage] = remoteModules;
+    const [usePreset, FormInfo, InfoPage, Descriptions] = remoteModules;
     const { apis, ajax } = usePreset();
     const { Form, SubmitButton, CancelButton } = FormInfo;
     const { message, modal } = App.useApp();
@@ -152,9 +185,9 @@ const TalentReviewSetting = createWithRemoteLoader({
             return (
               <InfoPage>
                 <InfoPage.Part
-                  title={formatMessage({ id: 'title' })}
+                  title={<PartTitle linked />}
                   extra={
-                    <Flex gap={8}>
+                    <Flex gap={4}>
                       <Button type="link" icon={<FormOutlined />} onClick={() => setIsEdit(true)}>
                         {formatMessage({ id: 'edit' })}
                       </Button>
@@ -187,13 +220,19 @@ const TalentReviewSetting = createWithRemoteLoader({
                     </Flex>
                   }
                 >
-                  <Flex vertical gap={16}>
-                    <ClientCard tenantId={tenant.id} />
-                    <InfoPage.Part title={formatMessage({ id: 'url' })}>{setting.url}</InfoPage.Part>
-                    <InfoPage.Part title={formatMessage({ id: 'appId' })}>{setting.appId}</InfoPage.Part>
-                    <InfoPage.Part title={formatMessage({ id: 'secretKey' })}>{SECRET_MASK}</InfoPage.Part>
-                    <InfoPage.Part title={formatMessage({ id: 'origin' })}>{setting.origin || '-'}</InfoPage.Part>
-                  </Flex>
+                  <ClientSummary tenantId={tenant.id} />
+                </InfoPage.Part>
+                <InfoPage.Part title={formatMessage({ id: 'connection' })}>
+                  <Descriptions
+                    dataSource={[
+                      [{ label: formatMessage({ id: 'url' }), content: setting.url }],
+                      [
+                        { label: formatMessage({ id: 'appId' }), content: setting.appId },
+                        { label: formatMessage({ id: 'secretKey' }), content: SECRET_MASK }
+                      ],
+                      [{ label: formatMessage({ id: 'origin' }), content: setting.origin || '-' }]
+                    ]}
+                  />
                 </InfoPage.Part>
               </InfoPage>
             );
@@ -201,7 +240,6 @@ const TalentReviewSetting = createWithRemoteLoader({
 
           return (
             <Form
-              type="default"
               data={{ url: setting.url, appId: setting.appId, secretKey: '' }}
               onSubmit={async formData => {
                 const payload = { tenantId: tenant.id, url: formData.url, appId: formData.appId };
@@ -222,11 +260,16 @@ const TalentReviewSetting = createWithRemoteLoader({
                 await onSaved();
               }}
             >
-              <CredentialFields hasSecretKey={setting.hasSecretKey} />
-              <Flex justify="center" gap={12}>
-                <SubmitButton>{formatMessage({ id: 'save' })}</SubmitButton>
-                {isConfigured ? <CancelButton onClick={() => setIsEdit(false)}>{formatMessage({ id: 'cancel' })}</CancelButton> : null}
-              </Flex>
+              <CredentialForm
+                hasSecretKey={setting.hasSecretKey}
+                linked={isConfigured}
+                footer={
+                  <Flex gap={12}>
+                    <SubmitButton>{formatMessage({ id: 'saveAndVerify' })}</SubmitButton>
+                    {isConfigured ? <CancelButton onClick={() => setIsEdit(false)}>{formatMessage({ id: 'cancel' })}</CancelButton> : null}
+                  </Flex>
+                }
+              />
             </Form>
           );
         }}

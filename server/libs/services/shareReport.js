@@ -438,6 +438,9 @@ module.exports = fp(async (fastify, options) => {
 
   Object.assign(fastify[options.name].services, {
     shareReport: {
+      getTenant,
+      buildMailContext,
+      sendMail,
       sendPositions,
       sendEmployees,
       publicDetail,
