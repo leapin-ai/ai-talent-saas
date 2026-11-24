@@ -182,11 +182,36 @@ export const MilestoneFlow = ({ t, title, milestones, activeKey, renderBeforeRes
 /** 参与人在列表里的状态节点：失败 > 完成 > 当前阶段的状态 */
 const personState = (person, active) => (person.status === 'failed' ? 'failed' : person.stage === 'done' ? 'done' : active?.state || 'todo');
 
+/** 参与人当前有效邀请：补充问卷阶段优先 reassess，否则 staff */
+const personCurrentInvite = (person, invites) => {
+  const list = (invites || []).filter(item => item.isCurrent !== false && String(item.personId) === String(person.id) && ['staff', 'reassess'].includes(item.kind));
+  if (!list.length) {
+    return null;
+  }
+  if (String(person.stage || '').startsWith('reassess')) {
+    return list.find(item => item.kind === 'reassess') || list[0];
+  }
+  return list.find(item => item.kind === 'staff') || list[0];
+};
+
+/** 当前邀请的复制链接 / 重发（不含阶段主操作，避免与标题栏「获取结果」等挤出「更多」） */
+const personInviteActions = (t, person, invites, inviteActions) => {
+  const primary = [];
+  const invite = personCurrentInvite(person, invites);
+  if (invite?.url && inviteActions?.copyLink) {
+    primary.push({ children: t('copyLink'), onClick: () => inviteActions.copyLink(invite) });
+  }
+  if (invite && ['sent', 'failed'].includes(invite.status) && inviteActions?.resend) {
+    primary.push({ children: t('resend'), onClick: () => inviteActions.resend(invite) });
+  }
+  return primary;
+};
+
 /**
  * 参与人：左侧参与人列表，右侧选中参与人的完整流程（按里程碑分组列出全部阶段）。
  * 默认选中第一个有待办的参与人。
  */
-export const PersonFlowPanel = ({ t, title, extra, persons, personFlows }) => {
+export const PersonFlowPanel = ({ t, title, extra, persons, personFlows, invites = [], inviteActions }) => {
   const recommended = persons.find(person => personFlows.get(String(person.id))?.active?.primary.length) || persons[0];
   const [selectedKey, select, titleRef] = useSelectAndScrollToTitle(recommended ? String(recommended.id) : null);
   const person = persons.find(item => String(item.id) === selectedKey) || persons[0];
@@ -194,6 +219,8 @@ export const PersonFlowPanel = ({ t, title, extra, persons, personFlows }) => {
     return null;
   }
   const current = personFlows.get(String(person.id));
+  const headerPrimary = current.active?.primary || [];
+  const invitePrimary = personInviteActions(t, person, invites, inviteActions);
   const items = persons.map(item => {
     const { active } = personFlows.get(String(item.id));
     const state = personState(item, active);
@@ -220,22 +247,25 @@ export const PersonFlowPanel = ({ t, title, extra, persons, personFlows }) => {
             </div>
             <div className={style.detailMeta}>{[person.email, person.profileCompletionPct == null ? null : `${t('completion')} ${person.profileCompletionPct}%`].filter(Boolean).join(' · ')}</div>
           </div>
-          {current.active?.primary.length ? <StageActions primary={current.active.primary} /> : null}
+          {headerPrimary.length ? <StageActions primary={headerPrimary} /> : null}
         </div>
         <StageTimeline
           t={t}
-          stages={current.milestones.flatMap(milestone => {
-            if (milestone.stages.length <= 1) {
-              return milestone.stages;
-            }
-            // 「获取员工问卷」时：不渲染组标题，把「员工问卷 0/2」挂到该步骤额外信息
-            const waiting = milestone.stages.find(stage => stage.waitingStaffQuestionnaire);
-            if (waiting) {
-              const groupExtra = [milestone.label, milestone.progress].filter(Boolean).join(' ');
-              return milestone.stages.map(stage => (stage.waitingStaffQuestionnaire && groupExtra ? { ...stage, facts: [groupExtra, ...(stage.facts || [])] } : stage));
-            }
-            return [{ key: `group:${milestone.key}`, isGroup: true, label: milestone.label, progress: milestone.progress }, ...milestone.stages];
-          })}
+          stages={current.milestones
+            .flatMap(milestone => {
+              if (milestone.stages.length <= 1) {
+                return milestone.stages;
+              }
+              // 「获取员工问卷」时：不渲染组标题，把「员工问卷 0/2」挂到该步骤额外信息
+              const waiting = milestone.stages.find(stage => stage.waitingStaffQuestionnaire);
+              if (waiting) {
+                const groupExtra = [milestone.label, milestone.progress].filter(Boolean).join(' ');
+                return milestone.stages.map(stage => (stage.waitingStaffQuestionnaire && groupExtra ? { ...stage, facts: [groupExtra, ...(stage.facts || [])] } : stage));
+              }
+              return [{ key: `group:${milestone.key}`, isGroup: true, label: milestone.label, progress: milestone.progress }, ...milestone.stages];
+            })
+            // 标题栏保留「获取结果 / 录入答卷」；时间线当前行改挂复制链接 / 重发，并保留退回等 secondary
+            .map(stage => (stage.key === current.active?.key ? { ...stage, primary: invitePrimary } : stage))}
         />
         <StageResultPanel key={person.id} t={t} stages={current.milestones.flatMap(milestone => milestone.stages)} />
       </div>
@@ -316,14 +346,15 @@ export const ManagerInviteOverview = ({ t, invites, inviteActions }) => {
   );
 };
 
-/** 参与人总览：分类计数 + 每人的当前阶段、流程进度、档案完成度与待办 */
-export const PersonOverview = ({ t, persons, personFlows }) => {
+/** 参与人总览：分类计数 + 每人的当前阶段、流程进度、档案完成度；操作仅复制链接 / 重发（获取结果等在下方参与人详情） */
+export const PersonOverview = ({ t, persons, personFlows, invites = [], inviteActions }) => {
   const rows = persons.map(person => {
     const flow = personFlows.get(String(person.id));
     const finished = flow.milestones.filter(item => item.state === 'done' || item.state === 'skipped').length;
     const state = personState(person, flow.active);
     const group = state === 'failed' ? 'failed' : state === 'done' ? 'done' : flow.active?.primary.length ? 'todo' : 'active';
-    return { person, flow, state, group, percent: flow.milestones.length ? Math.round((finished / flow.milestones.length) * 100) : 0 };
+    const primary = personInviteActions(t, person, invites, inviteActions);
+    return { person, flow, state, group, percent: flow.milestones.length ? Math.round((finished / flow.milestones.length) * 100) : 0, primary };
   });
   const counts = ['done', 'todo', 'active', 'failed'].map(key => ({ key, count: rows.filter(item => item.group === key).length }));
   return (
@@ -343,13 +374,16 @@ export const PersonOverview = ({ t, persons, personFlows }) => {
       {rows.length ? (
         <div className={style.overviewTable}>
           <div className={classnames(style.overviewRow, style.overviewHeader)}>
-            <span>{t('overview.person')}</span>
-            <span>{t('overview.stage')}</span>
-            <span>{t('overview.progress')}</span>
+            <span className={style.overviewPerson}>
+              <span className={style.nodeSpacer} aria-hidden />
+              <span>{t('overview.person')}</span>
+            </span>
+            <span className={style.overviewStage}>{t('overview.stage')}</span>
+            <span className={style.overviewProgress}>{t('overview.progress')}</span>
             <span>{t('completion')}</span>
-            <span />
+            <span className={style.overviewActions} />
           </div>
-          {rows.map(({ person, flow, state, percent }) => (
+          {rows.map(({ person, flow, state, percent, primary }) => (
             <div key={person.id} className={style.overviewRow}>
               <span className={style.overviewPerson}>
                 <StepNode state={state} index={0} />
@@ -367,7 +401,7 @@ export const PersonOverview = ({ t, persons, personFlows }) => {
                 <span className={style.detailMeta}>{percent}%</span>
               </span>
               <span>{person.profileCompletionPct == null ? '-' : `${person.profileCompletionPct}%`}</span>
-              <span className={style.overviewActions}>{flow.active?.primary.length ? <StageActions primary={flow.active.primary} /> : null}</span>
+              <span className={style.overviewActions}>{primary.length ? <StageActions primary={primary} /> : null}</span>
             </div>
           ))}
         </div>

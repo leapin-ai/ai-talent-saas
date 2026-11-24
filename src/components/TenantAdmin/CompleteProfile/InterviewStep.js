@@ -5,19 +5,18 @@ import { applyAiInterviewRemote } from '../../../preset';
 import AIInterviewRoom from './AIInterviewRoom';
 import style from './style.module.scss';
 
-/** 与 style.complete-profile-interview / footer-spacer 保持一致 */
-const LAYOUT_CHROME_PX = 114;
-const STEPPER_CHROME_PX = 45;
-/** 与 .footer-spacer 同高（12*2 + 按钮约 32 ≈ 56） */
-const HOST_FOOTER_CHROME_PX = 56;
-const sessionHeightOf = ({ withStepper = false, withHostFooter = false } = {}) => `calc(100dvh - ${LAYOUT_CHROME_PX + (withStepper ? STEPPER_CHROME_PX : 0) + (withHostFooter ? HOST_FOOTER_CHROME_PX : 0)}px)`;
-
 const setupRemote = data => {
   if (!data?.cdnUrl || !data?.version) {
     return false;
   }
   return applyAiInterviewRemote({ cdnUrl: data.cdnUrl, version: data.version });
 };
+
+/**
+ * 用 calc 定高（禁止 ResizeObserver / 勿写死 100%）。
+ * --cp-chrome / --cp-stepper / --cp-host-footer 定义在 .complete-profile-interview，桌面与移动端各一套
+ */
+const sessionHeightOf = ({ withStepper = false, withHostFooter = false } = {}) => `calc(100dvh - var(--cp-chrome)${withStepper ? ' - var(--cp-stepper)' : ''}${withHostFooter ? ' - var(--cp-host-footer)' : ''})`;
 
 const InterviewStep = ({ profilePayload, onInterviewComplete, onPhaseChange, onInterviewLockChange, apisAdapter, withStepper = false, withHostFooter = false }) => {
   const sessionHeight = sessionHeightOf({ withStepper, withHostFooter });

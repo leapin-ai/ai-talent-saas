@@ -26,7 +26,7 @@ const NOTICE_ICON = { success: CheckCircleFilled, error: CloseCircleFilled, warn
  * 概要区（岗位、关键指标、下一步）与流程区（里程碑 + 选中里程碑的阶段）。
  * 流程区里点某个里程碑，下方展示该里程碑包含的阶段。
  */
-const RoleFlowParts = ({ tools, t, run, persons, personFlows, doneCount, stageRows, roleActive, banner, managerInvites = [], inviteActions }) => {
+const RoleFlowParts = ({ tools, t, run, persons, personFlows, doneCount, stageRows, roleActive, banner, managerInvites = [], personInvites = [], inviteActions }) => {
   const { milestones, activeKey } = buildMilestones({ t, scope: 'role', stageRows });
   const percent = run.stage === 'done' ? 100 : progressOf(stageRows);
   const meta = [
@@ -100,7 +100,7 @@ const RoleFlowParts = ({ tools, t, run, persons, personFlows, doneCount, stageRo
           milestones={milestones}
           activeKey={activeKey}
           renderBeforeResult={selected => (selected.key === 'group:manager' && managerSent ? <ManagerInviteOverview t={t} invites={managerInvites} inviteActions={inviteActions} /> : null)}
-          renderExtra={selected => (selected.key === 'await_persons' && persons.length ? <PersonOverview t={t} persons={persons} personFlows={personFlows} /> : null)}
+          renderExtra={selected => (selected.key === 'await_persons' && persons.length ? <PersonOverview t={t} persons={persons} personFlows={personFlows} invites={personInvites} inviteActions={inviteActions} /> : null)}
         />
       </Section>
     </>
@@ -433,6 +433,7 @@ const ReadinessFlowDetail = createWithRemoteLoader({
             stageRows={roleRows}
             banner={banner}
             managerInvites={currentInvites.filter(item => item.kind === 'manager')}
+            personInvites={currentInvites.filter(item => item.kind === 'staff' || item.kind === 'reassess')}
             inviteActions={
               flowCanceled
                 ? {
@@ -462,6 +463,23 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                 }
                 persons={persons}
                 personFlows={personFlows}
+                invites={currentInvites.filter(item => item.kind === 'staff' || item.kind === 'reassess')}
+                inviteActions={
+                  flowCanceled
+                    ? {
+                        copyLink: item => {
+                          navigator.clipboard?.writeText(item.url);
+                          message.success(t('copied'));
+                        }
+                      }
+                    : {
+                        copyLink: item => {
+                          navigator.clipboard?.writeText(item.url);
+                          message.success(t('copied'));
+                        },
+                        resend: item => act(api.resendInvite, { inviteIds: [String(item.id)] }, 'resendSuccess')
+                      }
+                }
               />
             </Section>
           ) : null}

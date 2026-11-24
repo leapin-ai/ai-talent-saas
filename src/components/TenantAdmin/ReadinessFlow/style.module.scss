@@ -740,6 +740,13 @@ $sticky-nav-gap: 16px;
   min-width: 0;
 }
 
+/* 表头与数据行第一列对齐：占位与 StepNode 同宽 */
+.nodeSpacer {
+  flex: none;
+  width: $node;
+  height: $node;
+}
+
 .overviewStage {
   display: flex;
   flex-wrap: wrap;

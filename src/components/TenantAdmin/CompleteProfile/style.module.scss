@@ -9,17 +9,22 @@ $surface: #fafafe;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  // Page 在桌面布局里 page-children 常为 height:unset，用容器高度撑满面板，footer 才能贴底
-  min-height: var(--container-height, 100%);
+  // Page.Footer 会给 page-children 加 padding-bottom: max(24px, --page-footer-height)。
+  // min-height 若仍按满屏 --container-height，会比可排高度多出（footer - 24）→ Page 又滚动。
+  min-height: calc(var(--container-height, 100%) - max(0px, var(--page-footer-height, 0px) - 24px));
   height: 100%;
+  max-height: 100%;
 }
 
-// 面试步：100dvh 减去 layout 上下留白 12*2 + page-children padding 24*2 + 标题行约 40 ≈ 114
-// 实测 localhost collect-profile 窗口高 889 时 ideal=775 → 889-775=114，刚好贴底不空滚
-// 员工问卷有 Stepper（约 45px）与 .content 并列：content 不能再 height:100%，否则叠高出滚动条
+// 面试步：外壳 100dvh - chrome，会话再扣 Stepper 与宿主底栏（InterviewStep 用同一组变量拼 calc）
+// 桌面：layout 12*2 + page-children padding 24*2 + 标题 28 + 间距 12 = 114；底栏 57 中 24 压在 padding-bottom 上，让出 33
+// 员工问卷有 Stepper 与 .content 并列：content 不能再 height:100%，否则叠高出滚动条
 .complete-profile-interview {
-  height: calc(100dvh - 114px);
-  max-height: calc(100dvh - 114px);
+  --cp-chrome: 114px;
+  --cp-stepper: 45px;
+  --cp-host-footer: 33px;
+  height: calc(100dvh - var(--cp-chrome));
+  max-height: calc(100dvh - var(--cp-chrome));
   min-height: 0;
   overflow: hidden;
 
@@ -39,6 +44,11 @@ $surface: #fafafe;
   .interview-room {
     height: 100%;
     min-height: 0;
+  }
+
+  // 表单步的 16px 底距在面试步会变成 SessionBody 与底栏之间的空隙；面试只滚内部问卷
+  .step-body {
+    padding-bottom: 0;
   }
 }
 
@@ -179,10 +189,10 @@ $surface: #fafafe;
   width: 100%;
 }
 
-// 与 fixed footer 同高，留在文档流里作滚动余量
+// fixed 底栏让出的高度，与会话 calc 共用 --cp-host-footer
 .footer-spacer {
   flex-shrink: 0;
-  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  height: var(--cp-host-footer, 33px);
   pointer-events: none;
 }
 
@@ -700,7 +710,7 @@ $surface: #fafafe;
   box-sizing: border-box;
 }
 
-// 有宿主「上一步」时：底栏 fixed；会话高度已在 InterviewStep 扣掉 footer-spacer，面板按剩余高度铺满
+// 有宿主「上一步」时：底栏 fixed；会话高度由 InterviewStep calc 扣掉 footer-spacer
 .step-panel-interview-prestart {
   .step-body {
     display: flex;
@@ -724,6 +734,19 @@ $surface: #fafafe;
 @include resp.mobile-container {
   .interview-room {
     margin-inline: 0;
+  }
+
+  // 移动端：page-top 52+顶部安全区，page-inner 上下 padding 16*2 与 :after 24+底部安全区；Stepper 73
+  // 底栏 57+底部安全区 盖住 page-inner 底部 16+24+安全区，只需让出 17
+  .complete-profile-interview {
+    --cp-chrome: calc(108px + var(--safe-area-inset-top, 0px) + var(--safe-area-inset-bottom, 0px));
+    --cp-stepper: 73px;
+    --cp-host-footer: 17px;
+  }
+
+  // system-layout 移动端 page-top 为 52px，page-inner 的 min-height 却按 --nav-height(48) 算，短内容也会多出 4px 外滚
+  :global(.page-inner):has(> .complete-profile-interview) {
+    min-height: 0;
   }
 }
 
