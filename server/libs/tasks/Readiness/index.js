@@ -5,10 +5,10 @@
  * - 请求、受理结果、错误全部写入任务 log（日志字段保持结构化对象，不存 JSON 字符串）
  * - 上游异步回调：受理成功后返回 false，保持任务运行中，等待 /task/callback 回调完成任务
  */
-const ensureSlash = require('@kne/ensure-slash'); // eslint-disable-line no-unused-vars
+const ensureSlash = require('@kne/ensure-slash');
 
-// TODO(dev-only)：提交前删除，回调地址改回 ORIGIN
-const DEV_CALLBACK_ORIGIN = 'http://192.168.50.52:3050';
+// ENV=local 时 ORIGIN 常为 localhost，上游访问不到，回退到本机局域网地址；其它环境一律用 ORIGIN
+const LOCAL_CALLBACK_ORIGIN = 'http://192.168.50.52:3050';
 
 const REQUEST_TIMEOUT = 30 * 1000;
 const LOG_MAX_LENGTH = 8000;
@@ -99,8 +99,8 @@ const runner = async (fastify, options, { task, log }) => {
 
   const body = Object.assign({}, params);
   if (!body.callback_url) {
-    // TODO(dev-only)：开发环境先写死本机 IP（上游 192.168.50.195 访问不到 localhost），提交前改回 fastify.config.ORIGIN
-    const callbackOrigin = DEV_CALLBACK_ORIGIN; // ensureSlash(fastify.config.ORIGIN || '')
+    const origin = ensureSlash(fastify.config.ORIGIN || '');
+    const callbackOrigin = fastify.config.ENV === 'local' ? LOCAL_CALLBACK_ORIGIN : origin;
     body.callback_url = `${callbackOrigin}${options.prefix}/callback?taskId=${encodeURIComponent(task.id)}`;
   }
   const url = `${host}${path}`;
