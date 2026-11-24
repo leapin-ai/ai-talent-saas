@@ -1,8 +1,6 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { Alert, Button, Flex, message, Spin } from 'antd';
 import { Page } from '@kne/system-layout';
-import { ButtonFooter } from '@kne/button-group';
-import '@kne/button-group/dist/index.css';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useSearchParams } from 'react-router-dom';
 import { ResultCard } from '@kne/react-box';
@@ -287,21 +285,16 @@ const CompleteProfile = createWithRemoteLoader({
           {primary}
         </Flex>
       );
-      // 面试嵌入阶段不用 ButtonFooter（移动端会 fixed 全页底栏，与会话内提交条冲突）
+      // 面试嵌入阶段不用 Page.Footer（与会话内提交条叠两层）；仍用 fixed + spacer
       if (variant === 'interview-prestart') {
         return (
           <>
-            {/* fixed 脱流，占位避免内容被底栏挡住且无法继续滚动 */}
             <div className={style['footer-spacer']} aria-hidden="true" />
             <div className={`${style.footer} ${style['footer-interview-prestart']}`}>{actions}</div>
           </>
         );
       }
-      return (
-        <ButtonFooter className={style.footer} placement="bottomEnd">
-          {actions}
-        </ButtonFooter>
-      );
+      return <Page.Footer>{actions}</Page.Footer>;
     };
 
     const activeReviewData = normalizeReviewProfileData(
