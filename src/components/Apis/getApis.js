@@ -233,32 +233,12 @@ const getApis = options => {
             url: `${prefix}/tenant/position/skill-analysis-save`,
             method: 'POST'
           },
-          startAnalysis: {
-            url: `${prefix}/tenant/position/start-analysis`,
-            method: 'POST'
-          },
           startReadiness: {
             url: `${prefix}/tenant/position/start-readiness`,
             method: 'POST'
           },
           cancelReadiness: {
             url: `${prefix}/tenant/position/cancel-readiness`,
-            method: 'POST'
-          },
-          lockAnalysis: {
-            url: `${prefix}/tenant/position/lock-analysis`,
-            method: 'POST'
-          },
-          analysisTaskContext: {
-            url: `${prefix}/tenant/position/analysis-task-context`,
-            method: 'GET'
-          },
-          completeAnalysis: {
-            url: `${prefix}/tenant/position/complete-analysis`,
-            method: 'POST'
-          },
-          analysisAiFill: {
-            url: `${prefix}/tenant/position/analysis-ai-fill`,
             method: 'POST'
           }
         },
@@ -376,20 +356,6 @@ const getApis = options => {
             method: 'GET'
           }
         },
-        employeeQuestionnaire: {
-          projectList: {
-            url: `${prefix}/tenant/employee-questionnaire/project/list`,
-            method: 'GET'
-          },
-          send: {
-            url: `${prefix}/tenant/employee-questionnaire/send`,
-            method: 'POST'
-          },
-          list: {
-            url: `${prefix}/tenant/employee-questionnaire/list`,
-            method: 'GET'
-          }
-        },
         talentCollectInvite: {
           send: {
             url: `${prefix}/tenant/position/talent-collect-invite/send`,
@@ -411,10 +377,6 @@ const getApis = options => {
             url: `${prefix}/tenant/position/talent-collect-invite/interview-result`,
             method: 'GET'
           },
-          startAnalysis: {
-            url: `${prefix}/tenant/position/talent-collect-invite/start-analysis`,
-            method: 'POST'
-          },
           cancel: {
             url: `${prefix}/tenant/position/talent-collect-invite/cancel`,
             method: 'POST'
@@ -431,24 +393,6 @@ const getApis = options => {
           },
           sendEmployee: {
             url: `${prefix}/tenant/share-report/employee/send`,
-            method: 'POST'
-          }
-        },
-        assessment: {
-          generateTaskContext: {
-            url: `${prefix}/tenant/assessment/generate-task-context`,
-            method: 'GET'
-          },
-          completeGenerate: {
-            url: `${prefix}/tenant/assessment/complete-generate`,
-            method: 'POST'
-          },
-          generateAiFill: {
-            url: `${prefix}/tenant/assessment/generate-ai-fill`,
-            method: 'POST'
-          },
-          generateTalentInsight: {
-            url: `${prefix}/tenant/assessment/generate-talent-insight`,
             method: 'POST'
           }
         }

@@ -3,7 +3,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import { Empty, Flex, Typography } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
 import { useIntl } from '@kne/react-intl';
-import ResumeParseEditor from '../../AssessmentGenerateTask/ResumeParseEditor';
+import ResumeParseEditor from './ResumeParseEditor';
 import style from './inviteAssessmentResult.module.scss';
 
 const formatValue = value => {

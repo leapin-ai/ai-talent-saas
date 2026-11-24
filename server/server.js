@@ -50,7 +50,6 @@ const createServer = () => {
         READINESS_API_URL: { type: 'string', default: '' },
         READINESS_COMPLETION_THRESHOLD: { type: 'number', default: 80 },
         READINESS_ANSWER_SYNC_CRON: { type: 'string', default: '*/5 * * * *' },
-        AI_INTERVIEW_INVITE_ORIGIN: { type: 'string', default: '' },
 
         ORIGIN: { type: 'string', default: '' },
         OIDC_KEY_SECRET: { type: 'string' },
@@ -300,15 +299,6 @@ const createServer = () => {
             return fastify.tenant.services.org.syncOrg(result);
           },
           'sync-org-send-message': ({ task, result }) => {
-            return result;
-          },
-          'assessment-profile-review': ({ result }) => {
-            return result;
-          },
-          'position-ai-analysis': ({ result }) => {
-            return result;
-          },
-          'position-analysis-review': ({ result }) => {
             return result;
           },
           // invite-video-asr 只做转写；结果按发起方（task.targetType）在这里分发处理

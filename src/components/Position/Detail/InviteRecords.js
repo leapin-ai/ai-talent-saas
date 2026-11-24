@@ -50,7 +50,6 @@ const InviteRecords = createWithRemoteLoader({
     const { id: positionId } = useParams();
     const { InputFilterItem, SuperSelectFilterItem } = Filter.fields;
     const canManageInvite = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInviteRecords });
-    const canStartAnalysis = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionAnalysis });
     const canUpdateStatus = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionInviteStatus });
     const [reloadKey, setReloadKey] = useState(0);
     const [loadingId, setLoadingId] = useState(null);
@@ -205,64 +204,6 @@ const InviteRecords = createWithRemoteLoader({
         });
       },
       [ajax, apis, formatMessage, locale, message, modal]
-    );
-
-    const startInviteAnalysis = useCallback(
-      (item, { reanalyze = false } = {}) => {
-        if (!item?.id) {
-          return;
-        }
-        const isManager = item.inviteType === 'manager';
-        const confirmId = reanalyze
-          ? isManager
-            ? 'position.talentInviteReanalyzeConfirmManager'
-            : 'position.talentInviteReanalyzeConfirm'
-          : isManager
-            ? 'position.talentInviteStartAnalysisConfirmManager'
-            : 'position.talentInviteStartAnalysisConfirm';
-        modal.confirm({
-          title: formatMessage({ id: confirmId }, { name: item.name || '' }),
-          onOk: async () => {
-            setLoadingId(item.id);
-            setActionType('analysis');
-            try {
-              const { data: resData } = await ajax(
-                Object.assign({}, apis.talentSaas.tenant.talentCollectInvite.startAnalysis, {
-                  data: { id: String(item.id) }
-                })
-              );
-              if (resData.code !== 0) {
-                throw new Error(resData.msg || formatMessage({ id: 'position.talentInviteStartAnalysisFailed' }));
-              }
-              const asrStatus = resData.data?.asrStatus;
-              if (asrStatus === 'running') {
-                message.success(formatMessage({ id: 'position.talentInviteStartAnalysisAsrQueued' }));
-              } else {
-                const analysisKind = resData.data?.analysisKind;
-                message.success(
-                  formatMessage({
-                    id: reanalyze
-                      ? analysisKind === 'position-analysis-review' || isManager
-                        ? 'position.talentInviteReanalyzeSuccessManager'
-                        : 'position.talentInviteReanalyzeSuccess'
-                      : analysisKind === 'position-analysis-review' || isManager
-                        ? 'position.talentInviteStartAnalysisSuccessManager'
-                        : 'position.talentInviteStartAnalysisSuccess'
-                  })
-                );
-              }
-              setReloadKey(key => key + 1);
-            } catch (e) {
-              message.error(e.message || formatMessage({ id: 'position.talentInviteStartAnalysisFailed' }));
-              throw e;
-            } finally {
-              setLoadingId(null);
-              setActionType('');
-            }
-          }
-        });
-      },
-      [ajax, apis, formatMessage, message, modal]
     );
 
     const cancelInvite = useCallback(
@@ -430,25 +371,6 @@ const InviteRecords = createWithRemoteLoader({
                   onClick: () => fetchInterviewResult(item)
                 });
               }
-              if (canStartAnalysis) {
-                if (item.status === 'done') {
-                  actions.push({
-                    children: formatMessage({
-                      id: item.inviteType === 'manager' ? 'position.talentInviteStartAnalysisManager' : 'position.talentInviteStartAnalysis'
-                    }),
-                    loading: loadingId === item.id && actionType === 'analysis',
-                    onClick: () => startInviteAnalysis(item)
-                  });
-                } else {
-                  actions.push({
-                    children: formatMessage({
-                      id: item.inviteType === 'manager' ? 'position.talentInviteReanalyzeManager' : 'position.talentInviteReanalyze'
-                    }),
-                    loading: loadingId === item.id && actionType === 'analysis',
-                    onClick: () => startInviteAnalysis(item, { reanalyze: true })
-                  });
-                }
-              }
               if (canManageInvite && item.status === 'done') {
                 actions.push({
                   children: formatMessage({ id: 'position.talentInviteResend' }),
@@ -478,7 +400,7 @@ const InviteRecords = createWithRemoteLoader({
           }
         }
       ],
-      [actionType, canManageInvite, canStartAnalysis, canUpdateStatus, cancelInvite, fetchInterviewResult, fetchInviteLink, formatMessage, loadingId, resendInvite, startInviteAnalysis, updateInviteStatus]
+      [actionType, canManageInvite, canUpdateStatus, cancelInvite, fetchInterviewResult, fetchInviteLink, formatMessage, loadingId, resendInvite, updateInviteStatus]
     );
 
     const listApi = useMemo(() => {

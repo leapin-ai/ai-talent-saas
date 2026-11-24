@@ -5,7 +5,6 @@ const timezone = require('dayjs/plugin/timezone');
 const get = require('lodash/get');
 const ensureSlash = require('@kne/ensure-slash');
 const { mergeVideoTranscriptsIntoInterview } = require('../utils/merge-video-transcripts');
-const { collectVideoJobs, isNoInterviewError } = require('../utils/video-asr');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -14,7 +13,6 @@ const MESSAGE_CODE = 'INVITETALENTCOLLECT';
 const SHORTEN_TTL_HOURS = 24;
 const COLLECT_INVITE_SHORTEN_TYPE = 'talentCollectInvite';
 const COLLECT_INVITE_LINK_TTL_DAYS = 90;
-const VIDEO_ASR_TASK_TYPE = 'invite-video-asr';
 const DEADLINE_DISPLAY_TZ = 'Asia/Shanghai';
 const INVITE_STATUSES = ['invited', 'opened', 'filling', 'interviewing', 'done', 'ended', 'canceled'];
 
@@ -897,193 +895,7 @@ module.exports = fp(async (fastify, options) => {
     return assessment;
   };
 
-  /** 已有成功转写后：创建完善岗位分析 / 完善档案生成审核 */
-  const createRefineOrGenerateTask = async (authenticatePayload, { id } = {}) => {
-    const { tenantId } = authenticatePayload;
-    if (!tenantId) {
-      throw new Error('未登录租户用户');
-    }
-    if (!id) {
-      throw new Error('缺少邀请记录ID');
-    }
-    const row = await models.talentCollectInvite.findOne({
-      where: { id: String(id), tenantId }
-    });
-    if (!row) {
-      throw new Error('邀请记录不存在');
-    }
-    if (row.status !== 'done' && row.status !== 'ended') {
-      throw new Error('仅已完成或已结束的邀请可触发分析任务');
-    }
-
-    if (row.inviteType === 'manager') {
-      if (!row.positionId) {
-        throw new Error('邀请缺少岗位，无法触发岗位分析');
-      }
-      if (!services.position?.startRefineAnalysis) {
-        throw new Error('岗位分析服务未就绪');
-      }
-      const result = await services.position.startRefineAnalysis(authenticatePayload, {
-        id: String(row.positionId),
-        forceNew: true,
-        collectInviteId: String(row.id)
-      });
-      const taskId = result?.task?.id || null;
-      row.interviewData = Object.assign({}, row.interviewData || {}, {
-        analysisTaskId: taskId,
-        analysisKind: 'position-analysis-review',
-        analysisStartedAt: new Date().toISOString()
-      });
-      row.changed('interviewData', true);
-      await row.save();
-      return {
-        invite: toPublic(row),
-        taskId,
-        assessmentId: null,
-        analysisKind: 'position-analysis-review',
-        asrStatus: 'succeeded'
-      };
-    }
-
-    await syncEmployeeAssessmentFromInvite(row, { stage: 'done' });
-    const assessment = await ensureAssessmentFromInvite(row);
-    if (!assessment) {
-      throw new Error('无法创建分析任务所需的评估记录');
-    }
-
-    if (!services.assessment?.enterGenerating) {
-      throw new Error('分析任务服务未就绪');
-    }
-    await services.assessment.enterGenerating(assessment, { forceNew: true });
-    await assessment.reload();
-
-    row.interviewData = Object.assign({}, row.interviewData || {}, {
-      analysisTaskId: assessment.generateTaskId || null,
-      analysisKind: 'assessment-profile-review',
-      analysisStartedAt: new Date().toISOString()
-    });
-    row.changed('interviewData', true);
-    await row.save();
-
-    return {
-      invite: toPublic(row),
-      taskId: assessment.generateTaskId || null,
-      assessmentId: assessment.id,
-      analysisKind: 'assessment-profile-review',
-      asrStatus: 'succeeded'
-    };
-  };
-
-  /**
-   * 已完成邀请：先视频转写（invite-video-asr），成功后再触发完善任务。
-   * 若已有成功转写则直接创建完善任务。
-   */
-  const startAnalysis = async (authenticatePayload, { id } = {}) => {
-    const { tenantId } = authenticatePayload;
-    if (!tenantId) {
-      throw new Error('未登录租户用户');
-    }
-    if (!id) {
-      throw new Error('缺少邀请记录ID');
-    }
-    const row = await models.talentCollectInvite.findOne({
-      where: { id: String(id), tenantId }
-    });
-    if (!row) {
-      throw new Error('邀请记录不存在');
-    }
-    if (row.status !== 'done' && row.status !== 'ended') {
-      throw new Error('仅已完成或已结束的邀请可触发分析任务');
-    }
-
-    const interviewData = row.interviewData || {};
-    const asrSucceeded = interviewData.videoAsrStatus === 'succeeded' && interviewData.videoTranscripts != null;
-    if (asrSucceeded) {
-      return createRefineOrGenerateTask(authenticatePayload, { id: String(row.id) });
-    }
-
-    if (interviewData.videoAsrStatus === 'running' && interviewData.videoAsrTaskId) {
-      return {
-        invite: toPublic(row),
-        taskId: null,
-        assessmentId: null,
-        analysisKind: null,
-        asrStatus: 'running',
-        asrTaskId: interviewData.videoAsrTaskId
-      };
-    }
-
-    if (!fastify.config.ALI_ASR_APP_KEY || !fastify.config.ALI_ASR_ACCESS_KEY_ID || !fastify.config.ALI_ASR_ACCESS_KEY_SECRET) {
-      throw new Error('未配置阿里云录音文件识别（ALI_ASR_APP_KEY / ALI_ASR_ACCESS_KEY_ID / ALI_ASR_ACCESS_KEY_SECRET）');
-    }
-
-    // 取面试详情挑出要转写的录像；无面试数据 / 无视频题：跳过转写视为成功空转写，直接进入完善任务
-    const clientUserId = await resolveClientUserId(tenantId, row);
-    let interview = null;
-    if (clientUserId) {
-      try {
-        interview = await services.aiInterview.getInterviewDetail({ tenantId: String(tenantId), id: String(clientUserId) });
-      } catch (e) {
-        if (!isNoInterviewError(e)) {
-          throw e;
-        }
-      }
-    }
-    const jobs = interview ? collectVideoJobs(interview) : [];
-    if (!jobs.length) {
-      row.interviewData = Object.assign({}, interviewData, {
-        videoAsrStatus: 'succeeded',
-        videoTranscripts: {},
-        videoAsrSkipReason: interview ? 'no-video' : 'no-interview',
-        videoAsrCompletedAt: new Date().toISOString(),
-        videoAsrError: null
-      });
-      row.changed('interviewData', true);
-      await row.save();
-      return createRefineOrGenerateTask(authenticatePayload, { id: String(row.id) });
-    }
-
-    // 转写由 invite-video-asr 任务完成（只转写），结果在 onVideoAsrSuccess / onVideoAsrFailed 里落库并触发完善任务
-    const asrTask = await fastify.task.services.create({
-      type: VIDEO_ASR_TASK_TYPE,
-      targetId: String(row.id),
-      targetType: 'talentCollectInvite',
-      runnerType: 'system',
-      input: {
-        name: `video-asr:${row.id}`,
-        inviteId: String(row.id),
-        tenantId: String(tenantId),
-        jobs
-      }
-    });
-
-    row.interviewData = Object.assign({}, interviewData, {
-      videoAsrStatus: 'pending',
-      videoAsrTaskId: asrTask.id,
-      videoAsrError: null,
-      videoAsrQueuedAt: new Date().toISOString()
-    });
-    row.changed('interviewData', true);
-    await row.save();
-
-    // 尽快执行，不单靠 cron
-    if (typeof fastify.task.services.processSystemTask === 'function') {
-      fastify.task.services.processSystemTask(asrTask).catch(err => {
-        fastify.log.error({ err, taskId: asrTask.id }, 'invite-video-asr 立即执行失败');
-      });
-    }
-
-    return {
-      invite: toPublic(row),
-      taskId: null,
-      assessmentId: null,
-      analysisKind: null,
-      asrStatus: 'running',
-      asrTaskId: asrTask.id
-    };
-  };
-
-  /** invite-video-asr 转写成功（targetType=talentCollectInvite）：写入转写结果，再创建完善任务 */
+  /** invite-video-asr 转写成功（targetType=talentCollectInvite）：写入转写结果 */
   const onVideoAsrSuccess = async ({ task, result }) => {
     const { inviteId, tenantId } = task.input || {};
     const row = await models.talentCollectInvite.findOne({ where: { id: String(inviteId), tenantId: String(tenantId) } });
@@ -1101,8 +913,7 @@ module.exports = fp(async (fastify, options) => {
     });
     row.changed('interviewData', true);
     await row.save();
-    const analysis = await createRefineOrGenerateTask({ tenantId: String(tenantId) }, { id: String(row.id) });
-    return Object.assign({}, result, analysis || {});
+    return result;
   };
 
   /** invite-video-asr 转写失败（targetType=talentCollectInvite） */
@@ -1457,10 +1268,8 @@ module.exports = fp(async (fastify, options) => {
       markInterviewDone,
       createForReadiness,
       bindReadinessInvite,
-      startAnalysis,
       onVideoAsrSuccess,
       onVideoAsrFailed,
-      createRefineOrGenerateTask,
       resolveClientUserId,
       cancel,
       updateStatus,

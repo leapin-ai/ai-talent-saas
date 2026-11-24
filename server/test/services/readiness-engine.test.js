@@ -154,7 +154,6 @@ const createHarness = async ({ failPaths = [], responseByPath = {} } = {}) => {
     ORIGIN: 'http://192.168.1.10:3040',
     READINESS_COMPLETION_THRESHOLD: 80,
     READINESS_PUBLISH_POLL_INTERVAL: 5,
-    AI_INTERVIEW_INVITE_ORIGIN: 'http://invite.example.com',
     ALI_ASR_APP_KEY: 'test-app-key'
   });
   fastify.decorate('tenant', { models: { user: models.tenantUser } });
@@ -177,6 +176,8 @@ const createHarness = async ({ failPaths = [], responseByPath = {} } = {}) => {
       getRemote: async () => ({ url: 'http://cdn.example.com/ai', version: '1.2.3' })
     },
     aiInterview: {
+      detail: async () => ({ apiUrl: 'http://ai.example.com/api/v1', appId: 'app', hasSecretKey: true }),
+      getAjaxBaseUrl: apiUrl => String(apiUrl || '').replace(/\/api\/v\d+$/i, ''),
       getProjectDetail: async ({ id }) => ({ id, name: `项目${id}`, projectQuestions: [], endTime: projectEnds.get(String(id)) }),
       getInterviewList: async () => ({ pageData: interviewRows, totalCount: interviewRows.length }),
       getInterviewDetail: async ({ id }) => interviewDetails[id],

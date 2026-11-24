@@ -23,10 +23,6 @@ module.exports = fp(async (fastify, options) => {
   const idOrNull = value => (value == null || value === '' ? null : String(value));
 
   const resolveInviteOrigin = async tenantId => {
-    const configured = trimSlash(fastify.config.AI_INTERVIEW_INVITE_ORIGIN);
-    if (configured) {
-      return configured;
-    }
     const setting = await services.aiInterview.detail({ tenantId });
     if (!setting?.apiUrl) {
       throw new Error('未配置 AI 面试地址，无法生成问卷链接');

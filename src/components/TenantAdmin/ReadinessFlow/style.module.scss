@@ -8,6 +8,11 @@ $stage-pad: 10px;
 $layout-header-height: 48px;
 $sticky-nav-gap: 16px;
 
+// 返回按钮直接落在灰底上（保留 ant Button 默认 padding，只微调外边距对齐）
+.back {
+  margin: -4px 0 -4px -4px;
+}
+
 .page {
   display: flex;
   flex-direction: column;
