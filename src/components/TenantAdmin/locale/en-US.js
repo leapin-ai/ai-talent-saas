@@ -167,7 +167,7 @@ const enUS = {
   'tenantAdmin.switchTenant': 'Switch Tenant',
   'tenantAdmin.logout': 'Logout',
   'tenantAdmin.readiness.title': 'Readiness Flows',
-  'tenantAdmin.readiness.create': 'New flow',
+  'tenantAdmin.readiness.create': 'New role analysis task',
   'tenantAdmin.readiness.createSuccess': 'Flow created, generating the role catalog',
   'tenantAdmin.readiness.createSource': 'Role source',
   'tenantAdmin.readiness.createSourceExisting': 'Existing position',

@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { App, Button, Empty, Spin, Tabs } from 'antd';
+import { Button, Empty, Spin, Tabs } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '../withLocale';
@@ -12,10 +11,8 @@ import ReportGuideLink from '../../../commons/ReportGuideLink';
 import AnalyzeTalent from './AnalyzeTalent';
 import RoleInsights from './RoleInsights';
 import PositionInfoPanel from './PositionInfoPanel';
-import AiAnalysis from './AiAnalysis';
 import style from './style.module.scss';
 
-const isAnalysisCardStatus = status => status === 'generating' || status === 'locked';
 const DETAIL_TAB_KEYS = ['insights', 'analyze', 'role'];
 const DEFAULT_DETAIL_TAB = 'insights';
 
@@ -37,24 +34,20 @@ const resolvePositionId = ({ paramId, pathname, baseUrl = '' }) => {
 };
 
 const Detail = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:Permissions@usePermissionsPass']
+  modules: ['components-core:Permissions@usePermissionsPass']
 })(
   withLocale(({ remoteModules, baseUrl = '', apis, children }) => {
-    const [usePreset, usePermissionsPass] = remoteModules;
-    const { ajax } = usePreset();
+    const [usePermissionsPass] = remoteModules;
     const { formatMessage } = useIntl();
-    const { message, modal } = App.useApp();
     const navigate = useNavigate();
     const { pathname } = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
-    const canStartAnalysis = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionAnalysis });
     const canEdit = usePermissionsPass({ request: TENANT_ADMIN_PERMISSIONS.positionManagement });
     const { id: paramId } = useParams();
     const detailMatch = useMatch({ path: `${String(baseUrl).replace(/\/$/, '')}/position/:id`, end: true });
     const id = resolvePositionId({ paramId: paramId || detailMatch?.params?.id, pathname, baseUrl });
     const tabFromUrl = searchParams.get('tab');
     const activeTab = DETAIL_TAB_KEYS.includes(tabFromUrl) ? tabFromUrl : DEFAULT_DETAIL_TAB;
-    const [starting, setStarting] = useState(false);
     const pageTitleFallback = formatMessage({ id: 'position.bizName' });
 
     const onTabChange = key => {
@@ -84,7 +77,7 @@ const Detail = createWithRemoteLoader({
     };
 
     const statusContent = content => <div className={style['detail-status']}>{content}</div>;
-    const { data, error, reload } = useFetch({
+    const { data, error } = useFetch({
       ...apis.detail,
       params: { id },
       cache: false,
@@ -109,72 +102,13 @@ const Detail = createWithRemoteLoader({
       });
     }
 
-    const showAnalysisCard = isAnalysisCardStatus(data.analysisStatus);
-    const isLocked = data.analysisStatus === 'locked';
-    const lockAnalysis = async () => {
-      if (!apis.lockAnalysis) {
-        return;
-      }
-      const { data: resData } = await ajax({
-        url: apis.lockAnalysis.url,
-        method: apis.lockAnalysis.method,
-        data: { id: data.id }
-      });
-      if (resData.code === 0) {
-        reload();
-      }
-    };
-
-    const startAnalysis = async () => {
-      if (!apis?.startAnalysis || starting) {
-        return;
-      }
-      setStarting(true);
-      try {
-        const { data: resData } = await ajax(
-          Object.assign({}, apis.startAnalysis, {
-            data: { id: data.id }
-          })
-        );
-        if (resData.code !== 0) {
-          throw new Error(resData.msg || formatMessage({ id: 'position.aiAnalysisStartFail' }));
-        }
-        message.success(formatMessage({ id: 'position.aiAnalysisStartSuccess' }));
-        reload();
-      } catch (e) {
-        message.error(e.message || formatMessage({ id: 'position.aiAnalysisStartFail' }));
-        throw e;
-      } finally {
-        setStarting(false);
-      }
-    };
-
-    const confirmStartAnalysis = () => {
-      if (!apis?.startAnalysis || starting) {
-        return;
-      }
-      modal.confirm({
-        title: formatMessage({ id: 'position.aiAnalysisConfirm' }, { name: data.name || '' }),
-        onOk: startAnalysis
-      });
-    };
-
-    const extra =
-      !showAnalysisCard && canStartAnalysis ? (
-        <Button type="primary" loading={starting} onClick={confirmStartAnalysis}>
-          {formatMessage({ id: 'position.aiAnalysisAction' })}
-        </Button>
-      ) : null;
-
     const editExtra = canEdit ? (
       <Button type="link" className={style['edit-btn']} icon={<EditOutlined />} onClick={() => navigate(`${baseUrl}/position/${data.id}/edit`)}>
         {formatMessage({ id: 'action.edit' })}
       </Button>
     ) : null;
 
-    const content = showAnalysisCard ? (
-      <AiAnalysis positionName={data.name} progress={data.analysisProgress} locked={isLocked} animate={!isLocked} onAnimationComplete={lockAnalysis} />
-    ) : (
+    const content = (
       <Tabs
         activeKey={activeTab}
         onChange={onTabChange}
@@ -199,9 +133,7 @@ const Detail = createWithRemoteLoader({
       />
     );
 
-    const pageTitle = showAnalysisCard ? (
-      data.name
-    ) : (
+    const pageTitle = (
       <span className={style['title-with-badge']}>
         <span className={style['title-text']}>{data.name}</span>
         <span className={style.badge}>{formatMessage({ id: 'position.futureRoleBadge' })}</span>
@@ -210,8 +142,6 @@ const Detail = createWithRemoteLoader({
 
     return renderShell({
       title: pageTitle,
-      extra,
-      noPadding: showAnalysisCard,
       content
     });
   })

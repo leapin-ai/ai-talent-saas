@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, Flex, Progress, Skeleton, Space, Tag, Typography, message } from 'antd';
-import { CheckCircleFilled, CloseCircleFilled, ExclamationCircleFilled, InfoCircleFilled, ReloadOutlined, SyncOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CheckCircleFilled, CloseCircleFilled, ExclamationCircleFilled, InfoCircleFilled, ReloadOutlined, SyncOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
@@ -128,11 +128,11 @@ const DetailSkeleton = () => (
   </div>
 );
 
-/** 平台 Admin →「就绪度流程」tab 的详情：传 adminTenantId + runId（仅超级管理员可进入，操作不再单独做权限码） */
+/** 平台 Admin →「就绪度流程」tab 的详情：传 adminTenantId + runId，用 onBack 返回列表（仅超级管理员可进入，操作不再单独做权限码） */
 const ReadinessFlowDetail = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-core:TablePage@Table', 'components-core:FormInfo@useFormModal', 'components-core:Modal@useModal', 'components-core:Modal@useConfirmModal']
 })(
-  withLocale(({ remoteModules, adminTenantId, runId: id }) => {
+  withLocale(({ remoteModules, adminTenantId, runId: id, onBack }) => {
     const [usePreset, Table, useFormModal, useModal, useConfirmModal] = remoteModules;
     const { apis, ajax } = usePreset();
     const { formatMessage } = useIntl();
@@ -155,10 +155,15 @@ const ReadinessFlowDetail = createWithRemoteLoader({
         } catch (e) {
           if (!silent) {
             notifyError(e);
+            // URL 上的 runId 已不存在（或无权）时回列表，避免刷新后一直停在骨架屏
+            const msg = String(e?.message || '');
+            if (onBack && /不存在|not\s*found|404/i.test(msg)) {
+              onBack();
+            }
           }
         }
       },
-      [api.detail, call]
+      [api.detail, call, onBack]
     );
 
     useEffect(() => {
@@ -303,6 +308,7 @@ const ReadinessFlowDetail = createWithRemoteLoader({
       [act, api, call, confirmModal, detail, formModal, modal, openConfirm, openSend, t]
     );
 
+    // 加载中只用骨架屏，不放「返回列表」（避免空壳页上单独一个返回按钮）
     if (!detail) {
       return <DetailSkeleton />;
     }
@@ -369,6 +375,13 @@ const ReadinessFlowDetail = createWithRemoteLoader({
     return (
       <StageResultLoader.Provider value={loadResult}>
         <div className={style.page}>
+          {onBack ? (
+            <Flex>
+              <Button type="text" className={style.back} icon={<ArrowLeftOutlined />} onClick={onBack}>
+                {t('backToList')}
+              </Button>
+            </Flex>
+          ) : null}
           <RoleFlowParts
             tools={
               <Space size={8}>

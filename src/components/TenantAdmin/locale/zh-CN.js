@@ -167,7 +167,7 @@ const zhCN = {
   'tenantAdmin.switchTenant': '切换租户',
   'tenantAdmin.logout': '退出登录',
   'tenantAdmin.readiness.title': '就绪度流程',
-  'tenantAdmin.readiness.create': '新建流程',
+  'tenantAdmin.readiness.create': '新建岗位分析任务',
   'tenantAdmin.readiness.createSuccess': '流程已创建，正在生成岗位清单',
   'tenantAdmin.readiness.createSource': '岗位来源',
   'tenantAdmin.readiness.createSourceExisting': '选择已有岗位',

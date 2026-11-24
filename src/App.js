@@ -10,7 +10,7 @@ import PublicSystemLayout from '@components/PublicSystemLayout';
 import ShareReport from '@components/ShareReport';
 import ReadinessConfirm from '@components/ReadinessConfirm';
 import { Page } from '@kne/system-layout';
-import { getManualTaskAction } from '@components/AssessmentGenerateTask';
+import { getManualTaskAction } from '@components/DefaultManualCompleteTask';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
 import { getOidcClient } from './commons/oidcClient';
