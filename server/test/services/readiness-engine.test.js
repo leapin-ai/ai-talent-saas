@@ -435,8 +435,7 @@ test('创建流程：draft 任务按 input.path/params 调用上游，补全 cal
     assert.equal(draft.jd, '负责前端\n\n3 年经验');
     assert.equal(draft.job_title, '前端工程师');
     assert.equal(draft.language, 'zh-CN');
-    // TODO(dev-only)：开发期回调地址写死本机 IP，改回 ORIGIN 后恢复为 http://192.168.1.10:3040 的完整断言
-    assert.match(draft.callback_url, new RegExp(`/api/v1/task/callback\\?taskId=${[...h.tasks.values()][0].id}$`));
+    assert.equal(draft.callback_url, `http://192.168.1.10:3040/api/v1/task/callback?taskId=${[...h.tasks.values()][0].id}`);
     // 任务统一为 Readiness 类型，path/params 都在 input 里
     const task = [...h.tasks.values()][0];
     assert.equal(task.type, 'Readiness');
