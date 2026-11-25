@@ -1351,7 +1351,7 @@ test('发布失败：阶段 failed 且保留确认数据；重试成功后继续
   }
 });
 
-test('没有访谈题：发布任务明确报错，不会建出空项目', async () => {
+test('没有访谈题但有问卷题：跳过建题与转数字人，创建仅问卷数据采集项目', async () => {
   const h = await createHarness();
   try {
     const original = RESULTS['/role/question/manager'];
@@ -1360,9 +1360,35 @@ test('没有访谈题：发布任务明确报错，不会建出空项目', async
       const id = await runToManagerConfirm(h);
       await h.readiness.confirm(h.auth, { runId: id, kind: 'manager', deadline: h.deadline, digitalId: h.digitalId });
       await h.settle();
+      const run = await h.reload(id);
+      assert.equal(run.stage, 'manager_send');
+      assert.equal(h.publishCalls.questions.length, 0);
+      assert.equal(h.publishCalls.generate.length, 0);
+      assert.equal(h.publishCalls.projects.length, 1);
+      assert.deepEqual(h.publishCalls.projects[0].questionIds, []);
+      assert.equal(h.publishCalls.projects[0].status, 'open');
+      assert.equal(h.publishCalls.projects[0].setting.questionnaire.enabled, true);
+      assert.ok(h.publishCalls.projects[0].setting.questionnaire.schema.blocks[0].list.length > 0);
+    } finally {
+      RESULTS['/role/question/manager'] = original;
+    }
+  } finally {
+    await h.close();
+  }
+});
+
+test('没有访谈题也没有问卷题：发布失败，不会建出空项目', async () => {
+  const h = await createHarness();
+  try {
+    const original = RESULTS['/role/question/manager'];
+    RESULTS['/role/question/manager'] = { result: { questionnaire: [], interview: [] } };
+    try {
+      const id = await runToManagerConfirm(h);
+      await h.readiness.confirm(h.auth, { runId: id, kind: 'manager', deadline: h.deadline, digitalId: h.digitalId });
+      await h.settle();
       const [row] = await h.models.readinessStageData.findAll({ where: { runId: String(id), stage: 'manager_publish' } });
       assert.equal(row.status, 'failed');
-      assert.match(row.error, /没有访谈题/);
+      assert.match(row.error, /没有访谈题也没有问卷题/);
       assert.equal(h.publishCalls.projects.length, 0);
     } finally {
       RESULTS['/role/question/manager'] = original;
