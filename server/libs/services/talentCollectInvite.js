@@ -619,8 +619,8 @@ module.exports = fp(async (fastify, options) => {
   const isReadinessCollect = row => row?.interviewData?.source === 'readiness';
 
   /**
-   * 就绪度经理/员工问卷发送：建采集邀请并返回 /collect-profile 链接，不立刻调 AI 面试 invite。
-   * 员工会走简历/项目经历；经理仅面试步。AI shorten 在采集页 ensureInvite 时创建并回写 readinessInvite。
+   * 就绪度经理/员工/补充问卷发送：建采集邀请并返回 /collect-profile 链接，不立刻调 AI 面试 invite。
+   * 员工会走简历/项目经历；经理与补充问卷仅面试步。AI shorten 在采集页 ensureInvite 时创建并回写 readinessInvite。
    */
   const createForReadiness = async ({ tenantId, inviteType, positionId = null, name, email, projectId, projectName = '', language: languageInput, expiresAt, readinessInviteId = null } = {}) => {
     if (!tenantId || !projectId) {

@@ -270,10 +270,13 @@ const createHarness = async ({ failPaths = [], responseByPath = {} } = {}) => {
       return { id: `sa-${roleApplyCalls.skillAnalysisSave.length}` };
     }
   };
-  // 经理/员工发送走采集页：测试里用轻量 mock，不拉完整 talentCollectInvite 服务
+  // 经理/员工/补充问卷发送走采集页：测试里用轻量 mock，不拉完整 talentCollectInvite 服务
   const collectInviteIds = [];
+  const collectInviteCalls = [];
   aiServices.talentCollectInvite = {
-    createForReadiness: async ({ tenantId, inviteType, name, email, projectId, expiresAt }) => {
+    createForReadiness: async args => {
+      const { tenantId, inviteType, name, email, projectId, expiresAt } = args;
+      collectInviteCalls.push(args);
       const id = String(collectInviteIds.length + 1);
       collectInviteIds.push(id);
       const code = await fastify.shorten.services.sign(JSON.stringify({ type: 'talentCollectInvite', inviteId: id }), new Date(expiresAt).getTime());
@@ -396,6 +399,7 @@ const createHarness = async ({ failPaths = [], responseByPath = {} } = {}) => {
     interviewDetails,
     transferCalls,
     inviteCalls,
+    collectInviteCalls,
     mails,
     confirmService: () => fastify.project.services.readinessConfirm,
     sendService: () => fastify.project.services.readinessSend,
@@ -1029,6 +1033,42 @@ test('发送问卷：经理/员工走采集免登录页，有效期取问卷项�
     assert.equal(invite.shorten, null);
     assert.ok(invite.collectInviteId);
     assert.equal(new Date(invite.expiresAt).getTime(), projectEnd);
+    assert.equal(h.collectInviteCalls.at(-1).inviteType, 'manager');
+  } finally {
+    await h.close();
+  }
+});
+
+test('发送补充问卷：与经理一样走本站 /collect-profile，inviteType=manager（仅面试步），不直达 AI 面试', async () => {
+  const h = await createHarness();
+  try {
+    const emp = await h.models.employee.create({ name: '张三', email: 'zs@x.com', tenantId: 1 });
+    const { id } = await h.readiness.createRun(h.auth, { positionId: h.position.id, hasStaffQuestionnaire: true, employeeIds: [String(emp.id)] });
+    await h.settle();
+    await h.readiness.confirm(h.auth, { runId: id, kind: 'manager', deadline: h.deadline, digitalId: h.digitalId });
+    await h.settle();
+    await h.readiness.completeSend({ run: { id }, kind: 'manager', output: {}, userId: 7 });
+    await h.readiness.submitAnswers(h.auth, { runId: id, kind: 'manager', answers: { 1: 'a' } });
+    await h.settle();
+    const [person] = await h.readiness.loadPersons({ id, tenantId: 1 });
+    await h.readiness.confirm(h.auth, { runId: id, kind: 'staff', deadline: h.deadline, digitalId: h.digitalId });
+    await h.settle();
+    await h.readiness.completeSend({ run: { id }, kind: 'staff', personId: person.id, output: {}, userId: 7 });
+    await h.readiness.submitAnswers(h.auth, { runId: id, kind: 'staff', personId: person.id, answers: { 1: 'x' } });
+    await h.settle();
+    await h.readiness.confirm(h.auth, { runId: id, kind: 'reassess', personId: person.id, deadline: h.deadline, digitalId: h.digitalId });
+    await h.settle();
+    assert.equal((await h.models.readinessRunPerson.findByPk(person.id)).stage, 'reassess_send');
+
+    const beforeInviteCalls = h.inviteCalls.length;
+    const result = await h.sendService().send(h.auth, { kind: 'reassess', runIds: [String(id)], language: 'zh-CN' });
+    assert.equal(result.sent.length, 1);
+    assert.equal(h.inviteCalls.length, beforeInviteCalls, '补充问卷发送时不应立刻创建 AI 面试邀请');
+    const invite = await h.models.readinessInvite.findOne({ where: { runId: String(id), kind: 'reassess', isCurrent: true } });
+    assert.match(invite.url, /\/collect-profile\?code=/);
+    assert.equal(invite.shorten, null);
+    assert.ok(invite.collectInviteId);
+    assert.equal(h.collectInviteCalls.at(-1).inviteType, 'manager');
   } finally {
     await h.close();
   }

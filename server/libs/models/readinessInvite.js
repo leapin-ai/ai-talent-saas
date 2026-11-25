@@ -38,7 +38,7 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
         comment: 'AI 面试项目ID'
       },
       collectInviteId: definePrimaryType('collectInviteId', {
-        comment: '人才采集邀请 ID（经理/员工走 /collect-profile；AI 面试 shorten 延后到进入面试步）',
+        comment: '人才采集邀请 ID（经理/员工/补充问卷走 /collect-profile；AI 面试 shorten 延后到进入面试步）',
         allowNull: true
       }),
       inviteId: {
@@ -51,7 +51,7 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
       },
       url: {
         type: DataTypes.TEXT,
-        comment: '免登录链接（经理/员工为 /collect-profile?code=…）'
+        comment: '免登录链接（经理/员工/补充问卷为 /collect-profile?code=…）'
       },
       expiresAt: {
         type: DataTypes.DATE,
