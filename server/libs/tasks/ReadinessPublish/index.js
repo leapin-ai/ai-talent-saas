@@ -4,9 +4,10 @@
  *
  * 步骤（调用 AI 面试 open-api/admin，均按「题目 / 数字人」幂等，失败可直接重试）：
  *   1. 校验确认时选定的数字人确实分配给了该客户
- *   2. 添加问题：访谈题逐个建成题库问题（数据采集场景，已存在则复用）
- *   3. 转数字人：生成是异步的，反复调用同一接口直到全部 existed
- *   4. 添加项目：数据采集类型，名称 roleName-YYYY-MM-DD-时间戳；配置问卷 schema、配置题目、直接开启
+ *   2. 添加问题：访谈题逐个建成题库问题（数据采集场景，已存在则复用）；无访谈题则跳过
+ *   3. 转数字人：有访谈题时轮询直到全部 existed；无访谈题则跳过
+ *   4. 添加项目：数据采集类型；配置问卷 schema；有题则配题；直接开启
+ *      （仅问卷、无访谈题时依赖 AI 面试侧允许「空题库 + 有效问卷」开项目）
  * 返回值即阶段输出，发送阶段据此取 projectId 与截止日期。
  */
 const { buildProjectName, deadlineEndTime, buildInterviewQuestions, buildQuestionnaireSchema, digitalsOf } = require('../../utils/readiness-publish');
@@ -55,9 +56,12 @@ const runner = async (fastify, options, { task, log }) => {
   await step('使用数字人', { digitalId, name: digital.name, language: digital.language });
 
   const questions = buildInterviewQuestions({ interview, language });
-  if (!questions.length) {
-    await fail('问卷没有访谈题，无法创建数据采集项目（项目开启要求至少一个题目）');
+  const questionnaireSchema = buildQuestionnaireSchema({ questionnaire, language });
+  const questionnaireFieldCount = (questionnaireSchema.blocks || []).reduce((sum, block) => sum + (block.list || []).length, 0);
+  if (!questions.length && questionnaireFieldCount === 0) {
+    await fail('问卷没有访谈题也没有问卷题，无法创建数据采集项目');
   }
+
   const questionMap = [];
   for (const item of questions) {
     const created = await services.aiInterview.adminCreateQuestion({ tenantId, body: item.body });
@@ -66,44 +70,48 @@ const runner = async (fastify, options, { task, log }) => {
   }
   const questionIds = questionMap.map(item => item.questionId);
 
-  const recreated = new Map();
-  const startedAt = Date.now();
-  // 首次调用带 forceRetry：重试发布时清掉 AI 面试侧上次 failed，重新建任务；轮询期间不再强制重建
-  let forceRetry = true;
-  for (;;) {
-    const results = await services.aiInterview.adminGenerateDigital({
-      tenantId,
-      digitalIds: [digitalId],
-      questionIds,
-      forceRetry
-    });
-    forceRetry = false;
-    const failed = (results || []).filter(item => item.status === 'failed');
-    if (failed.length) {
-      const detail = failed.map(item => `${item.questionId}: ${item.error || '转数字人失败'}`).join('；');
-      await fail(`题目转数字人失败：${detail}`);
-    }
-    const pending = (results || []).filter(item => item.status !== 'existed');
-    if (!pending.length) {
-      await step('题目已全部转为数字人', { count: questionIds.length });
-      break;
-    }
-    pending.forEach(item => {
-      if (item.status === 'created') {
-        recreated.set(item.questionId, (recreated.get(item.questionId) || 0) + 1);
+  if (!questionIds.length) {
+    await step('无访谈题，跳过建题与转数字人（仅问卷项目）', { questionnaireFieldCount });
+  } else {
+    const recreated = new Map();
+    const startedAt = Date.now();
+    // 首次调用带 forceRetry：重试发布时清掉 AI 面试侧上次 failed，重新建任务；轮询期间不再强制重建
+    let forceRetry = true;
+    for (;;) {
+      const results = await services.aiInterview.adminGenerateDigital({
+        tenantId,
+        digitalIds: [digitalId],
+        questionIds,
+        forceRetry
+      });
+      forceRetry = false;
+      const failed = (results || []).filter(item => item.status === 'failed');
+      if (failed.length) {
+        const detail = failed.map(item => `${item.questionId}: ${item.error || '转数字人失败'}`).join('；');
+        await fail(`题目转数字人失败：${detail}`);
       }
-    });
-    const broken = [...recreated.entries()].find(([, times]) => times > MAX_RECREATE);
-    if (broken) {
-      await fail(`题目 ${broken[0]} 转数字人多次失败，请到 AI 面试后台检查数字人与题目`);
+      const pending = (results || []).filter(item => item.status !== 'existed');
+      if (!pending.length) {
+        await step('题目已全部转为数字人', { count: questionIds.length });
+        break;
+      }
+      pending.forEach(item => {
+        if (item.status === 'created') {
+          recreated.set(item.questionId, (recreated.get(item.questionId) || 0) + 1);
+        }
+      });
+      const broken = [...recreated.entries()].find(([, times]) => times > MAX_RECREATE);
+      if (broken) {
+        await fail(`题目 ${broken[0]} 转数字人多次失败，请到 AI 面试后台检查数字人与题目`);
+      }
+      await step('等待转数字人', {
+        pending: pending.map(item => ({ questionId: item.questionId, status: item.status, error: item.error || null }))
+      });
+      if (Date.now() - startedAt > timeout) {
+        await fail(`转数字人超过 ${Math.round(timeout / 60000)} 分钟仍未完成，请稍后重试`);
+      }
+      await sleep(pollInterval);
     }
-    await step('等待转数字人', {
-      pending: pending.map(item => ({ questionId: item.questionId, status: item.status, error: item.error || null }))
-    });
-    if (Date.now() - startedAt > timeout) {
-      await fail(`转数字人超过 ${Math.round(timeout / 60000)} 分钟仍未完成，请稍后重试`);
-    }
-    await sleep(pollInterval);
   }
 
   const name = buildProjectName(roleName);
@@ -119,9 +127,9 @@ const runner = async (fastify, options, { task, log }) => {
     endTime: deadlineEndTime(deadline),
     maxCount: PROJECT_MAX_COUNT,
     description: `Readiness / ${kind} / ${roleName}`,
-    setting: { questionnaire: { enabled: true, timing: 'before', schema: buildQuestionnaireSchema({ questionnaire, language }) } }
+    setting: { questionnaire: { enabled: true, timing: 'before', schema: questionnaireSchema } }
   };
-  await step('创建项目', { name, deadline, questionCount: questionIds.length, questionnaireCount: body.setting.questionnaire.schema.blocks.reduce((sum, block) => sum + block.list.length, 0) });
+  await step('创建项目', { name, deadline, questionCount: questionIds.length, questionnaireCount: questionnaireFieldCount });
   const project = await services.aiInterview.adminCreateProject({ tenantId, body });
   if (!project?.id) {
     await fail('AI 面试创建项目未返回项目 ID');
