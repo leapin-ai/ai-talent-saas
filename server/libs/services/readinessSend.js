@@ -30,11 +30,11 @@ module.exports = fp(async (fastify, options) => {
     return trimSlash(services.aiInterview.getAjaxBaseUrl(setting.apiUrl));
   };
 
-  /** 补充问卷仍直达 AI 面试免登录页；经理/员工走采集页 */
+  /** 直达 AI 面试免登录页（历史兜底；当前经理/员工/补充问卷均走采集页） */
   const buildInterviewInviteUrl = (origin, shorten) => `${origin}/invite?nl=${encodeURIComponent(shorten)}`;
 
-  /** 经理/员工：复用人才采集免登录页（员工含简历/项目经历） */
-  const usesCollectProfile = kind => kind === 'manager' || kind === 'staff';
+  /** 经理/员工/补充问卷：复用本站人才采集免登录页（经理与补充问卷仅面试步；员工含简历/项目经历） */
+  const usesCollectProfile = kind => kind === 'manager' || kind === 'staff' || kind === 'reassess';
 
   /** 手填的截止日期 → 当天 23:59:59.999（UTC+8）的毫秒时间戳；留空返回 null，已过期报错 */
   const overrideExpires = deadline => {
@@ -347,7 +347,7 @@ module.exports = fp(async (fastify, options) => {
 
   /**
    * 批量发送：Role 之间互相独立。可发的 Role 照常发送并推进，未确认/无对象的 Role 只被跳过并如实返回，不影响其它 Role。
-   * 同一收件邮箱只发一封邮件，包含其涉及的所有 Role 链接（经理/员工为采集页，补充问卷为 AI 面试页）。
+   * 同一收件邮箱只发一封邮件，包含其涉及的所有 Role 链接（经理/员工/补充问卷均为本站采集页）。
    */
   const send = async ({ tenantId, userId }, body = {}) => {
     const { kind, language, deadline } = body;
@@ -424,13 +424,14 @@ module.exports = fp(async (fastify, options) => {
             let shorten = null;
             let collectInviteId = null;
             if (collectFlow) {
-              // 经理/员工：先发采集免登录链；AI 面试邀请在采集页进入面试步时再创建
+              // 经理/员工/补充问卷：先发本站采集免登录链；AI 面试邀请在采集页进入面试步时再创建
+              // 补充问卷与经理一样只走面试步（inviteType=manager），不做简历/项目采集
               if (!services.talentCollectInvite?.createForReadiness) {
                 throw new Error('采集邀请服务未就绪');
               }
               const collect = await services.talentCollectInvite.createForReadiness({
                 tenantId,
-                inviteType: kind === 'manager' ? 'manager' : 'employee',
+                inviteType: kind === 'staff' ? 'employee' : 'manager',
                 positionId: run.positionId,
                 name: target.name,
                 email: target.email,
