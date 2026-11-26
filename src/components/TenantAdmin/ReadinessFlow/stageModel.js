@@ -101,11 +101,16 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
         primary.push({ children: t('goSend'), onClick: () => actions.openSend(kind) });
       }
       if (isCurrent && stage.action === 'answers') {
-        if (current.some(item => item.status === 'succeeded')) {
+        // 只完成问卷、访谈视频未齐：不展示「确认进入下一阶段 / 获取结果」（定时任务会继续同步）
+        const hasSucceeded = current.some(item => item.status === 'succeeded');
+        const answersReady = current.some(item => item.status === 'succeeded' && item.answersReady !== false);
+        if (answersReady) {
           primary.push({ children: t('confirmNextStage'), onClick: () => actions.advanceAnswers({ kind, personId }) });
           primary.push({ children: t('reanswer'), onClick: () => actions.reanswer({ kind, personId }) });
         }
-        primary.push({ children: t('fetchResult'), onClick: actions.fetchResult });
+        if (!hasSucceeded || answersReady) {
+          primary.push({ children: t('fetchResult'), onClick: actions.fetchResult });
+        }
         primary.push({ children: t('enterAnswers'), onClick: () => actions.openAnswers({ kind, personId }) });
       }
       if (isCurrent && stage.action === 'trigger') {
@@ -152,7 +157,8 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
       if (isCurrent && stage.action === 'answers') {
         const targets = invites.filter(item => item.isCurrent && item.kind === kind && (kind === 'manager' || String(item.personId) === personId));
         if (targets.length) {
-          facts.push(t('summary.inviteProgress', { answered: targets.filter(item => item.status === 'answered').length, total: targets.length }));
+          const answered = targets.filter(item => item.status === 'answered' && item.collectionComplete !== false).length;
+          facts.push(t('summary.inviteProgress', { answered, total: targets.length }));
         }
       }
       if (state === 'done' && stage.mode === 'auto' && succeeded) {

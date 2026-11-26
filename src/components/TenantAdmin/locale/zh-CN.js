@@ -511,6 +511,7 @@ const zhCN = {
   'tenantAdmin.readiness.inviteStatus.sent': '已发送',
   'tenantAdmin.readiness.inviteStatus.failed': '发送失败',
   'tenantAdmin.readiness.inviteStatus.answered': '已回答',
+  'tenantAdmin.readiness.inviteStatus.collecting': '问卷已答，待访谈',
   'tenantAdmin.readiness.stage.draft': '生成岗位清单',
   'tenantAdmin.readiness.stage.manager_questionnaire': '生成经理问卷',
   'tenantAdmin.readiness.stage.manager_confirm': '确认经理问卷',

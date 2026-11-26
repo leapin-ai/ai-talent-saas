@@ -30,7 +30,9 @@ const useSendReadiness = ({ useFormModal, useModal, call, api, onDone }) => {
       language: flowLanguage(runs.map(run => run.language)),
       deadline: defaultDeadline,
       participants: [],
-      members: kind === 'manager' ? null : []
+      members: kind === 'manager' ? null : [],
+      // staff/reassess：显式 []，取消勾选后若表单去掉字段也不会在提交时「漏传=发全部」
+      personIds: kind === 'staff' || kind === 'reassess' ? [] : undefined
     };
 
     const perRun = runs.length > 1 && (kind === 'manager' || kind === 'staff');

@@ -154,6 +154,13 @@ test('questionnaireOf 读取补充问卷 reassess.rows', () => {
   assert.strictEqual(stages.questionnaireOf({ result: { questionnaire: [{ no: 'Q02' }] } }).questionnaire[0].no, 'Q02');
 });
 
+test('answersCollectionReady：有访谈题时须视频作答齐套', () => {
+  assert.equal(stages.answersCollectionReady({ expectedVideos: 0, videoAnswers: [] }), true);
+  assert.equal(stages.answersCollectionReady({ expectedVideos: 2, videoAnswers: [{}] }), false);
+  assert.equal(stages.answersCollectionReady({ expectedVideos: 2, videoAnswers: [{}, {}] }), true);
+  assert.equal(stages.expectedInterviewCountOf({ result: { interview: [{ no: 'I1' }, { no: 'I2' }] } }), 2);
+});
+
 test('inviteDeleteBlock：经理邀请在回收答卷阶段之前可删，之后不可删；参与人邀请答卷提交后不可删', () => {
   const manager = { kind: 'manager' };
   assert.equal(stages.inviteDeleteBlock({ invite: manager, run: { stage: 'manager_send' } }), null);

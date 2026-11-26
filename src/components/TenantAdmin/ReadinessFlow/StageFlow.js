@@ -331,6 +331,8 @@ export const ManagerInviteOverview = ({ t, invites, inviteActions }) => {
                     <Tooltip title={invite.error}>
                       <span>{t(`inviteStatus.${invite.status}`)}</span>
                     </Tooltip>
+                  ) : invite.status === 'answered' && invite.collectionComplete === false ? (
+                    t('inviteStatus.collecting')
                   ) : (
                     t(`inviteStatus.${invite.status}`)
                   )}

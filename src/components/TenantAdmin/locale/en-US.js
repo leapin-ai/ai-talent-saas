@@ -513,6 +513,7 @@ const enUS = {
   'tenantAdmin.readiness.inviteStatus.sent': 'Sent',
   'tenantAdmin.readiness.inviteStatus.failed': 'Failed',
   'tenantAdmin.readiness.inviteStatus.answered': 'Answered',
+  'tenantAdmin.readiness.inviteStatus.collecting': 'Questionnaire done, interview pending',
   'tenantAdmin.readiness.stage.draft': 'Draft role catalog',
   'tenantAdmin.readiness.stage.manager_questionnaire': 'Manager questionnaire',
   'tenantAdmin.readiness.stage.manager_confirm': 'Confirm manager questionnaire',

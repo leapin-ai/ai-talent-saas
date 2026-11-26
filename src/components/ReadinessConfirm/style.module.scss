@@ -52,7 +52,6 @@ $subtle: #f6f8fb;
   font-size: 14px;
   line-height: 22px;
   color: $text-secondary;
-  max-width: 62ch;
 }
 
 .role {
@@ -73,12 +72,18 @@ $subtle: #f6f8fb;
 .meta {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px 40px;
   margin-top: 16px;
 }
 
 .meta-item {
   min-width: 0;
+}
+
+.meta-item:last-child {
+  text-align: right;
 }
 
 .meta-label {

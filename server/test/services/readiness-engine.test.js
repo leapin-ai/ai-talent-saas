@@ -1181,10 +1181,15 @@ test('回收答卷：已回收的答卷之后补充视频题作答，且只补�
     const invite = await h.models.readinessInvite.findOne({ where: { runId: String(id), isCurrent: true } });
     await invite.update({ shorten: 'sh-c2', inviteId: 'i-c2' });
     h.interviewRows.push({ id: 'c2', code: 'sh-c2', email: 'a@example.com' });
-    // 第一次回收时视频题还没有作答
+    // 第一次回收时视频题还没有作答：有访谈题时不能标 answered，也不能进入下一阶段
     h.interviewDetails.c2 = { options: { questionnaire: { submittedAt: new Date().toISOString(), answers: { Q01: 'B' } } }, answers: {} };
     assert.equal((await h.sendService().syncAnswers(h.auth, { runId: id })).saved, 1);
-    // 之后视频题作答完成，再次获取：补充到已保存的答卷上
+    await invite.reload();
+    assert.equal(invite.status, 'sent');
+    const [partial] = await h.models.readinessStageData.findAll({ where: { runId: String(id), stage: 'manager_answers', isCurrent: true } });
+    assert.equal(partial.output.answersReady, false);
+    await assert.rejects(() => h.readiness.advanceAnswers(h.auth, { runId: id, kind: 'manager' }), /访谈题未完成 AI 数据采集/);
+    // 之后视频题作答完成，再次获取：补充到已保存的答卷上并标记 answered
     h.interviewDetails.c2 = {
       options: { questionnaire: { submittedAt: new Date().toISOString(), answers: { Q01: 'B' } } },
       answers: { v2: { question: { id: 'v2', title: '最近的挑战' }, aiResult: [{ message: '数据迁移' }], submit: true } }
@@ -1192,9 +1197,13 @@ test('回收答卷：已回收的答卷之后补充视频题作答，且只补�
     const again = await h.sendService().syncAnswers(h.auth, { runId: id });
     assert.equal(again.saved, 0);
     assert.equal(again.video, 1);
+    assert.equal(again.collected, 1);
+    await invite.reload();
+    assert.equal(invite.status, 'answered');
     const [row] = await h.models.readinessStageData.findAll({ where: { runId: String(id), stage: 'manager_answers', isCurrent: true } });
     assert.deepEqual(row.output.answers, { Q01: 'B' });
     assert.equal(row.output.videoAnswers[0].transcript, '数据迁移');
+    assert.equal(row.output.answersReady, true);
     // 已补充过，不再重复
     assert.equal((await h.sendService().syncAnswers(h.auth, { runId: id })).video, 0);
   } finally {
