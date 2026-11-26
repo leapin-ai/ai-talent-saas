@@ -68,15 +68,24 @@ module.exports = fp(async (fastify, options) => {
 
   const publicLanguage = language => (MAIL_LANGUAGES.includes(language) ? language : 'zh-CN');
 
-  /** 当前确认状态：confirmed 以当前版本的确认数据为准（回退后会失效） */
+  /** 当前确认状态：confirmed 以当前版本的确认数据为准（回退后会失效）；驳回仍停在确认阶段 */
   const confirmState = async ({ run, info, person, stage }) => {
     if (stage === info.confirmStage) {
-      return { confirmed: false };
+      const row = await models.readinessStageData.findOne({
+        where: { runId: String(run.id), stage: info.confirmStage, personId: idOrNull(info.scope === 'person' ? person.id : null), isCurrent: true, status: 'succeeded' }
+      });
+      if (row?.output?.rejected === true) {
+        return { confirmed: false, rejected: true, rejectComment: row.output?.comment || '', rejectedAt: row.output?.rejectedAt || null };
+      }
+      return { confirmed: false, rejected: false };
     }
     const row = await models.readinessStageData.findOne({
       where: { runId: String(run.id), stage: info.confirmStage, personId: idOrNull(info.scope === 'person' ? person.id : null), isCurrent: true, status: 'succeeded' }
     });
-    return row ? { confirmed: true, deadline: row.output?.deadline || null, confirmedAt: row.output?.confirmedAt || null } : { confirmed: false, notReached: true };
+    if (!row || row.output?.rejected || row.output?.skipped) {
+      return { confirmed: false, notReached: true };
+    }
+    return { confirmed: true, deadline: row.output?.deadline || null, confirmedAt: row.output?.confirmedAt || null };
   };
 
   const mapQuestionnaire = output => {
@@ -291,6 +300,9 @@ module.exports = fp(async (fastify, options) => {
       stage: first.stage,
       confirmed: first.confirmed,
       notReached: first.notReached,
+      rejected: first.rejected,
+      rejectComment: first.rejectComment,
+      rejectedAt: first.rejectedAt,
       deadline: first.deadline,
       confirmedAt: first.confirmedAt,
       questionnaire: first.questionnaire || [],
@@ -298,16 +310,18 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
+  const resolveTarget = (payload, { key, runId, kind, personId }) =>
+    payload.targets.find(item => targetKeyOf(item) === String(key || '')) ||
+    payload.targets.find(item => String(item.runId) === String(runId) && item.kind === kind && String(item.personId || '') === String(personId || '')) ||
+    (payload.targets.length === 1 ? payload.targets[0] : null);
+
   /** 免登录页提交确认：只确认本批中的一份；先到先得 */
   const publicConfirm = async ({ code, deadline, key, runId, kind, personId }) => {
     const payload = await decode(code);
     if (!payload.digitalId) {
       throw new Error('该确认链接缺少数字人，请联系管理员重新发送');
     }
-    const target =
-      payload.targets.find(item => targetKeyOf(item) === String(key || '')) ||
-      payload.targets.find(item => String(item.runId) === String(runId) && item.kind === kind && String(item.personId || '') === String(personId || '')) ||
-      (payload.targets.length === 1 ? payload.targets[0] : null);
+    const target = resolveTarget(payload, { key, runId, kind, personId });
     if (!target) {
       throw new Error('确认目标不存在或不属于本链接');
     }
@@ -324,7 +338,26 @@ module.exports = fp(async (fastify, options) => {
     return { confirmedAt: output.confirmedAt, deadline: output.deadline, key: targetKeyOf(target) };
   };
 
+  /** 免登录页驳回：须填写修改意见；不推进阶段，管理员可见意见后改题重发或自行确认 */
+  const publicReject = async ({ code, comment, key, runId, kind, personId }) => {
+    const payload = await decode(code);
+    const target = resolveTarget(payload, { key, runId, kind, personId });
+    if (!target) {
+      throw new Error('确认目标不存在或不属于本链接');
+    }
+    const output = await services.readiness.rejectQuestionnaire({
+      tenantId: payload.tenantId,
+      runId: target.runId,
+      kind: target.kind,
+      personId: target.personId,
+      questionnaireVersion: target.questionnaireVersion,
+      comment,
+      operator: { via: 'email' }
+    });
+    return { rejectedAt: output.rejectedAt, key: targetKeyOf(target) };
+  };
+
   Object.assign(services, {
-    readinessConfirm: { sendMails, publicDetail, publicConfirm }
+    readinessConfirm: { sendMails, publicDetail, publicConfirm, publicReject }
   });
 });

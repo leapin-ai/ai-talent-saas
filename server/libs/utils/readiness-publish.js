@@ -180,4 +180,120 @@ const digitalsOf = items =>
     .filter(item => item?.digitalId || item?.digital?.id)
     .map(item => ({ id: String(item.digitalId || item.digital.id), name: text(item.digital?.name), language: text(item.digital?.language) }));
 
-module.exports = { DISPLAY_TZ, moduleInfo, buildProjectName, normalizeDeadline, deadlineEndTime, parseOptions, buildQuestionnaireSchema, buildInterviewQuestions, digitalsOf };
+/** FormCreator 选项「A. 文案」→ 上游 { label, value }；无字母前缀时用整段文案，value 按序 A/B/… */
+const unparseOptions = options => {
+  const list = asArray(options);
+  return list
+    .map((item, index) => {
+      const rawLabel = text(item?.label);
+      const rawValue = text(item?.value).toUpperCase();
+      const matched = rawLabel.match(/^([A-Z])\.\s*(.+)$/i);
+      if (matched) {
+        return { label: text(matched[2]), value: text(matched[1]).toUpperCase() };
+      }
+      if (rawLabel && rawValue) {
+        return { label: rawLabel, value: rawValue };
+      }
+      if (rawLabel) {
+        return { label: rawLabel, value: String.fromCharCode(65 + index) };
+      }
+      return null;
+    })
+    .filter(Boolean);
+};
+
+/** FormCreator visibleWhen → 上游 show_if；无法识别时返回 null */
+const visibleWhenToShowIf = visibleWhen => {
+  const conditions = asArray(visibleWhen?.conditions).filter(item => text(item?.field));
+  if (!conditions.length) {
+    return null;
+  }
+  const field = text(conditions[0].field);
+  if (conditions.every(item => text(item.operator) === 'neq' && text(item.field) === field)) {
+    return { no: field, op: 'not_in', values: conditions.map(item => text(item.value).toUpperCase()).filter(Boolean) };
+  }
+  const first = conditions[0];
+  const op = text(first.operator);
+  if (['in', 'includesAny', 'eq'].includes(op) && text(first.field) === field) {
+    const values = asArray(first.value)
+      .map(value => text(value).toUpperCase())
+      .filter(Boolean);
+    if (!values.length) {
+      return null;
+    }
+    return { no: field, op: 'in', values };
+  }
+  return null;
+};
+
+const stripQuestionLabel = (label, no) => {
+  const raw = text(label);
+  const prefix = `${text(no)}. `;
+  return raw.startsWith(prefix) ? text(raw.slice(prefix.length)) : raw;
+};
+
+const fieldTypeToQuestionType = (fieldType, originalType) => {
+  if (fieldType === 'RadioGroup') {
+    return 'single';
+  }
+  if (fieldType === 'CheckboxGroup') {
+    return 'multiple';
+  }
+  if (fieldType === 'TextArea' || fieldType === 'Input') {
+    return 'text';
+  }
+  return text(originalType) || 'text';
+};
+
+/**
+ * FormCreator schema → 上游问卷题列表。
+ * originals：按题号保留 module / design 等编辑器表达不了的字段；题序以 schema 为准。
+ */
+const schemaToQuestionnaire = (schema, { originals = [] } = {}) => {
+  const byNo = new Map(asArray(originals).map(item => [text(item?.no), item]));
+  const items = [];
+  asArray(schema?.blocks).forEach(block => {
+    const blockModule = text(block?.title);
+    asArray(block?.list).forEach(field => {
+      const no = text(field?.name);
+      if (!no) {
+        return;
+      }
+      const original = byNo.get(no) || {};
+      const question = stripQuestionLabel(field?.label, no);
+      if (!question) {
+        return;
+      }
+      const options = unparseOptions(field?.props?.options);
+      const showIf = field?.visibleWhen ? visibleWhenToShowIf(field.visibleWhen) : original.show_if || null;
+      const item = {
+        no,
+        type: fieldTypeToQuestionType(text(field?.type), original.type),
+        module: text(original.module) || blockModule,
+        question,
+        options: options.length ? options : asArray(original.options)
+      };
+      if (showIf?.no) {
+        item.show_if = { no: String(showIf.no), op: showIf.op === 'not_in' ? 'not_in' : 'in', values: asArray(showIf.values).map(String) };
+      }
+      if (original.design != null) {
+        item.design = original.design;
+      }
+      items.push(item);
+    });
+  });
+  return items;
+};
+
+module.exports = {
+  DISPLAY_TZ,
+  moduleInfo,
+  buildProjectName,
+  normalizeDeadline,
+  deadlineEndTime,
+  parseOptions,
+  buildQuestionnaireSchema,
+  schemaToQuestionnaire,
+  buildInterviewQuestions,
+  digitalsOf
+};

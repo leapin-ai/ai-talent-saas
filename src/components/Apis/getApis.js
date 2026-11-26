@@ -75,6 +75,8 @@ const getApis = options => {
           create: { url: `${prefix}/tenant/admin/readiness/create`, method: 'POST' },
           cancel: { url: `${prefix}/tenant/admin/readiness/cancel`, method: 'POST' },
           confirm: { url: `${prefix}/tenant/admin/readiness/manual/confirm`, method: 'POST' },
+          questionnaireEdit: { url: `${prefix}/tenant/admin/readiness/manual/questionnaire-edit`, method: 'POST' },
+          questionnaireUpdate: { url: `${prefix}/tenant/admin/readiness/manual/questionnaire-update`, method: 'POST' },
           projectPreview: { url: `${prefix}/tenant/admin/readiness/manual/project-preview`, method: 'POST' },
           confirmDigitals: { url: `${prefix}/tenant/admin/readiness/manual/digitals`, method: 'POST' },
           confirmMailSend: { url: `${prefix}/tenant/admin/readiness/manual/confirm-mail/send`, method: 'POST' },
@@ -428,6 +430,10 @@ const getApis = options => {
           },
           confirm: {
             url: `${prefix}/public/readiness-confirm`,
+            method: 'POST'
+          },
+          reject: {
+            url: `${prefix}/public/readiness-confirm/reject`,
             method: 'POST'
           }
         },

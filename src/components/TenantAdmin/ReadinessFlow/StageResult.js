@@ -595,6 +595,9 @@ const FieldsResult = ({ output, tr }) => {
   const via = output?.via ? tr(`via.${output.via}`) : null;
   const fields = [
     [tr('skippedAt'), formatTime(output?.skippedAt)],
+    [tr('rejected'), output?.rejected ? tr('yes') : null],
+    [tr('rejectComment'), output?.rejected ? output?.comment || '-' : null],
+    [tr('rejectedAt'), formatTime(output?.rejectedAt)],
     [tr('confirmedBy'), [output?.confirmedByName, output?.confirmedByEmail].filter(Boolean).join(' · ') || null],
     [tr('confirmedAt'), formatTime(output?.confirmedAt)],
     [tr('via'), via],

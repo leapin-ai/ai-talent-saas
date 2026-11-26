@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Badge, Button, Flex, Progress, Skeleton, Space, Tag, Typography, message } from 'antd';
+import { Badge, Button, Flex, Progress, Skeleton, Space, Tag, Tooltip, Typography, message } from 'antd';
 import { ArrowLeftOutlined, CheckCircleFilled, CloseCircleFilled, ExclamationCircleFilled, InfoCircleFilled, ReloadOutlined, SyncOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { createWithRemoteLoader } from '@kne/remote-loader';
@@ -11,6 +11,7 @@ import { ManagerInviteOverview, MilestoneFlow, PersonFlowPanel, PersonOverview, 
 import useSendReadiness from './useSendReadiness';
 import useConfirmReadiness from './useConfirmReadiness';
 import ProjectPreviewView from './ProjectPreviewView';
+import EditQuestionnaireModal from './EditQuestionnaireModal';
 import EnterAnswersForm, { DEFAULT_ANSWERS_JSON, loadAnswersDefaultJson, normalizeAnswersPayload } from './EnterAnswersForm';
 import { buildMilestones, buildStageRows, progressOf } from './stageModel';
 import { LANGUAGE_LABEL, STATUS_COLOR, notifyError, useReadinessCall } from './common';
@@ -239,6 +240,14 @@ const ReadinessFlowDetail = createWithRemoteLoader({
             children: <ProjectPreviewView call={call} api={api} params={{ runId: String(idRef.current), kind, personId }} />
           }),
         confirm: ({ kind, personId }) => openConfirm({ runId: String(idRef.current), kind, personId, language: detail?.language }),
+        editQuestionnaire: ({ kind, personId }) => {
+          modal({
+            title: t('editQuestionnaire'),
+            size: 'large',
+            footer: null,
+            children: ({ close }) => <EditQuestionnaireModal call={call} api={api} runId={String(idRef.current)} kind={kind} personId={personId} onSaved={() => load(true)} onClose={close} />
+          });
+        },
         fetchResult: async () => {
           const result = await act(api.syncAnswers, {});
           if (!result) {
@@ -312,7 +321,7 @@ const ReadinessFlowDetail = createWithRemoteLoader({
             onConfirm: () => act(api.rollback, { scope, personId, stage }, 'rollbackSuccess')
           })
       }),
-      [act, api, call, confirmModal, detail, formModal, modal, openConfirm, openSend, t]
+      [act, api, call, confirmModal, detail, formModal, load, modal, openConfirm, openSend, t]
     );
 
     // 加载中只用骨架屏，不放「返回列表」（避免空壳页上单独一个返回按钮）
@@ -590,8 +599,29 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                     name: 'confirmed',
                     title: t('confirmStatus'),
                     width: 200,
-                    renderType: 'status',
-                    getValueOf: item => ({ type: item.confirmed ? 'success' : 'default', text: item.confirmed ? `${t('confirmed')} · ${dayjs(item.confirmedAt).format('MM-DD HH:mm')}` : t('notConfirmed') })
+                    render: (_value, { dataSource: item }) => {
+                      if (item.confirmed) {
+                        return (
+                          <Tag bordered={false} color="success">
+                            {`${t('confirmed')} · ${dayjs(item.confirmedAt).format('MM-DD HH:mm')}`}
+                          </Tag>
+                        );
+                      }
+                      if (item.rejected) {
+                        return (
+                          <Tooltip title={item.rejectComment || t('rejectCommentEmpty')}>
+                            <Tag bordered={false} color="warning">
+                              {t('mailRejected')}
+                            </Tag>
+                          </Tooltip>
+                        );
+                      }
+                      return (
+                        <Tag bordered={false} color="default">
+                          {t('notConfirmed')}
+                        </Tag>
+                      );
+                    }
                   }
                 ]}
               />

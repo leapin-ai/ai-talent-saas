@@ -38,4 +38,27 @@ module.exports = fp(async (fastify, options) => {
     },
     async request => services.readinessConfirm.publicConfirm(request.body)
   );
+
+  fastify.post(
+    `${options.prefix}/public/readiness-confirm/reject`,
+    {
+      schema: {
+        tags: ['readiness'],
+        summary: '免登录-驳回确认问卷（必须填写修改意见）',
+        body: {
+          type: 'object',
+          properties: {
+            code: { type: 'string' },
+            comment: { type: 'string' },
+            key: { type: 'string' },
+            runId: { type: 'string' },
+            kind: { type: 'string' },
+            personId: { type: 'string' }
+          },
+          required: ['code', 'comment']
+        }
+      }
+    },
+    async request => services.readinessConfirm.publicReject(request.body)
+  );
 });

@@ -15,7 +15,7 @@ const {
   isDraft423Error
 } = require('../utils/readiness-stages');
 const { summarizeStageOutput } = require('../utils/readiness-summary');
-const { normalizeDeadline, digitalsOf } = require('../utils/readiness-publish');
+const { normalizeDeadline, digitalsOf, buildQuestionnaireSchema, schemaToQuestionnaire } = require('../utils/readiness-publish');
 const { buildPersonAnalysis, buildRolePreview, buildPositionOutlook } = require('../utils/readiness-report-map');
 
 const TASK_TYPE = 'Readiness';
@@ -645,10 +645,11 @@ module.exports = fp(async (fastify, options) => {
       models.readinessStageData.findAll({ where: { runId: String(run.id), isCurrent: true, status: 'succeeded' }, attributes: ['id', 'stage', 'output'] })
     ]);
     /**
-     * 确认邮件是否已确认：按本批中属于当前 run 的 targets 核对；
-     * 同一 Role / 参与人、同一问卷版本的确认记录（以确认时的版本为准）；全部命中才算已确认。
+     * 确认邮件状态：按本批中属于当前 run 的 targets 核对（同 Role/参与人、同问卷版本）。
+     * 全部真正确认 → confirmed；否则若有驳回 → rejected（带意见）；否则未确认。
      */
     const confirmOf = mail => {
+      const empty = { confirmed: false, rejected: false, confirmedAt: null, rejectComment: '', rejectedAt: null };
       const legacyKind = String(mail.kind || '').replace('confirm:', '');
       const targets =
         Array.isArray(mail.result?.targets) && mail.result.targets.length
@@ -661,32 +662,71 @@ module.exports = fp(async (fastify, options) => {
               }
             ];
       if (!targets.length) {
-        return { confirmed: false, confirmedAt: null };
+        return empty;
       }
       let confirmedAt = null;
+      let rejectedAt = null;
+      const rejectComments = [];
+      let allConfirmed = true;
+      let anyRejected = false;
       for (const target of targets) {
         const info = QUESTIONNAIRE_KINDS[target.kind];
         if (!info) {
-          return { confirmed: false, confirmedAt: null };
+          return empty;
         }
         const personId = target.personId ? String(target.personId) : null;
         const version = Number(target.questionnaireVersion);
         const rows = confirmRows.filter(row => row.stage === info.confirmStage && (row.personId ? String(row.personId) : null) === personId && Number(row.output?.questionnaireVersion) === version);
-        const row = rows.filter(item => item.isCurrent).pop();
-        if (!row) {
-          return { confirmed: false, confirmedAt: null };
+        const confirmedRow = rows.filter(item => item.isCurrent && !item.output?.rejected && !item.output?.skipped).pop();
+        if (confirmedRow) {
+          confirmedAt = confirmedRow.output?.confirmedAt || confirmedAt;
+          continue;
         }
-        confirmedAt = row.output?.confirmedAt || confirmedAt;
+        allConfirmed = false;
+        const rejectRow = rows.filter(item => item.isCurrent && item.output?.rejected === true).pop();
+        if (rejectRow) {
+          anyRejected = true;
+          if (rejectRow.output?.comment) {
+            rejectComments.push(String(rejectRow.output.comment).trim());
+          }
+          rejectedAt = rejectRow.output?.rejectedAt || rejectedAt;
+        }
       }
-      return { confirmed: true, confirmedAt };
+      if (allConfirmed) {
+        return { confirmed: true, rejected: false, confirmedAt, rejectComment: '', rejectedAt: null };
+      }
+      if (anyRejected) {
+        return {
+          confirmed: false,
+          rejected: true,
+          confirmedAt: null,
+          rejectComment: [...new Set(rejectComments.filter(Boolean))].join('；'),
+          rejectedAt
+        };
+      }
+      return empty;
     };
     const skippedIds = new Set(confirmRows.filter(row => row.output?.skipped === true).map(row => String(row.id)));
+    // 当前仍停在确认阶段时的驳回意见（confirm 阶段数据且未真正确认）
+    const rejectByKey = new Map(
+      confirmRows.filter(row => row.isCurrent && row.output?.rejected === true).map(row => [`${row.stage}:${row.personId ? String(row.personId) : ''}`, { comment: row.output?.comment || '', rejectedAt: row.output?.rejectedAt || null }])
+    );
     const summaries = new Map(outputRows.map(row => [String(row.id), summarizeStageOutput(row.stage, row.output)]));
     return {
       run: run.toJSON(),
       persons: persons.map(item => item.toJSON()),
       // 不下发 output，只带计数摘要；人工跳过补充问卷的记录在这里带出标记，供前端把后续阶段置灰
-      stageData: stageData.map(item => ({ ...item.toJSON(), skipped: skippedIds.has(String(item.id)), summary: summaries.get(String(item.id)) || null })),
+      stageData: stageData.map(item => {
+        const reject = rejectByKey.get(`${item.stage}:${item.personId ? String(item.personId) : ''}`);
+        return {
+          ...item.toJSON(),
+          skipped: skippedIds.has(String(item.id)),
+          rejected: Boolean(item.isCurrent && reject),
+          rejectComment: item.isCurrent && reject ? reject.comment : '',
+          rejectedAt: item.isCurrent && reject ? reject.rejectedAt : null,
+          summary: summaries.get(String(item.id)) || null
+        };
+      }),
       // deletable：邀请对应的阶段未过才能删除
       invites: invites.map(item => ({ ...item.toJSON(), deletable: !inviteDeleteBlock({ invite: item, run, person: persons.find(person => String(person.id) === String(item.personId)) }) })),
       confirmMails: confirmMails.map(item => ({ ...item.toJSON(), ...confirmOf(item) })),
@@ -812,6 +852,140 @@ module.exports = fp(async (fastify, options) => {
   const confirm = async ({ tenantId, userId }, { runId, kind, personId, deadline, digitalId }) => {
     await confirmQuestionnaire({ tenantId, runId, kind, personId, deadline, digitalId, operator: { userId, via: 'admin' } });
     return {};
+  };
+
+  /** 把新题列表写回问卷阶段 output，保留原有 result 包装与 interview 等字段 */
+  const patchQuestionnaireOutput = (original, kind, items) => {
+    const wrap = original?.result && typeof original.result === 'object' && !Array.isArray(original.result);
+    const data = Object.assign({}, wrap ? original.result : original || {});
+    const useReassess = kind === 'reassess' || (Array.isArray(data.reassess?.rows) && !(Array.isArray(data.questionnaire) && data.questionnaire.length));
+    if (useReassess) {
+      data.reassess = Object.assign({}, data.reassess || {}, { rows: items });
+    } else {
+      data.questionnaire = items;
+    }
+    return wrap ? Object.assign({}, original, { result: data }) : data;
+  };
+
+  /**
+   * 确认阶段编辑问卷：仅当仍停在对应 confirm 阶段时可改；写入问卷阶段新版本（访谈题保持不变）。
+   * 入参 schema（FormCreator）或 questionnaire 二选一。
+   */
+  const updateQuestionnaire = async ({ tenantId, userId }, { runId, kind, personId, schema, questionnaire }) => {
+    const info = QUESTIONNAIRE_KINDS[kind];
+    if (!info) {
+      throw new Error('问卷类型不正确');
+    }
+    const run = await findRun({ tenantId, id: runId });
+    const person = info.scope === 'person' ? await findPerson({ run, personId }) : null;
+    const stage = info.scope === 'role' ? run.stage : person.stage;
+    if (stage !== info.confirmStage) {
+      throw new Error(`当前阶段为 ${stage}，只能在确认问卷阶段编辑`);
+    }
+    const row = await models.readinessStageData.findOne({
+      where: { runId: String(run.id), stage: info.questionnaireStage, personId: idOrNull(info.scope === 'person' ? person.id : null), isCurrent: true, status: 'succeeded' }
+    });
+    if (!row) {
+      throw new Error('问卷尚未生成');
+    }
+    const { questionnaire: originals, interview } = questionnaireOf(row.output);
+    let items;
+    if (schema && typeof schema === 'object') {
+      items = schemaToQuestionnaire(schema, { originals });
+    } else if (Array.isArray(questionnaire)) {
+      items = questionnaire;
+    } else {
+      throw new Error('请提交问卷 Schema 或题目列表');
+    }
+    if (!items.length) {
+      throw new Error('问卷题目不能为空');
+    }
+    const output = patchQuestionnaireOutput(row.output, kind, items);
+    // 确保 interview 不被误删
+    if (interview.length) {
+      const wrap = output?.result && typeof output.result === 'object' && !Array.isArray(output.result);
+      if (wrap) {
+        output.result.interview = interview;
+      } else {
+        output.interview = interview;
+      }
+    }
+    const saved = await createManualData({ run, personId: person?.id, stage: info.questionnaireStage, output, operatorId: userId });
+    return { version: saved.version, questionCount: items.length };
+  };
+
+  /** 确认阶段拉取 FormCreator 可编辑 schema（只读预览/编辑共用） */
+  const questionnaireEditPayload = async ({ tenantId }, { runId, kind, personId }) => {
+    const info = QUESTIONNAIRE_KINDS[kind];
+    if (!info) {
+      throw new Error('问卷类型不正确');
+    }
+    const run = await findRun({ tenantId, id: runId });
+    const person = info.scope === 'person' ? await findPerson({ run, personId }) : null;
+    const stage = info.scope === 'role' ? run.stage : person.stage;
+    const row = await models.readinessStageData.findOne({
+      where: { runId: String(run.id), stage: info.questionnaireStage, personId: idOrNull(info.scope === 'person' ? person?.id : null), isCurrent: true, status: 'succeeded' }
+    });
+    if (!row) {
+      throw new Error('问卷尚未生成');
+    }
+    const { questionnaire, interview } = questionnaireOf(row.output);
+    const schema = buildQuestionnaireSchema({ questionnaire, language: run.language });
+    const rejectRow = await models.readinessStageData.findOne({
+      where: { runId: String(run.id), stage: info.confirmStage, personId: idOrNull(info.scope === 'person' ? person?.id : null), isCurrent: true, status: 'succeeded' }
+    });
+    const rejected = rejectRow?.output?.rejected === true;
+    return {
+      kind,
+      stage,
+      editable: stage === info.confirmStage,
+      version: row.version,
+      schema,
+      interview,
+      rejected,
+      rejectComment: rejected ? rejectRow.output?.comment || '' : '',
+      rejectedAt: rejected ? rejectRow.output?.rejectedAt || null : null
+    };
+  };
+
+  /**
+   * 第三方驳回确认：仍停在 confirm 阶段，写入带 rejected 标记的确认阶段数据；须填写修改意见。
+   * 不推进阶段；管理员可改题后重发，或直接确认。
+   */
+  const rejectQuestionnaire = async ({ tenantId, runId, kind, personId, comment, questionnaireVersion, operator }) => {
+    const info = QUESTIONNAIRE_KINDS[kind];
+    if (!info) {
+      throw new Error('问卷类型不正确');
+    }
+    const trimmed = String(comment || '').trim();
+    if (!trimmed) {
+      throw new Error('驳回时必须填写修改意见');
+    }
+    const run = await findRun({ tenantId, id: runId });
+    const person = info.scope === 'person' ? await findPerson({ run, personId }) : null;
+    const stage = info.scope === 'role' ? run.stage : person.stage;
+    if (stage !== info.confirmStage) {
+      throw new Error(stageIndex(info.scope, stage) > stageIndex(info.scope, info.confirmStage) ? ALREADY_CONFIRMED_MESSAGE : `当前阶段为 ${stage}，不能驳回`);
+    }
+    const version = await currentQuestionnaireVersion({ run, kind, personId: person?.id });
+    if (version == null) {
+      throw new Error('问卷尚未生成');
+    }
+    if (questionnaireVersion != null && Number(questionnaireVersion) !== Number(version)) {
+      throw new Error('问卷已更新，请使用最新的确认邮件');
+    }
+    const output = {
+      rejected: true,
+      comment: trimmed,
+      rejectedAt: new Date().toISOString(),
+      rejectedBy: idOrNull(operator?.userId),
+      rejectedByName: operator?.name || '',
+      rejectedByEmail: operator?.email || '',
+      via: operator?.via || 'email',
+      questionnaireVersion: version
+    };
+    await createManualData({ run, personId: person?.id, stage: info.confirmStage, output, operatorId: operator?.userId });
+    return output;
   };
 
   /**
@@ -1141,6 +1315,9 @@ module.exports = fp(async (fastify, options) => {
       detail,
       stageDataDetail,
       confirm,
+      updateQuestionnaire,
+      questionnaireEditPayload,
+      rejectQuestionnaire,
       skipReassessConfirm,
       submitAnswers,
       saveAnswers,
