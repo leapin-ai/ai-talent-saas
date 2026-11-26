@@ -100,6 +100,7 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
       if (isCurrent && stage.action === 'answers') {
         if (current.some(item => item.status === 'succeeded')) {
           primary.push({ children: t('confirmNextStage'), onClick: () => actions.advanceAnswers({ kind, personId }) });
+          primary.push({ children: t('reanswer'), onClick: () => actions.reanswer({ kind, personId }) });
         }
         primary.push({ children: t('fetchResult'), onClick: actions.fetchResult });
         primary.push({ children: t('enterAnswers'), onClick: () => actions.openAnswers({ kind, personId }) });

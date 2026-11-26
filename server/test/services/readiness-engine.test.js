@@ -1257,6 +1257,76 @@ test('回收答卷：未回收到答卷时不能确认进入下一阶段', async
   }
 });
 
+test('重新回答：经理问卷作废答卷并按原收件人自动重发', async () => {
+  const h = await createHarness();
+  try {
+    const id = await runToManagerConfirm(h);
+    await h.readiness.confirm(h.auth, { runId: id, kind: 'manager', deadline: h.deadline, digitalId: h.digitalId });
+    await h.settle();
+    await h.sendService().send(h.auth, { kind: 'manager', runIds: [String(id)], recipients: [{ name: '经理甲', email: 'mgr@example.com' }], language: 'zh-CN' });
+    await h.settle();
+    await h.readiness.saveAnswers(h.auth, { runId: id, kind: 'manager', answers: { Q01: 'old' } });
+    assert.equal((await h.reload(id)).stage, 'manager_answers');
+    const before = await h.models.readinessInvite.findOne({ where: { runId: String(id), kind: 'manager', isCurrent: true } });
+    assert.equal(before.email, 'mgr@example.com');
+
+    const result = await h.readiness.reanswer(h.auth, { runId: id, kind: 'manager' });
+    assert.ok((result.advanced || []).includes(String(id)));
+    assert.equal((await h.reload(id)).stage, 'manager_answers');
+    assert.equal(await h.models.readinessStageData.count({ where: { runId: String(id), stage: 'manager_answers', isCurrent: true, status: 'succeeded' } }), 0);
+    const after = await h.models.readinessInvite.findAll({ where: { runId: String(id), kind: 'manager', isCurrent: true } });
+    assert.equal(after.length, 1);
+    assert.equal(after[0].email, 'mgr@example.com');
+    assert.notEqual(String(after[0].id), String(before.id));
+    assert.equal((await before.reload()).isCurrent, false);
+  } finally {
+    await h.close();
+  }
+});
+
+test('重新回答：员工问卷回退参与人并自动重发；补充问卷同理', async () => {
+  const h = await createHarness();
+  try {
+    const { id } = await toStaffSend(h);
+    const person = await h.models.readinessRunPerson.findOne({ where: { runId: String(id) } });
+    await h.sendService().send(h.auth, { kind: 'staff', runIds: [String(id)], personIds: [String(person.id)], language: 'zh-CN' });
+    await h.settle();
+    await h.readiness.saveAnswers(h.auth, { runId: id, kind: 'staff', personId: person.id, answers: { S01: 'old' } });
+    assert.equal((await h.models.readinessRunPerson.findByPk(person.id)).stage, 'answers');
+    const staffInvite = await h.models.readinessInvite.findOne({ where: { runId: String(id), kind: 'staff', personId: String(person.id), isCurrent: true } });
+    assert.ok(staffInvite);
+
+    await h.readiness.reanswer(h.auth, { runId: id, kind: 'staff', personId: person.id });
+    assert.equal((await h.models.readinessRunPerson.findByPk(person.id)).stage, 'answers');
+    assert.equal(await h.models.readinessStageData.count({ where: { runId: String(id), stage: 'answers', personId: String(person.id), isCurrent: true, status: 'succeeded' } }), 0);
+    const staffAgain = await h.models.readinessInvite.findOne({ where: { runId: String(id), kind: 'staff', personId: String(person.id), isCurrent: true } });
+    assert.ok(staffAgain);
+    assert.notEqual(String(staffAgain.id), String(staffInvite.id));
+    assert.equal(staffAgain.email, staffInvite.email);
+
+    // 推到补充问卷答卷阶段后再重新回答
+    await h.readiness.submitAnswers(h.auth, { runId: id, kind: 'staff', personId: person.id, answers: { S01: 'new' } });
+    await h.settle();
+    assert.equal((await h.models.readinessRunPerson.findByPk(person.id)).stage, 'reassess_confirm');
+    await h.readiness.confirm(h.auth, { runId: id, kind: 'reassess', personId: person.id, deadline: h.deadline, digitalId: h.digitalId });
+    await h.settle();
+    await h.sendService().send(h.auth, { kind: 'reassess', runIds: [String(id)], personIds: [String(person.id)], language: 'zh-CN' });
+    await h.settle();
+    await h.readiness.saveAnswers(h.auth, { runId: id, kind: 'reassess', personId: person.id, answers: { R01: 'old' } });
+    const reassessInvite = await h.models.readinessInvite.findOne({ where: { runId: String(id), kind: 'reassess', personId: String(person.id), isCurrent: true } });
+    assert.ok(reassessInvite);
+    await h.readiness.reanswer(h.auth, { runId: id, kind: 'reassess', personId: person.id });
+    assert.equal((await h.models.readinessRunPerson.findByPk(person.id)).stage, 'reassess_answers');
+    assert.equal(await h.models.readinessStageData.count({ where: { runId: String(id), stage: 'reassess_answers', personId: String(person.id), isCurrent: true, status: 'succeeded' } }), 0);
+    const reassessAgain = await h.models.readinessInvite.findOne({ where: { runId: String(id), kind: 'reassess', personId: String(person.id), isCurrent: true } });
+    assert.ok(reassessAgain);
+    assert.notEqual(String(reassessAgain.id), String(reassessInvite.id));
+    assert.equal(reassessAgain.email, reassessInvite.email);
+  } finally {
+    await h.close();
+  }
+});
+
 test('预览面试项目：发布后返回项目详情与远程组件地址；未发布时提示', async () => {
   const h = await createHarness();
   try {

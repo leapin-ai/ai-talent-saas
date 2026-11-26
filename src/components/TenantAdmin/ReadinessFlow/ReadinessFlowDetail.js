@@ -258,6 +258,13 @@ const ReadinessFlowDetail = createWithRemoteLoader({
           }
         },
         advanceAnswers: data => act(api.advanceAnswers, data, 'advanceSuccess'),
+        reanswer: ({ kind, personId }) =>
+          confirmModal({
+            title: t('reanswer'),
+            message: t('reanswerConfirm'),
+            danger: true,
+            onConfirm: () => act(api.reanswer, { kind, personId }, 'reanswerSuccess')
+          }),
         skipReassessConfirm: ({ personId }) =>
           confirmModal({
             title: t('skipToAssessUpdate'),

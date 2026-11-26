@@ -110,6 +110,10 @@ module.exports = fp(async (fastify, options) => {
     services.readiness.advanceAnswers(info, body)
   );
 
+  post('manual/reanswer', '重新回答：作废当前答卷并按原收件人自动重发问卷', { type: 'object', properties: { runId: { type: 'string' }, kind: kindSchema, personId: { type: 'string' } }, required: ['runId', 'kind'] }, (info, body) =>
+    services.readiness.reanswer(info, body)
+  );
+
   post(
     'manual/submit-answers',
     '录入答卷并继续',
