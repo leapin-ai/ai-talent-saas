@@ -22,6 +22,7 @@ module.exports = fp(async (fastify, options) => {
       {
         onRequest,
         schema: {
+          tags: ['readiness'],
           summary: `Readiness 流程：${summary}`,
           body: Object.assign({}, body, { properties: Object.assign({ tenantId: { type: 'string' } }, body.properties), required: [...(body.required || []), 'tenantId'] })
         }
@@ -69,6 +70,24 @@ module.exports = fp(async (fastify, options) => {
     (info, body) => services.readiness.confirm(info, body)
   );
 
+  post(
+    'manual/questionnaire-edit',
+    '确认阶段拉取问卷 FormCreator Schema（含驳回意见）',
+    { type: 'object', properties: { runId: { type: 'string' }, kind: kindSchema, personId: { type: 'string' } }, required: ['runId', 'kind'] },
+    (info, body) => services.readiness.questionnaireEditPayload(info, body)
+  );
+
+  post(
+    'manual/questionnaire-update',
+    '确认阶段用 FormCreator Schema 更新问卷题目',
+    {
+      type: 'object',
+      properties: { runId: { type: 'string' }, kind: kindSchema, personId: { type: 'string' }, schema: { type: 'object' }, questionnaire: { type: 'array' } },
+      required: ['runId', 'kind']
+    },
+    (info, body) => services.readiness.updateQuestionnaire(info, body)
+  );
+
   post('manual/project-preview', '预览已发布的 AI 面试项目', { type: 'object', properties: { runId: { type: 'string' }, kind: kindSchema, personId: { type: 'string' } }, required: ['runId', 'kind'] }, (info, body) =>
     services.readinessSend.projectPreview(info, body)
   );
@@ -109,6 +128,10 @@ module.exports = fp(async (fastify, options) => {
     services.readiness.advanceAnswers(info, body)
   );
 
+  post('manual/reanswer', '重新回答：作废当前答卷并按原收件人自动重发问卷', { type: 'object', properties: { runId: { type: 'string' }, kind: kindSchema, personId: { type: 'string' } }, required: ['runId', 'kind'] }, (info, body) =>
+    services.readiness.reanswer(info, body)
+  );
+
   post(
     'manual/submit-answers',
     '录入答卷并继续',
@@ -125,6 +148,12 @@ module.exports = fp(async (fastify, options) => {
   const stageBody = { type: 'object', properties: { runId: { type: 'string' }, scope: scopeSchema, personId: { type: 'string' }, stage: { type: 'string' } }, required: ['runId', 'stage'] };
   post('rollback', '退回到某阶段重新执行', stageBody, (info, body) => services.readiness.rollback(info, body));
   post('retry', '重试失败阶段', stageBody, (info, body) => services.readiness.retry(info, body));
+  post(
+    'stage/apply',
+    '退回到该阶段并以指定版本数据（不传 output 用历史版本，传 output 用修改后的当前输出）生成新版本后继续',
+    { type: 'object', properties: { runId: { type: 'string' }, id: { type: 'string' }, output: {} }, required: ['id'] },
+    (info, body) => services.readiness.applyStageVersion(info, body)
+  );
 
   const recipientItem = { type: 'object', properties: { name: { type: 'string' }, email: { type: 'string' }, employeeId: { type: 'string' }, tenantUserId: { type: 'string' } } };
   const sendProperties = {
@@ -154,7 +183,12 @@ module.exports = fp(async (fastify, options) => {
   );
 
   post('invite/delete', '删除问卷邀请（参与人已提交答卷的除外）', { type: 'object', properties: { inviteIds: stringArray }, required: ['inviteIds'] }, (info, body) => services.readinessSend.deleteInvites(info, body));
-  post('invite/resend', '重发问卷邮件', { type: 'object', properties: { inviteIds: stringArray, language: { type: 'string' } }, required: ['inviteIds'] }, (info, body) => services.readinessSend.resend(info, body));
+  post(
+    'invite/resend',
+    '重发问卷邮件（deadline 为新的有效期，YYYY-MM-DD，已过期的邀请需传）',
+    { type: 'object', properties: { inviteIds: stringArray, language: { type: 'string' }, deadline: { type: 'string' } }, required: ['inviteIds'] },
+    (info, body) => services.readinessSend.resend(info, body)
+  );
 
   post('answers/sync', '从 AI 面试同步答卷', { type: 'object', properties: { runId: { type: 'string' } } }, (info, body) => services.readinessSend.syncAnswers(info, body));
 
@@ -164,6 +198,7 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest,
       schema: {
+        tags: ['readiness'],
         summary: 'Readiness 流程：平台管理-可选参与人（员工）',
         body: {
           type: 'object',

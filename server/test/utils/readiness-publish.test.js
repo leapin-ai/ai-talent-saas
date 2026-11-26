@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildProjectName, normalizeDeadline, deadlineEndTime, parseOptions, buildQuestionnaireSchema, buildInterviewQuestions, digitalsOf, moduleInfo } = require('../../libs/utils/readiness-publish');
+const { buildProjectName, normalizeDeadline, deadlineEndTime, parseOptions, buildQuestionnaireSchema, schemaToQuestionnaire, buildInterviewQuestions, digitalsOf, moduleInfo } = require('../../libs/utils/readiness-publish');
 
 // 2026-11-20 10:00 UTC+8
 const NOW = Date.parse('2026-11-20T02:00:00.000Z');
@@ -250,4 +250,84 @@ test('问卷 schema：中文题型「单选 / 多选」转成单选 / 多选字�
   assert.equal(single.type, 'RadioGroup');
   assert.equal(multiple.type, 'CheckboxGroup');
   assert.deepEqual(follow.visibleWhen, { logic: 'and', conditions: [{ field: 'Q02', operator: 'includesAny', value: ['B'] }] });
+});
+
+test('FormCreator schema 可回写为上游问卷题，并保留 module / show_if', () => {
+  const originals = [
+    {
+      no: 'Q01',
+      type: 'single',
+      question: '是否相关',
+      options: [
+        { label: '是', value: 'A' },
+        { label: '否', value: 'B' }
+      ],
+      module: 'Confirm · task'
+    },
+    {
+      no: 'Q02',
+      type: 'multiple',
+      question: '变化',
+      options: [
+        { label: '更重', value: 'A' },
+        { label: '更轻', value: 'B' }
+      ],
+      module: 'Trigger · Impact',
+      show_if: { no: 'Q01', op: 'in', values: ['A'] }
+    }
+  ];
+  const schema = buildQuestionnaireSchema({ language: 'zh-CN', questionnaire: originals });
+  const restored = schemaToQuestionnaire(schema, { originals });
+  assert.equal(restored.length, 2);
+  assert.equal(restored[0].no, 'Q01');
+  assert.equal(restored[0].type, 'single');
+  assert.equal(restored[0].module, 'Confirm · task');
+  assert.equal(restored[0].question, '是否相关');
+  assert.deepEqual(restored[0].options, [
+    { label: '是', value: 'A' },
+    { label: '否', value: 'B' }
+  ]);
+  assert.equal(restored[1].type, 'multiple');
+  assert.deepEqual(restored[1].show_if, { no: 'Q01', op: 'in', values: ['A'] });
+});
+
+test('schemaToQuestionnaire：not_in 条件从 neq 条件组还原', () => {
+  const schema = {
+    blocks: [
+      {
+        kind: 'formInfo',
+        title: 'Other',
+        list: [
+          {
+            type: 'RadioGroup',
+            name: 'Q1',
+            label: 'Q1. a',
+            props: {
+              options: [
+                { label: 'A. x', value: 'A' },
+                { label: 'B. y', value: 'B' }
+              ]
+            }
+          },
+          {
+            type: 'TextArea',
+            name: 'Q2',
+            label: 'Q2. follow',
+            visibleWhen: {
+              logic: 'and',
+              conditions: [
+                { field: 'Q1', operator: 'neq', value: 'A' },
+                { field: 'Q1', operator: 'neq', value: 'B' }
+              ]
+            },
+            props: { rows: 3 }
+          }
+        ]
+      }
+    ]
+  };
+  const [first, second] = schemaToQuestionnaire(schema);
+  assert.equal(first.type, 'single');
+  assert.deepEqual(second.show_if, { no: 'Q1', op: 'not_in', values: ['A', 'B'] });
+  assert.equal(second.type, 'text');
 });

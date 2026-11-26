@@ -68,15 +68,31 @@ module.exports = fp(async (fastify, options) => {
 
   const publicLanguage = language => (MAIL_LANGUAGES.includes(language) ? language : 'zh-CN');
 
-  /** 当前确认状态：confirmed 以当前版本的确认数据为准（回退后会失效） */
+  /** 当前确认状态：confirmed 以当前版本的确认数据为准（回退后会失效）；驳回仍停在确认阶段 */
   const confirmState = async ({ run, info, person, stage }) => {
     if (stage === info.confirmStage) {
-      return { confirmed: false };
+      const row = await models.readinessStageData.findOne({
+        where: { runId: String(run.id), stage: info.confirmStage, personId: idOrNull(info.scope === 'person' ? person.id : null), isCurrent: true, status: 'succeeded' }
+      });
+      if (row?.output?.rejected === true) {
+        return {
+          confirmed: false,
+          rejected: true,
+          rejectComment: row.output?.comment || '',
+          rejectedAt: row.output?.rejectedAt || null,
+          rejectedByEmail: row.output?.rejectedByEmail || '',
+          rejectedByName: row.output?.rejectedByName || ''
+        };
+      }
+      return { confirmed: false, rejected: false };
     }
     const row = await models.readinessStageData.findOne({
       where: { runId: String(run.id), stage: info.confirmStage, personId: idOrNull(info.scope === 'person' ? person.id : null), isCurrent: true, status: 'succeeded' }
     });
-    return row ? { confirmed: true, deadline: row.output?.deadline || null, confirmedAt: row.output?.confirmedAt || null } : { confirmed: false, notReached: true };
+    if (!row || row.output?.rejected || row.output?.skipped) {
+      return { confirmed: false, notReached: true };
+    }
+    return { confirmed: true, deadline: row.output?.deadline || null, confirmedAt: row.output?.confirmedAt || null };
   };
 
   const mapQuestionnaire = output => {
@@ -177,17 +193,6 @@ module.exports = fp(async (fastify, options) => {
       personId: person ? String(person.id) : null,
       questionnaireVersion: version
     }));
-    const code = await requireShorten().sign(
-      JSON.stringify({
-        type: CONFIRM_SHORTEN_TYPE,
-        tenantId: String(tenantId),
-        language: mailLanguage,
-        digitalId: String(digitalId),
-        targets: payloadTargets
-      }),
-      expires
-    );
-    const url = `${ensureSlash(fastify.config.ORIGIN || '')}/readiness-confirm?code=${encodeURIComponent(code)}${fixedLanguage ? `&lang=${fixedLanguage}` : ''}`;
     const tenant = await services.shareReport.getTenant(tenantId);
     const context = services.shareReport.buildMailContext(tenant, mailLanguage, expires);
     const names = loaded.map(({ run, person }) => (person ? `${run.roleName} / ${person.name}` : run.roleName));
@@ -199,8 +204,23 @@ module.exports = fp(async (fastify, options) => {
     const items = names.map(name => ({ name }));
     const sent = [];
     const failed = [];
+    const langQuery = fixedLanguage ? `&lang=${fixedLanguage}` : '';
+    // 每个收件人单独签发短链（带 email），驳回/确认时可记下操作人邮箱
     for (const recipient of valid) {
       try {
+        const code = await requireShorten().sign(
+          JSON.stringify({
+            type: CONFIRM_SHORTEN_TYPE,
+            tenantId: String(tenantId),
+            language: mailLanguage,
+            digitalId: String(digitalId),
+            targets: payloadTargets,
+            email: recipient.email,
+            name: recipient.name || ''
+          }),
+          expires
+        );
+        const url = `${ensureSlash(fastify.config.ORIGIN || '')}/readiness-confirm?code=${encodeURIComponent(code)}${langQuery}`;
         await services.shareReport.sendMail({
           email: recipient.email,
           code: `READINESSCONFIRM[${mailLanguage}]`,
@@ -291,6 +311,9 @@ module.exports = fp(async (fastify, options) => {
       stage: first.stage,
       confirmed: first.confirmed,
       notReached: first.notReached,
+      rejected: first.rejected,
+      rejectComment: first.rejectComment,
+      rejectedAt: first.rejectedAt,
       deadline: first.deadline,
       confirmedAt: first.confirmedAt,
       questionnaire: first.questionnaire || [],
@@ -298,16 +321,18 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
+  const resolveTarget = (payload, { key, runId, kind, personId }) =>
+    payload.targets.find(item => targetKeyOf(item) === String(key || '')) ||
+    payload.targets.find(item => String(item.runId) === String(runId) && item.kind === kind && String(item.personId || '') === String(personId || '')) ||
+    (payload.targets.length === 1 ? payload.targets[0] : null);
+
   /** 免登录页提交确认：只确认本批中的一份；先到先得 */
   const publicConfirm = async ({ code, deadline, key, runId, kind, personId }) => {
     const payload = await decode(code);
     if (!payload.digitalId) {
       throw new Error('该确认链接缺少数字人，请联系管理员重新发送');
     }
-    const target =
-      payload.targets.find(item => targetKeyOf(item) === String(key || '')) ||
-      payload.targets.find(item => String(item.runId) === String(runId) && item.kind === kind && String(item.personId || '') === String(personId || '')) ||
-      (payload.targets.length === 1 ? payload.targets[0] : null);
+    const target = resolveTarget(payload, { key, runId, kind, personId });
     if (!target) {
       throw new Error('确认目标不存在或不属于本链接');
     }
@@ -319,12 +344,31 @@ module.exports = fp(async (fastify, options) => {
       questionnaireVersion: target.questionnaireVersion,
       deadline,
       digitalId: payload.digitalId,
-      operator: { via: 'email' }
+      operator: { via: 'email', email: payload.email || '', name: payload.name || '' }
     });
     return { confirmedAt: output.confirmedAt, deadline: output.deadline, key: targetKeyOf(target) };
   };
 
+  /** 免登录页驳回：须填写修改意见；不推进阶段，管理员可见意见后改题重发或自行确认 */
+  const publicReject = async ({ code, comment, key, runId, kind, personId }) => {
+    const payload = await decode(code);
+    const target = resolveTarget(payload, { key, runId, kind, personId });
+    if (!target) {
+      throw new Error('确认目标不存在或不属于本链接');
+    }
+    const output = await services.readiness.rejectQuestionnaire({
+      tenantId: payload.tenantId,
+      runId: target.runId,
+      kind: target.kind,
+      personId: target.personId,
+      questionnaireVersion: target.questionnaireVersion,
+      comment,
+      operator: { via: 'email', email: payload.email || '', name: payload.name || '' }
+    });
+    return { rejectedAt: output.rejectedAt, key: targetKeyOf(target) };
+  };
+
   Object.assign(services, {
-    readinessConfirm: { sendMails, publicDetail, publicConfirm }
+    readinessConfirm: { sendMails, publicDetail, publicConfirm, publicReject }
   });
 });

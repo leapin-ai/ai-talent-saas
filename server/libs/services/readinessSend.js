@@ -2,7 +2,7 @@ const fp = require('fastify-plugin');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
-const { QUESTIONNAIRE_KINDS, inviteDeleteBlock, materialsFromProfileData } = require('../utils/readiness-stages');
+const { QUESTIONNAIRE_KINDS, inviteDeleteBlock, materialsFromProfileData, expectedInterviewCountOf, answersCollectionReady } = require('../utils/readiness-stages');
 const { createAdapter, NOT_READY_MESSAGE } = require('../utils/readiness-interview-adapter');
 const { getApiBase } = require('../utils/aiInterviewOpenApi');
 const { normalizeRecipients, groupItemsByEmail, isValidEmail } = require('../utils/readiness-send');
@@ -574,18 +574,47 @@ module.exports = fp(async (fastify, options) => {
     return result;
   };
 
-  /** 重发邮件：沿用原链接（未过期的 sent/failed 邀请），同邮箱合并成一封 */
-  const resend = async ({ tenantId, userId }, { inviteIds, language }) => {
+  /** 把邀请有效期改到 expires：问卷项目先结束的话一并延长项目，采集链接截止同步更新 */
+  const updateInviteExpires = async ({ tenantId, invites, expires }) => {
+    const projectIds = [
+      ...new Set(
+        invites
+          .map(item => item.projectId)
+          .filter(Boolean)
+          .map(String)
+      )
+    ];
+    for (const projectId of projectIds) {
+      const project = await services.aiInterview.getProjectDetail({ tenantId, id: projectId });
+      const projectEnd = project?.endTime ? dayjs(project.endTime).valueOf() : NaN;
+      if (!(projectEnd >= expires)) {
+        await services.aiInterview.adminUpdateProjectEndTime({ tenantId, id: projectId, endTime: new Date(expires).toISOString() });
+      }
+    }
+    for (const invite of invites) {
+      await invite.update({ expiresAt: new Date(expires) });
+      if (invite.collectInviteId && services.talentCollectInvite?.updateReadinessExpires) {
+        await services.talentCollectInvite.updateReadinessExpires({ collectInviteId: String(invite.collectInviteId), tenantId, expiresAt: expires });
+      }
+    }
+  };
+
+  /** 重发邮件：沿用原链接（sent/failed 邀请），同邮箱合并成一封；传 deadline 时先把有效期改到该日再发 */
+  const resend = async ({ tenantId, userId }, { inviteIds, language, deadline }) => {
     const ids = (inviteIds || []).map(String);
     if (!ids.length) {
       throw new Error('请选择要重发的邀请');
     }
+    const expires = overrideExpires(deadline);
     const invites = await models.readinessInvite.findAll({ where: { id: { [Op.in]: ids }, tenantId, isCurrent: true, status: { [Op.in]: ['sent', 'failed'] } } });
     const runs = await models.readinessRun.findAll({ where: { id: { [Op.in]: [...new Set(invites.map(item => String(item.runId)))] }, tenantId } });
     const runMap = new Map(runs.map(run => [String(run.id), run]));
+    if (expires != null) {
+      await updateInviteExpires({ tenantId, invites: invites.filter(item => item.url), expires });
+    }
     const valid = invites.filter(item => item.url && (!item.expiresAt || dayjs(item.expiresAt).isAfter(dayjs())));
     if (!valid.length) {
-      throw new Error('没有可重发的邀请（可能已过期，请重新发送）');
+      throw new Error(invites.some(item => item.url) ? '邀请已过期，请设置新的有效期后重发' : '没有可重发的邀请');
     }
     const entries = valid.map(item => ({
       email: String(item.email).toLowerCase(),
@@ -759,39 +788,73 @@ module.exports = fp(async (fastify, options) => {
     }
   };
 
+  const expectedVideosForInvite = async invite => {
+    const info = QUESTIONNAIRE_KINDS[invite.kind];
+    if (!info) {
+      return 0;
+    }
+    const row = await models.readinessStageData.findOne({
+      where: {
+        runId: String(invite.runId),
+        stage: info.questionnaireStage,
+        personId: idOrNull(info.scope === 'person' ? invite.personId : null),
+        isCurrent: true,
+        status: 'succeeded'
+      },
+      attributes: ['output']
+    });
+    return expectedInterviewCountOf(row?.output);
+  };
+
+  const refreshAnswersReady = async (row, expectedVideos) => {
+    const answersReady = answersCollectionReady({ expectedVideos, videoAnswers: row.output?.videoAnswers });
+    if (row.output?.answersReady === answersReady && row.output?.expectedVideos === expectedVideos) {
+      return answersReady;
+    }
+    await row.update({ output: Object.assign({}, row.output, { expectedVideos, answersReady }) });
+    await row.reload();
+    return answersReady;
+  };
+
   /**
    * 已回收过的邀请：把视频题作答合并到对应的当前阶段数据上（须与已保存的问卷答卷是同一份提交）
-   * 返回 { changed: 新增/变化的视频题数, pending: 还在转存/转写的视频题数 }
+   * 返回 { changed: 新增/变化的视频题数, pending: 还在转存/转写的视频题数, ready: 采集是否齐套 }
    */
-  const attachVideoAnswers = async ({ tenantId, invite, item }) => {
-    const none = { changed: 0, pending: 0 };
-    if (!item.videoAnswers?.length) {
-      return none;
-    }
+  const attachVideoAnswers = async ({ tenantId, invite, item, expectedVideos }) => {
+    const expected = expectedVideos == null ? await expectedVideosForInvite(invite) : expectedVideos;
+    const none = { changed: 0, pending: 0, ready: false };
     const row = await findAnswersRow(invite);
-    if (!row || !sameAnswers(row.output?.answers, item.answers)) {
+    if (!row) {
       return none;
     }
-    const existing = row.output?.videoAnswers || [];
-    const merged = item.videoAnswers.map(video => {
-      const old = existing.find(entry => entry.questionId === video.questionId);
-      return old ? Object.assign({}, video, { transcript: old.transcript || video.transcript, files: old.files, asrDone: old.asrDone, error: old.error }) : video;
-    });
-    const changed = videoSignature(merged) === videoSignature(existing) ? 0 : merged.length;
-    if (changed) {
-      await row.update({ output: Object.assign({}, row.output, { videoAnswers: merged }) });
-      await row.reload();
+    if (item.videoAnswers?.length) {
+      if (!sameAnswers(row.output?.answers, item.answers)) {
+        return Object.assign(none, { ready: answersCollectionReady({ expectedVideos: expected, videoAnswers: row.output?.videoAnswers }) });
+      }
+      const existing = row.output?.videoAnswers || [];
+      const merged = item.videoAnswers.map(video => {
+        const old = existing.find(entry => entry.questionId === video.questionId);
+        return old ? Object.assign({}, video, { transcript: old.transcript || video.transcript, files: old.files, asrDone: old.asrDone, error: old.error }) : video;
+      });
+      const changed = videoSignature(merged) === videoSignature(existing) ? 0 : merged.length;
+      if (changed) {
+        await row.update({ output: Object.assign({}, row.output, { videoAnswers: merged }) });
+        await row.reload();
+      }
+      none.changed = changed;
     }
+    const ready = await refreshAnswersReady(row, expected);
     const pending = pendingVideoCount(row);
     if (pending) {
       await startVideoTask(tenantId, row);
     }
-    return { changed, pending };
+    return { changed: none.changed, pending, ready };
   };
 
   /**
    * 从 AI 面试回收答卷（问卷 + 视频题）：
-   * - 新回收的（sent / failed）：邮件失败但链接已作答的也要收；标记为 answered，保存到当前阶段（不推进）
+   * - 新回收的（sent / failed）：保存到当前阶段；仅当问卷 + 访谈视频齐套时才标记 answered
+   * - 已有阶段数据但邀请仍为 sent（只答了问卷）：继续合并视频，齐套后再标 answered
    * - 已回收的（answered）：若之前没有带上视频题作答，补充进去
    */
   const syncAnswers = async ({ tenantId }, { runId } = {}) => {
@@ -821,20 +884,29 @@ module.exports = fp(async (fastify, options) => {
         if (!invite) {
           continue;
         }
-        if (invite.status === 'answered') {
-          const attached = await attachVideoAnswers({ tenantId, invite, item });
+        const expectedVideos = await expectedVideosForInvite(invite);
+        const complete = answersCollectionReady({ expectedVideos, videoAnswers: item.videoAnswers });
+        const existingRow = await findAnswersRow(invite);
+        if (invite.status === 'answered' || existingRow) {
+          const attached = await attachVideoAnswers({ tenantId, invite, item, expectedVideos });
           summary.video += attached.changed;
           summary.transcribing += attached.pending;
+          if (attached.ready && invite.status !== 'answered') {
+            await invite.update({ status: 'answered', answers: item.answers, answeredAt: new Date() });
+            summary.collected += 1;
+          }
           await attachProfileData(invite);
           continue;
         }
-        await invite.update({ status: 'answered', answers: item.answers, answeredAt: new Date() });
-        summary.collected += 1;
         try {
           const profileData = await loadCollectProfile(invite);
           await services.readiness.saveAnswers({ tenantId, userId: null }, { runId: invite.runId, kind: invite.kind, personId: invite.personId, answers: item.answers, videoAnswers: item.videoAnswers, profileData });
           summary.saved += 1;
           summary.video += (item.videoAnswers || []).length;
+          if (complete) {
+            await invite.update({ status: 'answered', answers: item.answers, answeredAt: new Date() });
+            summary.collected += 1;
+          }
           if (item.videoAnswers?.length) {
             const row = await findAnswersRow(invite);
             const pending = pendingVideoCount(row);
@@ -852,10 +924,10 @@ module.exports = fp(async (fastify, options) => {
     return summary;
   };
 
-  /** 定时任务：对所有有“已发送/邮件失败未回收”邀请的租户同步答卷；AI 面试尚未对接时静默 */
+  /** 定时任务：对有待同步邀请的租户回收答卷（含已 answered 但视频未齐、需补采的）；AI 面试尚未对接时静默 */
   const syncAllAnswers = async () => {
     const rows = await models.readinessInvite.findAll({
-      where: { isCurrent: true, status: { [Op.in]: ['sent', 'failed'] }, projectId: { [Op.ne]: null } },
+      where: { isCurrent: true, status: { [Op.in]: ['sent', 'failed', 'answered'] }, projectId: { [Op.ne]: null } },
       attributes: ['tenantId'],
       group: ['tenantId']
     });

@@ -75,15 +75,19 @@ const getApis = options => {
           create: { url: `${prefix}/tenant/admin/readiness/create`, method: 'POST' },
           cancel: { url: `${prefix}/tenant/admin/readiness/cancel`, method: 'POST' },
           confirm: { url: `${prefix}/tenant/admin/readiness/manual/confirm`, method: 'POST' },
+          questionnaireEdit: { url: `${prefix}/tenant/admin/readiness/manual/questionnaire-edit`, method: 'POST' },
+          questionnaireUpdate: { url: `${prefix}/tenant/admin/readiness/manual/questionnaire-update`, method: 'POST' },
           projectPreview: { url: `${prefix}/tenant/admin/readiness/manual/project-preview`, method: 'POST' },
           confirmDigitals: { url: `${prefix}/tenant/admin/readiness/manual/digitals`, method: 'POST' },
           confirmMailSend: { url: `${prefix}/tenant/admin/readiness/manual/confirm-mail/send`, method: 'POST' },
           submitAnswers: { url: `${prefix}/tenant/admin/readiness/manual/submit-answers`, method: 'POST' },
           advanceAnswers: { url: `${prefix}/tenant/admin/readiness/manual/advance-answers`, method: 'POST' },
+          reanswer: { url: `${prefix}/tenant/admin/readiness/manual/reanswer`, method: 'POST' },
           skipReassessConfirm: { url: `${prefix}/tenant/admin/readiness/manual/skip-reassess-confirm`, method: 'POST' },
           triggerReport: { url: `${prefix}/tenant/admin/readiness/trigger-report`, method: 'POST' },
           rollback: { url: `${prefix}/tenant/admin/readiness/rollback`, method: 'POST' },
           retry: { url: `${prefix}/tenant/admin/readiness/retry`, method: 'POST' },
+          stageApply: { url: `${prefix}/tenant/admin/readiness/stage/apply`, method: 'POST' },
           sendPreview: { url: `${prefix}/tenant/admin/readiness/send/preview`, method: 'POST' },
           sendDefaults: { url: `${prefix}/tenant/admin/readiness/send/defaults`, method: 'POST' },
           sendBatch: { url: `${prefix}/tenant/admin/readiness/send/batch`, method: 'POST' },
@@ -427,6 +431,10 @@ const getApis = options => {
           },
           confirm: {
             url: `${prefix}/public/readiness-confirm`,
+            method: 'POST'
+          },
+          reject: {
+            url: `${prefix}/public/readiness-confirm/reject`,
             method: 'POST'
           }
         },

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Badge, Button, Flex, Progress, Skeleton, Space, Tag, Typography, message } from 'antd';
+import { Badge, Button, Flex, Progress, Skeleton, Space, Tag, Tooltip, Typography, message } from 'antd';
 import { ArrowLeftOutlined, CheckCircleFilled, CloseCircleFilled, ExclamationCircleFilled, InfoCircleFilled, ReloadOutlined, SyncOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { createWithRemoteLoader } from '@kne/remote-loader';
@@ -11,9 +11,11 @@ import { ManagerInviteOverview, MilestoneFlow, PersonFlowPanel, PersonOverview, 
 import useSendReadiness from './useSendReadiness';
 import useConfirmReadiness from './useConfirmReadiness';
 import ProjectPreviewView from './ProjectPreviewView';
+import EditQuestionnaireFormInner from './EditQuestionnaireFormInner';
+import ResendFormInner from './ResendFormInner';
 import EnterAnswersForm, { DEFAULT_ANSWERS_JSON, loadAnswersDefaultJson, normalizeAnswersPayload } from './EnterAnswersForm';
 import { buildMilestones, buildStageRows, progressOf } from './stageModel';
-import { LANGUAGE_LABEL, STATUS_COLOR, notifyError, useReadinessCall } from './common';
+import { LANGUAGE_LABEL, STATUS_COLOR, inviteExpired, notifyError, useReadinessCall } from './common';
 import classnames from 'classnames';
 import Section from './Section';
 import style from './style.module.scss';
@@ -202,6 +204,29 @@ const ReadinessFlowDetail = createWithRemoteLoader({
     const openSend = useSendReadiness({ useFormModal, useModal, call, api, onDone: () => load(true) });
     const openConfirm = useConfirmReadiness({ useFormModal, call, api, onDone: () => load(true) });
 
+    /** 重发邀请：已过期的先设置新的有效期（问卷项目随之延长），未过期的沿用原有效期直接重发 */
+    const resendInvite = item => {
+      if (!inviteExpired(item)) {
+        return act(api.resendInvite, { inviteIds: [String(item.id)] }, 'resendSuccess');
+      }
+      const formApi = formModal({
+        title: t('resendExpiredTitle'),
+        size: 'small',
+        saveText: t('resend'),
+        formProps: {
+          data: { deadline: dayjs().add(7, 'day') },
+          onSubmit: async formData => {
+            const result = await act(api.resendInvite, { inviteIds: [String(item.id)], deadline: dayjs(formData.deadline).format('YYYY-MM-DD') }, 'resendSuccess');
+            if (!result) {
+              return false;
+            }
+            formApi.close();
+          }
+        },
+        children: <ResendFormInner expiresAt={item.expiresAt} />
+      });
+    };
+
     /** 删除邀请：只删邀请记录（staff / reassess 连带参与人）；对应阶段已过的不能删 */
     const deleteInvite = item => {
       if (!item.deletable) {
@@ -223,13 +248,29 @@ const ReadinessFlowDetail = createWithRemoteLoader({
 
     const actions = useMemo(
       () => ({
-        openData: (title, versions) =>
-          modal({
+        openData: (title, versions, { restorable, resetsAll } = {}) => {
+          const dataModal = modal({
             title,
             size: 'large',
             footer: null,
-            children: <StageDataView versions={[...versions].sort((a, b) => b.version - a.version)} call={call} api={api} />
-          }),
+            children: (
+              <StageDataView
+                versions={[...versions].sort((a, b) => b.version - a.version)}
+                call={call}
+                api={api}
+                restorable={restorable}
+                resetsAll={resetsAll}
+                onApply={async (payload, successKey) => {
+                  const result = await act(api.stageApply, payload, successKey);
+                  if (result) {
+                    dataModal.close();
+                  }
+                  return result;
+                }}
+              />
+            )
+          });
+        },
         openPreview: ({ kind, personId, title }) =>
           modal({
             title: `${t('previewProject')} · ${title}`,
@@ -239,6 +280,44 @@ const ReadinessFlowDetail = createWithRemoteLoader({
             children: <ProjectPreviewView call={call} api={api} params={{ runId: String(idRef.current), kind, personId }} />
           }),
         confirm: ({ kind, personId }) => openConfirm({ runId: String(idRef.current), kind, personId, language: detail?.language }),
+        editQuestionnaire: async ({ kind, personId }) => {
+          const runId = String(idRef.current);
+          let payload;
+          try {
+            payload = await call(api.questionnaireEdit, { runId, kind, personId });
+          } catch (e) {
+            notifyError(e);
+            return;
+          }
+          const formApi = formModal({
+            title: t('editQuestionnaire'),
+            size: 'large',
+            saveText: t('saveQuestionnaire'),
+            formProps: {
+              data: { schema: payload?.schema || { blocks: [] } },
+              onSubmit: async formData => {
+                if (!payload?.editable) {
+                  message.warning(t('editQuestionnaireNotEditable'));
+                  return false;
+                }
+                if (!formData?.schema?.blocks?.length) {
+                  message.error(t('editQuestionnaireEmpty'));
+                  return false;
+                }
+                try {
+                  await call(api.questionnaireUpdate, { runId, kind, personId, schema: formData.schema });
+                  message.success(t('editQuestionnaireSuccess'));
+                  formApi.close();
+                  load(true);
+                } catch (e) {
+                  notifyError(e);
+                  return false;
+                }
+              }
+            },
+            children: <EditQuestionnaireFormInner rejected={!!payload?.rejected} rejectComment={payload?.rejectComment || ''} rejectedByEmail={payload?.rejectedByEmail || ''} editable={!!payload?.editable} />
+          });
+        },
         fetchResult: async () => {
           const result = await act(api.syncAnswers, {});
           if (!result) {
@@ -258,6 +337,13 @@ const ReadinessFlowDetail = createWithRemoteLoader({
           }
         },
         advanceAnswers: data => act(api.advanceAnswers, data, 'advanceSuccess'),
+        reanswer: ({ kind, personId }) =>
+          confirmModal({
+            title: t('reanswer'),
+            message: t('reanswerConfirm'),
+            danger: true,
+            onConfirm: () => act(api.reanswer, { kind, personId }, 'reanswerSuccess')
+          }),
         skipReassessConfirm: ({ personId }) =>
           confirmModal({
             title: t('skipToAssessUpdate'),
@@ -305,7 +391,7 @@ const ReadinessFlowDetail = createWithRemoteLoader({
             onConfirm: () => act(api.rollback, { scope, personId, stage }, 'rollbackSuccess')
           })
       }),
-      [act, api, call, confirmModal, detail, formModal, modal, openConfirm, openSend, t]
+      [act, api, call, confirmModal, detail, formModal, load, modal, openConfirm, openSend, t]
     );
 
     // 加载中只用骨架屏，不放「返回列表」（避免空壳页上单独一个返回按钮）
@@ -447,7 +533,7 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                       navigator.clipboard?.writeText(item.url);
                       message.success(t('copied'));
                     },
-                    resend: item => act(api.resendInvite, { inviteIds: [String(item.id)] }, 'resendSuccess')
+                    resend: resendInvite
                   }
             }
           />
@@ -477,7 +563,7 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                           navigator.clipboard?.writeText(item.url);
                           message.success(t('copied'));
                         },
-                        resend: item => act(api.resendInvite, { inviteIds: [String(item.id)] }, 'resendSuccess')
+                        resend: resendInvite
                       }
                 }
               />
@@ -510,13 +596,31 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                   title: t('statusLabel'),
                   width: 110,
                   renderType: 'status',
-                  getValueOf: item => ({
-                    // 邮件发送失败可重发，用 warning，勿用 error 以免像阶段失败
-                    type: item.status === 'failed' ? 'warning' : item.status === 'answered' ? 'success' : item.status === 'sent' ? 'processing' : 'default',
-                    text: t(`inviteStatus.${item.status}`)
-                  })
+                  getValueOf: item => {
+                    const collecting = item.status === 'answered' && item.collectionComplete === false;
+                    // 邮件发送失败可重发，用 warning，勿用 error 以免像阶段失败；只答问卷未齐访谈时不算已回答
+                    return {
+                      type: item.status === 'failed' ? 'warning' : collecting ? 'processing' : item.status === 'answered' ? 'success' : item.status === 'sent' ? 'processing' : 'default',
+                      text: collecting ? t('inviteStatus.collecting') : t(`inviteStatus.${item.status}`)
+                    };
+                  }
                 },
-                { name: 'expiresAt', title: t('expiresAt'), width: 160, getValueOf: item => (item.expiresAt ? dayjs(item.expiresAt).format('YYYY-MM-DD HH:mm') : null) },
+                {
+                  name: 'expiresAt',
+                  title: t('expiresAt'),
+                  width: 160,
+                  getValueOf: item =>
+                    item.expiresAt ? (
+                      <Flex vertical gap={2}>
+                        <span>{dayjs(item.expiresAt).format('YYYY-MM-DD HH:mm')}</span>
+                        {inviteExpired(item) ? (
+                          <Typography.Text type="danger" style={{ fontSize: 12 }}>
+                            {t('inviteExpired')}
+                          </Typography.Text>
+                        ) : null}
+                      </Flex>
+                    ) : null
+                },
                 {
                   name: 'options',
                   title: t('actions'),
@@ -535,7 +639,7 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                       });
                     }
                     if (['sent', 'failed'].includes(item.status)) {
-                      options.push({ children: t('resend'), onClick: () => act(api.resendInvite, { inviteIds: [String(item.id)] }, 'resendSuccess') });
+                      options.push({ children: t('resend'), onClick: () => resendInvite(item) });
                     }
                     // 对应阶段已过的邀请不能删除（后端同样校验）
                     if (item.deletable) {
@@ -583,8 +687,30 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                     name: 'confirmed',
                     title: t('confirmStatus'),
                     width: 200,
-                    renderType: 'status',
-                    getValueOf: item => ({ type: item.confirmed ? 'success' : 'default', text: item.confirmed ? `${t('confirmed')} · ${dayjs(item.confirmedAt).format('MM-DD HH:mm')}` : t('notConfirmed') })
+                    render: (_value, { dataSource: item }) => {
+                      if (item.confirmed) {
+                        return (
+                          <Tag bordered={false} color="success">
+                            {`${t('confirmed')} · ${dayjs(item.confirmedAt).format('MM-DD HH:mm')}`}
+                          </Tag>
+                        );
+                      }
+                      if (item.rejected) {
+                        const tip = [item.rejectedByEmail ? t('rejectCommentFrom', { email: item.rejectedByEmail }) : null, item.rejectComment || t('rejectCommentEmpty')].filter(Boolean).join('\n');
+                        return (
+                          <Tooltip title={<span style={{ whiteSpace: 'pre-wrap' }}>{tip}</span>}>
+                            <Tag bordered={false} color="warning">
+                              {t('mailRejected')}
+                            </Tag>
+                          </Tooltip>
+                        );
+                      }
+                      return (
+                        <Tag bordered={false} color="default">
+                          {t('notConfirmed')}
+                        </Tag>
+                      );
+                    }
                   }
                 ]}
               />

@@ -8,6 +8,7 @@ module.exports = fp(async (fastify, options) => {
     `${options.prefix}/public/readiness-confirm`,
     {
       schema: {
+        tags: ['readiness'],
         summary: '免登录-确认问卷详情',
         query: { type: 'object', properties: { code: { type: 'string' } }, required: ['code'] }
       }
@@ -19,6 +20,7 @@ module.exports = fp(async (fastify, options) => {
     `${options.prefix}/public/readiness-confirm`,
     {
       schema: {
+        tags: ['readiness'],
         summary: '免登录-确认本批中的一份问卷并填写截止日期',
         body: {
           type: 'object',
@@ -35,5 +37,28 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => services.readinessConfirm.publicConfirm(request.body)
+  );
+
+  fastify.post(
+    `${options.prefix}/public/readiness-confirm/reject`,
+    {
+      schema: {
+        tags: ['readiness'],
+        summary: '免登录-驳回确认问卷（必须填写修改意见）',
+        body: {
+          type: 'object',
+          properties: {
+            code: { type: 'string' },
+            comment: { type: 'string' },
+            key: { type: 'string' },
+            runId: { type: 'string' },
+            kind: { type: 'string' },
+            personId: { type: 'string' }
+          },
+          required: ['code', 'comment']
+        }
+      }
+    },
+    async request => services.readinessConfirm.publicReject(request.body)
   );
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Flex, Typography } from 'antd';
 import classnames from 'classnames';
 import dayjs from 'dayjs';
@@ -34,10 +34,17 @@ const countSelected = (formData, kind, runId) => {
   return recipients + (Array.isArray(personIds) ? personIds.length : 0);
 };
 
+/** 表单里勾选的已有参与人；空选/未挂载字段一律 []，避免后端把「未传 personIds」当成发全部 */
+const pickPersonIds = (formData, runId) => {
+  const raw = formData?.[personIdsField(runId)];
+  return Array.isArray(raw) ? raw.map(String) : [];
+};
+
 /**
  * 表单值 → 发送/预览接口入参
  * - 多 Role 的经理/员工：走 items，各 Role 各自收件人
  * - 单 Role 或补充问卷：仍可用共用 recipients / personIds
+ * - staff/reassess 必须显式带 personIds（含空数组）；缺省不传会被服务端理解成「全部待发送」
  */
 export const buildSendBody = (runs, formData, fixedKind) => {
   const kind = fixedKind || formData.kind;
@@ -51,8 +58,8 @@ export const buildSendBody = (runs, formData, fixedKind) => {
     body.items = runs.map(run => {
       const runId = String(run.id);
       const item = { runId, recipients: pickSendRecipients(formData, runId) };
-      if (kind === 'staff' && Array.isArray(formData[personIdsField(runId)])) {
-        item.personIds = formData[personIdsField(runId)].map(String);
+      if (kind === 'staff') {
+        item.personIds = pickPersonIds(formData, runId);
       }
       return item;
     });
@@ -64,8 +71,8 @@ export const buildSendBody = (runs, formData, fixedKind) => {
   if (kind === 'manager' || kind === 'staff') {
     body.recipients = pickSendRecipients(formData);
   }
-  if (kind !== 'manager' && Array.isArray(formData.personIds)) {
-    body.personIds = formData.personIds.map(String);
+  if (kind === 'staff' || kind === 'reassess') {
+    body.personIds = pickPersonIds(formData);
   }
   return body;
 };
@@ -197,11 +204,20 @@ const SendFormInner = createWithRemoteLoader({
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [kind]);
 
+    // 仅在首次拉到某 Role 的可发参与人时默认全选；之后用户取消勾选不得被再次覆盖
+    const primedPersonRunsRef = useRef(new Set());
     useEffect(() => {
-      const fields = Object.entries(personsByRun).map(([runId, list]) => ({
-        name: personIdsField(runs.length > 1 ? runId : ''),
-        value: list.map(item => item.personId)
-      }));
+      const fields = [];
+      Object.entries(personsByRun).forEach(([runId, list]) => {
+        if (!list.length || primedPersonRunsRef.current.has(runId)) {
+          return;
+        }
+        primedPersonRunsRef.current.add(runId);
+        fields.push({
+          name: personIdsField(runs.length > 1 ? runId : ''),
+          value: list.map(item => item.personId)
+        });
+      });
       if (fields.length) {
         openApi.setFields(fields, { runValidate: false });
       }

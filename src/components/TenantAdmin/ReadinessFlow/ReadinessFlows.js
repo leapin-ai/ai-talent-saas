@@ -17,16 +17,25 @@ const POLL_INTERVAL = 8000;
 
 /** 平台 Admin → 租户管理 → 某租户 →「就绪度流程」tab 的列表：走 tenantAdmin 接口并带上 tenantId，详情通过 onOpenDetail 在 tab 内切换 */
 const ReadinessFlows = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:TablePage', 'components-core:TablePage@Table', 'components-core:Filter', 'components-core:FormInfo@useFormModal', 'components-core:Modal@useModal']
+  modules: [
+    'components-core:Global@usePreset',
+    'components-core:TablePage',
+    'components-core:TablePage@Table',
+    'components-core:Filter',
+    'components-core:FormInfo@useFormModal',
+    'components-core:Modal@useModal',
+    'components-core:Modal@useConfirmModal'
+  ]
 })(
   withLocale(({ remoteModules, adminTenantId, onOpenDetail }) => {
-    const [usePreset, TablePage, Table, Filter, useFormModal, useModal] = remoteModules;
+    const [usePreset, TablePage, Table, Filter, useFormModal, useModal, useConfirmModal] = remoteModules;
     const { SuperSelectFilterItem } = Filter.fields;
     const { apis, ajax } = usePreset();
     const { formatMessage } = useIntl();
     const call = useReadinessCall(ajax, { tenantId: adminTenantId });
     const api = apis.talentSaas.tenantAdmin.readiness;
     const formModal = useFormModal();
+    const confirmModal = useConfirmModal();
     const tableRef = useRef(null);
     const [pageList, setPageList] = useState([]);
     const [busyKey, setBusyKey] = useState('');
@@ -158,6 +167,15 @@ const ReadinessFlows = createWithRemoteLoader({
           await act(runId, api.advanceAnswers, { kind, personId }, 'advanceSuccess');
           return;
         }
+        if (type === 'reanswer') {
+          confirmModal({
+            title: t('reanswer'),
+            message: t('reanswerConfirm'),
+            danger: true,
+            onConfirm: () => act(runId, api.reanswer, { kind, personId }, 'reanswerSuccess')
+          });
+          return;
+        }
         if (type === 'enter') {
           openEnterAnswers({ runId, kind, personId });
           return;
@@ -182,7 +200,7 @@ const ReadinessFlows = createWithRemoteLoader({
         }
       },
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      [act, api, openConfirm, openEnterAnswers, openSend]
+      [act, api, confirmModal, openConfirm, openEnterAnswers, openSend]
     );
 
     const selectedItems = useMemo(() => {

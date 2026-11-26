@@ -70,6 +70,21 @@ const questionnaireOf = output => {
   return { questionnaire, interview: asArray(data.interview) };
 };
 
+/** 问卷中访谈题数量（须通过 AI 面试回收视频作答） */
+const expectedInterviewCountOf = output => questionnaireOf(output).interview.length;
+
+/**
+ * 答卷采集是否齐套：无访谈题时问卷答完即可；有访谈题时 videoAnswers 数量须 ≥ 期望访谈题数。
+ * 只完成问卷、未采到 AI 视频时返回 false。
+ */
+const answersCollectionReady = ({ expectedVideos = 0, videoAnswers } = {}) => {
+  const expected = Number(expectedVideos) || 0;
+  if (expected <= 0) {
+    return true;
+  }
+  return asArray(videoAnswers).length >= expected;
+};
+
 const answersOf = output => {
   requireOutput(output, '缺少答卷');
   return output.answers ?? {};
@@ -482,6 +497,8 @@ module.exports = {
   QUESTIONNAIRE_KINDS,
   unwrap,
   questionnaireOf,
+  expectedInterviewCountOf,
+  answersCollectionReady,
   assessCompletion,
   materialsFromProfileData,
   personMaterials,

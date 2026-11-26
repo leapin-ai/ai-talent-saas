@@ -81,6 +81,8 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
         state = 'current';
         if (waitingStaffQuestionnaire) {
           status = { type: 'processing', text: t('stateWaitingStaffQuestionnaire') };
+        } else if (stage.action === 'confirm' && current.some(item => item.rejected)) {
+          status = { type: 'warning', text: t('stateRejected') };
         } else {
           status = stage.mode === 'manual' || stage.mode === 'wait' ? { type: 'warning', text: t('stateWaitingManual') } : { type: 'processing', text: t('stateCurrent') };
         }
@@ -90,6 +92,7 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
       const secondary = [];
       if (isCurrent && stage.action === 'confirm') {
         primary.push({ children: t('confirmQuestionnaire'), onClick: () => actions.confirm({ kind, personId }) });
+        primary.push({ children: t('editQuestionnaire'), onClick: () => actions.editQuestionnaire({ kind, personId }) });
         if (stage.key === 'reassess_confirm') {
           primary.push({ children: t('skipToAssessUpdate'), onClick: () => actions.skipReassessConfirm({ personId }) });
         }
@@ -98,10 +101,16 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
         primary.push({ children: t('goSend'), onClick: () => actions.openSend(kind) });
       }
       if (isCurrent && stage.action === 'answers') {
-        if (current.some(item => item.status === 'succeeded')) {
+        // 只完成问卷、访谈视频未齐：不展示「确认进入下一阶段 / 获取结果」（定时任务会继续同步）
+        const hasSucceeded = current.some(item => item.status === 'succeeded');
+        const answersReady = current.some(item => item.status === 'succeeded' && item.answersReady !== false);
+        if (answersReady) {
           primary.push({ children: t('confirmNextStage'), onClick: () => actions.advanceAnswers({ kind, personId }) });
+          primary.push({ children: t('reanswer'), onClick: () => actions.reanswer({ kind, personId }) });
         }
-        primary.push({ children: t('fetchResult'), onClick: actions.fetchResult });
+        if (!hasSucceeded || answersReady) {
+          primary.push({ children: t('fetchResult'), onClick: actions.fetchResult });
+        }
         primary.push({ children: t('enterAnswers'), onClick: () => actions.openAnswers({ kind, personId }) });
       }
       if (isCurrent && stage.action === 'trigger') {
@@ -114,7 +123,10 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
         primary.push({ children: t('retry'), onClick: () => actions.retry({ scope: stage.fanOut ? 'role' : scope, personId: stage.fanOut ? item.personId : personId, stage: stage.key }) });
       });
       if (all.length) {
-        secondary.push({ children: t('viewData'), onClick: () => actions.openData(`${label}${titleSuffix}`, all) });
+        // restorable：可退回并应用历史版本 / 修改当前输出（与「退回至此」同条件，且只限调 AI 接口的自动阶段）
+        const restorable = !!stage.restorable && index <= currentIndex && run?.status !== 'canceled';
+        const resetsAll = scope === 'role' && index <= stageIndexOf(stages, 'staff_send');
+        secondary.push({ children: t('viewData'), onClick: () => actions.openData(`${label}${titleSuffix}`, all, { restorable, resetsAll }) });
       }
       if (stage.action === 'send' && index <= currentIndex && !skipped) {
         secondary.push({ children: t('previewProject'), onClick: () => actions.openPreview({ kind, personId, title: `${label}${titleSuffix}` }) });
@@ -138,13 +150,23 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
       const facts = [];
       const succeeded = current.filter(item => item.status === 'succeeded').sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))[0];
       Object.entries(succeeded?.summary || {}).forEach(([key, value]) => facts.push(t(`summary.${key}`, { count: value, name: value })));
+      const rejectRow = current.find(item => item.rejected);
+      if (rejectRow?.rejected && (rejectRow.rejectComment || rejectRow.rejectedByEmail)) {
+        facts.push(
+          t('rejectCommentFact', {
+            comment: rejectRow.rejectComment || t('rejectCommentEmpty'),
+            email: rejectRow.rejectedByEmail || '-'
+          })
+        );
+      }
       if (stage.fanOut && current.length) {
         facts.push(t('summary.fanOut', { done: current.filter(item => item.status === 'succeeded').length, total: current.length }));
       }
       if (isCurrent && stage.action === 'answers') {
         const targets = invites.filter(item => item.isCurrent && item.kind === kind && (kind === 'manager' || String(item.personId) === personId));
         if (targets.length) {
-          facts.push(t('summary.inviteProgress', { answered: targets.filter(item => item.status === 'answered').length, total: targets.length }));
+          const answered = targets.filter(item => item.status === 'answered' && item.collectionComplete !== false).length;
+          facts.push(t('summary.inviteProgress', { answered, total: targets.length }));
         }
       }
       if (state === 'done' && stage.mode === 'auto' && succeeded) {

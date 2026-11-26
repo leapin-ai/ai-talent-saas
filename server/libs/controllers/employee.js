@@ -170,6 +170,7 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.user, tenantAuthenticate.tenantUser],
       schema: {
+        tags: ['readiness'],
         summary: '未来任务就绪纠错反馈（It does not look right）',
         body: {
           type: 'object',
@@ -199,6 +200,7 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.user, authenticate.admin],
       schema: {
+        tags: ['readiness'],
         summary: '平台管理-纠错反馈列表',
         query: {
           type: 'object',
@@ -223,6 +225,7 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.user, authenticate.admin],
       schema: {
+        tags: ['readiness'],
         summary: '平台管理-纠错反馈详情',
         query: {
           type: 'object',
@@ -245,6 +248,7 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.user, authenticate.admin],
       schema: {
+        tags: ['readiness'],
         summary: '平台管理-处理纠错反馈',
         body: {
           type: 'object',
