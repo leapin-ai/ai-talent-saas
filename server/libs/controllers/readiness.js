@@ -70,6 +70,24 @@ module.exports = fp(async (fastify, options) => {
     (info, body) => services.readiness.confirm(info, body)
   );
 
+  post(
+    'manual/questionnaire-edit',
+    '确认阶段拉取问卷 FormCreator Schema（含驳回意见）',
+    { type: 'object', properties: { runId: { type: 'string' }, kind: kindSchema, personId: { type: 'string' } }, required: ['runId', 'kind'] },
+    (info, body) => services.readiness.questionnaireEditPayload(info, body)
+  );
+
+  post(
+    'manual/questionnaire-update',
+    '确认阶段用 FormCreator Schema 更新问卷题目',
+    {
+      type: 'object',
+      properties: { runId: { type: 'string' }, kind: kindSchema, personId: { type: 'string' }, schema: { type: 'object' }, questionnaire: { type: 'array' } },
+      required: ['runId', 'kind']
+    },
+    (info, body) => services.readiness.updateQuestionnaire(info, body)
+  );
+
   post('manual/project-preview', '预览已发布的 AI 面试项目', { type: 'object', properties: { runId: { type: 'string' }, kind: kindSchema, personId: { type: 'string' } }, required: ['runId', 'kind'] }, (info, body) =>
     services.readinessSend.projectPreview(info, body)
   );

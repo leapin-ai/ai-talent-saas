@@ -81,6 +81,8 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
         state = 'current';
         if (waitingStaffQuestionnaire) {
           status = { type: 'processing', text: t('stateWaitingStaffQuestionnaire') };
+        } else if (stage.action === 'confirm' && current.some(item => item.rejected)) {
+          status = { type: 'warning', text: t('stateRejected') };
         } else {
           status = stage.mode === 'manual' || stage.mode === 'wait' ? { type: 'warning', text: t('stateWaitingManual') } : { type: 'processing', text: t('stateCurrent') };
         }
@@ -90,6 +92,7 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
       const secondary = [];
       if (isCurrent && stage.action === 'confirm') {
         primary.push({ children: t('confirmQuestionnaire'), onClick: () => actions.confirm({ kind, personId }) });
+        primary.push({ children: t('editQuestionnaire'), onClick: () => actions.editQuestionnaire({ kind, personId }) });
         if (stage.key === 'reassess_confirm') {
           primary.push({ children: t('skipToAssessUpdate'), onClick: () => actions.skipReassessConfirm({ personId }) });
         }
@@ -139,6 +142,10 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
       const facts = [];
       const succeeded = current.filter(item => item.status === 'succeeded').sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))[0];
       Object.entries(succeeded?.summary || {}).forEach(([key, value]) => facts.push(t(`summary.${key}`, { count: value, name: value })));
+      const rejectRow = current.find(item => item.rejected);
+      if (rejectRow?.rejectComment) {
+        facts.push(t('rejectCommentFact', { comment: rejectRow.rejectComment }));
+      }
       if (stage.fanOut && current.length) {
         facts.push(t('summary.fanOut', { done: current.filter(item => item.status === 'succeeded').length, total: current.length }));
       }

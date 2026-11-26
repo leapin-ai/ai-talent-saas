@@ -408,15 +408,20 @@ $subtle: #f6f8fb;
 
 .item-action {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: 16px;
   padding: 16px 20px;
+}
 
-  :global(.ant-btn) {
-    flex: none;
-    margin-left: auto;
-  }
+.reject-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reject-actions {
+  margin-top: 4px;
 }
 
 .footer-space {

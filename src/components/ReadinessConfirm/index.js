@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, ConfigProvider, DatePicker, Flex, Result, Segmented, Spin, Tag } from 'antd';
+import { Button, ConfigProvider, DatePicker, Flex, Input, Result, Segmented, Spin, Tag } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import enUS from 'antd/locale/en_US';
 import classnames from 'classnames';
@@ -37,6 +37,9 @@ const normalizeItems = detail => {
       stage: detail.stage,
       confirmed: detail.confirmed,
       notReached: detail.notReached,
+      rejected: detail.rejected,
+      rejectComment: detail.rejectComment,
+      rejectedAt: detail.rejectedAt,
       deadline: detail.deadline,
       confirmedAt: detail.confirmedAt,
       questionnaire: detail.questionnaire || [],
@@ -45,7 +48,7 @@ const normalizeItems = detail => {
   ];
 };
 
-const itemPending = item => !item.outdated && !item.confirmed && !item.notReached;
+const itemPending = item => !item.outdated && !item.confirmed && !item.notReached && !item.rejected;
 
 const QuestionnairePreview = ({ item, pageLocale, t }) => {
   const byNo = useMemo(() => new Map((item.questionnaire || []).map(row => [row.no, row])), [item.questionnaire]);
@@ -77,12 +80,17 @@ const QuestionnairePreview = ({ item, pageLocale, t }) => {
   );
 };
 
-/** 单份问卷：待确认可提交；已确认可预览题目 */
-const ConfirmItemPanel = ({ item, pageLocale, t, submitting, onSubmit }) => {
+/** 单份问卷：待确认可提交或驳回；已确认 / 已驳回可预览题目 */
+const ConfirmItemPanel = ({ item, pageLocale, t, submitting, rejecting, onSubmit, onReject }) => {
   const [deadline, setDeadline] = useState(null);
   const [deadlineError, setDeadlineError] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectComment, setRejectComment] = useState('');
+  const [rejectError, setRejectError] = useState(false);
   const showDeadlineError = deadlineError && !deadline;
+  const showRejectError = rejectError && !String(rejectComment || '').trim();
   const pending = itemPending(item);
+  const busy = submitting || rejecting;
 
   const submit = () => {
     if (!deadline) {
@@ -92,19 +100,30 @@ const ConfirmItemPanel = ({ item, pageLocale, t, submitting, onSubmit }) => {
     onSubmit(item, deadline.format(DATE_FORMAT));
   };
 
+  const reject = () => {
+    const comment = String(rejectComment || '').trim();
+    if (!comment) {
+      setRejectError(true);
+      return;
+    }
+    onReject(item, comment);
+  };
+
   if (!pending) {
     let result;
     if (item.outdated) {
       result = <Result status="warning" title={t('outdatedTitle')} subTitle={t('outdatedDesc')} />;
     } else if (item.confirmed) {
       result = <Result status="success" title={t('confirmedTitle')} subTitle={t('confirmedDesc', { deadline: item.deadline || '-' })} />;
+    } else if (item.rejected) {
+      result = <Result status="warning" title={t('rejectedTitle')} subTitle={t('rejectedDesc', { comment: item.rejectComment || '-' })} />;
     } else {
       result = <Result status="info" title={t('notReachedTitle')} subTitle={t('notReachedDesc')} />;
     }
     return (
       <>
         <div className={classnames(style['panel'], style['result'])}>{result}</div>
-        {item.confirmed && !item.outdated ? <QuestionnairePreview item={item} pageLocale={pageLocale} t={t} /> : null}
+        {(item.confirmed || item.rejected) && !item.outdated ? <QuestionnairePreview item={item} pageLocale={pageLocale} t={t} /> : null}
       </>
     );
   }
@@ -129,9 +148,39 @@ const ConfirmItemPanel = ({ item, pageLocale, t, submitting, onSubmit }) => {
           </div>
           <div className={classnames(style['deadline-hint'], { [style['deadline-hint-error']]: showDeadlineError })}>{showDeadlineError ? t('deadlineRequired') : t('deadlineTip')}</div>
         </div>
-        <Button type="primary" size="large" loading={submitting} onClick={submit}>
-          {t('submit')}
-        </Button>
+        {rejectOpen ? (
+          <div className={style['reject-box']}>
+            <div className={style['deadline-label']}>{t('rejectComment')}</div>
+            <Input.TextArea
+              rows={4}
+              value={rejectComment}
+              status={showRejectError ? 'error' : undefined}
+              placeholder={t('rejectCommentPlaceholder')}
+              onChange={e => {
+                setRejectComment(e.target.value);
+                setRejectError(false);
+              }}
+            />
+            {showRejectError ? <div className={classnames(style['deadline-hint'], style['deadline-hint-error'])}>{t('rejectCommentRequired')}</div> : <div className={style['deadline-hint']}>{t('rejectTip')}</div>}
+            <Flex gap={8} wrap="wrap" className={style['reject-actions']}>
+              <Button danger type="primary" size="large" loading={rejecting} disabled={busy} onClick={reject}>
+                {t('rejectSubmit')}
+              </Button>
+              <Button size="large" disabled={busy} onClick={() => setRejectOpen(false)}>
+                {t('rejectCancel')}
+              </Button>
+            </Flex>
+          </div>
+        ) : (
+          <Flex gap={8} wrap="wrap">
+            <Button type="primary" size="large" loading={submitting} disabled={busy} onClick={submit}>
+              {t('submit')}
+            </Button>
+            <Button size="large" disabled={busy} onClick={() => setRejectOpen(true)}>
+              {t('reject')}
+            </Button>
+          </Flex>
+        )}
       </div>
     </>
   );
@@ -152,6 +201,7 @@ const ReadinessConfirmContent = createWithRemoteLoader({
     const [error, setError] = useState(false);
     const [activeKey, setActiveKey] = useState('');
     const [submittingKey, setSubmittingKey] = useState('');
+    const [rejectingKey, setRejectingKey] = useState('');
     const itemRefs = useRef({});
     const skipAutoActiveRef = useRef(false);
 
@@ -291,12 +341,33 @@ const ReadinessConfirmContent = createWithRemoteLoader({
       }
     };
 
+    const rejectItem = async (item, comment) => {
+      setRejectingKey(item.key);
+      try {
+        const { data } = await ajax(
+          Object.assign({}, publicApis.reject, {
+            data: { code, comment, key: item.key, runId: item.runId, kind: item.kind, personId: item.personId || undefined }
+          })
+        );
+        if (data.code !== 0) {
+          await load().catch(() => {});
+          return;
+        }
+        await load({ preferNextPendingOf: item.key }).catch(() => {});
+      } finally {
+        setRejectingKey('');
+      }
+    };
+
     const statusTag = item => {
       if (item.outdated) {
         return <Tag color="warning">{t('statusOutdated')}</Tag>;
       }
       if (item.confirmed) {
         return <Tag color="success">{t('statusConfirmed')}</Tag>;
+      }
+      if (item.rejected) {
+        return <Tag color="warning">{t('statusRejected')}</Tag>;
       }
       if (item.notReached) {
         return <Tag>{t('statusUnavailable')}</Tag>;
@@ -349,7 +420,7 @@ const ReadinessConfirmContent = createWithRemoteLoader({
                 </button>
                 {open ? (
                   <div className={style['item-body']}>
-                    <ConfirmItemPanel item={item} pageLocale={pageLocale} t={t} submitting={submittingKey === item.key} onSubmit={submitItem} />
+                    <ConfirmItemPanel item={item} pageLocale={pageLocale} t={t} submitting={submittingKey === item.key} rejecting={rejectingKey === item.key} onSubmit={submitItem} onReject={rejectItem} />
                   </div>
                 ) : null}
               </div>
