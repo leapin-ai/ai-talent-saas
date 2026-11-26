@@ -75,7 +75,14 @@ module.exports = fp(async (fastify, options) => {
         where: { runId: String(run.id), stage: info.confirmStage, personId: idOrNull(info.scope === 'person' ? person.id : null), isCurrent: true, status: 'succeeded' }
       });
       if (row?.output?.rejected === true) {
-        return { confirmed: false, rejected: true, rejectComment: row.output?.comment || '', rejectedAt: row.output?.rejectedAt || null };
+        return {
+          confirmed: false,
+          rejected: true,
+          rejectComment: row.output?.comment || '',
+          rejectedAt: row.output?.rejectedAt || null,
+          rejectedByEmail: row.output?.rejectedByEmail || '',
+          rejectedByName: row.output?.rejectedByName || ''
+        };
       }
       return { confirmed: false, rejected: false };
     }
@@ -186,17 +193,6 @@ module.exports = fp(async (fastify, options) => {
       personId: person ? String(person.id) : null,
       questionnaireVersion: version
     }));
-    const code = await requireShorten().sign(
-      JSON.stringify({
-        type: CONFIRM_SHORTEN_TYPE,
-        tenantId: String(tenantId),
-        language: mailLanguage,
-        digitalId: String(digitalId),
-        targets: payloadTargets
-      }),
-      expires
-    );
-    const url = `${ensureSlash(fastify.config.ORIGIN || '')}/readiness-confirm?code=${encodeURIComponent(code)}${fixedLanguage ? `&lang=${fixedLanguage}` : ''}`;
     const tenant = await services.shareReport.getTenant(tenantId);
     const context = services.shareReport.buildMailContext(tenant, mailLanguage, expires);
     const names = loaded.map(({ run, person }) => (person ? `${run.roleName} / ${person.name}` : run.roleName));
@@ -208,8 +204,23 @@ module.exports = fp(async (fastify, options) => {
     const items = names.map(name => ({ name }));
     const sent = [];
     const failed = [];
+    const langQuery = fixedLanguage ? `&lang=${fixedLanguage}` : '';
+    // 每个收件人单独签发短链（带 email），驳回/确认时可记下操作人邮箱
     for (const recipient of valid) {
       try {
+        const code = await requireShorten().sign(
+          JSON.stringify({
+            type: CONFIRM_SHORTEN_TYPE,
+            tenantId: String(tenantId),
+            language: mailLanguage,
+            digitalId: String(digitalId),
+            targets: payloadTargets,
+            email: recipient.email,
+            name: recipient.name || ''
+          }),
+          expires
+        );
+        const url = `${ensureSlash(fastify.config.ORIGIN || '')}/readiness-confirm?code=${encodeURIComponent(code)}${langQuery}`;
         await services.shareReport.sendMail({
           email: recipient.email,
           code: `READINESSCONFIRM[${mailLanguage}]`,
@@ -333,7 +344,7 @@ module.exports = fp(async (fastify, options) => {
       questionnaireVersion: target.questionnaireVersion,
       deadline,
       digitalId: payload.digitalId,
-      operator: { via: 'email' }
+      operator: { via: 'email', email: payload.email || '', name: payload.name || '' }
     });
     return { confirmedAt: output.confirmedAt, deadline: output.deadline, key: targetKeyOf(target) };
   };
@@ -352,7 +363,7 @@ module.exports = fp(async (fastify, options) => {
       personId: target.personId,
       questionnaireVersion: target.questionnaireVersion,
       comment,
-      operator: { via: 'email' }
+      operator: { via: 'email', email: payload.email || '', name: payload.name || '' }
     });
     return { rejectedAt: output.rejectedAt, key: targetKeyOf(target) };
   };

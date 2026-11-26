@@ -11,7 +11,7 @@ import { ManagerInviteOverview, MilestoneFlow, PersonFlowPanel, PersonOverview, 
 import useSendReadiness from './useSendReadiness';
 import useConfirmReadiness from './useConfirmReadiness';
 import ProjectPreviewView from './ProjectPreviewView';
-import EditQuestionnaireModal from './EditQuestionnaireModal';
+import EditQuestionnaireFormInner from './EditQuestionnaireFormInner';
 import EnterAnswersForm, { DEFAULT_ANSWERS_JSON, loadAnswersDefaultJson, normalizeAnswersPayload } from './EnterAnswersForm';
 import { buildMilestones, buildStageRows, progressOf } from './stageModel';
 import { LANGUAGE_LABEL, STATUS_COLOR, notifyError, useReadinessCall } from './common';
@@ -240,12 +240,42 @@ const ReadinessFlowDetail = createWithRemoteLoader({
             children: <ProjectPreviewView call={call} api={api} params={{ runId: String(idRef.current), kind, personId }} />
           }),
         confirm: ({ kind, personId }) => openConfirm({ runId: String(idRef.current), kind, personId, language: detail?.language }),
-        editQuestionnaire: ({ kind, personId }) => {
-          modal({
+        editQuestionnaire: async ({ kind, personId }) => {
+          const runId = String(idRef.current);
+          let payload;
+          try {
+            payload = await call(api.questionnaireEdit, { runId, kind, personId });
+          } catch (e) {
+            notifyError(e);
+            return;
+          }
+          const formApi = formModal({
             title: t('editQuestionnaire'),
             size: 'large',
-            footer: null,
-            children: ({ close }) => <EditQuestionnaireModal call={call} api={api} runId={String(idRef.current)} kind={kind} personId={personId} onSaved={() => load(true)} onClose={close} />
+            saveText: t('saveQuestionnaire'),
+            formProps: {
+              data: { schema: payload?.schema || { blocks: [] } },
+              onSubmit: async formData => {
+                if (!payload?.editable) {
+                  message.warning(t('editQuestionnaireNotEditable'));
+                  return false;
+                }
+                if (!formData?.schema?.blocks?.length) {
+                  message.error(t('editQuestionnaireEmpty'));
+                  return false;
+                }
+                try {
+                  await call(api.questionnaireUpdate, { runId, kind, personId, schema: formData.schema });
+                  message.success(t('editQuestionnaireSuccess'));
+                  formApi.close();
+                  load(true);
+                } catch (e) {
+                  notifyError(e);
+                  return false;
+                }
+              }
+            },
+            children: <EditQuestionnaireFormInner rejected={!!payload?.rejected} rejectComment={payload?.rejectComment || ''} rejectedByEmail={payload?.rejectedByEmail || ''} editable={!!payload?.editable} />
           });
         },
         fetchResult: async () => {
@@ -611,8 +641,9 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                         );
                       }
                       if (item.rejected) {
+                        const tip = [item.rejectedByEmail ? t('rejectCommentFrom', { email: item.rejectedByEmail }) : null, item.rejectComment || t('rejectCommentEmpty')].filter(Boolean).join('\n');
                         return (
-                          <Tooltip title={item.rejectComment || t('rejectCommentEmpty')}>
+                          <Tooltip title={<span style={{ whiteSpace: 'pre-wrap' }}>{tip}</span>}>
                             <Tag bordered={false} color="warning">
                               {t('mailRejected')}
                             </Tag>

@@ -72,28 +72,35 @@ $subtle: #f6f8fb;
 .meta {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px 40px;
+  align-items: stretch;
+  gap: 0;
   margin-top: 16px;
+  padding: 12px 4px;
+  border-radius: 10px;
+  background: $subtle;
 }
 
 .meta-item {
+  flex: 1 1 0;
   min-width: 0;
-}
+  padding: 0 16px;
+  text-align: center;
 
-.meta-item:last-child {
-  text-align: right;
+  & + & {
+    border-left: 1px solid $border;
+  }
 }
 
 .meta-label {
   font-size: 12px;
+  line-height: 18px;
   color: $text-tertiary;
 }
 
 .meta-value {
   margin-top: 2px;
-  font-size: 15px;
+  font-size: 18px;
+  line-height: 26px;
   font-weight: 600;
   color: $text;
   overflow-wrap: anywhere;
@@ -413,19 +420,33 @@ $subtle: #f6f8fb;
 
 .item-action {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 16px;
-  padding: 16px 20px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  padding: 20px 24px;
+}
+
+.item-buttons {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .reject-box {
+  flex: 1 1 100%;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 .reject-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
   margin-top: 4px;
 }
 
@@ -442,6 +463,14 @@ $subtle: #f6f8fb;
     padding: 20px;
   }
 
+  .meta {
+    padding: 10px 0;
+  }
+
+  .meta-item {
+    padding: 0 12px;
+  }
+
   .section {
     padding: 16px;
   }
@@ -455,11 +484,22 @@ $subtle: #f6f8fb;
   .item-action {
     flex-direction: column;
     align-items: stretch;
+    padding: 16px;
 
     :global(.ant-btn) {
       width: 100%;
       margin-left: 0;
     }
+  }
+
+  .item-buttons {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .reject-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
   }
 
   .deadline-row {

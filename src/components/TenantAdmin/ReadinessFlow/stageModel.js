@@ -148,8 +148,13 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
       const succeeded = current.filter(item => item.status === 'succeeded').sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))[0];
       Object.entries(succeeded?.summary || {}).forEach(([key, value]) => facts.push(t(`summary.${key}`, { count: value, name: value })));
       const rejectRow = current.find(item => item.rejected);
-      if (rejectRow?.rejectComment) {
-        facts.push(t('rejectCommentFact', { comment: rejectRow.rejectComment }));
+      if (rejectRow?.rejected && (rejectRow.rejectComment || rejectRow.rejectedByEmail)) {
+        facts.push(
+          t('rejectCommentFact', {
+            comment: rejectRow.rejectComment || t('rejectCommentEmpty'),
+            email: rejectRow.rejectedByEmail || '-'
+          })
+        );
       }
       if (stage.fanOut && current.length) {
         facts.push(t('summary.fanOut', { done: current.filter(item => item.status === 'succeeded').length, total: current.length }));

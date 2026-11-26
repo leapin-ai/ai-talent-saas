@@ -162,24 +162,24 @@ const ConfirmItemPanel = ({ item, pageLocale, t, submitting, rejecting, onSubmit
               }}
             />
             {showRejectError ? <div className={classnames(style['deadline-hint'], style['deadline-hint-error'])}>{t('rejectCommentRequired')}</div> : <div className={style['deadline-hint']}>{t('rejectTip')}</div>}
-            <Flex gap={8} wrap="wrap" className={style['reject-actions']}>
+            <div className={style['reject-actions']}>
+              <Button size="large" autoInsertSpace={false} disabled={busy} onClick={() => setRejectOpen(false)}>
+                {t('rejectCancel')}
+              </Button>
               <Button danger type="primary" size="large" loading={rejecting} disabled={busy} onClick={reject}>
                 {t('rejectSubmit')}
               </Button>
-              <Button size="large" disabled={busy} onClick={() => setRejectOpen(false)}>
-                {t('rejectCancel')}
-              </Button>
-            </Flex>
+            </div>
           </div>
         ) : (
-          <Flex gap={8} wrap="wrap">
+          <div className={style['item-buttons']}>
+            <Button size="large" autoInsertSpace={false} disabled={busy} onClick={() => setRejectOpen(true)}>
+              {t('reject')}
+            </Button>
             <Button type="primary" size="large" loading={submitting} disabled={busy} onClick={submit}>
               {t('submit')}
             </Button>
-            <Button size="large" disabled={busy} onClick={() => setRejectOpen(true)}>
-              {t('reject')}
-            </Button>
-          </Flex>
+          </div>
         )}
       </div>
     </>
