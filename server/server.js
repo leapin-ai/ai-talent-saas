@@ -105,6 +105,15 @@ const createServer = () => {
     }
   });
 
+  // 须早于其它路由注册，才能收集完整 OpenAPI；Signature 管理端读 /open-api.json
+  const rootPackageJsonPath = path.join(__dirname, '../package.json');
+  const appPackageJson = require('node:fs').existsSync(rootPackageJsonPath) ? require(rootPackageJsonPath) : packageJson;
+  fastify.register(require('@fastify/swagger'), {
+    openapi: {
+      info: { title: appPackageJson.name, version: appPackageJson.version }
+    }
+  });
+
   fastify.register(require('fastify-cron'));
 
   fastify.register(require('@kne/fastify-intl'), {
@@ -177,6 +186,10 @@ const createServer = () => {
         isTest: true,
         prefix: `${options.prefix}`,
         dbTableNamePrefix: tablePrefix ? `${tablePrefix}account_` : 't_account_',
+        // 超管 getSuperAdminInfo.setting：平台管理用 mcpEnabled 控制「MCP管理」菜单
+        getAdminSetting: ({ fastify: app }) => ({
+          mcpEnabled: !!app.mcp
+        }),
         getUserAuthenticate: () => fastify.oidc.authenticate.user,
         sendMessage: async ({ name, type, messageType, props }) => {
           const language = props.options?.language === 'zh-CN' ? 'zh-CN' : 'en-US';
@@ -603,6 +616,37 @@ const createServer = () => {
     })
   );
 
+  // MCP：须在 sequelize.sync 前注册以纳入模型；菜单依赖 getAdminSetting.mcpEnabled ← !!fastify.mcp
+  fastify.register(
+    require('fastify-plugin')(async fastify => {
+      const tablePrefix = fastify.config.DB_TABLE_PREFIX || null;
+      const { resolveSeedScenarios } = require('./libs/utils/mcp-seed-allowlist');
+      await fastify.register(require('@kne/fastify-mcp'), {
+        prefix: options.prefix,
+        // 全量 swagger → allowlist；场景优先 schema；默认不对 MCP 开放（enabled: false）
+        seedFromSwagger: {
+          getScenarios: resolveSeedScenarios,
+          enabled: false
+        },
+        dbTableNamePrefix: tablePrefix ? `${tablePrefix}mcp_` : 't_mcp_',
+        serverInfo: { name: 'ai-talent-saas', version: packageJson.version },
+        guideMarkdownPath: path.join(__dirname, 'MCP.md'),
+        guideRootDir: __dirname,
+        authenticateUser: async request => fastify.account.authenticate.user(request),
+        authenticateAdmin: async request => {
+          await fastify.account.authenticate.user(request);
+          await fastify.account.authenticate.admin(request);
+        },
+        resolveUser: async subjectId => fastify.account.services.user.getUserInstance({ id: subjectId })
+      });
+      require('./libs/utils/mcp-admin-keys').registerMcpAdminKeys(fastify, {
+        prefix: options.prefix,
+        authenticate: [fastify.account.authenticate.user, fastify.account.authenticate.admin],
+        getUserModel: () => fastify.account.models.user
+      });
+    })
+  );
+
   fastify.register(
     require('fastify-plugin')(async fastify => {
       await fastify.sequelize.sync();
@@ -626,6 +670,23 @@ const createServer = () => {
         },
         start: true
       });
+    })
+  );
+
+  // 未接 app-runtime：手写鉴权 GET /open-api.json（登录用户可读，供 Signature 作用域选择）
+  fastify.register(
+    require('fastify-plugin')(async fastify => {
+      if (typeof fastify.swagger !== 'function' || !fastify.account?.authenticate?.user) {
+        fastify.log.warn('open-api.json disabled: need @fastify/swagger and account.authenticate.user');
+        return;
+      }
+      fastify.get(
+        '/open-api.json',
+        {
+          onRequest: [async request => fastify.account.authenticate.user(request)]
+        },
+        async () => fastify.swagger()
+      );
     })
   );
 

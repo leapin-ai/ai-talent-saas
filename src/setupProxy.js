@@ -46,4 +46,12 @@ module.exports = function (app) {
       changeOrigin: true
     })
   );
+  // OpenAPI 文档挂在根路径，不在 /api 下（Signature 作用域从这里读 paths）
+  app.use(
+    createProxyMiddleware({
+      target: 'http://localhost:8050',
+      pathFilter: path => path === '/open-api.json' || path.startsWith('/open-api.json?'),
+      changeOrigin: true
+    })
+  );
 };

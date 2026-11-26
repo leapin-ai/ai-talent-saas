@@ -22,6 +22,7 @@ module.exports = fp(async (fastify, options) => {
       {
         onRequest,
         schema: {
+          tags: ['readiness'],
           summary: `Readiness 流程：${summary}`,
           body: Object.assign({}, body, { properties: Object.assign({ tenantId: { type: 'string' } }, body.properties), required: [...(body.required || []), 'tenantId'] })
         }
@@ -164,6 +165,7 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest,
       schema: {
+        tags: ['readiness'],
         summary: 'Readiness 流程：平台管理-可选参与人（员工）',
         body: {
           type: 'object',
