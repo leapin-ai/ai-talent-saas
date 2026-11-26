@@ -8,6 +8,7 @@ module.exports = fp(async (fastify, options) => {
     `${options.prefix}/public/readiness-confirm`,
     {
       schema: {
+        tags: ['readiness'],
         summary: '免登录-确认问卷详情',
         query: { type: 'object', properties: { code: { type: 'string' } }, required: ['code'] }
       }
@@ -19,6 +20,7 @@ module.exports = fp(async (fastify, options) => {
     `${options.prefix}/public/readiness-confirm`,
     {
       schema: {
+        tags: ['readiness'],
         summary: '免登录-确认本批中的一份问卷并填写截止日期',
         body: {
           type: 'object',

@@ -1,6 +1,6 @@
 {
   "name": "ai-talent-saas",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -34,6 +34,7 @@
   "dependencies": {
     "@fastify/env": "^7.0.0",
     "@fastify/static": "^10.1.5",
+    "@fastify/swagger": "^9.9.5",
     "@kne/ensure-slash": "^0.1.0",
     "@kne/fastify-account": "^2.0.14",
     "@kne/fastify-aliyun": "^1.1.8",
@@ -41,13 +42,14 @@
     "@kne/fastify-aws": "^0.1.0",
     "@kne/fastify-file-manager": "^3.2.0",
     "@kne/fastify-intl": "^0.1.7",
-    "@kne/fastify-message": "^2.1.1",
+    "@kne/fastify-mcp": "^0.1.5",
+    "@kne/fastify-message": "^2.1.2",
     "@kne/fastify-namespace": "^1.2.1",
     "@kne/fastify-oidc": "^0.1.18",
     "@kne/fastify-response-data-format": "^1.0.0",
     "@kne/fastify-sequelize": "^4.0.5",
     "@kne/fastify-shorten": "^1.0.16",
-    "@kne/fastify-signature": "^1.0.4",
+    "@kne/fastify-signature": "^1.0.5",
     "@kne/fastify-task": "^3.0.5",
     "@kne/fastify-tenant": "1.0.5",
     "fastify": "^5.12.5",
