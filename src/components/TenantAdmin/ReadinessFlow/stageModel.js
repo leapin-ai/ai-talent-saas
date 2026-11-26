@@ -123,7 +123,10 @@ export const buildStageRows = ({ t, scope, stages, currentStage, person, run, ro
         primary.push({ children: t('retry'), onClick: () => actions.retry({ scope: stage.fanOut ? 'role' : scope, personId: stage.fanOut ? item.personId : personId, stage: stage.key }) });
       });
       if (all.length) {
-        secondary.push({ children: t('viewData'), onClick: () => actions.openData(`${label}${titleSuffix}`, all) });
+        // restorable：可退回并应用历史版本 / 修改当前输出（与「退回至此」同条件，且只限调 AI 接口的自动阶段）
+        const restorable = !!stage.restorable && index <= currentIndex && run?.status !== 'canceled';
+        const resetsAll = scope === 'role' && index <= stageIndexOf(stages, 'staff_send');
+        secondary.push({ children: t('viewData'), onClick: () => actions.openData(`${label}${titleSuffix}`, all, { restorable, resetsAll }) });
       }
       if (stage.action === 'send' && index <= currentIndex && !skipped) {
         secondary.push({ children: t('previewProject'), onClick: () => actions.openPreview({ kind, personId, title: `${label}${titleSuffix}` }) });

@@ -104,7 +104,7 @@ module.exports = fp(async (fastify, options) => {
     }
   };
 
-  const createStageData = async ({ run, personId, stage, source, input, output, status, taskId, error, operatorId }) => {
+  const createStageData = async ({ run, personId, stage, source, input, output, status, taskId, error, operatorId, origin }) => {
     const last = await models.readinessStageData.max('version', { where: { runId: String(run.id), stage, personId: idOrNull(personId) } });
     return models.readinessStageData.create({
       tenantId: run.tenantId,
@@ -119,7 +119,8 @@ module.exports = fp(async (fastify, options) => {
       output: output === undefined ? null : output,
       taskId,
       error,
-      operatorId: idOrNull(operatorId)
+      operatorId: idOrNull(operatorId),
+      origin: origin || null
     });
   };
 
@@ -233,12 +234,17 @@ module.exports = fp(async (fastify, options) => {
       fastify.log.info(`readiness task ${task.id} 的阶段数据已失效，忽略回调`);
       return;
     }
-    await data.update({ status: 'succeeded', output: result == null ? {} : result });
+    const output = result == null ? {} : result;
+    await data.update({ status: 'succeeded', output });
+    await advanceAfterSuccess(data, output);
+  };
+
+  /** 阶段成功后推进到下一阶段（任务回调与人工指定版本数据共用） */
+  const advanceAfterSuccess = async (data, output) => {
     const run = await models.readinessRun.findByPk(data.runId);
     if (!run) {
       return;
     }
-    const output = result == null ? {} : result;
 
     if (data.stage === 'person_reports') {
       const def = getDef('role', 'person_reports');
@@ -628,11 +634,11 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
-  const STAGE_SUMMARY_ATTRIBUTES = ['id', 'runId', 'personId', 'stage', 'version', 'isCurrent', 'status', 'source', 'taskId', 'error', 'operatorId', 'createdAt', 'updatedAt'];
+  const STAGE_SUMMARY_ATTRIBUTES = ['id', 'runId', 'personId', 'stage', 'version', 'isCurrent', 'status', 'source', 'taskId', 'error', 'operatorId', 'origin', 'createdAt', 'updatedAt'];
 
   const flowDescription = () => ({
-    roleStages: ROLE_STAGES.map(key => ({ key, mode: getDef('role', key).mode, action: getDef('role', key).action || null, fanOut: !!getDef('role', key).fanOut })),
-    personStages: PERSON_STAGES.map(key => ({ key, mode: getDef('person', key).mode, action: getDef('person', key).action || null }))
+    roleStages: ROLE_STAGES.map(key => ({ key, mode: getDef('role', key).mode, action: getDef('role', key).action || null, fanOut: !!getDef('role', key).fanOut, restorable: isRestorableStage('role', key) })),
+    personStages: PERSON_STAGES.map(key => ({ key, mode: getDef('person', key).mode, action: getDef('person', key).action || null, restorable: isRestorableStage('person', key) }))
   });
 
   const detail = async ({ tenantId }, { id }) => {
@@ -1269,7 +1275,18 @@ module.exports = fp(async (fastify, options) => {
    * 退回到某阶段重新执行：目标阶段及其下游的当前版本置为历史，重新执行后版本 +1。
    * scope=role：退回到 staff_send 及更早，所有参与人一并重置；scope=person：只重置该人，Role 报告段若已开始则整体作废。
    */
-  const rollback = async ({ tenantId, userId }, { runId, scope = 'role', personId, stage }) => {
+  const rollback = async ({ tenantId }, { runId, scope = 'role', personId, stage }) => {
+    const { run, person } = await resetToStage({ tenantId }, { runId, scope, personId, stage });
+    if (person) {
+      await enterPerson(run, person, stage);
+    } else {
+      await enterRole(run, stage);
+    }
+    return {};
+  };
+
+  /** 退回的校验与作废：目标阶段及其下游置为历史、重置关联邀请/参与人，但不进入目标阶段 */
+  const resetToStage = async ({ tenantId }, { runId, scope, personId, stage }) => {
     const run = await findRun({ tenantId, id: runId });
     if (!['role', 'person'].includes(scope)) {
       throw new Error('scope 不正确');
@@ -1298,7 +1315,6 @@ module.exports = fp(async (fastify, options) => {
           await item.update({ stage: 'pending', status: 'pending', profileCompletionPct: null });
         }
       }
-      await enterRole(run, stage);
     } else {
       await supersede({ runId: run.id, personId: person.id, stages: plan.personStages });
       if (plan.personStages.includes('reassess_send')) {
@@ -1311,10 +1327,65 @@ module.exports = fp(async (fastify, options) => {
         await supersede({ runId: run.id, stages: plan.roleStages, allPersons: true });
         await run.update({ stage: plan.roleStageTarget });
       }
-      await enterPerson(run, person, stage);
     }
-    void userId;
-    return {};
+    return { run, person };
+  };
+
+  /** 可人工指定版本数据的阶段：调上游 AI 接口的自动阶段（不含按人展开的个人报告、发布与写回任务） */
+  const isRestorableStage = (scope, stage) => {
+    const def = getDef(scope, stage);
+    return def.mode === 'auto' && !!def.path && !def.fanOut;
+  };
+
+  /**
+   * 退回到某阶段并指定该阶段数据，生成新的当前版本后继续执行下游：
+   * 不传 output → 用历史版本的数据（restore）；传 output → 用人工修改后的当前版本输出（edit）。
+   */
+  const applyStageVersion = async ({ tenantId, userId }, { runId, id, output }) => {
+    const source = await models.readinessStageData.findOne({ where: { id: String(id), tenantId } });
+    if (!source || (runId && String(source.runId) !== String(runId))) {
+      throw new Error('阶段数据不存在');
+    }
+    const edited = output !== undefined;
+    const scope = source.personId && PERSON_STAGES.includes(source.stage) ? 'person' : 'role';
+    if (!isRestorableStage(scope, source.stage)) {
+      throw new Error('该阶段不支持指定版本数据');
+    }
+    if (source.status !== 'succeeded') {
+      throw new Error('只能使用执行成功的版本数据');
+    }
+    if (edited && !source.isCurrent) {
+      throw new Error('只能修改当前版本的输出');
+    }
+    if (!edited && source.isCurrent) {
+      throw new Error('该版本已是当前版本');
+    }
+    if (edited && (output === null || typeof output !== 'object')) {
+      throw new Error('输出须为 JSON 对象或数组');
+    }
+    const current = await findRun({ tenantId, id: source.runId });
+    if (current.status === 'canceled') {
+      throw new Error('流程已取消');
+    }
+    const { run, person } = await resetToStage({ tenantId }, { runId: source.runId, scope, personId: source.personId, stage: source.stage });
+    if (person) {
+      await person.update({ stage: source.stage });
+    } else {
+      await run.update({ stage: source.stage });
+    }
+    const data = await createStageData({
+      run,
+      personId: person?.id,
+      stage: source.stage,
+      source: 'manual',
+      input: source.input,
+      output: edited ? output : source.output,
+      status: 'succeeded',
+      operatorId: userId,
+      origin: { type: edited ? 'edit' : 'restore', fromId: String(source.id), fromVersion: source.version }
+    });
+    await advanceAfterSuccess(data, data.output);
+    return { id: String(data.id), version: data.version };
   };
 
   /** 重试失败阶段：person_reports 只重跑该人的报告，其它阶段退回到该阶段重跑 */
@@ -1427,6 +1498,7 @@ module.exports = fp(async (fastify, options) => {
       completeSend,
       triggerReports,
       rollback,
+      applyStageVersion,
       retry,
       findRun,
       findPerson,

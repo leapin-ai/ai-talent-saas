@@ -574,18 +574,47 @@ module.exports = fp(async (fastify, options) => {
     return result;
   };
 
-  /** 重发邮件：沿用原链接（未过期的 sent/failed 邀请），同邮箱合并成一封 */
-  const resend = async ({ tenantId, userId }, { inviteIds, language }) => {
+  /** 把邀请有效期改到 expires：问卷项目先结束的话一并延长项目，采集链接截止同步更新 */
+  const updateInviteExpires = async ({ tenantId, invites, expires }) => {
+    const projectIds = [
+      ...new Set(
+        invites
+          .map(item => item.projectId)
+          .filter(Boolean)
+          .map(String)
+      )
+    ];
+    for (const projectId of projectIds) {
+      const project = await services.aiInterview.getProjectDetail({ tenantId, id: projectId });
+      const projectEnd = project?.endTime ? dayjs(project.endTime).valueOf() : NaN;
+      if (!(projectEnd >= expires)) {
+        await services.aiInterview.adminUpdateProjectEndTime({ tenantId, id: projectId, endTime: new Date(expires).toISOString() });
+      }
+    }
+    for (const invite of invites) {
+      await invite.update({ expiresAt: new Date(expires) });
+      if (invite.collectInviteId && services.talentCollectInvite?.updateReadinessExpires) {
+        await services.talentCollectInvite.updateReadinessExpires({ collectInviteId: String(invite.collectInviteId), tenantId, expiresAt: expires });
+      }
+    }
+  };
+
+  /** 重发邮件：沿用原链接（sent/failed 邀请），同邮箱合并成一封；传 deadline 时先把有效期改到该日再发 */
+  const resend = async ({ tenantId, userId }, { inviteIds, language, deadline }) => {
     const ids = (inviteIds || []).map(String);
     if (!ids.length) {
       throw new Error('请选择要重发的邀请');
     }
+    const expires = overrideExpires(deadline);
     const invites = await models.readinessInvite.findAll({ where: { id: { [Op.in]: ids }, tenantId, isCurrent: true, status: { [Op.in]: ['sent', 'failed'] } } });
     const runs = await models.readinessRun.findAll({ where: { id: { [Op.in]: [...new Set(invites.map(item => String(item.runId)))] }, tenantId } });
     const runMap = new Map(runs.map(run => [String(run.id), run]));
+    if (expires != null) {
+      await updateInviteExpires({ tenantId, invites: invites.filter(item => item.url), expires });
+    }
     const valid = invites.filter(item => item.url && (!item.expiresAt || dayjs(item.expiresAt).isAfter(dayjs())));
     if (!valid.length) {
-      throw new Error('没有可重发的邀请（可能已过期，请重新发送）');
+      throw new Error(invites.some(item => item.url) ? '邀请已过期，请设置新的有效期后重发' : '没有可重发的邀请');
     }
     const entries = valid.map(item => ({
       email: String(item.email).toLowerCase(),

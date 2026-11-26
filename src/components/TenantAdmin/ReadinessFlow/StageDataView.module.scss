@@ -1,0 +1,246 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+// 左侧版本列表 + 右侧版本明细；只有一个版本时只渲染明细
+.view {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.single {
+  display: block;
+}
+
+.versions {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+  min-width: 0;
+}
+
+.versionsTitle {
+  flex: none;
+  padding-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ant-color-text-secondary);
+}
+
+.versionList {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-layout);
+  list-style: none;
+}
+
+.versionItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--ant-border-radius);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease-out,
+    box-shadow 0.2s ease-out;
+
+  &:hover {
+    background: var(--ant-color-fill-tertiary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ant-color-primary-border);
+    outline-offset: -2px;
+  }
+}
+
+.versionSelected,
+.versionSelected:hover {
+  background: var(--ant-color-bg-container);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.versionHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.versionNo {
+  color: var(--ant-color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.versionSelected .versionNo {
+  font-weight: 600;
+}
+
+.versionNote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ant-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tag {
+  margin-inline-end: 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.summary {
+  padding: 14px 16px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-layout);
+}
+
+.detailHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.detailHeadline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.detailTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.detailTitle {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 26px;
+  color: var(--ant-color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.detailMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  font-size: 13px;
+  color: var(--ant-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.detailActions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ant-color-border);
+  font-size: 12px;
+}
+
+.fact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+
+  dt {
+    color: var(--ant-color-text-tertiary);
+  }
+
+  dd {
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--ant-color-text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.factCode {
+  font-family: var(--ant-font-family-code);
+}
+
+.diffLabels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ant-color-text-secondary);
+}
+
+@include resp.mobile-container {
+  .view {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .versions {
+    position: static;
+    max-height: none;
+  }
+
+  .versionList {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .versionItem {
+    width: auto;
+    min-width: 140px;
+  }
+
+  .detailHead {
+    flex-direction: column;
+  }
+
+  .detailActions {
+    justify-content: flex-start;
+  }
+
+  .diffLabels {
+    display: none;
+  }
+}

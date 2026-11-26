@@ -684,6 +684,22 @@ module.exports = fp(async (fastify, options) => {
     return toPublic(row);
   };
 
+  /** 就绪度重发时改有效期：采集链接截止与之后创建 AI 面试邀请的有效期一起更新 */
+  const updateReadinessExpires = async ({ collectInviteId, tenantId, expiresAt }) => {
+    if (!collectInviteId) {
+      return null;
+    }
+    const row = await models.talentCollectInvite.findOne({ where: { id: String(collectInviteId), tenantId } });
+    if (!row) {
+      return null;
+    }
+    row.deadline = dayjs(expiresAt).toDate();
+    row.interviewData = Object.assign({}, row.interviewData || {}, { inviteExpires: dayjs(expiresAt).toISOString() });
+    row.changed('interviewData', true);
+    await row.save();
+    return toPublic(row);
+  };
+
   const ensureInvite = async ({ code, forceNew = false } = {}) => {
     const row = await findByCode(code);
     const setting = await services.aiInterview.detail({ tenantId: row.tenantId });
@@ -1268,6 +1284,7 @@ module.exports = fp(async (fastify, options) => {
       markInterviewDone,
       createForReadiness,
       bindReadinessInvite,
+      updateReadinessExpires,
       onVideoAsrSuccess,
       onVideoAsrFailed,
       resolveClientUserId,
