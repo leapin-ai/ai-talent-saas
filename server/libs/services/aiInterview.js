@@ -152,6 +152,11 @@ module.exports = fp(async (fastify, options) => {
         const credentials = await getCredentials(tenantId);
         return openApiRequest(credentials, 'admin/project/create', { method: 'POST', body });
       },
+      /** 修改项目结束时间；AI 面试侧会把沿用旧结束时间的邀请一并延期 */
+      adminUpdateProjectEndTime: async ({ tenantId, id, endTime }) => {
+        const credentials = await getCredentials(tenantId);
+        return openApiRequest(credentials, 'admin/project/end-time', { method: 'POST', body: { id: String(id), endTime } });
+      },
       getInterviewList: async ({ tenantId, projectId, currentPage = 1, perPage = 10, filter }) => {
         const credentials = await getCredentials(tenantId);
         return openApiRequest(credentials, 'project/interview-list', {

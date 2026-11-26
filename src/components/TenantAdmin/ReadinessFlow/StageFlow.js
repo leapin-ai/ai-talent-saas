@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Progress, Tag, Tooltip } from 'antd';
+import { Progress, Tag, Tooltip, Typography } from 'antd';
 import { CheckOutlined, CloseOutlined, LoadingOutlined, MinusOutlined } from '@ant-design/icons';
 import classnames from 'classnames';
 import dayjs from 'dayjs';
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { STATUS_COLOR } from './common';
+import { STATUS_COLOR, inviteExpired } from './common';
 import { StageResultPanel } from './StageResult';
 import style from './style.module.scss';
 
@@ -337,7 +337,10 @@ export const ManagerInviteOverview = ({ t, invites, inviteActions }) => {
                     t(`inviteStatus.${invite.status}`)
                   )}
                 </span>
-                <span className={style.detailMeta}>{invite.expiresAt ? dayjs(invite.expiresAt).format('YYYY-MM-DD HH:mm') : '-'}</span>
+                <span className={style.detailMeta}>
+                  {invite.expiresAt ? dayjs(invite.expiresAt).format('YYYY-MM-DD HH:mm') : '-'}
+                  {inviteExpired(invite) ? <Typography.Text type="danger" style={{ fontSize: 'inherit' }}>{` · ${t('inviteExpired')}`}</Typography.Text> : null}
+                </span>
                 <span className={style.overviewActions}>{primary.length ? <StageActions primary={primary} /> : null}</span>
               </div>
             );

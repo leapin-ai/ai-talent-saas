@@ -160,7 +160,7 @@ const createHarness = async ({ failPaths = [], responseByPath = {} } = {}) => {
   fastify.decorate('fileManager', { services: { getFileUrl: async ({ id }) => `http://files.example.com/${id}` } });
 
   // ---- 假 AI 面试（open-api/admin）：记录调用，转数字人第一次返回 created、之后 existed ----
-  const publishCalls = { questions: [], generate: [], projects: [] };
+  const publishCalls = { questions: [], generate: [], projects: [], endTimes: [] };
   const generated = new Set();
   const projectEnds = new Map();
   const interviewRows = [];
@@ -224,6 +224,11 @@ const createHarness = async ({ failPaths = [], responseByPath = {} } = {}) => {
         publishCalls.projects.push(body);
         projectEnds.set(`p${publishCalls.projects.length}`, body.endTime);
         return { id: `p${publishCalls.projects.length}` };
+      },
+      adminUpdateProjectEndTime: async ({ id, endTime }) => {
+        publishCalls.endTimes.push({ id, endTime });
+        projectEnds.set(String(id), endTime);
+        return { id };
       }
     }
   };
@@ -273,6 +278,7 @@ const createHarness = async ({ failPaths = [], responseByPath = {} } = {}) => {
   // 经理/员工/补充问卷发送走采集页：测试里用轻量 mock，不拉完整 talentCollectInvite 服务
   const collectInviteIds = [];
   const collectInviteCalls = [];
+  const collectExpiresCalls = [];
   aiServices.talentCollectInvite = {
     createForReadiness: async args => {
       const { tenantId, inviteType, name, email, projectId, expiresAt } = args;
@@ -286,7 +292,11 @@ const createHarness = async ({ failPaths = [], responseByPath = {} } = {}) => {
         code
       };
     },
-    bindReadinessInvite: async () => null
+    bindReadinessInvite: async () => null,
+    updateReadinessExpires: async args => {
+      collectExpiresCalls.push(args);
+      return null;
+    }
   };
   fastify.decorate('project', { models, services: aiServices });
 
@@ -400,6 +410,7 @@ const createHarness = async ({ failPaths = [], responseByPath = {} } = {}) => {
     transferCalls,
     inviteCalls,
     collectInviteCalls,
+    collectExpiresCalls,
     mails,
     confirmService: () => fastify.project.services.readinessConfirm,
     sendService: () => fastify.project.services.readinessSend,
@@ -539,6 +550,58 @@ test('退回到 draft：旧版本保留为历史、产生 v2；迟到的旧回�
 
     // 不能退回到还没到达的阶段
     await assert.rejects(() => h.readiness.rollback(h.auth, { runId: id, scope: 'role', stage: 'forecast' }), /已经到达过/);
+  } finally {
+    await h.close();
+  }
+});
+
+test('退回并应用历史版本 / 修改当前输出：生成带来源的新版本，不重调该阶段上游，下游重新执行', async () => {
+  const h = await createHarness();
+  try {
+    const id = await runToManagerConfirm(h);
+    await h.readiness.rollback(h.auth, { runId: id, scope: 'role', stage: 'draft' });
+    await h.settle();
+    const rowOf = async (stage, version) => h.models.readinessStageData.findOne({ where: { runId: String(id), stage, version } });
+    const countOf = path => h.received.filter(item => item.path === path).length;
+    assert.equal(countOf('/role/draft'), 2);
+
+    // 当前版本不能「应用」，历史版本不能「修改」
+    const draftV1 = await rowOf('draft', 1);
+    const draftV2 = await rowOf('draft', 2);
+    await assert.rejects(() => h.readiness.applyStageVersion(h.auth, { runId: id, id: draftV2.id }), /已是当前版本/);
+    await assert.rejects(() => h.readiness.applyStageVersion(h.auth, { runId: id, id: draftV1.id, output: {} }), /只能修改当前版本/);
+
+    // 应用 draft v1：生成 v3（来源 v1），不再调 /role/draft，经理问卷重新生成
+    await h.readiness.applyStageVersion(h.auth, { runId: id, id: draftV1.id });
+    await h.settle();
+    const restored = await rowOf('draft', 3);
+    assert.equal(restored.isCurrent, true);
+    assert.equal(restored.status, 'succeeded');
+    assert.deepEqual(restored.origin, { type: 'restore', fromId: String(draftV1.id), fromVersion: 1 });
+    assert.deepEqual(restored.output, draftV1.output);
+    assert.equal(countOf('/role/draft'), 2);
+    assert.equal(countOf('/role/question/manager'), 3);
+    assert.equal((await h.reload(id)).stage, 'manager_confirm');
+
+    // 修改经理问卷当前输出：生成 v4（来源 v3，edit），直接进入确认，不调上游
+    const edited = { result: { questionnaire: [{ no: 'Q01', type: 'single', question: '改过的题', options: [{ label: '是', value: 'A' }], module: '基础' }], interview: [] } };
+    await h.readiness.applyStageVersion(h.auth, { runId: id, id: (await rowOf('manager_questionnaire', 3)).id, output: edited });
+    await h.settle();
+    const latest = await rowOf('manager_questionnaire', 4);
+    assert.equal(latest.isCurrent, true);
+    assert.equal(latest.source, 'manual');
+    assert.deepEqual(latest.output, edited);
+    assert.equal(latest.origin.type, 'edit');
+    assert.equal(latest.origin.fromVersion, 3);
+    assert.equal(countOf('/role/question/manager'), 3);
+    assert.equal((await h.reload(id)).stage, 'manager_confirm');
+    assert.equal((await h.reload(id)).status, 'blocked');
+
+    // 人工阶段不支持
+    await h.readiness.confirm(h.auth, { runId: id, kind: 'manager', deadline: h.deadline, digitalId: h.digitalId });
+    await h.settle();
+    const confirmRow = await h.models.readinessStageData.findOne({ where: { runId: String(id), stage: 'manager_confirm', isCurrent: true } });
+    await assert.rejects(() => h.readiness.applyStageVersion(h.auth, { runId: id, id: confirmRow.id, output: {} }), /不支持/);
   } finally {
     await h.close();
   }
@@ -1113,6 +1176,36 @@ test('发送问卷：拿不到项目有效期或项目已过期时不发送', as
     result = await h.sendService().send(h.auth, { kind: 'manager', runIds: [String(id)], recipients: [{ email: 'a@example.com' }], language: 'zh-CN' });
     assert.match(result.skipped[0].reason, /问卷项目已过期/);
     assert.equal(h.inviteCalls.length, 0);
+  } finally {
+    await h.close();
+  }
+});
+
+test('重发已过期的邀请：需设置新的有效期，项目先结束时一并延长，采集链接截止同步更新', async () => {
+  const h = await createHarness();
+  try {
+    const { id } = await sendManager(h);
+    const invite = await h.models.readinessInvite.findOne({ where: { runId: String(id), isCurrent: true } });
+    const past = new Date(Date.now() - 1000);
+    await invite.update({ expiresAt: past });
+    h.projectEnds.set('p1', past.toISOString());
+    const mailCount = h.mails.length;
+
+    await assert.rejects(() => h.sendService().resend(h.auth, { inviteIds: [String(invite.id)] }), /邀请已过期，请设置新的有效期后重发/);
+    await assert.rejects(() => h.sendService().resend(h.auth, { inviteIds: [String(invite.id)], deadline: '2000-01-01' }), /有效期已过/);
+    assert.equal(h.mails.length, mailCount);
+
+    const result = await h.sendService().resend(h.auth, { inviteIds: [String(invite.id)], deadline: '2099-12-31' });
+    assert.equal(result.sent.length, 1);
+    const expires = new Date('2099-12-31T15:59:59.999Z').getTime();
+    assert.equal(new Date((await invite.reload()).expiresAt).getTime(), expires);
+    assert.deepEqual(h.publishCalls.endTimes, [{ id: 'p1', endTime: new Date(expires).toISOString() }]);
+    assert.deepEqual(h.collectExpiresCalls.at(-1), { collectInviteId: String(invite.collectInviteId), tenantId: 1, expiresAt: expires });
+    assert.equal(h.mails.at(-1).props.expires, expires);
+
+    // 项目有效期已够长时只改邀请，不再改项目
+    await h.sendService().resend(h.auth, { inviteIds: [String(invite.id)], deadline: '2099-06-30' });
+    assert.equal(h.publishCalls.endTimes.length, 1);
   } finally {
     await h.close();
   }

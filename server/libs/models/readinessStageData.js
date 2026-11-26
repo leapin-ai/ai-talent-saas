@@ -59,7 +59,12 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
       operatorId: definePrimaryType('operatorId', {
         comment: '人工操作人',
         allowNull: true
-      })
+      }),
+      origin: {
+        type: DataTypes.JSONB,
+        comment: '版本来源：{ type: restore|edit, fromId, fromVersion }；为空表示正常执行产生',
+        defaultValue: null
+      }
     },
     associate: ({ readinessStageData }) => {
       readinessStageData.belongsTo(options.getTenantModels().tenant, { allowNull: false });

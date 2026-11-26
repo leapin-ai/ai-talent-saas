@@ -148,6 +148,12 @@ module.exports = fp(async (fastify, options) => {
   const stageBody = { type: 'object', properties: { runId: { type: 'string' }, scope: scopeSchema, personId: { type: 'string' }, stage: { type: 'string' } }, required: ['runId', 'stage'] };
   post('rollback', '退回到某阶段重新执行', stageBody, (info, body) => services.readiness.rollback(info, body));
   post('retry', '重试失败阶段', stageBody, (info, body) => services.readiness.retry(info, body));
+  post(
+    'stage/apply',
+    '退回到该阶段并以指定版本数据（不传 output 用历史版本，传 output 用修改后的当前输出）生成新版本后继续',
+    { type: 'object', properties: { runId: { type: 'string' }, id: { type: 'string' }, output: {} }, required: ['id'] },
+    (info, body) => services.readiness.applyStageVersion(info, body)
+  );
 
   const recipientItem = { type: 'object', properties: { name: { type: 'string' }, email: { type: 'string' }, employeeId: { type: 'string' }, tenantUserId: { type: 'string' } } };
   const sendProperties = {
@@ -177,7 +183,12 @@ module.exports = fp(async (fastify, options) => {
   );
 
   post('invite/delete', '删除问卷邀请（参与人已提交答卷的除外）', { type: 'object', properties: { inviteIds: stringArray }, required: ['inviteIds'] }, (info, body) => services.readinessSend.deleteInvites(info, body));
-  post('invite/resend', '重发问卷邮件', { type: 'object', properties: { inviteIds: stringArray, language: { type: 'string' } }, required: ['inviteIds'] }, (info, body) => services.readinessSend.resend(info, body));
+  post(
+    'invite/resend',
+    '重发问卷邮件（deadline 为新的有效期，YYYY-MM-DD，已过期的邀请需传）',
+    { type: 'object', properties: { inviteIds: stringArray, language: { type: 'string' }, deadline: { type: 'string' } }, required: ['inviteIds'] },
+    (info, body) => services.readinessSend.resend(info, body)
+  );
 
   post('answers/sync', '从 AI 面试同步答卷', { type: 'object', properties: { runId: { type: 'string' } } }, (info, body) => services.readinessSend.syncAnswers(info, body));
 

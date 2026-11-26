@@ -87,6 +87,7 @@ const getApis = options => {
           triggerReport: { url: `${prefix}/tenant/admin/readiness/trigger-report`, method: 'POST' },
           rollback: { url: `${prefix}/tenant/admin/readiness/rollback`, method: 'POST' },
           retry: { url: `${prefix}/tenant/admin/readiness/retry`, method: 'POST' },
+          stageApply: { url: `${prefix}/tenant/admin/readiness/stage/apply`, method: 'POST' },
           sendPreview: { url: `${prefix}/tenant/admin/readiness/send/preview`, method: 'POST' },
           sendDefaults: { url: `${prefix}/tenant/admin/readiness/send/defaults`, method: 'POST' },
           sendBatch: { url: `${prefix}/tenant/admin/readiness/send/batch`, method: 'POST' },

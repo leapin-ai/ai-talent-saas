@@ -12,9 +12,10 @@ import useSendReadiness from './useSendReadiness';
 import useConfirmReadiness from './useConfirmReadiness';
 import ProjectPreviewView from './ProjectPreviewView';
 import EditQuestionnaireFormInner from './EditQuestionnaireFormInner';
+import ResendFormInner from './ResendFormInner';
 import EnterAnswersForm, { DEFAULT_ANSWERS_JSON, loadAnswersDefaultJson, normalizeAnswersPayload } from './EnterAnswersForm';
 import { buildMilestones, buildStageRows, progressOf } from './stageModel';
-import { LANGUAGE_LABEL, STATUS_COLOR, notifyError, useReadinessCall } from './common';
+import { LANGUAGE_LABEL, STATUS_COLOR, inviteExpired, notifyError, useReadinessCall } from './common';
 import classnames from 'classnames';
 import Section from './Section';
 import style from './style.module.scss';
@@ -203,6 +204,29 @@ const ReadinessFlowDetail = createWithRemoteLoader({
     const openSend = useSendReadiness({ useFormModal, useModal, call, api, onDone: () => load(true) });
     const openConfirm = useConfirmReadiness({ useFormModal, call, api, onDone: () => load(true) });
 
+    /** 重发邀请：已过期的先设置新的有效期（问卷项目随之延长），未过期的沿用原有效期直接重发 */
+    const resendInvite = item => {
+      if (!inviteExpired(item)) {
+        return act(api.resendInvite, { inviteIds: [String(item.id)] }, 'resendSuccess');
+      }
+      const formApi = formModal({
+        title: t('resendExpiredTitle'),
+        size: 'small',
+        saveText: t('resend'),
+        formProps: {
+          data: { deadline: dayjs().add(7, 'day') },
+          onSubmit: async formData => {
+            const result = await act(api.resendInvite, { inviteIds: [String(item.id)], deadline: dayjs(formData.deadline).format('YYYY-MM-DD') }, 'resendSuccess');
+            if (!result) {
+              return false;
+            }
+            formApi.close();
+          }
+        },
+        children: <ResendFormInner expiresAt={item.expiresAt} />
+      });
+    };
+
     /** 删除邀请：只删邀请记录（staff / reassess 连带参与人）；对应阶段已过的不能删 */
     const deleteInvite = item => {
       if (!item.deletable) {
@@ -224,13 +248,29 @@ const ReadinessFlowDetail = createWithRemoteLoader({
 
     const actions = useMemo(
       () => ({
-        openData: (title, versions) =>
-          modal({
+        openData: (title, versions, { restorable, resetsAll } = {}) => {
+          const dataModal = modal({
             title,
             size: 'large',
             footer: null,
-            children: <StageDataView versions={[...versions].sort((a, b) => b.version - a.version)} call={call} api={api} />
-          }),
+            children: (
+              <StageDataView
+                versions={[...versions].sort((a, b) => b.version - a.version)}
+                call={call}
+                api={api}
+                restorable={restorable}
+                resetsAll={resetsAll}
+                onApply={async (payload, successKey) => {
+                  const result = await act(api.stageApply, payload, successKey);
+                  if (result) {
+                    dataModal.close();
+                  }
+                  return result;
+                }}
+              />
+            )
+          });
+        },
         openPreview: ({ kind, personId, title }) =>
           modal({
             title: `${t('previewProject')} · ${title}`,
@@ -493,7 +533,7 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                       navigator.clipboard?.writeText(item.url);
                       message.success(t('copied'));
                     },
-                    resend: item => act(api.resendInvite, { inviteIds: [String(item.id)] }, 'resendSuccess')
+                    resend: resendInvite
                   }
             }
           />
@@ -523,7 +563,7 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                           navigator.clipboard?.writeText(item.url);
                           message.success(t('copied'));
                         },
-                        resend: item => act(api.resendInvite, { inviteIds: [String(item.id)] }, 'resendSuccess')
+                        resend: resendInvite
                       }
                 }
               />
@@ -565,7 +605,22 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                     };
                   }
                 },
-                { name: 'expiresAt', title: t('expiresAt'), width: 160, getValueOf: item => (item.expiresAt ? dayjs(item.expiresAt).format('YYYY-MM-DD HH:mm') : null) },
+                {
+                  name: 'expiresAt',
+                  title: t('expiresAt'),
+                  width: 160,
+                  getValueOf: item =>
+                    item.expiresAt ? (
+                      <Flex vertical gap={2}>
+                        <span>{dayjs(item.expiresAt).format('YYYY-MM-DD HH:mm')}</span>
+                        {inviteExpired(item) ? (
+                          <Typography.Text type="danger" style={{ fontSize: 12 }}>
+                            {t('inviteExpired')}
+                          </Typography.Text>
+                        ) : null}
+                      </Flex>
+                    ) : null
+                },
                 {
                   name: 'options',
                   title: t('actions'),
@@ -584,7 +639,7 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                       });
                     }
                     if (['sent', 'failed'].includes(item.status)) {
-                      options.push({ children: t('resend'), onClick: () => act(api.resendInvite, { inviteIds: [String(item.id)] }, 'resendSuccess') });
+                      options.push({ children: t('resend'), onClick: () => resendInvite(item) });
                     }
                     // 对应阶段已过的邀请不能删除（后端同样校验）
                     if (item.deletable) {

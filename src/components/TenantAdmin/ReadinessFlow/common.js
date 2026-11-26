@@ -52,6 +52,9 @@ export const STATUS_COLOR = {
   superseded: 'default'
 };
 
+/** 待回答（已发送 / 发送失败）的邀请已过有效期：重发前需重新设置有效期 */
+export const inviteExpired = invite => ['sent', 'failed'].includes(invite?.status) && !!invite.expiresAt && new Date(invite.expiresAt).getTime() <= Date.now();
+
 /** 流程语言的展示名 */
 export const LANGUAGE_LABEL = { 'zh-CN': '中文', 'en-US': 'English' };
 
