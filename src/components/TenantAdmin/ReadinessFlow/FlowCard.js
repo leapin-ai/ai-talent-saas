@@ -58,9 +58,14 @@ const TodoActions = ({ t, item, todo, busy, onAction }) => {
     return (
       <Space size={0}>
         {todo.total && todo.answered >= todo.total ? (
-          <Button type="link" size="small" loading={busy} onClick={e => run('advance', e)}>
-            {t('confirmNextStage')}
-          </Button>
+          <>
+            <Button type="link" size="small" loading={busy} onClick={e => run('advance', e)}>
+              {t('confirmNextStage')}
+            </Button>
+            <Button type="link" size="small" loading={busy} onClick={e => run('reanswer', e)}>
+              {t('reanswer')}
+            </Button>
+          </>
         ) : null}
         <Button type="link" size="small" loading={busy} onClick={e => run('fetch', e)}>
           {t('fetchResult')}

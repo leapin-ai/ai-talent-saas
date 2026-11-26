@@ -80,6 +80,7 @@ const getApis = options => {
           confirmMailSend: { url: `${prefix}/tenant/admin/readiness/manual/confirm-mail/send`, method: 'POST' },
           submitAnswers: { url: `${prefix}/tenant/admin/readiness/manual/submit-answers`, method: 'POST' },
           advanceAnswers: { url: `${prefix}/tenant/admin/readiness/manual/advance-answers`, method: 'POST' },
+          reanswer: { url: `${prefix}/tenant/admin/readiness/manual/reanswer`, method: 'POST' },
           skipReassessConfirm: { url: `${prefix}/tenant/admin/readiness/manual/skip-reassess-confirm`, method: 'POST' },
           triggerReport: { url: `${prefix}/tenant/admin/readiness/trigger-report`, method: 'POST' },
           rollback: { url: `${prefix}/tenant/admin/readiness/rollback`, method: 'POST' },

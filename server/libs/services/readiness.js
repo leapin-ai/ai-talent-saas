@@ -1054,6 +1054,81 @@ module.exports = fp(async (fastify, options) => {
     return rollback(auth, { runId, scope, personId, stage });
   };
 
+  /**
+   * 重新回答：作废当前答卷并回退到发送阶段，再按原邀请收件人自动重发（无需人工再点发送）。
+   * manager / staff / reassess 均支持；收件人取自当前有效邀请。
+   */
+  const reanswer = async ({ tenantId, userId }, { runId, kind, personId }) => {
+    const info = QUESTIONNAIRE_KINDS[kind];
+    if (!info) {
+      throw new Error('问卷类型不正确');
+    }
+    const run = await findRun({ tenantId, id: runId });
+    if (kind === 'manager') {
+      assertRoleStage(run, info.answersStage);
+      if (!(await hasCurrentAnswers({ run, stage: info.answersStage }))) {
+        throw new Error('尚未回收到经理答卷，不能重新回答');
+      }
+    } else {
+      const person = await findPerson({ run, personId });
+      if (person.stage !== info.answersStage) {
+        throw new Error(`参与人当前阶段为 ${person.stage}，不能重新回答`);
+      }
+      if (!(await hasCurrentAnswers({ run, stage: info.answersStage, personId: person.id }))) {
+        throw new Error('尚未回收到该参与人的答卷，不能重新回答');
+      }
+    }
+
+    const inviteWhere = { runId: String(run.id), kind, isCurrent: true };
+    if (kind !== 'manager') {
+      inviteWhere.personId = String(personId);
+    }
+    const invites = await models.readinessInvite.findAll({ where: inviteWhere, order: [['id', 'ASC']] });
+    const seen = new Set();
+    const recipients = [];
+    for (const invite of invites) {
+      const email = String(invite.email || '')
+        .trim()
+        .toLowerCase();
+      if (!email || seen.has(email)) {
+        continue;
+      }
+      seen.add(email);
+      recipients.push({ name: invite.name || '', email });
+    }
+    if (!recipients.length) {
+      throw new Error('没有可重新发送的收件人');
+    }
+
+    if (kind === 'manager') {
+      await rollback({ tenantId, userId }, { runId, scope: 'role', stage: info.sendStage });
+    } else if (kind === 'reassess') {
+      await rollback({ tenantId, userId }, { runId, scope: 'person', personId, stage: info.sendStage });
+    } else {
+      // staff：rollback API 禁止退到 pending；作废 answers 及之后并回到 pending，以便在 await_persons 下重发
+      const person = await findPerson({ run, personId });
+      const fromAnswers = PERSON_STAGES.slice(stageIndex('person', 'answers'));
+      await supersede({ runId: run.id, personId: person.id, stages: fromAnswers });
+      await invalidateInvites({ run, kinds: ['staff'], personId: person.id });
+      const plan = rollbackPlan({ scope: 'person', stage: 'answers', runStage: run.stage });
+      if (plan.roleStageTarget) {
+        await supersede({ runId: run.id, stages: plan.roleStages, allPersons: true });
+        await run.update({ stage: plan.roleStageTarget });
+      }
+      await enterPerson(run, person, 'pending');
+    }
+
+    const language = ['zh-CN', 'en-US'].includes(run.language) ? run.language : 'zh-CN';
+    // manager 按邀请邮箱重发；staff/reassess 按原参与人重发（发送逻辑用 personIds 选对象）
+    const sendBody = kind === 'manager' ? { kind, runIds: [String(run.id)], recipients, language } : { kind, runIds: [String(run.id)], personIds: [String(personId)], language };
+    const result = await fastify[options.name].services.readinessSend.send({ tenantId, userId }, sendBody);
+    if (!(result.advanced || []).length) {
+      const reason = result.skipped?.[0]?.reason || result.failed?.[0]?.reason || result.advanceFailed?.[0]?.reason || '重新安排问卷失败';
+      throw new Error(reason);
+    }
+    return result;
+  };
+
   Object.assign(fastify[options.name].services, {
     readiness: {
       onTaskSuccess,
@@ -1070,6 +1145,7 @@ module.exports = fp(async (fastify, options) => {
       submitAnswers,
       saveAnswers,
       advanceAnswers,
+      reanswer,
       completeSend,
       triggerReports,
       rollback,
