@@ -9,6 +9,8 @@ const {
   stageIndex,
   rollbackPlan,
   questionnaireOf,
+  expectedInterviewCountOf,
+  answersCollectionReady,
   inviteDeleteBlock,
   runProgress,
   runTodos,
@@ -712,23 +714,69 @@ module.exports = fp(async (fastify, options) => {
       confirmRows.filter(row => row.isCurrent && row.output?.rejected === true).map(row => [`${row.stage}:${row.personId ? String(row.personId) : ''}`, { comment: row.output?.comment || '', rejectedAt: row.output?.rejectedAt || null }])
     );
     const summaries = new Map(outputRows.map(row => [String(row.id), summarizeStageOutput(row.stage, row.output)]));
+    // 答卷阶段：按对应问卷的访谈题数判断 AI 数据采集是否齐套（只答问卷不算完成）
+    const expectedVideosByAnswersKey = new Map();
+    const answersOutputByKey = new Map();
+    Object.values(QUESTIONNAIRE_KINDS).forEach(info => {
+      outputRows.forEach(row => {
+        const personKey = row.personId ? String(row.personId) : '';
+        if (row.stage === info.questionnaireStage) {
+          if (info.scope === 'role' && personKey) {
+            return;
+          }
+          expectedVideosByAnswersKey.set(`${info.answersStage}:${info.scope === 'person' ? personKey : ''}`, expectedInterviewCountOf(row.output));
+        }
+        if (row.stage === info.answersStage) {
+          answersOutputByKey.set(`${info.answersStage}:${personKey}`, row.output);
+        }
+      });
+    });
+    const answersReadyOf = (stage, personId) => {
+      const personKey = personId ? String(personId) : '';
+      const answersKind = Object.values(QUESTIONNAIRE_KINDS).find(info => info.answersStage === stage);
+      if (!answersKind) {
+        return true;
+      }
+      const expectedKey = `${stage}:${answersKind.scope === 'person' ? personKey : ''}`;
+      const expectedVideos = expectedVideosByAnswersKey.get(expectedKey) ?? 0;
+      const output = answersOutputByKey.get(`${stage}:${personKey}`);
+      // 手工录入会显式 answersReady=true；AI 同步按视频题数量判断
+      if (output?.answersReady === true) {
+        return true;
+      }
+      return answersCollectionReady({ expectedVideos, videoAnswers: output?.videoAnswers });
+    };
     return {
       run: run.toJSON(),
       persons: persons.map(item => item.toJSON()),
       // 不下发 output，只带计数摘要；人工跳过补充问卷的记录在这里带出标记，供前端把后续阶段置灰
       stageData: stageData.map(item => {
         const reject = rejectByKey.get(`${item.stage}:${item.personId ? String(item.personId) : ''}`);
+        const answersKind = Object.values(QUESTIONNAIRE_KINDS).find(info => info.answersStage === item.stage);
         return {
           ...item.toJSON(),
           skipped: skippedIds.has(String(item.id)),
           rejected: Boolean(item.isCurrent && reject),
           rejectComment: item.isCurrent && reject ? reject.comment : '',
           rejectedAt: item.isCurrent && reject ? reject.rejectedAt : null,
-          summary: summaries.get(String(item.id)) || null
+          summary: summaries.get(String(item.id)) || null,
+          answersReady: answersKind && item.isCurrent && item.status === 'succeeded' ? answersReadyOf(item.stage, item.personId) : true
         };
       }),
-      // deletable：邀请对应的阶段未过才能删除
-      invites: invites.map(item => ({ ...item.toJSON(), deletable: !inviteDeleteBlock({ invite: item, run, person: persons.find(person => String(person.id) === String(item.personId)) }) })),
+      // deletable：邀请对应的阶段未过才能删除；collectionComplete：已回答但访谈视频未齐时前端勿展示「已回答」
+      invites: invites.map(item => {
+        const info = QUESTIONNAIRE_KINDS[item.kind];
+        const personKey = item.personId ? String(item.personId) : '';
+        const expectedKey = info ? `${info.answersStage}:${info.scope === 'person' ? personKey : ''}` : '';
+        const expectedVideos = info ? (expectedVideosByAnswersKey.get(expectedKey) ?? 0) : 0;
+        const output = info ? answersOutputByKey.get(`${info.answersStage}:${personKey}`) : null;
+        const collectionComplete = item.status !== 'answered' || output?.answersReady === true || answersCollectionReady({ expectedVideos, videoAnswers: output?.videoAnswers });
+        return {
+          ...item.toJSON(),
+          deletable: !inviteDeleteBlock({ invite: item, run, person: persons.find(person => String(person.id) === String(item.personId)) }),
+          collectionComplete
+        };
+      }),
       confirmMails: confirmMails.map(item => ({ ...item.toJSON(), ...confirmOf(item) })),
       flow: flowDescription(),
       allPersonsDone: persons.length > 0 && persons.every(person => person.stage === 'done')
@@ -1042,6 +1090,35 @@ module.exports = fp(async (fastify, options) => {
     return count > 0;
   };
 
+  const loadExpectedVideos = async ({ run, kind, personId }) => {
+    const info = QUESTIONNAIRE_KINDS[kind];
+    const row = await models.readinessStageData.findOne({
+      where: {
+        runId: String(run.id),
+        stage: info.questionnaireStage,
+        personId: idOrNull(info.scope === 'person' ? personId : null),
+        isCurrent: true,
+        status: 'succeeded'
+      },
+      attributes: ['output']
+    });
+    return expectedInterviewCountOf(row?.output);
+  };
+
+  const assertAnswersCollectionReady = async ({ run, kind, personId, stage }) => {
+    const row = await models.readinessStageData.findOne({
+      where: { runId: String(run.id), stage, personId: idOrNull(personId), isCurrent: true, status: 'succeeded' },
+      attributes: ['output']
+    });
+    if (row?.output?.answersReady === true) {
+      return;
+    }
+    const expectedVideos = row?.output?.expectedVideos ?? (await loadExpectedVideos({ run, kind, personId }));
+    if (!answersCollectionReady({ expectedVideos, videoAnswers: row?.output?.videoAnswers })) {
+      throw new Error('问卷已回收，但仍有访谈题未完成 AI 数据采集，不能进入下一阶段');
+    }
+  };
+
   /** 保存答卷到当前阶段，不推进；经理答卷只保留先到的一份，之后的收件人答卷报“已回收”（由调用方记为失败项） */
   const saveAnswers = async ({ tenantId, userId }, { runId, kind, personId, answers, videoAnswers, profileData }) => {
     const info = QUESTIONNAIRE_KINDS[kind];
@@ -1054,7 +1131,10 @@ module.exports = fp(async (fastify, options) => {
       throw new Error('答卷不能为空');
     }
     const run = await findRun({ tenantId, id: runId });
-    const output = { answers: answers || {}, videoAnswers: videoAnswers || [] };
+    const expectedVideos = await loadExpectedVideos({ run, kind, personId });
+    // 管理端手工录入视为齐套；AI 同步须问卷 + 访谈视频都齐
+    const answersReady = userId != null || answersCollectionReady({ expectedVideos, videoAnswers });
+    const output = { answers: answers || {}, videoAnswers: videoAnswers || [], expectedVideos, answersReady };
     if (profileData && typeof profileData === 'object' && Object.keys(profileData).length) {
       output.profileData = profileData;
     }
@@ -1064,7 +1144,7 @@ module.exports = fp(async (fastify, options) => {
         throw new Error('经理答卷已回收，不再重复保存');
       }
       await createManualData({ run, stage: info.answersStage, output, operatorId: userId });
-      return {};
+      return { answersReady };
     }
     const person = await findPerson({ run, personId });
     if (person.stage !== info.answersStage) {
@@ -1079,10 +1159,10 @@ module.exports = fp(async (fastify, options) => {
       await person.update({ materials: Object.assign({ resume: '', projects: '', reviews: '' }, person.materials || {}, materials) });
     }
     await createManualData({ run, personId: person.id, stage: info.answersStage, output, operatorId: userId });
-    return {};
+    return { answersReady };
   };
 
-  /** 确认答卷并进入下一阶段：要求当前阶段已有答卷 */
+  /** 确认答卷并进入下一阶段：要求当前阶段已有答卷，且访谈视频采集齐套 */
   const advanceAnswers = async ({ tenantId }, { runId, kind, personId }) => {
     const info = QUESTIONNAIRE_KINDS[kind];
     if (!info) {
@@ -1094,6 +1174,7 @@ module.exports = fp(async (fastify, options) => {
       if (!(await hasCurrentAnswers({ run, stage: info.answersStage }))) {
         throw new Error('尚未回收到经理答卷，不能进入下一阶段');
       }
+      await assertAnswersCollectionReady({ run, kind, personId: null, stage: info.answersStage });
       await enterRole(run, getDef('role', info.answersStage).next());
       return {};
     }
@@ -1104,6 +1185,7 @@ module.exports = fp(async (fastify, options) => {
     if (!(await hasCurrentAnswers({ run, stage: info.answersStage, personId: person.id }))) {
       throw new Error('尚未回收到该参与人的答卷，不能进入下一阶段');
     }
+    await assertAnswersCollectionReady({ run, kind, personId: person.id, stage: info.answersStage });
     await enterPerson(run, person, getDef('person', info.answersStage).next());
     return {};
   };

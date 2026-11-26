@@ -34,7 +34,7 @@ const message = {
   'readinessConfirm.questionHint': '{count} questions in total; conditional ones show their condition',
   'readinessConfirm.groupCount': '{count} questions',
   'readinessConfirm.interviewSection': 'Interview questions',
-  'readinessConfirm.interviewHint': 'Asked by a digital human, answered on video',
+  'readinessConfirm.interviewHint': 'Asked by an AI avatar, answered on video',
   'readinessConfirm.videoAnswer': 'Video answer',
   'readinessConfirm.type.single': 'Single choice',
   'readinessConfirm.type.multiple': 'Multiple choice',

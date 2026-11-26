@@ -526,11 +526,14 @@ const ReadinessFlowDetail = createWithRemoteLoader({
                   title: t('statusLabel'),
                   width: 110,
                   renderType: 'status',
-                  getValueOf: item => ({
-                    // 邮件发送失败可重发，用 warning，勿用 error 以免像阶段失败
-                    type: item.status === 'failed' ? 'warning' : item.status === 'answered' ? 'success' : item.status === 'sent' ? 'processing' : 'default',
-                    text: t(`inviteStatus.${item.status}`)
-                  })
+                  getValueOf: item => {
+                    const collecting = item.status === 'answered' && item.collectionComplete === false;
+                    // 邮件发送失败可重发，用 warning，勿用 error 以免像阶段失败；只答问卷未齐访谈时不算已回答
+                    return {
+                      type: item.status === 'failed' ? 'warning' : collecting ? 'processing' : item.status === 'answered' ? 'success' : item.status === 'sent' ? 'processing' : 'default',
+                      text: collecting ? t('inviteStatus.collecting') : t(`inviteStatus.${item.status}`)
+                    };
+                  }
                 },
                 { name: 'expiresAt', title: t('expiresAt'), width: 160, getValueOf: item => (item.expiresAt ? dayjs(item.expiresAt).format('YYYY-MM-DD HH:mm') : null) },
                 {
