@@ -651,7 +651,7 @@ module.exports = fp(async (fastify, options) => {
      * 全部真正确认 → confirmed；否则若有驳回 → rejected（带意见）；否则未确认。
      */
     const confirmOf = mail => {
-      const empty = { confirmed: false, rejected: false, confirmedAt: null, rejectComment: '', rejectedAt: null };
+      const empty = { confirmed: false, rejected: false, confirmedAt: null, rejectComment: '', rejectedByEmail: '', rejectedAt: null };
       const legacyKind = String(mail.kind || '').replace('confirm:', '');
       const targets =
         Array.isArray(mail.result?.targets) && mail.result.targets.length
@@ -669,6 +669,7 @@ module.exports = fp(async (fastify, options) => {
       let confirmedAt = null;
       let rejectedAt = null;
       const rejectComments = [];
+      const rejectEmails = [];
       let allConfirmed = true;
       let anyRejected = false;
       for (const target of targets) {
@@ -691,11 +692,14 @@ module.exports = fp(async (fastify, options) => {
           if (rejectRow.output?.comment) {
             rejectComments.push(String(rejectRow.output.comment).trim());
           }
+          if (rejectRow.output?.rejectedByEmail) {
+            rejectEmails.push(String(rejectRow.output.rejectedByEmail).trim());
+          }
           rejectedAt = rejectRow.output?.rejectedAt || rejectedAt;
         }
       }
       if (allConfirmed) {
-        return { confirmed: true, rejected: false, confirmedAt, rejectComment: '', rejectedAt: null };
+        return { confirmed: true, rejected: false, confirmedAt, rejectComment: '', rejectedByEmail: '', rejectedAt: null };
       }
       if (anyRejected) {
         return {
@@ -703,6 +707,7 @@ module.exports = fp(async (fastify, options) => {
           rejected: true,
           confirmedAt: null,
           rejectComment: [...new Set(rejectComments.filter(Boolean))].join('；'),
+          rejectedByEmail: [...new Set(rejectEmails.filter(Boolean))].join('；'),
           rejectedAt
         };
       }
@@ -711,7 +716,17 @@ module.exports = fp(async (fastify, options) => {
     const skippedIds = new Set(confirmRows.filter(row => row.output?.skipped === true).map(row => String(row.id)));
     // 当前仍停在确认阶段时的驳回意见（confirm 阶段数据且未真正确认）
     const rejectByKey = new Map(
-      confirmRows.filter(row => row.isCurrent && row.output?.rejected === true).map(row => [`${row.stage}:${row.personId ? String(row.personId) : ''}`, { comment: row.output?.comment || '', rejectedAt: row.output?.rejectedAt || null }])
+      confirmRows
+        .filter(row => row.isCurrent && row.output?.rejected === true)
+        .map(row => [
+          `${row.stage}:${row.personId ? String(row.personId) : ''}`,
+          {
+            comment: row.output?.comment || '',
+            rejectedByEmail: row.output?.rejectedByEmail || '',
+            rejectedByName: row.output?.rejectedByName || '',
+            rejectedAt: row.output?.rejectedAt || null
+          }
+        ])
     );
     const summaries = new Map(outputRows.map(row => [String(row.id), summarizeStageOutput(row.stage, row.output)]));
     // 答卷阶段：按对应问卷的访谈题数判断 AI 数据采集是否齐套（只答问卷不算完成）
@@ -758,6 +773,8 @@ module.exports = fp(async (fastify, options) => {
           skipped: skippedIds.has(String(item.id)),
           rejected: Boolean(item.isCurrent && reject),
           rejectComment: item.isCurrent && reject ? reject.comment : '',
+          rejectedByEmail: item.isCurrent && reject ? reject.rejectedByEmail : '',
+          rejectedByName: item.isCurrent && reject ? reject.rejectedByName : '',
           rejectedAt: item.isCurrent && reject ? reject.rejectedAt : null,
           summary: summaries.get(String(item.id)) || null,
           answersReady: answersKind && item.isCurrent && item.status === 'succeeded' ? answersReadyOf(item.stage, item.personId) : true
@@ -992,6 +1009,8 @@ module.exports = fp(async (fastify, options) => {
       interview,
       rejected,
       rejectComment: rejected ? rejectRow.output?.comment || '' : '',
+      rejectedByEmail: rejected ? rejectRow.output?.rejectedByEmail || '' : '',
+      rejectedByName: rejected ? rejectRow.output?.rejectedByName || '' : '',
       rejectedAt: rejected ? rejectRow.output?.rejectedAt || null : null
     };
   };
