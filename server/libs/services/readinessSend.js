@@ -574,7 +574,7 @@ module.exports = fp(async (fastify, options) => {
     return result;
   };
 
-  /** 把邀请有效期改到 expires：问卷项目先结束的话一并延长项目，采集链接截止同步更新 */
+  /** 把邀请有效期改到 expires：问卷项目先结束则延长项目；采集短链按新截止重签并写回 url（经理/员工/补充问卷同一路径） */
   const updateInviteExpires = async ({ tenantId, invites, expires }) => {
     const projectIds = [
       ...new Set(
@@ -592,14 +592,18 @@ module.exports = fp(async (fastify, options) => {
       }
     }
     for (const invite of invites) {
-      await invite.update({ expiresAt: new Date(expires) });
+      const patch = { expiresAt: new Date(expires), inviteId: null, shorten: null };
       if (invite.collectInviteId && services.talentCollectInvite?.updateReadinessExpires) {
-        await services.talentCollectInvite.updateReadinessExpires({ collectInviteId: String(invite.collectInviteId), tenantId, expiresAt: expires });
+        const updated = await services.talentCollectInvite.updateReadinessExpires({ collectInviteId: String(invite.collectInviteId), tenantId, expiresAt: expires });
+        if (updated?.inviteUrl) {
+          patch.url = updated.inviteUrl;
+        }
       }
+      await invite.update(patch);
     }
   };
 
-  /** 重发邮件：沿用原链接（sent/failed 邀请），同邮箱合并成一封；传 deadline 时先把有效期改到该日再发 */
+  /** 重发邮件：未过期沿用原链接；传 deadline 时先延期项目并重签采集链接再发（经理/员工/补充问卷共用） */
   const resend = async ({ tenantId, userId }, { inviteIds, language, deadline }) => {
     const ids = (inviteIds || []).map(String);
     if (!ids.length) {

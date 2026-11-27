@@ -684,7 +684,12 @@ module.exports = fp(async (fastify, options) => {
     return toPublic(row);
   };
 
-  /** 就绪度重发时改有效期：采集链接截止与之后创建 AI 面试邀请的有效期一起更新 */
+  /**
+   * 就绪度过期重发时改有效期：
+   * 1) 更新采集截止与之后创建 AI 面试邀请用的 inviteExpires
+   * 2) 作废已过期的 AI 面试 shorten（进入面试步时按新截止重建）
+   * 3) 按新 deadline 重签采集短链（旧 code 在 shorten.decode 会因 expires 直接失效，只改库不够）
+   */
   const updateReadinessExpires = async ({ collectInviteId, tenantId, expiresAt }) => {
     if (!collectInviteId) {
       return null;
@@ -693,11 +698,25 @@ module.exports = fp(async (fastify, options) => {
     if (!row) {
       return null;
     }
+    const oldCode = row.code;
     row.deadline = dayjs(expiresAt).toDate();
     row.interviewData = Object.assign({}, row.interviewData || {}, { inviteExpires: dayjs(expiresAt).toISOString() });
+    row.shorten = null;
+    row.shortenExpiresAt = null;
+    row.inviteId = '';
+    row.inviteCode = '';
     row.changed('interviewData', true);
     await row.save();
-    return toPublic(row);
+    row.code = await signCollectInviteCode(row);
+    await row.save();
+    if (oldCode && oldCode !== row.code) {
+      try {
+        await requireShortenServices().remove(oldCode);
+      } catch (e) {
+        // 旧短链已过期或不存在时忽略
+      }
+    }
+    return Object.assign(toPublic(row), { inviteUrl: buildInviteUrl(row) });
   };
 
   const ensureInvite = async ({ code, forceNew = false } = {}) => {

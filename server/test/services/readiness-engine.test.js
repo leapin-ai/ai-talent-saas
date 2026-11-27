@@ -295,7 +295,12 @@ const createHarness = async ({ failPaths = [], responseByPath = {} } = {}) => {
     bindReadinessInvite: async () => null,
     updateReadinessExpires: async args => {
       collectExpiresCalls.push(args);
-      return null;
+      const code = await fastify.shorten.services.sign(JSON.stringify({ type: 'talentCollectInvite', inviteId: args.collectInviteId }), args.expiresAt);
+      return {
+        id: args.collectInviteId,
+        code,
+        inviteUrl: `${fastify.config.ORIGIN}/collect-profile?code=${encodeURIComponent(code)}`
+      };
     }
   };
   fastify.decorate('project', { models, services: aiServices });
@@ -1181,12 +1186,13 @@ test('发送问卷：拿不到项目有效期或项目已过期时不发送', as
   }
 });
 
-test('重发已过期的邀请：需设置新的有效期，项目先结束时一并延长，采集链接截止同步更新', async () => {
+test('重发已过期的邀请：需设置新的有效期，项目先结束时一并延长，并重签采集链接', async () => {
   const h = await createHarness();
   try {
     const { id } = await sendManager(h);
     const invite = await h.models.readinessInvite.findOne({ where: { runId: String(id), isCurrent: true } });
     const past = new Date(Date.now() - 1000);
+    const oldUrl = invite.url;
     await invite.update({ expiresAt: past });
     h.projectEnds.set('p1', past.toISOString());
     const mailCount = h.mails.length;
@@ -1198,14 +1204,21 @@ test('重发已过期的邀请：需设置新的有效期，项目先结束时�
     const result = await h.sendService().resend(h.auth, { inviteIds: [String(invite.id)], deadline: '2099-12-31' });
     assert.equal(result.sent.length, 1);
     const expires = new Date('2099-12-31T15:59:59.999Z').getTime();
-    assert.equal(new Date((await invite.reload()).expiresAt).getTime(), expires);
+    await invite.reload();
+    assert.equal(new Date(invite.expiresAt).getTime(), expires);
+    assert.notEqual(invite.url, oldUrl);
+    assert.match(invite.url, /collect-profile\?code=/);
     assert.deepEqual(h.publishCalls.endTimes, [{ id: 'p1', endTime: new Date(expires).toISOString() }]);
     assert.deepEqual(h.collectExpiresCalls.at(-1), { collectInviteId: String(invite.collectInviteId), tenantId: 1, expiresAt: expires });
     assert.equal(h.mails.at(-1).props.expires, expires);
+    assert.equal(h.mails.at(-1).props.items[0].url, invite.url);
 
-    // 项目有效期已够长时只改邀请，不再改项目
+    // 项目有效期已够长时只改邀请，不再改项目；链接仍应重签
+    const midUrl = invite.url;
     await h.sendService().resend(h.auth, { inviteIds: [String(invite.id)], deadline: '2099-06-30' });
     assert.equal(h.publishCalls.endTimes.length, 1);
+    await invite.reload();
+    assert.notEqual(invite.url, midUrl);
   } finally {
     await h.close();
   }
